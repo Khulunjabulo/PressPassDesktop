@@ -1,11 +1,12 @@
-import GoogleSignUp from '../components/pages/GoogleSignUp'
+import SignUp from '../components/pages/SignUp'
 
 export default function Home() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-gray-100">
-      <h1 className="text-3xl font-bold mb-6">PressPass - Sign Up</h1>
-      <GoogleSignUp />
-    </main>
+    //<main className="flex min-h-screen flex-col items-center justify-center bg-gray-100">
+     // <h1 className="text-2xl font-bold mb-6">Welcome to PressPass</h1>
+     
+      <SignUp />
+    //</main>
   )
 }
 
