@@ -3,7 +3,7 @@
 
 import React from 'react'
 import { signInWithPopup } from 'firebase/auth'
-import { auth, provider } from '../FirebaseConfig'
+import { auth, provider } from '../firebase/firebase'
 
 const GoogleSignUp = () => {
   const handleSignUp = async () => {
