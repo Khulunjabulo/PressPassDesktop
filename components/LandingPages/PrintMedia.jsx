@@ -1,5 +1,5 @@
 import React from "react";
-import Presspass from '../../public/Presspass.png'
+
 
 // Custom SVG Icons
 const GlobeIcon = () => (
@@ -108,7 +108,7 @@ const App = () => {
     <div className="bg-white text-black min-h-screen font-sans">
       {/* Header */}
       <header className="bg-blue-500 text-white p-4 flex justify-between items-center">
-        <img src="/public/" alt="Logo" className="h-10" />
+        <img src="/isolezwe.png" alt="Logo" className="h-10" />
         <nav className="flex space-x-6">
           <button className="text-white hover:text-gray-300">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
@@ -124,20 +124,29 @@ const App = () => {
           </button>
           <button className="text-white hover:text-gray-300">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
-              <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8z" />
-            </svg>
+    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 
+    2 5.42 4.42 3 7.5 3c1.74 0 3.41 1.01 4.5 
+    2.09C13.09 4.01 14.76 3 16.5 3 
+    19.58 3 22 5.42 22 8.5c0 
+    3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+  </svg>
             Favorite
           </button>
           <button className="text-white hover:text-gray-300">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
-              <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8z" />
-            </svg>
+             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
+    <path d="M20.59 13.41L12 4.83 3.41 
+    13.41 5.83 15.83 12 9.66l6.17 
+    6.17z" />
+  </svg>
             Classified
           </button>
           <button className="text-white hover:text-gray-300">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
-              <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8z" />
-            </svg>
+    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 
+    1.79-4 4 1.79 4 4 4zm0 
+    2c-2.67 0-8 1.34-8 
+    4v2h16v-2c0-2.66-5.33-4-8-4z" />
+  </svg>
             Profile
           </button>
         </nav>
@@ -159,7 +168,7 @@ const App = () => {
             </button>
           </div>
           <div className="md:w-1/2 mt-6 md:mt-0">
-            <img src="https://placehold.co/600x400 " alt="Hero Image" className="w-full rounded-lg" />
+            <img src="/image1.jpg" alt="Hero Image" className="w-full rounded-lg" />
           </div>
         </section>
 
@@ -167,9 +176,8 @@ const App = () => {
         <section className="mb-8">
           <h2 className="text-3xl text-center font-bold mb-4">Why Use Digital Advertising?</h2>
           <div className="flex flex-wrap justify-center gap-4">
-            <img src="https://placehold.co/600x400 " alt="Device Mockup 1" className="w-full md:w-1/3 rounded-lg" />
-            {/* <img src="https://placehold.co/600x400 " alt="Device Mockup 2" className="w-full md:w-1/3 rounded-lg" /> */}
-            {/* <img src="https://placehold.co/600x400 " alt="Device Mockup 3" className="w-full md:w-1/3 rounded-lg" /> */}
+            <img src="/image2.jpg" alt="Device Mockup 1" className="w-full md:w-1/3 rounded-lg" />
+          
           </div>
         </section>
 
@@ -199,7 +207,7 @@ const App = () => {
         {/* How it Works */}
         <section className="mb-8">
           <h2 className="text-3xl text-center font-bold mb-4">How it Works</h2>
-          <img src=" " alt="Workflow Image" className="w-full rounded-lg mb-4" />
+          <img src="/image3.jpg" alt="Workflow Image" className="w-full rounded-lg mb-4" />
           <div className="flex flex-col gap-4">
   <div className="flex items-center space-x-4">
     <DocumentIcon />
@@ -222,7 +230,7 @@ const App = () => {
    
 <section className="bg-blue-100 p-8 text-center my-8">
   <div className="max-w-md mx-auto">
-    <img src={Presspass} alt="Press-Pass Logo" className="mx-auto mb-4" />
+    <img src="/Presspass.png" alt="Press-Pass Logo" className="mx-auto mb-4" />
     <h2 className="text-2xl font-bold mb-2">GENERATE MAXIMUM EXPOSURE FOR YOUR BRAND IN FRONT OF OUR PRESS-PASS AUDIENCE</h2>
     <p className="mb-4">VIEW PRINT AND DIGITAL ADVERTISING OPPORTUNITIES HERE:</p>
     <button className="bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600 transition duration-300">
