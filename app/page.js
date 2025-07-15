@@ -1,7 +1,6 @@
 "use client";
 
 import '../app/globals.css';
-import Home from '@/components/pages/Home';
 import SignIn from '@/components/pages/SignIn';
 import SignUp from '@/components/pages/SignUp';
 import PrintMedia from '@/components/LandingPages/PrintMedia';
@@ -15,7 +14,7 @@ export default function App() {
   let page;
   switch (pathname) {
     case '/signin':
-      page = <SignIn />;
+      page = <Signin />;
       break;
     case '/signup':
       page = <SignUp />;
