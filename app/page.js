@@ -4,6 +4,7 @@ import '../app/globals.css';
 import Home from '@/components/pages/Home';
 import SignIn from '@/components/pages/SignIn';
 import SignUp from '@/components/pages/SignUp';
+import PrintMedia from '@/components/LandingPages/PrintMedia';
 // import Header from '@/components/Header';
 
 import { usePathname } from 'next/navigation';
@@ -18,6 +19,9 @@ export default function App() {
       break;
     case '/signup':
       page = <SignUp />;
+      break;
+       case '/printmedia':
+      page = <PrintMedia />;
       break;
     case '/':
     default:
