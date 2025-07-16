@@ -1,4 +1,6 @@
+import { useRouter } from 'next/navigation';
 import React from "react";
+
 
 
 // Custom SVG Icons
@@ -104,6 +106,8 @@ const BarChartIcon = () => (
 );
 
 const App = () => {
+ const router = useRouter();
+
   return (
     <div className="bg-white text-black min-h-screen font-sans">
       {/* Header */}
@@ -163,9 +167,11 @@ const App = () => {
               Keep Your Voice.<br />
               Get Paid Fairly.
             </h1>
-            <button className="bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600 transition duration-300">
-              LOGIN
-            </button>
+           <button 
+                onClick={() => router.push('/PressPass/signIn')} 
+                className="bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600 transition duration-300">
+                LOGIN
+              </button>
           </div>
           <div className="md:w-1/2 mt-6 md:mt-0">
             <img src="/image1.jpg" alt="Hero Image" className="w-full rounded-lg" />
