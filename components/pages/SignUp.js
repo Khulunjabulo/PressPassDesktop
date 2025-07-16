@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import {
   signUpWithEmail,
-  loginWithEmail,
+  signInWithEmail,
   logout,
   onUserChanged,
 } from '../firebase/auth'
@@ -31,7 +31,7 @@ const SignUp = () => {
       if (mode === 'signup') {
         await signUpWithEmail(email, password)
       } else {
-        await loginWithEmail(email, password)
+        await signInWithEmail(email, password)
       }
 
       setEmail('')

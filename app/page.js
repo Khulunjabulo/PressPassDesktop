@@ -3,6 +3,7 @@
 import '../app/globals.css';
 import SignIn from '@/components/pages/SignIn';
 import SignUp from '@/components/pages/SignUp';
+import Home from '@/components/pages/Home';
 // import Header from '@/components/Header';
 
 import { usePathname } from 'next/navigation';
@@ -13,7 +14,7 @@ export default function App() {
   let page;
   switch (pathname) {
     case '/signin':
-      page = <Signin />;
+      page = <SignIn />;
       break;
     case '/signup':
       page = <SignUp />;
