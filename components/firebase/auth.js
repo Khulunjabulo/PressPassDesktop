@@ -1,12 +1,19 @@
-'use client'
-import { auth, provider } from './firebase'
-import { signInWithPopup,
+'use client';
+import { auth, provider } from './firebase';
+import {
+  signInWithPopup,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
-   onAuthStateChanged
-  } from 'firebase/auth'
+  onAuthStateChanged,
+  setPersistence,
+  browserLocalPersistence,
+  browserSessionPersistence
+} from 'firebase/auth';
 
+export const setAuthPersistence = async (keepSignedIn) => {
+  await setPersistence(auth, keepSignedIn ? browserLocalPersistence : browserSessionPersistence);
+};
 
 export const signUpWithGoogle = async () => {
   try {
@@ -63,5 +70,5 @@ export const logout = async () => {
 
 
 export const onUserChanged = (callback) => {
-  return onAuthStateChanged(auth, callback)
-}
+  return onAuthStateChanged(auth, callback);
+};
