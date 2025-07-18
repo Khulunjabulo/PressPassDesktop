@@ -1,61 +1,48 @@
 // "use client";
 
-// import React, { useState, useEffect } from "react";
+// import { useState } from "react";
 // import { useRouter } from "next/navigation";
-// import { signUpWithEmail, logout, onUserChanged } from "../../Firebase/auth";
-// import { auth, provider } from "../../Firebase/firebase";
-// import { signInWithPopup } from "firebase/auth";
+// import {
+//   signInWithEmail,
+//   signInWithGoogle,
+//   setAuthPersistence,
+// } from "../../Firebase/auth";
 
-// const SignUp = () => {
-//   const [user, setUser] = useState(null);
+// export default function SignIn() {
 //   const [email, setEmail] = useState("");
 //   const [password, setPassword] = useState("");
-//   const [error, setError] = useState(null);
+//   const [keepSignedIn, setKeepSignedIn] = useState(false);
+//   const [role, setRole] = useState("reader");
 //   const [loading, setLoading] = useState(false);
-
+//   const [error, setError] = useState("");
 //   const router = useRouter();
 
-//   useEffect(() => {
-//     const unsubscribe = onUserChanged(setUser);
-//     return () => unsubscribe();
-//   }, []);
-
-//   const handleEmailPasswordSubmit = async (e) => {
+//   const handleSignIn = async (e) => {
 //     e.preventDefault();
-//     setError(null);
-
+//     setLoading(true);
+//     setError("");
 //     try {
-//       await signUpWithEmail(email, password);
-//       setEmail("");
-//       setPassword("");
-//       alert("Account created successfully! You can now sign in.");
-//       router.push("/PressPass/signIn");
+//       await setAuthPersistence(keepSignedIn);
+//       await signInWithEmail(email, password);
+//       alert(`Signed in as ${role}`);
+//       router.push("/");
 //     } catch (err) {
 //       setError(err.message);
+//     } finally {
+//       setLoading(false);
 //     }
 //   };
 
-//   const handleGoogleSignUp = async () => {
-//     setError(null);
+//   const handleGoogleSignIn = async () => {
 //     setLoading(true);
-
+//     setError("");
 //     try {
-//       const result = await signInWithPopup(auth, provider);
-//       const user = result.user;
-//       const isNewUser = result._tokenResponse?.isNewUser;
-
-//       if (isNewUser) {
-//         console.log("New user signed up:", user.displayName);
-//         alert("Signed up successfully with Google!");
-//         router.push("/PressPass/signIn");
-//       } else {
-//         console.log("User already exists:", user.displayName);
-//         alert("Account already exists. Please sign in.");
-//         router.push("/PressPass/signIn");
-//       }
+//       await setAuthPersistence(keepSignedIn);
+//       await signInWithGoogle();
+//       alert(`Signed in as ${role}`);
+//       router.push("/");
 //     } catch (err) {
-//       console.error("Google sign-up error:", err);
-//       setError("Failed to sign up with Google. Please try again.");
+//       setError(err.message);
 //     } finally {
 //       setLoading(false);
 //     }
@@ -69,15 +56,10 @@
 //           <img src="/Presspass.png" alt="Logo" className="h-20 w-20" />
 //         </div>
 
-//         <h2 className="text-2xl font-bold text-center mb-6">
-//           Create an Account
-//         </h2>
+//         <h2 className="text-2xl font-bold text-center mb-6">Sign In</h2>
+//         {error && <p className="text-red-200 text-sm mb-4">{error}</p>}
 
-//         {error && (
-//           <p className="text-red-200 text-sm mb-4 text-center">{error}</p>
-//         )}
-
-//         <form onSubmit={handleEmailPasswordSubmit} className="space-y-4">
+//         <form onSubmit={handleSignIn} className="space-y-4">
 //           <input
 //             type="email"
 //             placeholder="Email"
@@ -95,18 +77,49 @@
 //             className="w-full px-4 py-2 border border-white bg-blue-500 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-white placeholder-white"
 //           />
 
+//           {/* Role Selection */}
+//           <div className="flex items-center justify-between text-sm text-white">
+//             <label className="mr-2">Sign in as:</label>
+//             <select
+//               value={role}
+//               onChange={(e) => setRole(e.target.value)}
+//               className="bg-blue-500 border border-white px-2 py-1 rounded text-white"
+//             >
+//               <option value="reader">News Reader</option>
+//               <option value="buyer">Media Buyer</option>
+//             </select>
+//           </div>
+
+//           <div className="flex items-center justify-between text-sm">
+//             <label className="flex items-center gap-2">
+//               <input
+//                 type="checkbox"
+//                 checked={keepSignedIn}
+//                 onChange={(e) => setKeepSignedIn(e.target.checked)}
+//               />
+//               Keep me signed in
+//             </label>
+//             <button
+//               type="button"
+//               onClick={() => alert("Forgot password logic goes here")}
+//               className="text-white underline hover:text-gray-200"
+//             >
+//               Forgot password?
+//             </button>
+//           </div>
+
 //           <button
 //             type="submit"
 //             disabled={loading}
 //             className="w-full bg-white text-blue-700 font-bold py-2 rounded-md hover:bg-gray-100 transition"
 //           >
-//             {loading ? "Creating account..." : "Sign Up"}
+//             {loading ? "Signing in..." : "Sign In"}
 //           </button>
 //         </form>
 
 //         <div className="mt-6 flex flex-col gap-3">
 //           <button
-//             onClick={handleGoogleSignUp}
+//             onClick={handleGoogleSignIn}
 //             disabled={loading}
 //             className="w-full bg-white text-blue-700 py-2 rounded-md hover:bg-gray-100 font-bold transition flex items-center justify-center gap-2"
 //           >
@@ -132,19 +145,17 @@
 //                 fill="#EA4335"
 //               />
 //             </svg>
-//             Sign up with Google
+//             Sign in with Google
 //           </button>
 
 //           <button
-//             onClick={() => router.push("/PressPass/signIn")}
+//             onClick={() => router.push("/PressPass/signUp")}
 //             className="text-sm text-white underline text-center hover:text-gray-200"
 //           >
-//             Already have an account? Sign In
+//             Don’t have an account? Sign Up
 //           </button>
 //         </div>
 //       </div>
 //     </div>
 //   );
-// };
-
-// export default SignUp;
+// }
