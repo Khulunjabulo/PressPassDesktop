@@ -69,7 +69,7 @@ export default function SignUp() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 to-blue-700">
+    <div className="min-h-screen flex items-center justify-center bg-white">
       <div className="w-full max-w-md bg-blue-600 text-white p-8 rounded-lg shadow-lg">
         {/* Logo */}
         <div className="flex justify-center mb-6">

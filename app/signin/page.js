@@ -47,7 +47,7 @@ export default function SignIn() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 to-blue-700">
+    <div className="min-h-screen flex items-center justify-center bg-white">
       <div className="w-full max-w-md bg-blue-600 text-white p-8 rounded-lg shadow-lg">
         {/* Logo */}
         <div className="flex justify-center mb-6">
@@ -89,13 +89,9 @@ export default function SignIn() {
               <input type="checkbox" checked={keepSignedIn} onChange={(e) => setKeepSignedIn(e.target.checked)} />
               Keep me signed in
             </label>
-            <button
-              type="button"
-              onClick={() => alert("Forgot password logic goes here")}
-              className="text-white underline hover:text-gray-200"
-            >
-              Forgot password?
-            </button>
+            <Link href="/ForgortPassword" className="text-sm text-white underline text-center hover:text-gray-200">
+            Forgot password?
+          </Link>
           </div>
           <button
             type="submit"
