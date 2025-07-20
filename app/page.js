@@ -9,8 +9,8 @@ import Image from "next/image"
 export default function HomePage() {
   return (
     <>
-      <Header />
-      <AuthButtons />
+     {/**  <Header />
+      <AuthButtons />*/}
       <main className="min-h-screen bg-gradient-to-br from-blue-500 to-blue-700 text-white flex flex-col items-center justify-center px-4">
         <h1 className="text-5xl font-bold mb-4">Welcome to Press Pass</h1>
         
@@ -25,11 +25,11 @@ export default function HomePage() {
           />
         </div>
 
-        <p className="text-xl text-blue-100 mb-8">This is the main landing page.</p>
+        <p className="text-xl text-blue-100 mb-8">Select your journey below</p>
 
         <div className="flex gap-4">
           <Link href="/news-reader">
-            <button className="bg-orange-400 hover:bg-orange-500 text-white font-semibold py-2 px-6 rounded-lg text-lg transition">
+            <button className="bg-orange-400 hover:bg-orange-700 text-white font-semibold py-2 px-6 rounded-lg text-lg transition">
               Go to News Reader
             </button>
           </Link>
