@@ -18,7 +18,7 @@ export default function Home() {
       {/* Header */}
       <header className="bg-blue-600 text-white flex justify-between items-center px-6 py-4">
         <h1 className="text-xl font-bold">PressPass</h1>
-        <a href="#" className="text-sm underline">Download App</a>
+        <a href="#" className="text-sm underline">Login</a>
       </header>
 
       {/* Hero Section */}
