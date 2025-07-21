@@ -9,7 +9,7 @@ export default function NewsReaderHeader() {
     <header className="bg-[#329ae1] w-full flex justify-between items-center px-6 py-3 shadow-md">
       {/* Logo Section */}
       <div className="flex items-center gap-3">
-        <Link href="/news-reader">
+        <Link href="/">
         <Image
           src="/Presspass.png"
           alt="Press Pass logo"
@@ -28,21 +28,21 @@ export default function NewsReaderHeader() {
           </div>
         </Link>
 
-        <Link href="/search">
+        <Link href="/news-reader/search">
           <div className="flex flex-col items-center hover:text-gray-200 transition">
             <Search size={24} />
             <span className="text-xs mt-1">Search</span>
           </div>
         </Link>
 
-        <Link href="/favorite">
+        <Link href="/news-reader/favorite">
           <div className="flex flex-col items-center hover:text-gray-200 transition">
             <Star size={24} />
             <span className="text-xs mt-1">Favorite</span>
           </div>
         </Link>
 
-        <Link href="/classified">
+        <Link href="/news-reader/classified">
           <div className="flex flex-col items-center hover:text-gray-200 transition">
             <FileText size={24} />
             <span className="text-xs mt-1">Classified</span>
