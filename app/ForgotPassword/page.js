@@ -2,6 +2,7 @@
 import { useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("")
