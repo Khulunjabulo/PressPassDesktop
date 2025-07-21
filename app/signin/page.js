@@ -1,7 +1,8 @@
 "use client"
+
 import { useState } from "react"
 import Link from "next/link"
-
+import{Newspaper, FilePen} from "lucide-react"
 import { useRouter } from "next/navigation"
 import { signInWithEmail, signInWithGoogle, setAuthPersistence } from "@/Firebase/auth"
 import Image from "next/image" 
@@ -23,7 +24,7 @@ export default function SignIn() {
       await setAuthPersistence(keepSignedIn)
       await signInWithEmail(email, password)
       alert(`Signed in as ${role}`)
-      router.push("/")
+       router.push(role === "reader" ? "/newsreader" : "/printmedia")
     } catch (err) {
       setError(err.message)
     } finally {
@@ -38,13 +39,21 @@ export default function SignIn() {
       await setAuthPersistence(keepSignedIn)
       await signInWithGoogle()
       alert(`Signed in as ${role}`)
-      router.push("/")
+       router.push(role === "reader" ? "/newsreader" : "/printmedia")
     } catch (err) {
       setError(err.message)
     } finally {
       setLoading(false)
     }
   }
+        const RoleIcon = () => {
+    return role === "reader" ? (
+      <Newspaper className="inline-block w-5 h-5 text-white" />
+    ) : (
+      <FilePen className="inline-block w-5 h-5 text-white" />
+    )
+  }
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-white">
@@ -53,8 +62,12 @@ export default function SignIn() {
         <div className="flex justify-center mb-6">
           <Image src="/Presspass.png" alt="Logo" className="h-20 w-20" width={80} height={80} />
         </div>
-        <h2 className="text-2xl font-bold text-center mb-6">Sign In</h2>
+        <h2 className="text-2xl font-bold text-center mb-6 flex items-center justify-center gap-2">
+          Sign In <RoleIcon />
+        </h2>
+
         {error && <p className="text-red-200 text-sm mb-4">{error}</p>}
+
         <form onSubmit={handleSignIn} className="space-y-4">
           <input
             type="email"
@@ -81,7 +94,7 @@ export default function SignIn() {
               className="bg-blue-500 border border-white px-2 py-1 rounded text-white"
             >
               <option value="reader">News Reader</option>
-              <option value="buyer">Media Buyer</option>
+              <option value="buyer">Print Media</option>
             </select>
           </div>
           <div className="flex items-center justify-between text-sm">
