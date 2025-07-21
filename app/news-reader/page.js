@@ -1,11 +1,39 @@
-import { Users, Megaphone, MessageSquare, User, BarChart3, Smartphone } from "lucide-react"
-import Link from "next/link" // Import Link for navigation
+"use client";
+
+import { Users, Megaphone, MessageSquare, User, BarChart3, Smartphone } from "lucide-react";
+import Link from "next/link";
+import Image from "next/image";
 
 export default function NewsReaderHomePage() {
   return (
-    <div className="min-h-screen bg-white">
+    <div>
+      {/* Header */}
+      <header className="bg-[#329ae1] px-6 py-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-2">
+          <Link href="/">
+          <Image  
+          src="/Presspass.png"
+          alt="Press Pass logo"
+          width={110}
+          height={25}
+          />
+          </Link>
+          </div>
+          <div className="flex items-center gap-4">
+            <button variant="outline" className="bg-white text-[#329ae1] border-white hover:bg-gray-50">
+              Download App
+            </button>
+            <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
+              <User className="w-4 h-4 text-[#329ae1]" />
+            </div>
+          </div>
+        </div>
+      </header>
+    
+    <div className="w-full min-h-screen bg-white overflow-x-hidden">
       {/* Hero Section */}
-      <section className="relative bg-[#e6e6e6] py-20 overflow-hidden">
+      <section className="w-full relative bg-[#e6e6e6] py-20 overflow-hidden">
         <div className="absolute inset-0 opacity-10">
           <div className="text-6xl font-bold text-gray-400 transform rotate-12 absolute top-10 left-10">
             COAST TO COAST
@@ -36,8 +64,6 @@ export default function NewsReaderHomePage() {
                   <div>FREE</div>
                 </div>
                 <Link href="/news-reader/home">
-                  {" "}
-                  {/* Link to signup page */}
                   <button className="bg-[#329ae1] hover:bg-[#3997d6] text-white px-8 py-3 rounded-full">
                     Start to read
                   </button>
@@ -79,75 +105,73 @@ export default function NewsReaderHomePage() {
           </div>
         </div>
       </section>
+
       {/* Why Use Section */}
-      <section className="py-20 bg-white">
+      <section className="w-full py-20 bg-white">
         <div className="max-w-7xl mx-auto px-6">
           <h2 className="text-4xl font-bold text-center text-black mb-16">Why Use Press Pass?</h2>
           <div className="grid md:grid-cols-3 gap-8">
-            <div className="border-2 border-[#ffbd59] bg-white">
-              <div className="p-8 text-center">
-                <Users className="w-12 h-12 text-[#329ae1] mx-auto mb-4" />
-                <h3 className="text-xl font-bold text-black mb-2">Stay Connected</h3>
-                <h4 className="text-lg font-semibold text-black mb-4">to your Community</h4>
-                <p className="text-gray-600">
-                  Follow news that matters from community papers, regional newsletters, and grassroots outlets.
-                </p>
+            {[{
+              icon: <Users className="w-12 h-12 text-[#329ae1] mx-auto mb-4" />,
+              title: "Stay Connected",
+              subtitle: "to your Community",
+              description: "Follow news that matters from community papers, regional newsletters, and grassroots outlets."
+            }, {
+              icon: <Megaphone className="w-12 h-12 text-[#329ae1] mx-auto mb-4" />,
+              title: "One Platform.",
+              subtitle: "Hundreds of Voices.",
+              description: "Discover diverse perspectives from trusted local sources — all in one app."
+            }, {
+              icon: <MessageSquare className="w-12 h-12 text-[#329ae1] mx-auto mb-4" />,
+              title: "Support Independent",
+              subtitle: "Journalism",
+              description: "Your views and subscriptions empower community journalists across South Africa."
+            }].map((item, idx) => (
+              <div key={idx} className="border-2 border-[#ffbd59] bg-white">
+                <div className="p-8 text-center">
+                  {item.icon}
+                  <h3 className="text-xl font-bold text-black mb-2">{item.title}</h3>
+                  <h4 className="text-lg font-semibold text-black mb-4">{item.subtitle}</h4>
+                  <p className="text-gray-600">{item.description}</p>
+                </div>
               </div>
-            </div>
-            <div className="border-2 border-[#ffbd59] bg-white">
-              <div className="p-8 text-center">
-                <Megaphone className="w-12 h-12 text-[#329ae1] mx-auto mb-4" />
-                <h3 className="text-xl font-bold text-black mb-2">One Platform.</h3>
-                <h4 className="text-lg font-semibold text-black mb-4">Hundreds of Voices.</h4>
-                <p className="text-gray-600">
-                  Discover diverse perspectives from trusted local sources — all in one app.
-                </p>
-              </div>
-            </div>
-            <div className="border-2 border-[#ffbd59] bg-white">
-              <div className="p-8 text-center">
-                <MessageSquare className="w-12 h-12 text-[#329ae1] mx-auto mb-4" />
-                <h3 className="text-xl font-bold text-black mb-2">Support Independent</h3>
-                <h4 className="text-lg font-semibold text-black mb-4">Journalism</h4>
-                <p className="text-gray-600">
-                  Your views and subscriptions empower community journalists across South Africa.
-                </p>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>
+
       {/* How it works */}
-      <section className="py-20 bg-[#e6e6e6]">
+      <section className="w-full py-20 bg-[#e6e6e6]">
         <div className="max-w-7xl mx-auto px-6">
           <h2 className="text-4xl font-bold text-center text-black mb-16">How it works</h2>
           <div className="grid md:grid-cols-3 gap-8">
-            <div className="border-2 border-[#ffbd59] bg-white">
-              <div className="p-8 text-center">
-                <User className="w-12 h-12 text-[#329ae1] mx-auto mb-4" />
-                <h3 className="text-xl font-bold text-black mb-4">Sign up for free.</h3>
-                <p className="text-gray-600">Create your profile in seconds.</p>
+            {[{
+              icon: <User className="w-12 h-12 text-[#329ae1] mx-auto mb-4" />,
+              title: "Sign up for free.",
+              description: "Create your profile in seconds."
+            }, {
+              icon: <BarChart3 className="w-12 h-12 text-[#329ae1] mx-auto mb-4" />,
+              title: "Choose your communities.",
+              description: "Follow publications that matter to you."
+            }, {
+              icon: <Smartphone className="w-12 h-12 text-[#329ae1] mx-auto mb-4" />,
+              title: "Get fresh local news.",
+              description: "Curated, relevant, and reliable updates daily."
+            }].map((item, idx) => (
+              <div key={idx} className="border-2 border-[#ffbd59] bg-white">
+                <div className="p-8 text-center">
+                  {item.icon}
+                  <h3 className="text-xl font-bold text-black mb-4">{item.title}</h3>
+                  <p className="text-gray-600">{item.description}</p>
+                </div>
               </div>
-            </div>
-            <div className="border-2 border-[#ffbd59] bg-white">
-              <div className="p-8 text-center">
-                <BarChart3 className="w-12 h-12 text-[#329ae1] mx-auto mb-4" />
-                <h3 className="text-xl font-bold text-black mb-4">Choose your communities.</h3>
-                <p className="text-gray-600">Follow publications that matter to you.</p>
-              </div>
-            </div>
-            <div className="border-2 border-[#ffbd59] bg-white">
-              <div className="p-8 text-center">
-                <Smartphone className="w-12 h-12 text-[#329ae1] mx-auto mb-4" />
-                <h3 className="text-xl font-bold text-black mb-4">Get fresh local news.</h3>
-                <p className="text-gray-600">Curated, relevant, and reliable updates daily.</p>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>
+
       {/* Featured Publications */}
-      <section className="py-20 bg-white">
+      <section className="w-full py-20 bg-white">
         <div className="max-w-7xl mx-auto px-6">
           <h2 className="text-4xl font-bold text-center text-black mb-16">Featured publications</h2>
           <div className="flex justify-center items-center gap-12 flex-wrap">
@@ -158,24 +182,22 @@ export default function NewsReaderHomePage() {
           </div>
         </div>
       </section>
-      {/* Call to Action Section (part of the page content, not the global footer) */}
-      <section className="bg-[#329ae1] py-16">
+
+      {/* Call to Action Section */}
+      <section className="w-full bg-[#329ae1] py-16">
         <div className="max-w-7xl mx-auto px-6 text-center">
           <h2 className="text-4xl font-bold text-white mb-4">Ready to read smarter, local news?</h2>
           <p className="text-white/90 mb-8">Join thousands of South Africans switching to community-first media.</p>
           <div className="flex justify-center gap-4">
-            <div className="w-10 h-10 bg-[#ffbd59] rounded flex items-center justify-center">
-              <span className="text-white font-bold">in</span>
-            </div>
-            <div className="w-10 h-10 bg-[#ffbd59] rounded flex items-center justify-center">
-              <span className="text-white font-bold">@</span>
-            </div>
-            <div className="w-10 h-10 bg-[#ffbd59] rounded flex items-center justify-center">
-              <span className="text-white font-bold">f</span>
-            </div>
+            {["in", "@", "f"].map((char, idx) => (
+              <div key={idx} className="w-10 h-10 bg-[#ffbd59] rounded flex items-center justify-center">
+                <span className="text-white font-bold">{char}</span>
+              </div>
+            ))}
           </div>
         </div>
       </section>
     </div>
-  )
+    </div>
+  );
 }
