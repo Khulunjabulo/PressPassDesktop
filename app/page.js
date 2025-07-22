@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Users, Megaphone, MessageSquare, User, BarChart3, Smartphone } from "lucide-react";
@@ -32,6 +33,7 @@ export default function NewsReaderHomePage() {
   };
 
   return (
+
     <div>
       <MainHeader/>
 
