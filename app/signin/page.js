@@ -102,7 +102,7 @@ export default function SignIn() {
               <input type="checkbox" checked={keepSignedIn} onChange={(e) => setKeepSignedIn(e.target.checked)} />
               Keep me signed in
             </label>
-            <Link href="/ForgortPassword" className="text-sm text-white underline text-center hover:text-gray-200">
+            <Link href="/ForgotPassword" className="text-sm text-white underline text-center hover:text-gray-200">
             Forgot password?
           </Link>
           </div>
