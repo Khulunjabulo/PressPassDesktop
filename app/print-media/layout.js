@@ -1,5 +1,3 @@
-import { PublisherSidebar } from "@/components/LandingPages/PublisherSidebar"
-
 export default function PrintMediaLayout({ children }) {
   return (
     <div className="flex">
