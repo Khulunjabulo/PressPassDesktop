@@ -7,7 +7,7 @@ import Image from "next/image";
 import AnimatedSlogan from "@/components/UI/AnimatedSlogan";
 import { Header } from "@/components/UI/Header"
 import { Footer } from "@/components/UI/Footer"
-import { AuthButtons } from "@/components"
+//import { AuthButtons } from "@/components"
 import React, { useState, useEffect } from "react";
 
 export default function NewsReaderHomePage() {
@@ -25,6 +25,7 @@ export default function NewsReaderHomePage() {
           width={110}
           height={25}
           />
+          </Link>
         </div>
 
         <p className="text-xl text-blue-100 mb-8">Select your journey below</p>
@@ -39,9 +40,8 @@ export default function NewsReaderHomePage() {
             <button className="border border-white text-white font-semibold py-2 px-6 rounded-lg text-lg transition hover:bg-white hover:text-blue-700">
               Go to Print Media
             </button>
-
           </Link>
-          </div>
+        </div>
           <nav className="flex items-center gap-4">
           <Link href="/print-media" className="text-white hover:underline">Print Media</Link>
           <Link href="/signup" className="text-white hover:underline">Sign Up</Link>
@@ -229,4 +229,3 @@ export default function NewsReaderHomePage() {
     </div>
   );
 }
-
