@@ -1,14 +1,18 @@
+
 "use client";
 
 import { Users, Megaphone, MessageSquare, User, BarChart3, Smartphone } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import AnimatedSlogan from "@/components/UI/AnimatedSlogan";
-
+import { Header } from "@/components/UI/Header"
+import { Footer } from "@/components/UI/Footer"
+import { AuthButtons } from "@/components"
 import React, { useState, useEffect } from "react";
 
 export default function NewsReaderHomePage() {
   return (
+
     <div>
       {/* Header */}
       <header className="bg-[#329ae1] px-6 py-4">
@@ -21,6 +25,21 @@ export default function NewsReaderHomePage() {
           width={110}
           height={25}
           />
+        </div>
+
+        <p className="text-xl text-blue-100 mb-8">Select your journey below</p>
+
+        <div className="flex gap-4">
+          <Link href="/news-reader">
+            <button className="bg-orange-400 hover:bg-orange-700 text-white font-semibold py-2 px-6 rounded-lg text-lg transition">
+              Go to News Reader
+            </button>
+          </Link>
+          <Link href="/print-media">
+            <button className="border border-white text-white font-semibold py-2 px-6 rounded-lg text-lg transition hover:bg-white hover:text-blue-700">
+              Go to Print Media
+            </button>
+
           </Link>
           </div>
           <nav className="flex items-center gap-4">
@@ -210,3 +229,4 @@ export default function NewsReaderHomePage() {
     </div>
   );
 }
+
