@@ -1,11 +1,14 @@
 'use client'
 import { useState } from 'react'
+import Header from '@/components/UI/Header'
 
 export default function Publisher() {
   const [priority, setPriority] = useState(null)
   const [previewStyle, setPreviewStyle] = useState('Modern')
 
   return (
+    <>
+      <Header />
     <div className="min-h-screen bg-gray-50 flex">
       {/* Sidebar */}
       <aside className="w-64 bg-white shadow-md">
@@ -142,5 +145,6 @@ export default function Publisher() {
         </footer>
       </main>
     </div>
+    </>
   )
 }
