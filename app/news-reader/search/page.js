@@ -24,7 +24,7 @@ export default function SearchPage() {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
-        setPublications(data.articles || []);
+        setPublications(data.results || []);
       } catch (error) {
         console.error("Failed to fetch publications:", error);
         setPublications([]);
@@ -77,7 +77,7 @@ export default function SearchPage() {
                 {publications.map((pub, index) => (
                   <PublicationCard
                     key={index}
-                    logoText={pub.source.name || "News"}
+                    logoText={pub.source_id ? pub.source_id.toUpperCase() : "NEWS"}
                     logoBgColor="#4F46E5"
                     publicationName={pub.title}
                   />
