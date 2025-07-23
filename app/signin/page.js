@@ -24,7 +24,11 @@ export default function SignIn() {
       await setAuthPersistence(keepSignedIn)
       await signInWithEmail(email, password)
       alert(`Signed in as ${role}`)
+
+       router.push(role === "reader" ? "/news-reader" : "/printmedia")
+
        router.push(role === "reader" ? "/news-reader" : "/publisher")
+
     } catch (err) {
       setError(err.message)
     } finally {
@@ -39,6 +43,7 @@ export default function SignIn() {
       await setAuthPersistence(keepSignedIn)
       await signInWithGoogle()
       alert(`Signed in as ${role}`)
+       router.push(role === "reader" ? "/news-reader" : "/printmedia")
        router.push(role === "reader" ? "/news-reader" : "/publisher")
     } catch (err) {
       setError(err.message)
