@@ -2,7 +2,6 @@ import { initializeApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getDatabase } from 'firebase/database';
 
-
 let app, auth, db, provider;
 
 try {
@@ -17,6 +16,17 @@ try {
     measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
   };
 
+  app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+  auth = getAuth(app);
+    db = getDatabase(app);
+   provider = new GoogleAuthProvider();
+  } catch (error) {
+  console.error("[Firebase Init] ❌ ERROR initializing Firebase:");
+  console.error("Error Message:", error.message);
+  console.error("Error Code:", error.code);
+  console.error("Full Error Object:", error);
+}
+export { auth, db, provider };
   app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
   auth = getAuth(app);
     db = getDatabase(app);
