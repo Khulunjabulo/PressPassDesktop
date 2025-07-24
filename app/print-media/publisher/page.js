@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import Header from '@/components/UI/Header'
+import Header from '@/components/UI/header'
 
 export default function Publisher() {
   const [priority, setPriority] = useState(null)

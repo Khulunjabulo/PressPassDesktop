@@ -8,7 +8,7 @@ import Image from 'next/image';
 import { getAuth, onAuthStateChanged, signInWithPopup } from 'firebase/auth';
 import { get, ref } from 'firebase/database';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth, db, provider } from '@/firebase/firebase';
+import { auth, db, provider } from '@/Firebase/firebase';
 
 export default function SignUp() {
   const router = useRouter();
@@ -56,12 +56,12 @@ export default function SignUp() {
     
     if (!user || !user.role) return;
 
-    if (user.role === 'buyer') {
-      console.log('[useEffect] Redirecting to /newsbuyer/home');
-      router.push('/newsbuyer/home');
-    } else if (user.role === 'reader') {
-      console.log('[useEffect] Redirecting to /newsreader/home');
-      router.push('/newsreader/home');
+    if (user.role === 'print media') {
+      console.log('[useEffect] Redirecting to /print-media');
+      router.push('/print-media/overview');
+    } else if (user.role === 'news reader') {
+      console.log('[useEffect] Redirecting to /news-reader');
+      router.push('/news-reader');
     }
   }, [user, router]);
 
