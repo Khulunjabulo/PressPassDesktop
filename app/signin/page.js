@@ -23,9 +23,9 @@ export default function SignIn() {
 
   const redirectToRoleHome = (userRole) => {
     if (userRole === "reader") {
-      router.push("/newsreader/home")
+      router.push("/news-reader")
     } else if (userRole === "buyer") {
-      router.push("/newsbuyer/home")
+      router.push("/print-media/overview")
     }
   }
 
