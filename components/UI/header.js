@@ -20,19 +20,19 @@ export default function Header() {
 
       {/* Navigation */}
       <nav className="flex space-x-6 text-white font-medium">
-        <Link href="/" className="flex flex-col items-center hover:text-gray-100">
+        <Link href="/print-media" className="flex flex-col items-center hover:text-gray-100">
           <Home size={20} />
           <span className="text-sm">Home</span>
         </Link>
-        <Link href="/publisher" className="flex flex-col items-center hover:text-gray-100">
+        <Link href="/print-media/publisher" className="flex flex-col items-center hover:text-gray-100">
           <Newspaper size={20} />
           <span className="text-sm">Publisher</span>
         </Link>
-        <Link href="/monetization" className="flex flex-col items-center hover:text-gray-100">
+        <Link href="/print-media/monetization" className="flex flex-col items-center hover:text-gray-100">
           <DollarSign size={20} />
           <span className="text-sm">Monetization</span>
         </Link>
-        <Link href="/wallet" className="flex flex-col items-center hover:text-gray-100">
+        <Link href="/print-media/wallet" className="flex flex-col items-center hover:text-gray-100">
           <Wallet size={20} />
           <span className="text-sm">Wallet</span>
         </Link>
