@@ -15,12 +15,12 @@ export default function PublisherSidebar() {
     const pathname = usePathname()
 
     const menuItems=[
-    { name: 'OVERVIEW', icon: <LayoutDashboard size={16} />, href: '/publisher/overview' },
-    { name: 'CONTENT ANALYSIS', icon: <BarChart size={16} />, href: '/publisher/analysis' },
-    { name: 'JOURNALIST', icon: <User size={16} />, href: '/publisher/journalist' },
-    { name: 'SUBSCRIBERS', icon: <Users size={16} />, href: '/publisher/subscribers' },
-    { name: 'NEWS FEED', icon: <Newspaper size={16} />, href: '/publisher/news' },
-    { name: 'ADVANCED ANALYTICS', icon: <Activity size={16} />, href: '/publisher/analytics' },
+    { name: 'OVERVIEW', icon: <LayoutDashboard size={16} />, href: '/print-media/publisher/overview' },
+    { name: 'CONTENT ANALYSIS', icon: <BarChart size={16} />, href: '/print-media/publisher/analysis' },
+    { name: 'JOURNALIST', icon: <User size={16} />, href: '/print-media/publisher/journalist' },
+    { name: 'SUBSCRIBERS', icon: <Users size={16} />, href: '/print-media/publisher/subscribers' },
+    { name: 'NEWS FEED', icon: <Newspaper size={16} />, href: '/print-media/publisher/news' },
+    { name: 'ADVANCED ANALYTICS', icon: <Activity size={16} />, href: '/print-media/publisher/analytics' },
     ]
 
 
