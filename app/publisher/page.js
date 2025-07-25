@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
-import Header from '@/components/UI/Header'
+import Header from '@/components/UI/header'
+import PublisherSidebar from '@/components/UI/publisherSidebar'
 
 export default function Publisher() {
   const [priority, setPriority] = useState(null)
@@ -10,27 +11,8 @@ export default function Publisher() {
     <>
       <Header />
     <div className="min-h-screen bg-gray-50 flex">
-      {/* Sidebar */}
-      <aside className="w-64 bg-white shadow-md">
-        <div className="p-6 font-bold text-lg text-blue-600">PressPass</div>
-        <nav className="space-y-4 text-gray-700 text-sm px-6 mt-6">
-          <div>OVERVIEW</div>
-          <div>CONTENT ANALYSIS</div>
-          <div>JOURNALIST</div>
-          <div>SUBSCRIBERS</div>
-          <div>NEWS FEED</div>
-          <div>ADVANCED ANALYTICS</div>
-        </nav>
-        <div className="mt-12 px-6">
-          <div className="bg-gray-100 p-4 rounded-lg flex items-center space-x-3">
-            <div className="w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center text-white font-bold">DH</div>
-            <div>
-              <p className="text-sm font-semibold">Daniel Hoppes</p>
-              <p className="text-xs text-gray-500">Editor-in-Chief</p>
-            </div>
-          </div>
-        </div>
-      </aside>
+      <PublisherSidebar/>
+  
 
       {/* Main Content */}
       <main className="flex-1 p-10">
