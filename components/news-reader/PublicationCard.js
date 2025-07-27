@@ -1,5 +1,13 @@
-export function PublicationCard({ logoText = "News", logoBgColor = "#4F46E5", publicationName = "Untitled" }) {
-  const safeId = publicationName?.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9\-]/g, "") || "publication";
+export default function PublicationCard({
+  logoText = 'News',
+  logoBgColor = '#4F46E5',
+  publicationName = 'Untitled',
+}) {
+  const safeId =
+    (publicationName || 'publication')
+      .toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9\-]/g, '');
 
   return (
     <div className="flex items-center gap-4 p-2 rounded-lg shadow-sm bg-white hover:shadow-md transition">
@@ -11,13 +19,8 @@ export function PublicationCard({ logoText = "News", logoBgColor = "#4F46E5", pu
           {logoText.toUpperCase()}
         </span>
       </div>
-      <div className="flex-1 text-sm font-medium text-gray-800">
-        {publicationName}
-      </div>
-      <div
-        id={`subscribe-${safeId}`}
-        className="w-5 h-5"
-      />
+      <div className="flex-1 text-sm font-medium text-gray-800">{publicationName}</div>
+      <div id={`subscribe-${safeId}`} className="w-5 h-5" />
     </div>
   );
 }
