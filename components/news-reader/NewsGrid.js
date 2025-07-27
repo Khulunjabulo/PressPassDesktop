@@ -53,14 +53,14 @@ export default function NewsGrid({ articles }) {
           </div>
 
           {/* Publications */}
-          <section className="mt-10">
+          {/* <section className="mt-10">
             <h2 className="text-xl font-bold mb-4">Publications</h2>
             <div className="space-y-3">
               <PublicationCard logoText="Isolezwe" logoBgColor="#008000" publicationName="Isolezwe" />
               <PublicationCard logoText="Briefly" logoBgColor="#000000" publicationName="Briefly" />
               <PublicationCard logoText="Sowetan" logoBgColor="#E31B23" publicationName="Sowetan" />
             </div>
-          </section>
+          </section> */}
         </div>
 
         {/* RIGHT SIDEBAR (ads) */}

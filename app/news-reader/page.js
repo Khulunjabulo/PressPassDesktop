@@ -21,6 +21,8 @@ export default async function NewsReaderHome() {
       </div>
 
       <NewsGrid articles={articles} />
+
+      
     </div>
   );
 }
