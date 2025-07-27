@@ -1,10 +1,10 @@
-import Link from "next/link"
-import { fetchNews } from "@/lib/fetchNews"
-import NewsReaderHeader from "@/components/UI/NewsReaderHeader"
+import Link from "next/link";
+import { fetchNews } from "@/lib/fetchNews";
+import NewsReaderHeader from "@/components/news-reader/NewsReaderHeader";
 
 export default async function CategoryPage({ params }) {
-  const { category } = params
-  const articles = await fetchNews(category)
+  const { category } = params;
+  const articles = await fetchNews(category);
 
   return (
     <div>
@@ -49,5 +49,5 @@ export default async function CategoryPage({ params }) {
         ))}
       </div>
     </div>
-  )
+  );
 }

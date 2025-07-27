@@ -57,7 +57,7 @@ export default function SignUp() {
     if (!user || !user.role) return;
 
     if (user.role === 'print media') {
-      console.log('[useEffect] Redirecting to /print-media');
+      console.log('[useEffect] Redirecting to /print-media/overview');
       router.push('/print-media/overview');
     } else if (user.role === 'news reader') {
       console.log('[useEffect] Redirecting to /news-reader');
@@ -218,7 +218,7 @@ export default function SignUp() {
         Select role
       </option>
       <option value="reader">News Reader</option>
-      <option value="buyer">Media Buyer</option>
+      <option value="buyer">Print Media</option>
     </select>
   </div>
 
