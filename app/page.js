@@ -1,11 +1,11 @@
-
 "use client";
 
 import { Users, Megaphone, MessageSquare, User, BarChart3, Smartphone } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import AnimatedSlogan from "@/components/UI/AnimatedSlogan";
-import MainHeader from "@/components/UI/NewsReaderMainHeader";
+import AnimatedSlogan from "@/components/news-reader/AnimatedSlogan";
+import MainHeader from "@/components/news-reader/NewsReaderMainHeader";
+import UserReviewsSection from "@/components/user review/UserReviewSection";
 
 import React, { useState, useEffect } from "react";
 import { auth } from "@/Firebase/firebase";
@@ -188,8 +188,10 @@ export default function NewsReaderHomePage() {
           </div>
         </section>
 
+        <UserReviewsSection/>
+
         {/* Download App CTA (Now at bottom) */}
-        <section className="w-full py-10 bg-[#e6e6e6] text-center">
+        <section className="w-full py-10 bg-[#ffffff] text-center">
           <div className="max-w-7xl mx-auto px-6">
             <h3 className="text-2xl font-bold text-black mb-4">Prefer mobile?</h3>
             <p className="text-gray-600 mb-6">Download the Press Pass app for a better on-the-go experience.</p>

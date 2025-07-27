@@ -21,7 +21,7 @@ export default function NewsReaderHeader() {
 
       {/* Navigation Icons */}
       <nav className="flex gap-8 text-white text-sm font-medium items-center">
-        <Link href="/">
+        <Link href="/news-reader">
           <div className="flex flex-col items-center hover:text-gray-200 transition">
             <Home size={24} />
             <span className="text-xs mt-1">Home</span>

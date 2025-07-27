@@ -20,7 +20,7 @@ export default function Header() {
 
       {/* Navigation */}
       <nav className="flex space-x-6 text-white font-medium">
-        <Link href="/print-media" className="flex flex-col items-center hover:text-gray-100">
+        <Link href="/print-media/overview" className="flex flex-col items-center hover:text-gray-100">
           <Home size={20} />
           <span className="text-sm">Home</span>
         </Link>
