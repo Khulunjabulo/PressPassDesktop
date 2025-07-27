@@ -15,11 +15,11 @@ export default async function SearchPage({ searchParams }) {
 
       <div className="py-8 text-center space-y-4">
         <h2 className="text-4xl font-bold">Search</h2>
-        <p className="text-muted-foreground">
+        <p className="text-muted-foreground text-gray-400">
           {q ? (
-            <>Results for: <span className="font-semibold">{q}</span></>
+            <>Results for: <span className="text-gray-400">{q}</span></>
           ) : (
-            'Type something to search headlines'
+            <div className='text-gray-500'>Type something to search headlines or publication</div>
           )}
         </p>
         <SearchForm />
@@ -28,8 +28,8 @@ export default async function SearchPage({ searchParams }) {
       {articles?.length ? (
         <NewsGrid articles={articles} />
       ) : (
-        <div className="text-center py-16 text-sm text-gray-500">
-          {q ? 'No results found.' : 'Start by entering a keyword.'}
+        <div className="text-center py-16 text-sm">
+          {q ? 'No results found.' :<div><h2 className='text-4xl font-bold'>FIND YOUR LOCAL COMMUNITY NEWSPAPER,</h2><h2 className='text-4xl font-bold'>MAGAZINE AND PUBLICATIONS.</h2></div>}
         </div>
       )}
     </div>
