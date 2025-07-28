@@ -8,7 +8,8 @@ export default function Header() {
   return (
     <header className="bg-blue-400 px-4 py-3 flex items-center justify-between">
       {/* Logo */}
-      <div className="flex items-center">
+
+      <Link href='/print-media' className="flex items-center">
         <Image
           src="/isolezwe.png" 
           alt="Isolezwe Logo"
@@ -16,11 +17,11 @@ export default function Header() {
           height={40}
           className="object-contain"
         />
-      </div>
+      </Link>
 
       {/* Navigation */}
       <nav className="flex space-x-6 text-white font-medium">
-        <Link href="/print-media" className="flex flex-col items-center hover:text-gray-100">
+        <Link href="/print-media/overview" className="flex flex-col items-center hover:text-gray-100">
           <Home size={20} />
           <span className="text-sm">Home</span>
         </Link>

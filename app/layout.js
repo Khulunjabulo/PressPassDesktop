@@ -11,7 +11,7 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body className="flex flex-col min-h-screen">
-        <main className="flex-grow container mx-auto px-4 py-8">{children}</main>
+        <main className="flex-grow w-full">{children}</main>
       </body>
     </html>
   )
