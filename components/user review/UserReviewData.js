@@ -33,7 +33,6 @@ export const userReviews = [
   },
 ];
 
-// Optional tiny “component/hook” style export
 export default function useUserReviews() {
   return userReviews;
 }

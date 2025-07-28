@@ -30,8 +30,7 @@ export default function NewsGrid({ articles }) {
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6 px-6 pb-10">
         {/* MAIN COLUMN */}
         <div className="space-y-6">
-          <h2 className="text-xl font-bold">Top Headlines</h2>
-
+            
           {/* 3 columns on large screens */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {unique.map((article, index) => (

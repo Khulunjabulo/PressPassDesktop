@@ -11,7 +11,7 @@ export default function RecommendedOverlayBottom({ articles }) {
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          className="fixed bottom-5 right-5 z-40 rounded-full bg-[#329ae1] text-white px-4 py-2 shadow-lg"
+          className="fixed bottom-5 Left-5 z-40 rounded-full bg-[#329ae1] text-white px-4 py-2 shadow-lg"
         >
           Recommended
         </button>
