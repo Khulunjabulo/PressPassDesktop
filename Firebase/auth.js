@@ -71,3 +71,22 @@ export const logout = async () => {
 export const onUserChanged = (callback) => {
   return onAuthStateChanged(auth, callback)
 }
+
+import { getDatabase, ref, get } from "firebase/database";
+
+export const getUserRole = async (uid) => {
+  try {
+    const dbRef = ref(getDatabase(), `users/${uid}/role`);
+    const snapshot = await get(dbRef);
+
+    if (snapshot.exists()) {
+      return snapshot.val(); 
+    } else {
+      console.warn("No role found for user.");
+      return "guest";
+    }
+  } catch (error) {
+    console.error("Failed to fetch user role:", error);
+    return "guest";
+  }
+};
