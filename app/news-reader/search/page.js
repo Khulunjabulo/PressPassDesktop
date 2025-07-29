@@ -1,4 +1,3 @@
-import NewsReaderHeader from '@/components/news-reader/NewsReaderHeader';
 import NewsGrid from '@/components/news-reader/NewsGrid';
 import SearchForm from '@/components/news-reader/SearchForm';
 import { searchNews } from '@/lib/fetchNews';
@@ -11,15 +10,13 @@ export default async function SearchPage({ searchParams }) {
 
   return (
     <div>
-      <NewsReaderHeader />
-
       <div className="py-8 text-center space-y-4">
         <h2 className="text-4xl font-bold">Search</h2>
         <p className="text-muted-foreground text-gray-400">
           {q ? (
             <>Results for: <span className="text-gray-400">{q}</span></>
           ) : (
-            <div className='text-gray-500'>Type something to search headlines or publication</div>
+            <span className='text-gray-500'>Type something to search headlines or publication</span>
           )}
         </p>
         <SearchForm />
