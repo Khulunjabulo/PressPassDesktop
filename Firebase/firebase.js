@@ -20,12 +20,9 @@ try {
   auth = getAuth(app);
   db = getFirestore(app);
   provider = new GoogleAuthProvider();
+  storage = getStorage(app);
 } catch (error) {
   console.error('[Firebase Init] ❌ Error initializing Firebase:', error.message);
-  db = getDatabase(app);
-  storage = getStorage(app);
-
 }
-
 
 export { app, auth, db, provider, storage };
