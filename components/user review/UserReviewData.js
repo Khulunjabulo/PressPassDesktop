@@ -8,7 +8,7 @@ export const userReviews = [
     location: "Umlazi",
   },
   {
-    rating: 4,
+    rating: 5,
     title: "Easy to read, even on my phone.",
     body:
       "The articles load fast, and I love that it’s mobile-friendly. I can read while commuting and catch up on what’s happening around me.",
@@ -24,7 +24,7 @@ export const userReviews = [
     location: "Tembisa",
   },
   {
-    rating: 4,
+    rating: 5,
     title: "Great design, but I wish I could save articles offline.",
     body:
       "The layout is simple and clean. It would be cool to download stories or get notifications by area. Still a must-have app though!",

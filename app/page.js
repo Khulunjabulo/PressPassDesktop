@@ -6,6 +6,7 @@ import Image from "next/image";
 import AnimatedSlogan from "@/components/news-reader/AnimatedSlogan";
 import MainHeader from "@/components/news-reader/NewsReaderMainHeader";
 import UserReviewsSection from "@/components/user review/UserReviewSection";
+import "../app/globals.css"
 
 import React, { useState, useEffect } from "react";
 import { auth } from "@/Firebase/firebase";
@@ -37,17 +38,9 @@ export default function NewsReaderHomePage() {
     <div>
       <MainHeader/>
 
-      <div className="w-full min-h-screen bg-white overflow-x-hidden">
+      <div className="w-full min-h-screen bg-gray-50 overflow-x-hidden">
         {/* Hero Section */}
-        <section className="w-full relative bg-[#e6e6e6] py-20 overflow-hidden">
-          <div className="absolute inset-0 opacity-10">
-            <div className="text-6xl font-bold text-gray-400 transform rotate-12 absolute top-10 left-10">
-              COAST TO COAST
-            </div>
-            <div className="text-4xl font-bold text-gray-400 transform -rotate-12 absolute bottom-20 right-20">
-              LOCAL NEWS
-            </div>
-          </div>
+        <section className="w-full relative bg-gray-50 py-20 overflow-hidden">
           <div className="max-w-7xl mx-auto px-6 relative z-10">
             <div className="grid lg:grid-cols-2 gap-12 items-center">
               <div>
@@ -69,7 +62,7 @@ export default function NewsReaderHomePage() {
                   </div>
                   <button
                     onClick={handleStartReading}
-                    className="bg-[#329ae1] hover:bg-[#3997d6] text-white px-8 py-3 rounded-full"
+                    className="bg-[#329ae1] hover:bg-[#6aa9d3] text-white px-8 py-3 rounded-full"
                   >
                     Start to read
                   </button>
@@ -107,7 +100,7 @@ export default function NewsReaderHomePage() {
         </section>
 
         {/* Why Use Section */}
-        <section className="w-full py-20 bg-white">
+        <section className="w-full py-20 bg-gray-50">
           <div className="max-w-7xl mx-auto px-6">
             <h2 className="text-4xl font-bold text-center text-black mb-16">Why Use Press Pass?</h2>
             <div className="grid md:grid-cols-3 gap-8">
@@ -141,7 +134,7 @@ export default function NewsReaderHomePage() {
         </section>
 
         {/* How it works */}
-        <section className="w-full py-20 bg-[#e6e6e6]">
+        <section className="w-full py-20 bg-gray-50">
           <div className="max-w-7xl mx-auto px-6">
             <h2 className="text-4xl font-bold text-center text-black mb-16">How it works</h2>
             <div className="grid md:grid-cols-3 gap-8">
@@ -171,7 +164,7 @@ export default function NewsReaderHomePage() {
         </section>
 
         {/* Featured Publications */}
-        <section className="w-full py-20 bg-white">
+        <section className="w-full py-20 bg-gray-50">
           <div className="max-w-7xl mx-auto px-6">
             <h2 className="text-4xl font-bold text-center text-black mb-16">Featured publications</h2>
             <div className="flex justify-center items-center gap-12 flex-wrap">
@@ -186,7 +179,7 @@ export default function NewsReaderHomePage() {
         <UserReviewsSection/>
 
         {/* Download App CTA (Now at bottom) */}
-        <section className="w-full py-10 bg-[#ffffff] text-center">
+        <section className="w-full py-10 bg-gray-50 text-center">
           <div className="max-w-7xl mx-auto px-6">
             <h3 className="text-2xl font-bold text-black mb-4">Prefer mobile?</h3>
             <p className="text-gray-600 mb-6">Download the Press Pass app for a better on-the-go experience.</p>

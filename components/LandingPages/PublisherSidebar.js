@@ -9,12 +9,12 @@ export function PublisherSidebar() {
           <div className="text-xl">Publisher Tools</div>
         </div>
         <div className="flex flex-col gap-2">
-          <Link href="/print-media/ad-sales">
+          <Link href="/print-media/">
             <button variant="ghost" className="w-full justify-start">
               Ad Sales
             </button>
           </Link>
-          <Link href="/print-media/payment-method">
+          <Link href="/print-media/">
             <button variant="ghost" className="w-full justify-start">
               Payment Method
             </button>
