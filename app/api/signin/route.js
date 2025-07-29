@@ -1,10 +1,10 @@
-// File: /app/api/google-signup/route.js
+// File: /app/api/signin/route.js
 
 import { NextResponse } from 'next/server';
 import { initializeApp, getApps } from 'firebase/app';
 import { getFirestore, doc, setDoc } from 'firebase/firestore';
 import { getAuth, sendEmailVerification } from 'firebase/auth';
-import { adminAuth } from '../../../lib/firebaseAdmin';
+import { getAdminAuth } from '../../../lib/firebaseAdminLazy';
 
 // Firebase configuration (same as your signup route)
 const firebaseConfig = {
@@ -58,6 +58,7 @@ export async function POST(req) {
     // Verify the Google ID token using Firebase Admin SDK
     let decodedToken;
     try {
+      const adminAuth = await getAdminAuth();
       decodedToken = await adminAuth.verifyIdToken(token);
       console.log('✅ Token verified with Admin SDK:', decodedToken.email);
     } catch (verifyError) {
@@ -77,16 +78,11 @@ export async function POST(req) {
         console.log('✅ Fallback JWT decode successful:', decodedToken.email);
       } catch (decodeError) {
         console.error('[Token] ❌ Failed to decode token:', decodeError);
-        return NextResponse.json({ 
-          success: false, 
-          error: 'Invalid token format' 
+        return NextResponse.json({
+          success: false,
+          error: 'Invalid token format'
         }, { status: 401 });
       }
-    }❌ Failed to decode token:', decodeError);
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Invalid token format' 
-      }, { status: 401 });
     }
 
     const { uid, email, name, picture, given_name, family_name } = decodedToken;
