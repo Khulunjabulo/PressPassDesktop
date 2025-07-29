@@ -1,8 +1,8 @@
 import React, { useState } from "react"
-import FileUpload from "./FileUpload"
-import PrioritySelector from "./PrioritySelector"
-import PreviewToggle from "./PreviewToggle"
-import { storage } from "@/firebase"
+import FileUpload from "./fileUpload"
+import PrioritySelector from "./prioritySelector"
+import PreviewToggle from "./previviewToogle"
+import { storage } from "../Firebase/firebase"
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage"
 
 export default function UploadForm({ onSubmit }) {
@@ -10,15 +10,24 @@ export default function UploadForm({ onSubmit }) {
   const [previewStyle, setPreviewStyle] = useState("Modern")
   const [file, setFile] = useState(null)
   const [uploadProgress, setUploadProgress] = useState(null)
+  const [uploadError, setUploadError] = useState("")
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    setUploadError("")
+    
     const formData = Object.fromEntries(new FormData(e.target))
     formData.priority = priority
     formData.previewStyle = previewStyle
 
     if (file) {
-      const storageRef = ref(storage, `uploads/${file.name}`)
+      // Validate file before upload
+      if (file.type !== "application/pdf") {
+        setUploadError("Please select a valid PDF file")
+        return
+      }
+
+      const storageRef = ref(storage, `uploads/${Date.now()}_${file.name}`)
       const uploadTask = uploadBytesResumable(storageRef, file)
 
       uploadTask.on(
@@ -29,11 +38,22 @@ export default function UploadForm({ onSubmit }) {
         },
         (error) => {
           console.error("Upload error:", error)
+          setUploadError(`Upload failed: ${error.message}`)
+          setUploadProgress(null)
         },
         async () => {
-          const url = await getDownloadURL(uploadTask.snapshot.ref)
-          formData.pdfUrl = url
-          onSubmit(formData)
+          try {
+            const url = await getDownloadURL(uploadTask.snapshot.ref)
+            formData.pdfUrl = url
+            formData.fileName = file.name
+            formData.fileSize = file.size
+            setUploadProgress(null)
+            onSubmit(formData)
+          } catch (error) {
+            console.error("Error getting download URL:", error)
+            setUploadError("Failed to get file URL")
+            setUploadProgress(null)
+          }
         }
       )
     } else {
@@ -46,6 +66,12 @@ export default function UploadForm({ onSubmit }) {
       <h2 className="text-xl font-bold mb-4 text-center">Document Upload</h2>
 
       <FileUpload setFile={setFile} uploadProgress={uploadProgress} />
+
+      {uploadError && (
+        <div className="bg-red-50 border border-red-200 rounded-md p-3 mb-4">
+          <p className="text-sm text-red-600">{uploadError}</p>
+        </div>
+      )}
 
       {/* Form Fields */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
