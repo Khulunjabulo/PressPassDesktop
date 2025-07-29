@@ -92,7 +92,7 @@ export default function NewsReaderHomePage() {
               <div className="flex justify-center">
                 <div className="relative">
                   <div className="w-64 h-96 bg-[#329ae1] rounded-3xl shadow-2xl transform rotate-6"></div>
-                  <div className="absolute -top-4 -left-4 w-64 h-96 bg-[#329ae1] rounded-3xl shadow-2xl">
+                  <div className="absolute -top-4 -left-4 w-64 h-96 bg-[#a6e700] rounded-3xl shadow-2xl">
                     <div className="p-4 text-white">
                       <div className="bg-white/20 rounded-lg p-3 mb-3">
                         <div className="h-2 bg-white/60 rounded mb-2"></div>
