@@ -1,3 +1,5 @@
+'use client'
+
 import React, { useState } from "react"
 import FileUpload from "./fileUpload"
 import PrioritySelector from "./prioritySelector"
@@ -74,30 +76,76 @@ export default function UploadForm({ onSubmit }) {
       )}
 
       {/* Form Fields */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <input name="headline" placeholder="Enter headline..." className="border p-3 rounded-md w-full" />
-        <input name="byline" placeholder="Byline Name" className="border p-3 rounded-md w-full" />
-        <input name="location" placeholder="City/Town" className="border p-3 rounded-md w-full" />
-        <select name="section" className="border p-3 rounded-md w-full">
-          <option>Select Section</option>
-          <option>Politics</option>
-          <option>Business</option>
-        </select>
-        <select name="edition" className="border p-3 rounded-md w-full">
-          <option>Morning Edition</option>
-          <option>Evening Edition</option>
-        </select>
-      </div>
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+  <input name="headline" id="headline" placeholder="Enter headline..." className="border p-3 rounded-md w-full" />
+  <input name="byline" id="byline" placeholder="Byline Name" className="border p-3 rounded-md w-full" />
+  <input name="location" id="location" placeholder="City/Town" className="border p-3 rounded-md w-full" />
+  
+  <select name="section" id="section" className="border p-3 rounded-md w-full">
+    <option>Select Section</option>
+    <option>Politics</option>
+    <option>Business</option>
+  </select>
+
+  <select name="edition" id="edition" className="border p-3 rounded-md w-full">
+    <option>Morning Edition</option>
+    <option>Evening Edition</option>
+  </select>
+</div>
+
 
       <PrioritySelector priority={priority} setPriority={setPriority} />
 
-      <textarea name="lead" placeholder="Write the lead paragraph..." className="w-full border p-3 rounded-md mb-4" rows="2" />
-      <textarea name="body" placeholder="Continue with the article body..." className="w-full border p-3 rounded-md mb-6" rows="5" />
+      <textarea name="lead"id='lead' placeholder="Write the lead paragraph..." className="w-full border p-3 rounded-md mb-4" rows="2" />
+      <textarea name="body" id='body'placeholder="Continue with the article body..." className="w-full border p-3 rounded-md mb-6" rows="5" />
 
       <div className="flex justify-between mb-6">
-        <button type="button" className="bg-blue-900 text-white px-6 py-2 rounded-md">SAVE DRAFT</button>
-        <button type="submit" className="bg-yellow-400 text-black font-semibold px-6 py-2 rounded-md">SUBMIT FOR REVIEW</button>
-        <button type="submit" className="bg-red-600 text-white px-6 py-2 rounded-md">PUBLISH NOW</button>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault()
+            const formData = Object.fromEntries(new FormData(e.target.form))
+            formData.priority = priority
+            formData.previewStyle = previewStyle
+            formData.action = 'draft'
+            if (file) {
+              formData.fileName = file.name
+              formData.fileSize = file.size
+            }
+            onSubmit(formData)
+          }}
+          className="bg-blue-900 text-white px-6 py-2 rounded-md hover:bg-blue-800 transition-colors"
+        >
+          SAVE DRAFT
+        </button>
+        <button
+          type="submit"
+          onClick={(e) => {
+            const form = e.target.form
+            const hiddenInput = document.createElement('input')
+            hiddenInput.type = 'hidden'
+            hiddenInput.name = 'action'
+            hiddenInput.value = 'review'
+            form.appendChild(hiddenInput)
+          }}
+          className="bg-yellow-400 text-black font-semibold px-6 py-2 rounded-md hover:bg-yellow-500 transition-colors"
+        >
+          SUBMIT FOR REVIEW
+        </button>
+        <button
+          type="submit"
+          onClick={(e) => {
+            const form = e.target.form
+            const hiddenInput = document.createElement('input')
+            hiddenInput.type = 'hidden'
+            hiddenInput.name = 'action'
+            hiddenInput.value = 'publish'
+            form.appendChild(hiddenInput)
+          }}
+          className="bg-red-600 text-white px-6 py-2 rounded-md hover:bg-red-700 transition-colors"
+        >
+          PUBLISH NOW
+        </button>
       </div>
 
       <PreviewToggle previewStyle={previewStyle} setPreviewStyle={setPreviewStyle} />
