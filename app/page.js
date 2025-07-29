@@ -89,24 +89,19 @@ export default function NewsReaderHomePage() {
                   </div>
                 </div>
               </div>
-              <div className="flex justify-center">
-                <div className="relative">
-                  <div className="w-64 h-96 bg-[#329ae1] rounded-3xl shadow-2xl transform rotate-6"></div>
-                  <div className="absolute -top-4 -left-4 w-64 h-96 bg-[#a6e700] rounded-3xl shadow-2xl">
-                    <div className="p-4 text-white">
-                      <div className="bg-white/20 rounded-lg p-3 mb-3">
-                        <div className="h-2 bg-white/60 rounded mb-2"></div>
-                        <div className="h-2 bg-white/40 rounded w-3/4"></div>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="h-1 bg-white/40 rounded"></div>
-                        <div className="h-1 bg-white/40 rounded w-5/6"></div>
-                        <div className="h-1 bg-white/40 rounded w-4/6"></div>
-                      </div>
+                <div className="container mx-auto flex flex-col items-center justify-center">
+                  <div className="flex justify-center">
+                    <div className="relative">
+                      <Image
+                        src="/Mobile.png"
+                        alt="Press-Pass mobile app interface showing local community news"
+                        width={300}
+                        height={600}
+                        className="rounded-3xl shadow-2xl"
+                      />
                     </div>
                   </div>
                 </div>
-              </div>
             </div>
           </div>
         </section>
