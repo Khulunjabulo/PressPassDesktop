@@ -15,6 +15,7 @@ export default function NewsReaderHeader() {
           alt="Press Pass logo"
           width={110}
           height={25}
+          priority
         />
         </Link>
       </div>
