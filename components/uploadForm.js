@@ -1,8 +1,10 @@
+'use client'
+
 import React, { useState } from "react"
-import FileUpload from "./FileUpload"
-import PrioritySelector from "./PrioritySelector"
-import PreviewToggle from "./PreviewToggle"
-import { storage } from "@/firebase"
+import FileUpload from "./fileUpload"
+import PrioritySelector from "./prioritySelector"
+import PreviewToggle from "./previviewToogle"
+import { storage } from "../Firebase/firebase"
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage"
 
 export default function UploadForm({ onSubmit }) {
@@ -10,15 +12,24 @@ export default function UploadForm({ onSubmit }) {
   const [previewStyle, setPreviewStyle] = useState("Modern")
   const [file, setFile] = useState(null)
   const [uploadProgress, setUploadProgress] = useState(null)
+  const [uploadError, setUploadError] = useState("")
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    setUploadError("")
+    
     const formData = Object.fromEntries(new FormData(e.target))
     formData.priority = priority
     formData.previewStyle = previewStyle
 
     if (file) {
-      const storageRef = ref(storage, `uploads/${file.name}`)
+      // Validate file before upload
+      if (file.type !== "application/pdf") {
+        setUploadError("Please select a valid PDF file")
+        return
+      }
+
+      const storageRef = ref(storage, `uploads/${Date.now()}_${file.name}`)
       const uploadTask = uploadBytesResumable(storageRef, file)
 
       uploadTask.on(
@@ -29,11 +40,22 @@ export default function UploadForm({ onSubmit }) {
         },
         (error) => {
           console.error("Upload error:", error)
+          setUploadError(`Upload failed: ${error.message}`)
+          setUploadProgress(null)
         },
         async () => {
-          const url = await getDownloadURL(uploadTask.snapshot.ref)
-          formData.pdfUrl = url
-          onSubmit(formData)
+          try {
+            const url = await getDownloadURL(uploadTask.snapshot.ref)
+            formData.pdfUrl = url
+            formData.fileName = file.name
+            formData.fileSize = file.size
+            setUploadProgress(null)
+            onSubmit(formData)
+          } catch (error) {
+            console.error("Error getting download URL:", error)
+            setUploadError("Failed to get file URL")
+            setUploadProgress(null)
+          }
         }
       )
     } else {
@@ -47,31 +69,83 @@ export default function UploadForm({ onSubmit }) {
 
       <FileUpload setFile={setFile} uploadProgress={uploadProgress} />
 
+      {uploadError && (
+        <div className="bg-red-50 border border-red-200 rounded-md p-3 mb-4">
+          <p className="text-sm text-red-600">{uploadError}</p>
+        </div>
+      )}
+
       {/* Form Fields */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <input name="headline" placeholder="Enter headline..." className="border p-3 rounded-md w-full" />
-        <input name="byline" placeholder="Byline Name" className="border p-3 rounded-md w-full" />
-        <input name="location" placeholder="City/Town" className="border p-3 rounded-md w-full" />
-        <select name="section" className="border p-3 rounded-md w-full">
-          <option>Select Section</option>
-          <option>Politics</option>
-          <option>Business</option>
-        </select>
-        <select name="edition" className="border p-3 rounded-md w-full">
-          <option>Morning Edition</option>
-          <option>Evening Edition</option>
-        </select>
-      </div>
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+  <input name="headline" id="headline" placeholder="Enter headline..." className="border p-3 rounded-md w-full" />
+  <input name="byline" id="byline" placeholder="Byline Name" className="border p-3 rounded-md w-full" />
+  <input name="location" id="location" placeholder="City/Town" className="border p-3 rounded-md w-full" />
+  
+  <select name="section" id="section" className="border p-3 rounded-md w-full">
+    <option>Select Section</option>
+    <option>Politics</option>
+    <option>Business</option>
+  </select>
+
+  <select name="edition" id="edition" className="border p-3 rounded-md w-full">
+    <option>Morning Edition</option>
+    <option>Evening Edition</option>
+  </select>
+</div>
+
 
       <PrioritySelector priority={priority} setPriority={setPriority} />
 
-      <textarea name="lead" placeholder="Write the lead paragraph..." className="w-full border p-3 rounded-md mb-4" rows="2" />
-      <textarea name="body" placeholder="Continue with the article body..." className="w-full border p-3 rounded-md mb-6" rows="5" />
+      <textarea name="lead"id='lead' placeholder="Write the lead paragraph..." className="w-full border p-3 rounded-md mb-4" rows="2" />
+      <textarea name="body" id='body'placeholder="Continue with the article body..." className="w-full border p-3 rounded-md mb-6" rows="5" />
 
       <div className="flex justify-between mb-6">
-        <button type="button" className="bg-blue-900 text-white px-6 py-2 rounded-md">SAVE DRAFT</button>
-        <button type="submit" className="bg-yellow-400 text-black font-semibold px-6 py-2 rounded-md">SUBMIT FOR REVIEW</button>
-        <button type="submit" className="bg-red-600 text-white px-6 py-2 rounded-md">PUBLISH NOW</button>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault()
+            const formData = Object.fromEntries(new FormData(e.target.form))
+            formData.priority = priority
+            formData.previewStyle = previewStyle
+            formData.action = 'draft'
+            if (file) {
+              formData.fileName = file.name
+              formData.fileSize = file.size
+            }
+            onSubmit(formData)
+          }}
+          className="bg-blue-900 text-white px-6 py-2 rounded-md hover:bg-blue-800 transition-colors"
+        >
+          SAVE DRAFT
+        </button>
+        <button
+          type="submit"
+          onClick={(e) => {
+            const form = e.target.form
+            const hiddenInput = document.createElement('input')
+            hiddenInput.type = 'hidden'
+            hiddenInput.name = 'action'
+            hiddenInput.value = 'review'
+            form.appendChild(hiddenInput)
+          }}
+          className="bg-yellow-400 text-black font-semibold px-6 py-2 rounded-md hover:bg-yellow-500 transition-colors"
+        >
+          SUBMIT FOR REVIEW
+        </button>
+        <button
+          type="submit"
+          onClick={(e) => {
+            const form = e.target.form
+            const hiddenInput = document.createElement('input')
+            hiddenInput.type = 'hidden'
+            hiddenInput.name = 'action'
+            hiddenInput.value = 'publish'
+            form.appendChild(hiddenInput)
+          }}
+          className="bg-red-600 text-white px-6 py-2 rounded-md hover:bg-red-700 transition-colors"
+        >
+          PUBLISH NOW
+        </button>
       </div>
 
       <PreviewToggle previewStyle={previewStyle} setPreviewStyle={setPreviewStyle} />
