@@ -1,8 +1,9 @@
 import { initializeApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getDatabase } from 'firebase/database';
+import { getStorage } from 'firebase/storage';
 
-let app, auth, db, provider;
+let app, auth, db, provider, storage;
 
 try {
   const firebaseConfig = {
@@ -18,12 +19,12 @@ try {
 
   app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
   auth = getAuth(app);
-
-    db = getDatabase(app);
-   provider = new GoogleAuthProvider();
+  db = getDatabase(app);
+  storage = getStorage(app);
+  provider = new GoogleAuthProvider();
   } catch (error) {
   console.error("[Firebase Init] ❌ ERROR initializing Firebase:");
   console.error("Error Message:", error.message);
   console.error("Error Code:", error.code);
 }
-export { app, auth, db, provider };
+export { app, auth, db, provider, storage };
