@@ -1,12 +1,16 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 
 const MediaHubRegistration = () => {
+  const router = useRouter();
   const [isPublisher, setIsPublisher] = useState(true);
   const [profilePicPreview, setProfilePicPreview] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+ 
+
   const [formData, setFormData] = useState({
     // Publisher fields
     companyName: '',
@@ -26,6 +30,25 @@ const MediaHubRegistration = () => {
     confirmPassword: '',
     agreeToTerms: false
   });
+
+  
+  // Load Google Sign-In script
+  useEffect(() => {
+    const loadGoogleScript = () => {
+      if (typeof window !== 'undefined' && !window.google) {
+        const script = document.createElement('script');
+        script.src = 'https://accounts.google.com/gsi/client';
+        script.async = true;
+        script.defer = true;
+        script.onload = () => {
+          console.log('✅ Google Sign-In script loaded');
+        };
+        document.head.appendChild(script);
+      }
+    };
+
+    loadGoogleScript();
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -148,72 +171,85 @@ const MediaHubRegistration = () => {
   }
 };
   const handleGoogleCallback = async (response) => {
-  try {
-    const credential = response.credential; // ID token from Google
-    const payload = JSON.parse(atob(credential.split('.')[1]));
+    setIsLoading(true);
+    
+    try {
+      const credential = response.credential; // ID token from Google
+      const payload = JSON.parse(atob(credential.split('.')[1]));
 
-    console.log("✅ Google JWT Payload:", payload);
+      console.log("✅ Google JWT Payload:", payload);
 
-    const res = await fetch('/api/google-signup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        token: credential,
-        role: isPublisher ? 'publisher' : 'reader',
-        profilePicture: payload.picture,
-        firstName: payload.given_name,
-        lastName: payload.family_name,
-      }),
-    });
-
-    const result = await res.json();
-    console.log("✅ Server Response:", result);
-
-    if (res.ok) {
-      alert("✅ Google Sign-Up successful!");
-
-      const redirectUrl = isPublisher ? "/print-media" : "/news-reader";
-      router.push(`http://localhost:3000${redirectUrl}`);
-    } else {
-      alert(result.error || "Google registration failed.");
-    }
-  } catch (error) {
-    console.error("❌ Google callback error:", error.message);
-    alert("Google sign-up failed.");
-  }
-};
-
-
-const handleGoogleSignUp = async () => {
-  setIsLoading(true);
-  try {
-    if (typeof window !== 'undefined' && window.google) {
-      window.google.accounts.id.initialize({
-        client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
-        callback: handleGoogleCallback,
+      const res = await fetch('/api/google-signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token: credential,
+          role: isPublisher ? 'publisher' : 'reader',
+          profilePicture: payload.picture,
+          firstName: payload.given_name,
+          lastName: payload.family_name,
+        }),
       });
-      window.google.accounts.id.prompt();
-    } else {
-      const script = document.createElement('script');
-      script.src = 'https://accounts.google.com/gsi/client';
-      script.async = true;
-      script.defer = true;
-      script.onload = () => {
+
+      const result = await res.json();
+      console.log("✅ Server Response:", result);
+
+      if (res.ok) {
+        alert("✅ Google Sign-Up successful! Please check your email to verify your account.");
+        resetForm();
+
+        const redirectUrl = isPublisher ? "/print-media" : "/news-reader";
+        router.push(redirectUrl);
+      } else {
+        alert(result.error || "Google registration failed.");
+      }
+    } catch (error) {
+      console.error("❌ Google callback error:", error.message);
+      alert("Google sign-up failed. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+
+ const handleGoogleSignUp = async () => {
+    if (!formData.agreeToTerms) {
+      alert('Please agree to the terms and conditions first.');
+      return;
+    }
+
+    try {
+      if (typeof window !== 'undefined' && window.google) {
         window.google.accounts.id.initialize({
           client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
           callback: handleGoogleCallback,
+          auto_select: false,
+          cancel_on_tap_outside: true
         });
-        window.google.accounts.id.prompt();
-      };
-      document.head.appendChild(script);
+        
+        window.google.accounts.id.prompt((notification) => {
+          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+            console.log('Google Sign-In prompt not displayed or skipped');
+            // Fallback to renderButton
+            window.google.accounts.id.renderButton(
+              document.getElementById('google-signin-button'),
+              { 
+                theme: 'outline', 
+                size: 'large',
+                text: 'signup_with',
+                width: 250
+              }
+            );
+          }
+        });
+      } else {
+        alert("Google Sign-In is not available. Please try regular registration.");
+      }
+    } catch (error) {
+      console.error('❌ Google Sign-Up error:', error);
+      alert("Google sign-up failed. Please try regular registration.");
     }
-  } catch (error) {
-    console.error('❌ Google Sign-Up error:', error);
-    alert("Google sign-up failed. Please try regular registration.");
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
 
 
 
