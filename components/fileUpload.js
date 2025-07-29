@@ -1,6 +1,6 @@
 import React, { useState, useRef } from "react"
 
-export default function FileUpload({ setFile, uploadProgress }) {
+export default function FileUpload({ setFile, uploadProgress, onPreview }) {
   const [selectedFile, setSelectedFile] = useState(null)
   const [error, setError] = useState("")
   const [isDragOver, setIsDragOver] = useState(false)
@@ -19,7 +19,7 @@ export default function FileUpload({ setFile, uploadProgress }) {
       }
 
       // Validate file size (max 10MB)
-      const maxSize = 10 * 1024 * 1024 // 10MB in bytes
+      const maxSize = 10 * 1024 * 1024
       if (file.size > maxSize) {
         setError("File size must be less than 10MB")
         setSelectedFile(null)
@@ -29,6 +29,12 @@ export default function FileUpload({ setFile, uploadProgress }) {
 
       setSelectedFile(file)
       setFile(file)
+      
+      // Create preview URL for immediate preview
+      if (onPreview) {
+        const previewUrl = URL.createObjectURL(file)
+        onPreview(previewUrl)
+      }
     }
   }
 
@@ -112,16 +118,35 @@ export default function FileUpload({ setFile, uploadProgress }) {
             <p className="text-xs text-gray-500 mb-4">
               Size: {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
             </p>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation()
-                removeFile()
-              }}
-              className="inline-flex items-center px-3 py-1 border border-red-300 text-sm font-medium rounded-md text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500"
-            >
-              Remove File
-            </button>
+            <div className="flex space-x-2">
+              {onPreview && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    const previewUrl = URL.createObjectURL(selectedFile)
+                    onPreview(previewUrl)
+                  }}
+                  className="inline-flex items-center px-3 py-1 border border-blue-300 text-sm font-medium rounded-md text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                  Preview
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  removeFile()
+                }}
+                className="inline-flex items-center px-3 py-1 border border-red-300 text-sm font-medium rounded-md text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500"
+              >
+                Remove File
+              </button>
+            </div>
           </div>
         ) : (
           <div>
