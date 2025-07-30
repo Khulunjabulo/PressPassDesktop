@@ -392,10 +392,7 @@ const MediaHubRegistration = () => {
     }
   };
 
-  // Don't forget to return your JSX...
-  // (Your return statement was missing in the original code)
-
-
+  
   return (
     <div className="bg-gray-50 min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-4xl bg-white rounded-2xl shadow-xl overflow-hidden">
@@ -789,7 +786,7 @@ const MediaHubRegistration = () => {
             <div className="mt-6 text-center text-sm text-blue-700">
               <p>
                 Already have an account?{' '}
-                <a href="#" className="text-blue-600 font-medium hover:underline">
+                <a href="/signin" className="text-blue-600 font-medium hover:underline">
                   Sign in here
                 </a>
               </p>

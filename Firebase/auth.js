@@ -72,15 +72,17 @@ export const onUserChanged = (callback) => {
   return onAuthStateChanged(auth, callback)
 }
 
-import { getDatabase, ref, get } from "firebase/database";
+import { getFirestore, doc, getDoc } from "firebase/firestore";
 
 export const getUserRole = async (uid) => {
   try {
-    const dbRef = ref(getDatabase(), `users/${uid}/role`);
-    const snapshot = await get(dbRef);
+    const db = getFirestore();
+    const userDocRef = doc(db, 'users', uid);
+    const userDocSnap = await getDoc(userDocRef);
 
-    if (snapshot.exists()) {
-      return snapshot.val(); 
+    if (userDocSnap.exists()) {
+      const userData = userDocSnap.data();
+      return userData.role || "guest";
     } else {
       console.warn("No role found for user.");
       return "guest";
@@ -88,5 +90,42 @@ export const getUserRole = async (uid) => {
   } catch (error) {
     console.error("Failed to fetch user role:", error);
     return "guest";
+  }
+};
+
+export const getUserData = async (uid) => {
+  try {
+    const db = getFirestore();
+    const userDocRef = doc(db, 'users', uid);
+    const userDocSnap = await getDoc(userDocRef);
+
+    if (userDocSnap.exists()) {
+      return userDocSnap.data();
+    } else {
+      console.warn("No user data found.");
+      return null;
+    }
+  } catch (error) {
+    console.error("Failed to fetch user data:", error);
+    return null;
+  }
+};
+
+export const getUserProfile = async (uid, role) => {
+  try {
+    const db = getFirestore();
+    const collection = role === 'publisher' ? 'publishers' : 'readers';
+    const profileDocRef = doc(db, collection, uid);
+    const profileDocSnap = await getDoc(profileDocRef);
+
+    if (profileDocSnap.exists()) {
+      return profileDocSnap.data();
+    } else {
+      console.warn(`No ${role} profile found.`);
+      return null;
+    }
+  } catch (error) {
+    console.error(`Failed to fetch ${role} profile:`, error);
+    return null;
   }
 };

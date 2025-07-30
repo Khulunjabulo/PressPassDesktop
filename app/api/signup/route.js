@@ -67,9 +67,14 @@ export async function POST(request) {
 
     console.log('✅ Validation passed. Preparing user data...');
 
+    // Generate role-specific UID
+    const roleSpecificUid = `${role}_${uid}`;
+    console.log('🆔 Generated role-specific UID:', roleSpecificUid);
+
     // Prepare base user data
     const userData = {
-      uid,
+      originalUid: uid, // Store original Firebase Auth UID for reference
+      uid: roleSpecificUid,
       email: email.toLowerCase().trim(),
       firstName: firstName.trim(),
       lastName: lastName?.trim() || '',
@@ -80,9 +85,8 @@ export async function POST(request) {
       isActive: true,
     };
 
-    // Add publisher-specific fields if role is publisher
     if (role === 'publisher') {
-      console.log('📋 Adding publisher-specific fields...');
+      console.log('📋 Processing publisher signup...');
       
       // Validate publisher required fields
       if (!companyName || !industry || !publicationType || !audienceType) {
@@ -96,83 +100,49 @@ export async function POST(request) {
         );
       }
 
-      userData.publisherData = {
-        companyName: companyName.trim(),
-        industry: industry.trim(),
-        companyWebsite: companyWebsite?.trim() || null,
-        jobTitle: jobTitle?.trim() || '',
-        phone: phone?.trim() || null,
-        publicationType: publicationType.trim(),
-        audienceType: audienceType.trim(),
-        monthlyReadership: monthlyReadership ? parseInt(monthlyReadership) : null,
-        isVerified: false,
-        subscriptionStatus: 'trial',
-      };
-    }
+      // Add publisher-specific fields
+      userData.companyName = companyName.trim();
+      userData.industry = industry.trim();
+      userData.companyWebsite = companyWebsite?.trim() || null;
+      userData.jobTitle = jobTitle?.trim() || '';
+      userData.phone = phone?.trim() || null;
+      userData.publicationType = publicationType.trim();
+      userData.audienceType = audienceType.trim();
+      userData.monthlyReadership = monthlyReadership ? parseInt(monthlyReadership) : null;
+      userData.isVerified = false;
+      userData.subscriptionStatus = 'trial';
+      userData.totalArticles = 0;
+      userData.totalViews = 0;
 
-    console.log('💾 Saving user data to Firestore...');
-    console.log('📄 Final userData:', JSON.stringify(userData, null, 2));
+      console.log('💾 Saving publisher data to Firestore...');
+      console.log('📄 Final publisher userData:', JSON.stringify(userData, null, 2));
 
-    // Save to Firestore
-    const userDocRef = doc(db, 'users', uid);
-    await setDoc(userDocRef, userData);
+      // Save to publishers collection only
+      const publisherDocRef = doc(db, 'publishers', roleSpecificUid);
+      await setDoc(publisherDocRef, userData);
 
-    console.log('✅ User data saved successfully to Firestore');
+      console.log('✅ Publisher data saved successfully to Firestore');
 
-    // If publisher, also create a separate publisher profile document
-    if (role === 'publisher') {
-      console.log('📋 Creating publisher profile document...');
+    } else if (role === 'reader') {
+      console.log('👤 Processing reader signup...');
       
-      const publisherProfileRef = doc(db, 'publishers', uid);
-      const publisherProfile = {
-        uid,
-        email: userData.email,
-        contactName: `${firstName} ${lastName}`.trim(),
-        companyName: userData.publisherData.companyName,
-        industry: userData.publisherData.industry,
-        companyWebsite: userData.publisherData.companyWebsite,
-        jobTitle: userData.publisherData.jobTitle,
-        phone: userData.publisherData.phone,
-        publicationType: userData.publisherData.publicationType,
-        audienceType: userData.publisherData.audienceType,
-        monthlyReadership: userData.publisherData.monthlyReadership,
-        profilePicture: userData.profilePicture,
-        isVerified: false,
-        subscriptionStatus: 'trial',
-        totalArticles: 0,
-        totalViews: 0,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
+      // Add reader-specific fields
+      userData.preferences = {
+        categories: [],
+        notifications: true,
       };
+      userData.readingHistory = [];
+      userData.bookmarks = [];
+      userData.following = [];
 
-      await setDoc(publisherProfileRef, publisherProfile);
-      console.log('✅ Publisher profile created successfully');
-    }
+      console.log('💾 Saving reader data to Firestore...');
+      console.log('📄 Final reader userData:', JSON.stringify(userData, null, 2));
 
-    // If reader, create reader profile
-    if (role === 'reader') {
-      console.log('👤 Creating reader profile document...');
-      
-      const readerProfileRef = doc(db, 'readers', uid);
-      const readerProfile = {
-        uid,
-        email: userData.email,
-        firstName: userData.firstName,
-        lastName: userData.lastName,
-        profilePicture: userData.profilePicture,
-        preferences: {
-          categories: [],
-          notifications: true,
-        },
-        readingHistory: [],
-        bookmarks: [],
-        following: [],
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      };
+      // Save to readers collection only
+      const readerDocRef = doc(db, 'readers', roleSpecificUid);
+      await setDoc(readerDocRef, userData);
 
-      await setDoc(readerProfileRef, readerProfile);
-      console.log('✅ Reader profile created successfully');
+      console.log('✅ Reader data saved successfully to Firestore');
     }
 
     console.log('🎉 Registration completed successfully');
@@ -181,7 +151,8 @@ export async function POST(request) {
       success: true, 
       message: 'User registered successfully',
       user: {
-        uid,
+        uid: roleSpecificUid,
+        originalUid: uid,
         email: userData.email,
         firstName: userData.firstName,
         lastName: userData.lastName,

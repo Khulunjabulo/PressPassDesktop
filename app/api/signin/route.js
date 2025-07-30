@@ -1,175 +1,215 @@
-// File: /app/api/signin/route.js
-
+// app/api/signin/route.js
+import { getFirestore, doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { getApps, initializeApp } from 'firebase/app';
+import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import { NextResponse } from 'next/server';
-import { initializeApp, getApps } from 'firebase/app';
-import { getFirestore, doc, setDoc } from 'firebase/firestore';
-import { getAuth, sendEmailVerification } from 'firebase/auth';
-import { getAdminAuth } from '../../../lib/firebaseAdminLazy';
 
-// Firebase configuration (same as your signup route)
 const firebaseConfig = {
-  apiKey: "AIzaSyBGunI4nNpayJebuPecdxY1Ww_K6xEZDR8",
-  authDomain: "press-pass-7c6f6.firebaseapp.com",
-  projectId: "press-pass-7c6f6",
-  storageBucket: "press-pass-7c6f6.appspot.com",
-  messagingSenderId: "51480223395",
-  appId: "1:51480223395:web:a84c3c28b1afc260e22916",
-  measurementId: "G-BCFYT2PYB9",
-  databaseURL: "https://press-pass-7c6f6-default-rtdb.firebaseio.com"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Initialize Firebase
-let app;
-let db;
-let auth;
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+const db = getFirestore(app);
+const auth = getAuth(app);
 
-try {
-  if (!getApps().length) {
-    app = initializeApp(firebaseConfig);
-    console.log('[Firebase] ✅ Initialized for Google signup');
-  } else {
-    app = getApps()[0];
-  }
+export async function POST(request) {
+  console.log('🔐 /api/signin POST route called');
 
-  db = getFirestore(app);
-  auth = getAuth(app);
-} catch (error) {
-  console.error('[Firebase] ❌ Initialization error:', error);
-}
-
-export async function POST(req) {
   try {
-    if (!db || !auth) {
-      return NextResponse.json({
-        success: false,
-        error: 'Firebase not initialized',
-      }, { status: 500 });
+    const body = await request.json();
+    console.log('📊 Request body:', { email: body.email, role: body.role });
+
+    const { email, password, role } = body;
+
+    // Validate required fields
+    if (!email || !password || !role) {
+      console.warn('❌ Missing required fields');
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Missing required fields: email, password, role' 
+        },
+        { status: 400 }
+      );
     }
 
-    const { token, role = 'reader', profilePicture, firstName, lastName } = await req.json();
-    
-    if (!token) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Missing ID token' 
-      }, { status: 400 });
+    // Validate role
+    if (!['reader', 'publisher'].includes(role)) {
+      console.warn('❌ Invalid role:', role);
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Invalid role. Must be either "reader" or "publisher"' 
+        },
+        { status: 400 }
+      );
     }
 
-    // Verify the Google ID token using Firebase Admin SDK
-    let decodedToken;
-    try {
-      const adminAuth = await getAdminAuth();
-      decodedToken = await adminAuth.verifyIdToken(token);
-      console.log('✅ Token verified with Admin SDK:', decodedToken.email);
-    } catch (verifyError) {
-      console.error('[Token Verification] ❌ Failed:', verifyError);
-      
-      // Fallback: decode JWT manually
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        decodedToken = {
-          uid: payload.sub,
-          email: payload.email,
-          name: payload.name,
-          picture: payload.picture,
-          given_name: payload.given_name,
-          family_name: payload.family_name
-        };
-        console.log('✅ Fallback JWT decode successful:', decodedToken.email);
-      } catch (decodeError) {
-        console.error('[Token] ❌ Failed to decode token:', decodeError);
-        return NextResponse.json({
-          success: false,
-          error: 'Invalid token format'
-        }, { status: 401 });
-      }
-    }
+    console.log('🔍 Processing signin for:', email, 'Role:', role);
 
-    const { uid, email, name, picture, given_name, family_name } = decodedToken;
-
-    if (!uid || !email) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Invalid token: UID or email missing' 
-      }, { status: 401 });
-    }
-
-    console.log('✅ Verified Google user:', email, uid);
-
-    // Create Google credential and sign in user
-    const credential = GoogleAuthProvider.credentialFromResult({ credential: token });
+    // First, authenticate with Firebase Auth
     let firebaseUser;
-    
     try {
-      // For Google users, we need to create them in Firebase Auth first
-      const userCredential = await signInWithCredential(auth, credential);
+      const userCredential = await signInWithEmailAndPassword(auth, email.toLowerCase().trim(), password);
       firebaseUser = userCredential.user;
-      
-      // Send email verification to Google users too
-      if (!firebaseUser.emailVerified) {
-        await sendEmailVerification(firebaseUser);
-        console.log('[Auth] 📧 Verification email sent to Google user:', email);
-      }
+      console.log('✅ Firebase Auth successful');
     } catch (authError) {
-      console.log('[Auth] User might already exist, continuing with data storage...');
+      console.error('❌ Firebase Auth failed:', authError.code);
+      
+      let errorMessage = 'Invalid email or password';
+      if (authError.code === 'auth/user-not-found') {
+        errorMessage = 'No account found with this email address';
+      } else if (authError.code === 'auth/wrong-password') {
+        errorMessage = 'Incorrect password';
+      } else if (authError.code === 'auth/invalid-email') {
+        errorMessage = 'Invalid email address format';
+      } else if (authError.code === 'auth/user-disabled') {
+        errorMessage = 'This account has been disabled';
+      } else if (authError.code === 'auth/too-many-requests') {
+        errorMessage = 'Too many failed attempts. Please try again later';
+      }
+      
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: errorMessage 
+        },
+        { status: 401 }
+      );
     }
 
-    // Generate userId
-    const timestamp = Date.now();
-    const randomNum = Math.floor(Math.random() * 10000);
-    const userId = `${role}_${timestamp}_${randomNum}`;
-    const collectionName = role === 'publisher' ? 'publishers' : 'readers';
+    // Generate role-specific UID to look up user data
+    const roleSpecificUid = `${role}_${firebaseUser.uid}`;
+    console.log('🆔 Looking up role-specific UID:', roleSpecificUid);
 
-    // Prepare user data based on role
-    const userData = {
-      userId,
-      type: role,
-      email,
-      agreeToTerms: true, // Assume Google users agree to terms
-      createdAt: new Date().toISOString(),
-      emailVerified: false, // Will be true once they verify the email we send
-      isGoogleUser: true,
-      googleId: uid,
-      ...(role === 'publisher'
-        ? {
-            companyName: '',
-            industry: '',
-            companyWebsite: '',
-            contactName: name || `${given_name} ${family_name}`.trim(),
-            jobTitle: '',
-            phone: '',
-            publicationType: '',
-            audienceType: '',
-            monthlyReadership: null,
-          }
-        : {
-            firstName: firstName || given_name || '',
-            lastName: lastName || family_name || '',
-            password: null, // No password for Google users
-            profilePicture: profilePicture || picture || '',
-          }),
+    // Get user data from role-specific collection
+    const collectionName = role === 'reader' ? 'readers' : 'publishers';
+    const userDocRef = doc(db, collectionName, roleSpecificUid);
+    const userDocSnap = await getDoc(userDocRef);
+
+    if (!userDocSnap.exists()) {
+      console.warn('❌ User not found in', collectionName, 'collection');
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: `No ${role} account found. Please check your role selection or sign up first.` 
+        },
+        { status: 404 }
+      );
+    }
+
+    const userData = userDocSnap.data();
+    console.log('📄 User data retrieved successfully');
+
+    // Check if account is active
+    if (!userData.isActive) {
+      console.warn('❌ Account is inactive');
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Your account is currently inactive. Please contact support.' 
+        },
+        { status: 403 }
+      );
+    }
+
+    // Update last login timestamp
+    try {
+      await updateDoc(userDocRef, {
+        lastLoginAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+      console.log('✅ Last login timestamp updated');
+    } catch (updateError) {
+      console.warn('⚠️ Could not update last login timestamp:', updateError);
+      // Don't fail the signin for this
+    }
+
+    // Prepare response data (exclude sensitive information)
+    const responseUser = {
+      uid: userData.uid,
+      originalUid: userData.originalUid,
+      email: userData.email,
+      firstName: userData.firstName,
+      lastName: userData.lastName,
+      role: userData.role,
+      profilePicture: userData.profilePicture,
+      createdAt: userData.createdAt,
+      isActive: userData.isActive,
     };
 
-    console.log(`[Firestore] Saving Google user to ${collectionName}/${userId}...`);
-    await setDoc(doc(db, collectionName, userId), userData);
-    console.log(`[Firestore] ✅ Google user data stored at ${collectionName}/${userId}`);
+    // Add role-specific data
+    if (role === 'publisher') {
+      responseUser.companyName = userData.companyName;
+      responseUser.industry = userData.industry;
+      responseUser.companyWebsite = userData.companyWebsite;
+      responseUser.jobTitle = userData.jobTitle;
+      responseUser.phone = userData.phone;
+      responseUser.publicationType = userData.publicationType;
+      responseUser.audienceType = userData.audienceType;
+      responseUser.monthlyReadership = userData.monthlyReadership;
+      responseUser.isVerified = userData.isVerified;
+      responseUser.subscriptionStatus = userData.subscriptionStatus;
+      responseUser.totalArticles = userData.totalArticles;
+      responseUser.totalViews = userData.totalViews;
+    } else if (role === 'reader') {
+      responseUser.preferences = userData.preferences;
+      responseUser.readingHistory = userData.readingHistory || [];
+      responseUser.bookmarks = userData.bookmarks || [];
+      responseUser.following = userData.following || [];
+    }
 
-    return NextResponse.json({
-      success: true,
-      message: 'Google Sign-Up successful! Please check your email to verify your account.',
-      userId,
-      user: {
-        email,
-        name: name || `${given_name} ${family_name}`.trim(),
-        picture: picture || profilePicture
-      }
-    }, { status: 201 });
+    console.log('🎉 Sign-in completed successfully');
+
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Sign-in successful',
+      user: responseUser
+    });
 
   } catch (error) {
-    console.error('❌ Google Sign-up error:', error);
-    return NextResponse.json({ 
-      success: false, 
-      error: `Google registration failed: ${error.message}` 
-    }, { status: 500 });
+    console.error('❌ Error in /api/signin:', error);
+    
+    // Handle specific Firestore errors
+    if (error.code === 'permission-denied') {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Permission denied. Check Firestore security rules.' 
+        },
+        { status: 403 }
+      );
+    }
+    
+    if (error.code === 'unavailable') {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Database temporarily unavailable. Please try again.' 
+        },
+        { status: 503 }
+      );
+    }
+
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: 'Internal server error: ' + error.message 
+      },
+      { status: 500 }
+    );
   }
+}
+
+// Handle other HTTP methods
+export async function GET() {
+  return NextResponse.json(
+    { error: 'Method not allowed. Only POST is supported.' },
+    { status: 405 }
+  );
 }
