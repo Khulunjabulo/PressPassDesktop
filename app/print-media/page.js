@@ -115,10 +115,10 @@ export default function Home() {
               </thead>
               <tbody>
                 {[
-                  ['News24', '121', '112'],
-                  ['The Herald', '114', '106'],
-                  ['NEWS SUD', '108', '105'],
-                  ['The Mercury', '103', '100']
+                  ['News24', '121,000', '11,200'],
+                  ['The Herald', '114,000', '10,600'],
+                  ['NEWS SUD', '108,000', '10,500'],
+                  ['The Mercury', '103,000', '10,000']
                 ].map(([name, views, earnings], idx) => (
                   <tr key={idx} className="border-t">
                     <td className="p-3 font-semibold">{name}</td>
