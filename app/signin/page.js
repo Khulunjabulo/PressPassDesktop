@@ -25,7 +25,7 @@ export default function SignIn() {
     if (userRole === "reader") {
       router.push("/news-reader")
     } else if (userRole === "publisher") {
-      router.push("/publisher-dashboard") // Updated route for publisher
+      router.push("/print-media/overview") 
     }
   }
 

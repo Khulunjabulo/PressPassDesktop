@@ -52,8 +52,8 @@ export default function PrintMediaHeader() {
             <Image  
               src="/Presspass.png"
               alt="Press Pass logo"
-              width={110}
-              height={25}
+              width={200}
+              height={100}
               priority
             />
           </Link>
