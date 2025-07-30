@@ -4,8 +4,8 @@ import { useState } from "react"
 import Link from "next/link"
 import { Newspaper, FilePen } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { signInWithEmail, signInWithGoogle, setAuthPersistence } from "@/Firebase/auth"
-import { getDatabase, ref, get } from "firebase/database"
+import { signInWithGoogle, setAuthPersistence } from "@/Firebase/auth"
+import { getFirestore, doc, getDoc } from "firebase/firestore"
 import { getAuth } from "firebase/auth"
 import Image from "next/image"
 
@@ -18,14 +18,14 @@ export default function SignIn() {
   const [error, setError] = useState("")
   const router = useRouter()
 
-  const db = getDatabase()
+  const db = getFirestore()
   const auth = getAuth()
 
   const redirectToRoleHome = (userRole) => {
     if (userRole === "reader") {
       router.push("/news-reader")
-    } else if (userRole === "buyer") {
-      router.push("/print-media/overview")
+    } else if (userRole === "publisher") {
+      router.push("/publisher-dashboard") // Updated route for publisher
     }
   }
 
@@ -35,26 +35,38 @@ export default function SignIn() {
     setError("")
     try {
       await setAuthPersistence(keepSignedIn)
-      const userCredential = await signInWithEmail(email, password)
-      const firebaseUser = userCredential.user
+      
+      // Call the sign-in API endpoint
+      const response = await fetch('/api/signin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email.toLowerCase().trim(),
+          password,
+          role
+        }),
+      })
 
-      const userRef = ref(db, `users/${firebaseUser.uid}`)
-      const snapshot = await get(userRef)
+      const data = await response.json()
 
-      if (!snapshot.exists()) {
-        setError("Account not found. Please sign up first.")
+      if (!data.success) {
+        setError(data.error || "Failed to sign in.")
         return
       }
 
-      const userData = snapshot.val()
-      if (userData.role !== role) {
-        setError(`You signed up as a ${userData.role}. Please sign in as that role or create a new account.`)
-        return
+      console.log('✅ Sign-in successful:', data.user)
+      
+      // Store user data in localStorage or session storage for the app to use
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('currentUser', JSON.stringify(data.user))
       }
-
-      redirectToRoleHome(userData.role)
+      
+      redirectToRoleHome(data.user.role)
     } catch (err) {
-      setError(err.message || "Failed to sign in.")
+      console.error('❌ Sign-in error:', err)
+      setError(err.message || "Failed to sign in. Please try again.")
     } finally {
       setLoading(false)
     }
@@ -68,23 +80,38 @@ export default function SignIn() {
       const result = await signInWithGoogle()
       const firebaseUser = result.user
 
-      const userRef = ref(db, `users/${firebaseUser.uid}`)
-      const snapshot = await get(userRef)
+      // Generate role-specific UID to check user data
+      const roleSpecificUid = `${role}_${firebaseUser.uid}`
+      const collectionName = role === 'reader' ? 'readers' : 'publishers'
+      
+      // Check if user exists in the role-specific collection
+      const userDocRef = doc(db, collectionName, roleSpecificUid)
+      const userDocSnap = await getDoc(userDocRef)
 
-      if (!snapshot.exists()) {
-        setError("Google account not linked to a user. Please sign up first.")
+      if (!userDocSnap.exists()) {
+        setError(`No ${role} account found with this Google account. Please sign up first or check your role selection.`)
         return
       }
 
-      const userData = snapshot.val()
-      if (userData.role !== role) {
-        setError(`You signed up as a ${userData.role}. Please sign in as that role or sign up again.`)
+      const userData = userDocSnap.data()
+      
+      // Check if account is active
+      if (!userData.isActive) {
+        setError("Your account is currently inactive. Please contact support.")
         return
       }
 
+      console.log('✅ Google sign-in successful:', userData)
+      
+      // Store user data in localStorage for the app to use
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('currentUser', JSON.stringify(userData))
+      }
+      
       redirectToRoleHome(userData.role)
     } catch (err) {
-      setError(err.message || "Google sign-in failed.")
+      console.error('❌ Google sign-in error:', err)
+      setError(err.message || "Google sign-in failed. Please try again.")
     } finally {
       setLoading(false)
     }
@@ -136,13 +163,17 @@ export default function SignIn() {
               className="bg-blue-500 border border-white px-2 py-1 rounded text-white"
             >
               <option value="reader">News Reader</option>
-              <option value="buyer">Print Media</option>
+              <option value="publisher">Publisher</option>
             </select>
           </div>
 
           <div className="flex items-center justify-between text-sm">
             <label className="flex items-center gap-2">
-              <input type="checkbox" checked={keepSignedIn} onChange={(e) => setKeepSignedIn(e.target.checked)} />
+              <input 
+                type="checkbox" 
+                checked={keepSignedIn} 
+                onChange={(e) => setKeepSignedIn(e.target.checked)} 
+              />
               Keep me signed in
             </label>
             <Link href="/ForgotPassword" className="text-sm text-white underline hover:text-gray-200">
@@ -153,7 +184,7 @@ export default function SignIn() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-white text-blue-700 font-bold py-2 rounded-md hover:bg-gray-100 transition"
+            className="w-full bg-white text-blue-700 font-bold py-2 rounded-md hover:bg-gray-100 transition disabled:opacity-50"
           >
             {loading ? "Signing in..." : "Sign In"}
           </button>
@@ -163,7 +194,7 @@ export default function SignIn() {
           <button
             onClick={handleGoogleSignIn}
             disabled={loading}
-            className="w-full bg-white text-blue-700 py-2 rounded-md hover:bg-gray-100 font-bold transition flex items-center justify-center gap-2"
+            className="w-full bg-white text-blue-700 py-2 rounded-md hover:bg-gray-100 font-bold transition flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {/* Google Icon */}
             <svg className="h-5 w-5" viewBox="0 0 533.5 544.3" xmlns="http://www.w3.org/2000/svg">
@@ -184,11 +215,11 @@ export default function SignIn() {
                 fill="#EA4335"
               />
             </svg>
-            Sign in with Google
+            {loading ? "Signing in..." : "Sign in with Google"}
           </button>
 
           <Link href="/signup" className="text-sm text-white underline text-center hover:text-gray-200">
-            Don’t have an account? Sign Up
+            Don't have an account? Sign Up
           </Link>
         </div>
       </div>
