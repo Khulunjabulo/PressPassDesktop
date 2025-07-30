@@ -46,3 +46,7 @@ html, body {
   height: 100%;
   box-sizing: border-box;
 }
+
+.text-pressblue {
+  color: #329ae1;
+}
