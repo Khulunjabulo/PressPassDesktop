@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import '@fortawesome/fontawesome-free/css/all.min.css';
-
+import "../globals.css";
 import { getAuth, signInWithCustomToken, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { app } from '../../Firebase/firebase';
 
@@ -123,8 +123,8 @@ const MediaHubRegistration = () => {
         console.log('➡️ Navigating to /news-reader');
         router.push('/news-reader');
       } else {
-        console.log('➡️ Navigating to /print-media');
-        router.push('/print-media');
+        console.log('➡️ Navigating to /print-media/overview');
+        router.push('/print-media/overview');
       }
     } catch (error) {
       console.error('❌ Google callback error:', error);
@@ -397,7 +397,7 @@ const MediaHubRegistration = () => {
     <div className="bg-gray-50 min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-4xl bg-white rounded-2xl shadow-xl overflow-hidden">
         <div className="flex flex-col md:flex-row">
-          <div className="md:w-2/5 bg-gradient-to-br from-blue-600 to-indigo-800 text-white p-8 flex flex-col justify-center">
+          <div className="md:w-2/5 bg-gradient-to-br bg-[#329ae1] text-white p-8 flex flex-col justify-center">
             <div className="text-center mb-8">
               <div className="bg-white/20 p-4 rounded-full inline-block mb-4">
                 <img 
@@ -445,7 +445,7 @@ const MediaHubRegistration = () => {
               <button 
                 onClick={handleToggleForm} 
                 className={`flex-1 py-2 px-4 rounded-md text-center font-medium transition ${
-                  isPublisher ? 'bg-blue-600 text-white' : 'text-blue-600'
+                  isPublisher ? 'bg-[#329ae1] text-white' : 'text-black-600'
                 }`}
               >
                 Print Media Registration
@@ -453,7 +453,7 @@ const MediaHubRegistration = () => {
               <button 
                 onClick={handleToggleForm} 
                 className={`flex-1 py-2 px-4 rounded-md text-center font-medium transition ${
-                  !isPublisher ? 'bg-blue-600 text-white' : 'text-blue-600'
+                  !isPublisher ? 'bg-[#329ae1] text-white' : 'text-black-600'
                 }`}
               >
                 News Reader Registration
@@ -466,8 +466,8 @@ const MediaHubRegistration = () => {
                 
                 {/* Company Info */}
                 <div>
-                  <h3 className="text-lg font-semibold text-blue-800 mb-4 flex items-center">
-                    <i className="fas fa-building text-blue-600 mr-2"></i>Company Information
+                  <h3 className="text-lg font-semibold text-black-800 mb-4 flex items-center">
+                    <i className="fas fa-building text-pressblue mr-2"></i>Company Information
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <input 
@@ -506,8 +506,8 @@ const MediaHubRegistration = () => {
                 
                 {/* Contact Info */}
                 <div>
-                  <h3 className="text-lg font-semibold text-blue-800 mb-4 flex items-center">
-                    <i className="fas fa-user-tie text-blue-600 mr-2"></i>Primary Contact
+                  <h3 className="text-lg font-semibold text-black-800 mb-4 flex items-center">
+                    <i className="fas fa-user-tie text-pressblue mr-2"></i>Primary Contact
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <input 
@@ -570,8 +570,8 @@ const MediaHubRegistration = () => {
                 
                 {/* Publication Details */}
                 <div>
-                  <h3 className="text-lg font-semibold text-blue-800 mb-4 flex items-center">
-                    <i className="fas fa-book-open text-blue-600 mr-2"></i>Publication Details
+                  <h3 className="text-lg font-semibold text-black-800 mb-4 flex items-center">
+                    <i className="fas fa-book-open text-pressblue mr-2"></i>Publication Details
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <select 
@@ -630,7 +630,7 @@ const MediaHubRegistration = () => {
                     type="button" 
                     onClick={handlePublisherSubmit}
                     disabled={isLoading}
-                    className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold py-3 px-4 rounded-lg hover:from-blue-700 hover:to-blue-800 transition duration-300 transform hover:-translate-y-0.5 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed mt-4"
+                    className="w-full bg-gradient-to-r bg-[#329ae1] text-white font-semibold py-3 px-4 rounded-lg hover:from-blue-700 hover:to-blue-800 transition duration-300 transform hover:-translate-y-0.5 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed mt-4"
                   >
                     {isLoading ? 'Registering...' : 'Register as Print Media'}
                   </button>
@@ -710,7 +710,7 @@ const MediaHubRegistration = () => {
                       <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
                     </label>
                   </div>
-                  <p className="text-sm text-blue-700 mt-2">Upload profile picture</p>
+                  <p className="text-sm text-pressblue mt-2">Upload profile picture</p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <input 
@@ -776,17 +776,17 @@ const MediaHubRegistration = () => {
                   type="button" 
                   onClick={handleReaderSubmit}
                   disabled={isLoading}
-                  className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold py-3 px-4 rounded-lg hover:from-blue-700 hover:to-blue-800 transition duration-300 transform hover:-translate-y-0.5 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed mt-4"
+                  className="w-full bg-gradient-to-r bg-[#329ae1] text-white font-semibold py-3 px-4 rounded-lg hover:from-blue-700 hover:to-blue-800 transition duration-300 transform hover:-translate-y-0.5 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed mt-4"
                 >
                   {isLoading ? 'Registering...' : 'Register as News Reader'}
                 </button>
               </div>
             )}
 
-            <div className="mt-6 text-center text-sm text-blue-700">
+            <div className="mt-6 text-center text-sm text-black-700">
               <p>
                 Already have an account?{' '}
-                <a href="/signin" className="text-blue-600 font-medium hover:underline">
+                <a href="/signin" className="text-pressblue font-medium hover:underline">
                   Sign in here
                 </a>
               </p>
