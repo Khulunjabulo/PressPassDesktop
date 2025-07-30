@@ -21,15 +21,8 @@ function Stars({ count }) {
 export default function UserReviewsSection() {
   const reviews = userReviews; 
   return (
-    <section className="w-full py-20 bg-[#e6e6e6]">
+    <section className="w-full py-20 bg-gray-50">
       <div className="max-w-7xl mx-auto px-6">
-        <h2 className="text-4xl font-bold text-center text-black mb-4">
-          User Reviews – Newsreader
-        </h2>
-        <p className="text-center text-gray-600 mb-16 max-w-2xl mx-auto">
-          What our readers across South Africa are saying about Press Pass.
-        </p>
-
         <div className="grid md:grid-cols-2 gap-8">
           {reviews.map((r, idx) => (
           <article
