@@ -11,12 +11,25 @@ export default function Publisher() {
     try {
       console.log('Form submitted with data:', formData)
       
-      // Here you would typically send the data to your backend API
-      // For now, we'll just show a success message
-      setSubmissionStatus({
-        type: 'success',
-        message: 'Article submitted successfully!'
+      // Send the data to the stories API endpoint
+      const response = await fetch('/api/stories', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
       })
+
+      const result = await response.json()
+
+      if (response.ok) {
+        setSubmissionStatus({
+          type: 'success',
+          message: result.message || 'Article submitted successfully!'
+        })
+      } else {
+        throw new Error(result.error || 'Failed to submit article')
+      }
       
       // Clear the status after 5 seconds
       setTimeout(() => {
@@ -27,7 +40,7 @@ export default function Publisher() {
       console.error('Error submitting form:', error)
       setSubmissionStatus({
         type: 'error',
-        message: 'Failed to submit article. Please try again.'
+        message: error.message || 'Failed to submit article. Please try again.'
       })
       
       // Clear the status after 5 seconds
