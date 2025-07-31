@@ -19,34 +19,53 @@ export default async function CategoryPage({ params }) {
         </Link>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 px-6 pb-10">
-        {articles.map((article, index) => (
-          <div
-            key={index}
-            className="border rounded-lg p-4 shadow-sm bg-white hover:shadow-md transition"
-          >
-            <h3 className="text-lg font-semibold mb-2">{article.title}</h3>
-            {article.image_url && (
-              <img
-                src={article.image_url}
-                alt={article.title}
-                className="w-full h-48 object-cover rounded mb-3"
-              />
-            )}
-            <p className="text-sm text-gray-700 mb-2">{article.description}</p>
-            <p className="text-xs text-gray-500 mb-2">
-              Source: {article.source_id} |{" "}
-              {new Date(article.pubDate).toLocaleString()}
-            </p>
-            <a
-              href={article.link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 hover:underline text-sm"
+        {articles.map((article, index) => {
+          const isUploadedStory = article.source_id === 'presspass';
+          const readMoreLink = isUploadedStory && article.pdfUrl ? article.pdfUrl : article.link;
+          const publishDate = article.pubDate || article.publishedAt || article.createdAt;
+          
+          return (
+            <div
+              key={index}
+              className="border rounded-lg p-4 shadow-sm bg-white hover:shadow-md transition"
             >
-              Read More →
-            </a>
-          </div>
-        ))}
+              {/* Add indicator for uploaded stories */}
+              {isUploadedStory && (
+                <div className="mb-2">
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    📰 Press Pass Story
+                  </span>
+                </div>
+              )}
+              
+              <h3 className="text-lg font-semibold mb-2">{article.title}</h3>
+              {article.image_url && (
+                <img
+                  src={article.image_url}
+                  alt={article.title}
+                  className="w-full h-48 object-cover rounded mb-3"
+                />
+              )}
+              <p className="text-sm text-gray-700 mb-2">{article.description}</p>
+              <p className="text-xs text-gray-500 mb-2">
+                Source: {article.source_id} |{" "}
+                {publishDate ? new Date(publishDate).toLocaleString() : 'Unknown date'}
+              </p>
+              {readMoreLink ? (
+                <a
+                  href={readMoreLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline text-sm"
+                >
+                  {isUploadedStory && article.pdfUrl ? 'View PDF →' : 'Read More →'}
+                </a>
+              ) : (
+                <span className="text-gray-400 text-sm">No link available</span>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
