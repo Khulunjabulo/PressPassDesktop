@@ -11,12 +11,25 @@ export default function Publisher() {
     try {
       console.log('Form submitted with data:', formData)
       
-      // Here you would typically send the data to your backend API
-      // For now, we'll just show a success message
-      setSubmissionStatus({
-        type: 'success',
-        message: 'Article submitted successfully!'
+      // Send the data to the stories API endpoint
+      const response = await fetch('/api/stories', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
       })
+
+      const result = await response.json()
+
+      if (response.ok) {
+        setSubmissionStatus({
+          type: 'success',
+          message: result.message || 'Article submitted successfully!'
+        })
+      } else {
+        throw new Error(result.error || 'Failed to submit article')
+      }
       
       // Clear the status after 5 seconds
       setTimeout(() => {
@@ -27,7 +40,7 @@ export default function Publisher() {
       console.error('Error submitting form:', error)
       setSubmissionStatus({
         type: 'error',
-        message: 'Failed to submit article. Please try again.'
+        message: error.message || 'Failed to submit article. Please try again.'
       })
       
       // Clear the status after 5 seconds
@@ -40,11 +53,11 @@ export default function Publisher() {
   return (
     <>
       <Header />
-      <div className="min-h-screen bg-gray-50 flex">
+      <div className="h-screen bg-gray-50 flex overflow-hidden">
         <PublisherSidebar />
 
         {/* Main Content */}
-        <main className="flex-1 p-10">
+        <main className="flex-1 p-4 overflow-y-auto">
           {/* Status Messages */}
           {submissionStatus && (
             <div className={`mb-6 p-4 rounded-md ${
@@ -60,10 +73,10 @@ export default function Publisher() {
           <UploadForm onSubmit={handleFormSubmit} />
 
           {/* Footer */}
-          <footer className="text-center mt-8 text-xs text-gray-400">
+          <footer className="text-center mt-4 text-xs text-gray-400">
             <p>Corporate HQ | Terms of Use | Privacy Policy</p>
             <p>ABOUT PRESS-PASS</p>
-            <div className="mt-2 space-x-2">
+            <div className="mt-1 space-x-2">
               <span>🔗</span>
               <span>📘</span>
               <span>🐦</span>

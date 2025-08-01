@@ -33,22 +33,30 @@ export default function NewsGrid({ articles }) {
             
           {/* 3 columns on large screens */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {unique.map((article, index) => (
-              <NewsCard
-                key={index}
-                imageUrl={article.image_url}
-                logoText={(article.source_id || 'News').slice(0, 10)}
-                logoBgColor="#008000"
-                title={article.title || ''}
-                description={article.description || ''}
-                author={
-                  Array.isArray(article.creator)
-                    ? article.creator[0]
-                    : article.creator || 'Unknown'
-                }
-                time={timeAgo(article.pubDate)}
-              />
-            ))}
+            {unique.map((article, index) => {
+              // Check if this is an uploaded story (has source_id as 'presspass')
+              const isUploadedStory = article.source_id === 'presspass';
+              
+              return (
+                <NewsCard
+                  key={index}
+                  imageUrl={article.image_url}
+                  logoText={(article.source_id || 'News').slice(0, 10)}
+                  logoBgColor={isUploadedStory ? "#1f2937" : "#008000"}
+                  title={article.title || ''}
+                  description={article.description || ''}
+                  author={
+                    Array.isArray(article.creator)
+                      ? article.creator[0]
+                      : article.creator || 'Unknown'
+                  }
+                  time={timeAgo(article.pubDate || article.publishedAt || article.createdAt)}
+                  isUploadedStory={isUploadedStory}
+                  pdfUrl={article.pdfUrl}
+                  link={article.link}
+                />
+              );
+            })}
           </div>
 
           {/* Publications */}

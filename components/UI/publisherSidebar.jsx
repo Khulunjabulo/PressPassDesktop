@@ -26,7 +26,7 @@ export default function PublisherSidebar() {
 
 
   return (
-    <aside className="w-64 bg-white shadow-md min-h-screen">
+    <aside className="w-64 bg-white shadow-md h-full flex flex-col">
       <div className="p-6 font-bold text-lg text-blue-600">PressPass</div>
       
       <nav className="px-6 mt-6 space-y-2">
@@ -51,7 +51,7 @@ export default function PublisherSidebar() {
       </nav>
 
       {/* Profile block */}
-      <div className="mt-12 px-6">
+      <div className="mt-auto px-6 pb-6">
         <div className="bg-gray-100 p-4 rounded-lg flex items-center space-x-3">
           <div className="w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center text-white font-bold">DH</div>
           <div>
