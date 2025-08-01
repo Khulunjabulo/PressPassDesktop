@@ -87,8 +87,8 @@ export default function UploadForm({ onSubmit }) {
 
   return (
     <>
-      <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md p-6 w-full">
-        <h2 className="text-xl font-bold mb-4 text-center">Document Upload</h2>
+      <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md p-3 w-full">
+        <h2 className="text-base font-bold mb-2 text-center">Document Upload</h2>
 
         <FileUpload setFile={setFile} uploadProgress={uploadProgress} onPreview={handlePreview} />
 
@@ -99,18 +99,18 @@ export default function UploadForm({ onSubmit }) {
         )}
 
         {/* Form Fields */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <input name="headline" id="headline" placeholder="Enter headline..." className="border p-3 rounded-md w-full" />
-          <input name="byline" id="byline" placeholder="Byline Name" className="border p-3 rounded-md w-full" />
-          <input name="location" id="location" placeholder="City/Town" className="border p-3 rounded-md w-full" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-3">
+          <input name="headline" id="headline" placeholder="Enter headline..." className="border p-1.5 rounded-md w-full text-xs" />
+          <input name="byline" id="byline" placeholder="Byline Name" className="border p-1.5 rounded-md w-full text-xs" />
+          <input name="location" id="location" placeholder="City/Town" className="border p-1.5 rounded-md w-full text-xs" />
           
-          <select name="section" id="section" className="border p-3 rounded-md w-full">
+          <select name="section" id="section" className="border p-1.5 rounded-md w-full text-xs">
             <option>Select Section</option>
             <option>Politics</option>
             <option>Business</option>
           </select>
 
-          <select name="edition" id="edition" className="border p-3 rounded-md w-full">
+          <select name="edition" id="edition" className="border p-1.5 rounded-md w-full text-xs">
             <option>Morning Edition</option>
             <option>Evening Edition</option>
           </select>
@@ -118,10 +118,10 @@ export default function UploadForm({ onSubmit }) {
 
         <PrioritySelector priority={priority} setPriority={setPriority} />
 
-        <textarea name="lead" id="lead" placeholder="Write the lead paragraph..." className="w-full border p-3 rounded-md mb-4" rows="2" />
-        <textarea name="body" id="body" placeholder="Continue with the article body..." className="w-full border p-3 rounded-md mb-6" rows="5" />
+        <textarea name="lead" id="lead" placeholder="Write the lead paragraph..." className="w-full border p-1.5 rounded-md mb-2 text-xs" rows="2" />
+        <textarea name="body" id="body" placeholder="Continue with the article body..." className="w-full border p-1.5 rounded-md mb-3 text-xs" rows="2" />
 
-        <div className="flex justify-between mb-6">
+        <div className="flex justify-between mb-3">
           <button
             type="button"
             onClick={(e) => {
@@ -136,7 +136,7 @@ export default function UploadForm({ onSubmit }) {
               }
               onSubmit(formData)
             }}
-            className="bg-blue-900 text-white px-6 py-2 rounded-md hover:bg-blue-800 transition-colors"
+            className="bg-blue-900 text-white px-3 py-1.5 rounded-md hover:bg-blue-800 transition-colors text-xs"
           >
             SAVE DRAFT
           </button>
@@ -150,7 +150,7 @@ export default function UploadForm({ onSubmit }) {
               hiddenInput.value = 'review'
               form.appendChild(hiddenInput)
             }}
-            className="bg-yellow-400 text-black font-semibold px-6 py-2 rounded-md hover:bg-yellow-500 transition-colors"
+            className="bg-yellow-400 text-black font-semibold px-3 py-1.5 rounded-md hover:bg-yellow-500 transition-colors text-xs"
           >
             SUBMIT FOR REVIEW
           </button>
@@ -164,7 +164,7 @@ export default function UploadForm({ onSubmit }) {
               hiddenInput.value = 'publish'
               form.appendChild(hiddenInput)
             }}
-            className="bg-red-600 text-white px-6 py-2 rounded-md hover:bg-red-700 transition-colors"
+            className="bg-red-600 text-white px-3 py-1.5 rounded-md hover:bg-red-700 transition-colors text-xs"
           >
             PUBLISH NOW
           </button>
@@ -175,15 +175,15 @@ export default function UploadForm({ onSubmit }) {
 
       {/* Immediate PDF Preview (before upload) */}
       {immediatePreviewUrl && !pdfPreviewUrl && (
-        <div className="mt-6 bg-white rounded-lg shadow-md p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold text-gray-800">PDF Preview (Before Upload)</h3>
+        <div className="mt-3 bg-white rounded-lg shadow-md p-3">
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="text-sm font-semibold text-gray-800">PDF Preview (Before Upload)</h3>
             <button
               onClick={() => {
                 URL.revokeObjectURL(immediatePreviewUrl)
                 setImmediatePreviewUrl(null)
               }}
-              className="inline-flex items-center px-3 py-1 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 transition-colors"
+              className="inline-flex items-center px-2 py-1 bg-red-600 text-white text-xs rounded-md hover:bg-red-700 transition-colors"
             >
               <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
@@ -196,13 +196,13 @@ export default function UploadForm({ onSubmit }) {
             <iframe
               src={immediatePreviewUrl}
               width="100%"
-              height="500px"
+              height="200px"
               className="w-full"
               title="PDF Preview"
             />
           </div>
           
-          <div className="mt-4 text-sm text-gray-500 text-center">
+          <div className="mt-2 text-xs text-gray-500 text-center">
             <p>This is a preview of your selected PDF. Submit the form to upload and save it.</p>
           </div>
         </div>
@@ -210,15 +210,15 @@ export default function UploadForm({ onSubmit }) {
 
       {/* PDF Preview After Upload */}
       {pdfPreviewUrl && (
-        <div className="mt-6 bg-white rounded-lg shadow-md p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold text-gray-800">PDF Preview</h3>
+        <div className="mt-3 bg-white rounded-lg shadow-md p-3">
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="text-sm font-semibold text-gray-800">PDF Preview</h3>
             <div className="flex space-x-2">
               <a
                 href={pdfPreviewUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center px-3 py-1 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
+                className="inline-flex items-center px-2 py-1 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700 transition-colors"
               >
                 <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -231,7 +231,7 @@ export default function UploadForm({ onSubmit }) {
                   setPreviewError("")
                   setIsLoadingPreview(false)
                 }}
-                className="inline-flex items-center px-3 py-1 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 transition-colors"
+                className="inline-flex items-center px-2 py-1 bg-red-600 text-white text-xs rounded-md hover:bg-red-700 transition-colors"
               >
                 <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
@@ -242,10 +242,10 @@ export default function UploadForm({ onSubmit }) {
           </div>
 
           {isLoadingPreview && (
-            <div className="flex items-center justify-center h-64 bg-gray-50 rounded-md">
+            <div className="flex items-center justify-center h-20 bg-gray-50 rounded-md">
               <div className="text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                <p className="text-gray-600">Loading PDF preview...</p>
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-1"></div>
+                <p className="text-gray-600 text-xs">Loading PDF preview...</p>
               </div>
             </div>
           )}
@@ -266,7 +266,7 @@ export default function UploadForm({ onSubmit }) {
               <iframe
                 src={`${pdfPreviewUrl}#toolbar=1&navpanes=1&scrollbar=1`}
                 width="100%"
-                height="600px"
+                height="250px"
                 className="w-full"
                 onLoad={() => {
                   setIsLoadingPreview(false)
@@ -281,7 +281,7 @@ export default function UploadForm({ onSubmit }) {
             </div>
           )}
 
-          <div className="mt-4 text-sm text-gray-500 text-center">
+          <div className="mt-2 text-xs text-gray-500 text-center">
             <p>Use the controls above the PDF to navigate, zoom, and interact with the document.</p>
           </div>
         </div>
