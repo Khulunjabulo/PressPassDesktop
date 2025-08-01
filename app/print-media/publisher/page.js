@@ -53,11 +53,11 @@ export default function Publisher() {
   return (
     <>
       <Header />
-      <div className="min-h-screen bg-gray-50 flex">
+      <div className="h-screen bg-gray-50 flex overflow-hidden">
         <PublisherSidebar />
 
         {/* Main Content */}
-        <main className="flex-1 p-10">
+        <main className="flex-1 p-4 overflow-y-auto">
           {/* Status Messages */}
           {submissionStatus && (
             <div className={`mb-6 p-4 rounded-md ${
@@ -73,10 +73,10 @@ export default function Publisher() {
           <UploadForm onSubmit={handleFormSubmit} />
 
           {/* Footer */}
-          <footer className="text-center mt-8 text-xs text-gray-400">
+          <footer className="text-center mt-4 text-xs text-gray-400">
             <p>Corporate HQ | Terms of Use | Privacy Policy</p>
             <p>ABOUT PRESS-PASS</p>
-            <div className="mt-2 space-x-2">
+            <div className="mt-1 space-x-2">
               <span>🔗</span>
               <span>📘</span>
               <span>🐦</span>
