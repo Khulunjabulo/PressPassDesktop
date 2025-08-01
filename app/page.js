@@ -1,5 +1,4 @@
 "use client";
-
 import { Users, Megaphone, MessageSquare, User, BarChart3, Smartphone } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -8,30 +7,13 @@ import MainHeader from "@/components/news-reader/NewsReaderMainHeader";
 import UserReviewsSection from "@/components/user review/UserReviewSection";
 import "../app/globals.css"
 
-import React, { useState, useEffect } from "react";
-import { auth } from "@/Firebase/firebase";
-import { onAuthStateChanged } from "firebase/auth";
-import { useRouter } from "next/navigation";
+import React from "react";
+import useLandingPageLogic from "@/hooks/LandingPageLogic";
 
+
+  
 export default function NewsReaderHomePage() {
-  const [user, setUser] = useState(null);
-  const router = useRouter();
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  const handleStartReading = () => {
-    if (user) {
-      router.push("/news-reader");
-    } else {
-      router.push("/signin");
-    }
-  };
+  const { handleStartReading } = useLandingPageLogic()
 
   return (
 
