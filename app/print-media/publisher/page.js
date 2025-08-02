@@ -1,54 +1,12 @@
-'use client'
-import { useState } from 'react'
-import Header from '@/components/UI/header'
-import PublisherSidebar from '@/components/UI/publisherSidebar'
-import UploadForm from '@/components/uploadForm'
+"use client";
+
+import Header from "@/components/UI/header";
+import PublisherSidebar from "@/components/UI/publisherSidebar";
+import UploadForm from "@/components/uploadForm";
+import usePrintMediaLogic from "@/hooks/PrintMediaLogic";
 
 export default function Publisher() {
-  const [submissionStatus, setSubmissionStatus] = useState(null)
-
-  const handleFormSubmit = async (formData) => {
-    try {
-      console.log('Form submitted with data:', formData)
-      
-      // Send the data to the stories API endpoint
-      const response = await fetch('/api/stories', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      })
-
-      const result = await response.json()
-
-      if (response.ok) {
-        setSubmissionStatus({
-          type: 'success',
-          message: result.message || 'Article submitted successfully!'
-        })
-      } else {
-        throw new Error(result.error || 'Failed to submit article')
-      }
-      
-      // Clear the status after 5 seconds
-      setTimeout(() => {
-        setSubmissionStatus(null)
-      }, 5000)
-      
-    } catch (error) {
-      console.error('Error submitting form:', error)
-      setSubmissionStatus({
-        type: 'error',
-        message: error.message || 'Failed to submit article. Please try again.'
-      })
-      
-      // Clear the status after 5 seconds
-      setTimeout(() => {
-        setSubmissionStatus(null)
-      }, 5000)
-    }
-  }
+  const { submissionStatus, handleFormSubmit } = usePrintMediaLogic();
 
   return (
     <>
@@ -60,11 +18,13 @@ export default function Publisher() {
         <main className="flex-1 p-4 overflow-y-auto">
           {/* Status Messages */}
           {submissionStatus && (
-            <div className={`mb-6 p-4 rounded-md ${
-              submissionStatus.type === 'success'
-                ? 'bg-green-50 border border-green-200 text-green-700'
-                : 'bg-red-50 border border-red-200 text-red-700'
-            }`}>
+            <div
+              className={`mb-6 p-4 rounded-md ${
+                submissionStatus.type === "success"
+                  ? "bg-green-50 border border-green-200 text-green-700"
+                  : "bg-red-50 border border-red-200 text-red-700"
+              }`}
+            >
               <p className="font-medium">{submissionStatus.message}</p>
             </div>
           )}
@@ -85,5 +45,5 @@ export default function Publisher() {
         </main>
       </div>
     </>
-  )
+  );
 }
