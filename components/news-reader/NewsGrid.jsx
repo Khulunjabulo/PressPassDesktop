@@ -2,7 +2,7 @@
 
 import { timeAgo } from '@/lib/time';
 import NewsCard from '@/components/news-reader/NewsCard';
-import AdSlot from '@/components/news-reader/AdSlot';
+import AdSlot from '@/components/news-reader/AdsSlot';
 import PublicationCard from '@/components/news-reader/PublicationCard';
 import RecommendedOverlayBottom from '@/components/news-reader/Overlay';
 
