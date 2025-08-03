@@ -2,7 +2,7 @@
 
 import { timeAgo } from '@/lib/time';
 import NewsCard from '@/components/news-reader/NewsCard';
-import AdSlot from '@/components/news-reader/AdsSlot';
+import AdSlot from '@/components/news-reader/AdSlot';
 import PublicationCard from '@/components/news-reader/PublicationCard';
 import RecommendedOverlayBottom from '@/components/news-reader/Overlay';
 
@@ -30,7 +30,7 @@ export default function NewsGrid({ articles }) {
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6 px-6 pb-10">
         {/* MAIN COLUMN */}
         <div className="space-y-6">
-            
+          
           {/* 3 columns on large screens */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {unique.map((article, index) => {
@@ -72,9 +72,32 @@ export default function NewsGrid({ articles }) {
 
         {/* RIGHT SIDEBAR (ads) */}
         <aside className="space-y-6 lg:sticky lg:top-20 h-fit">
-          <AdSlot label="Ads here (300x250)" height={250} color="bg-blue-200" />
-          <AdSlot label="Ads here (300x600)" height={600} color="bg-gray-200" />
-          <AdSlot label="Ads here (300x250)" height={250} color="bg-blue-200" />
+          {/* Rectangle Ad (300x250) */}
+          <AdSlot 
+            label="Rectangle Ad (300x250)" 
+            height={250} 
+            width={300}
+            preferredType="rectangles"
+            className="max-w-[300px]"
+          />
+          
+          {/* Skyscraper Ad (300x600) */}
+          <AdSlot 
+            label="Skyscraper Ad (300x600)" 
+            height={600} 
+            width={300}
+            preferredType="skyscrapers"
+            className="max-w-[300px]"
+          />
+          
+          {/* Another Rectangle Ad (300x250) */}
+          <AdSlot 
+            label="Rectangle Ad (300x250)" 
+            height={250} 
+            width={300}
+            preferredType="rectangles"
+            className="max-w-[300px]"
+          />
         </aside>
       </div>
     </div>
