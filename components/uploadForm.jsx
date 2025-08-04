@@ -22,13 +22,14 @@ export default function UploadForm({ onSubmit }) {
     setImmediatePreviewUrl(previewUrl)
   }
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e, action = 'publish') => {
     e.preventDefault()
     setUploadError("")
     
     const formData = Object.fromEntries(new FormData(e.target))
     formData.priority = priority
     formData.previewStyle = previewStyle
+    formData.action = action
 
     if (file) {
       // Validate file type
@@ -85,6 +86,57 @@ export default function UploadForm({ onSubmit }) {
     }
   }
 
+  const handleSaveDraft = async (e) => {
+    e.preventDefault()
+    setUploadError("")
+    
+    const formData = Object.fromEntries(new FormData(e.target.form))
+    formData.priority = priority
+    formData.previewStyle = previewStyle
+    formData.action = 'draft'
+
+    if (file) {
+      // Validate file type
+      if (file.type !== "application/pdf") {
+        setUploadError("Please select a valid PDF file")
+        return
+      }
+
+      const storageRef = ref(storage, `uploads/${Date.now()}_${file.name}`)
+      const uploadTask = uploadBytesResumable(storageRef, file)
+
+      uploadTask.on(
+        "state_changed",
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100
+          setUploadProgress(progress.toFixed(0))
+        },
+        (error) => {
+          console.error("Upload error:", error)
+          setUploadError(`Upload failed: ${error.message}`)
+          setUploadProgress(null)
+        },
+        async () => {
+          try {
+            const url = await getDownloadURL(uploadTask.snapshot.ref)
+            formData.pdfUrl = url
+            formData.fileName = file.name
+            formData.fileSize = file.size
+
+            setUploadProgress(null)
+            onSubmit(formData)
+          } catch (error) {
+            console.error("Error getting download URL:", error)
+            setUploadError("Failed to get file URL")
+            setUploadProgress(null)
+          }
+        }
+      )
+    } else {
+      onSubmit(formData)
+    }
+  }
+
   return (
     <>
       <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md p-3 w-full">
@@ -124,46 +176,21 @@ export default function UploadForm({ onSubmit }) {
         <div className="flex justify-between mb-3">
           <button
             type="button"
-            onClick={(e) => {
-              e.preventDefault()
-              const formData = Object.fromEntries(new FormData(e.target.form))
-              formData.priority = priority
-              formData.previewStyle = previewStyle
-              formData.action = 'draft'
-              if (file) {
-                formData.fileName = file.name
-                formData.fileSize = file.size
-              }
-              onSubmit(formData)
-            }}
+            onClick={handleSaveDraft}
             className="bg-blue-900 text-white px-3 py-1.5 rounded-md hover:bg-blue-800 transition-colors text-xs"
           >
             SAVE DRAFT
           </button>
           <button
-            type="submit"
-            onClick={(e) => {
-              const form = e.target.form
-              const hiddenInput = document.createElement('input')
-              hiddenInput.type = 'hidden'
-              hiddenInput.name = 'action'
-              hiddenInput.value = 'review'
-              form.appendChild(hiddenInput)
-            }}
+            type="button"
+            onClick={(e) => handleSubmit(e, 'review')}
             className="bg-yellow-400 text-black font-semibold px-3 py-1.5 rounded-md hover:bg-yellow-500 transition-colors text-xs"
           >
             SUBMIT FOR REVIEW
           </button>
           <button
-            type="submit"
-            onClick={(e) => {
-              const form = e.target.form
-              const hiddenInput = document.createElement('input')
-              hiddenInput.type = 'hidden'
-              hiddenInput.name = 'action'
-              hiddenInput.value = 'publish'
-              form.appendChild(hiddenInput)
-            }}
+            type="button"
+            onClick={(e) => handleSubmit(e, 'publish')}
             className="bg-red-600 text-white px-3 py-1.5 rounded-md hover:bg-red-700 transition-colors text-xs"
           >
             PUBLISH NOW
