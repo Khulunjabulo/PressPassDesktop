@@ -1,9 +1,9 @@
-import { fetchNews } from '@/lib/fetchNews';
-import NewsGrid from '@/components/news-reader/NewsGrid';
-import BannerAd from '@/components/news-reader/BannerAd';
+import { fetchNews } from "@/lib/fetchNews";
+import NewsGrid from "@/components/news-reader/NewsGrid";
+import BannerAd from "@/components/news-reader/BannerAd";
 
 export default async function NewsReaderHome() {
-  const articles = await fetchNews('top', 'us');
+  const articles = await fetchNews("top", "us");
 
   return (
     <div>
