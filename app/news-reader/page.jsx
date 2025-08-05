@@ -1,14 +1,15 @@
 import { fetchNews } from '@/lib/fetchNews';
 import NewsGrid from '@/components/news-reader/NewsGrid';
-import AdSlot from '@/components/news-reader/AdsSlot';
+import BannerAd from '@/components/news-reader/BannerAd';
 
 export default async function NewsReaderHome() {
   const articles = await fetchNews('top', 'us');
 
   return (
     <div>
+      {/* Top Banner Ad */}
       <div className="px-6 mt-4">
-        <AdSlot label="Ads here (100% x 120)" height={120} color="bg-gray-200" />
+        <BannerAd />
       </div>
 
       <div className="py-8 text-left m-5">
