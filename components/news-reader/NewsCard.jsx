@@ -1,40 +1,91 @@
+import { useState } from "react";
+
 export default function NewsCard({
-  imageUrl = '',
-  logoText = 'NEWS',
-  logoBgColor = '#008000',
-  title = 'Headline',
-  description = 'Description snippet here...',
-  author = 'Unknown',
-  time = 'Unknown',
+  imageUrl = "",
+  publicationName = "NEWS",
+  logoBgColor = "#008000",
+  author = "Unknown",
+  time = "Unknown",
+  summary = "",
   isUploadedStory = false,
   pdfUrl = null,
   link = null,
 }) {
-  const truncate = (text = '', maxLength) =>
-    text.length > maxLength ? text.slice(0, maxLength) + '...' : text;
+  const [liked, setLiked] = useState(false);
 
-  // Determine the link to use for "Read more"
+  const toggleLiked = () => {
+    setLiked(!liked);
+  };
+
   const readMoreLink = isUploadedStory && pdfUrl ? pdfUrl : link;
 
   return (
     <div className="flex items-start gap-4 bg-white rounded-xl shadow-sm hover:shadow-md transition p-4">
-      {/* Left media box */}
-      <div
-        className="w-20 h-20 rounded-md flex items-center justify-center flex-shrink-0 overflow-hidden"
-        style={{ backgroundColor: imageUrl ? 'transparent' : logoBgColor }}
-      >
-        {imageUrl ? (
-          <img src={imageUrl} alt={logoText} className="w-full h-full object-cover" />
-        ) : (
-          <span className="text-white font-bold text-xs text-center px-1">
-            {logoText}
-          </span>
-        )}
+      {/* Left image or logo box with heart button */}
+      <div className="flex flex-col items-center flex-shrink-0">
+        <div
+          className="w-20 h-20 rounded-md flex items-center justify-center overflow-hidden"
+          style={{ backgroundColor: imageUrl ? "transparent" : logoBgColor }}
+        >
+          {imageUrl ? (
+            <img
+              src={imageUrl}
+              alt={publicationName}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <span className="text-white font-bold text-xs text-center px-1">
+              {publicationName.toUpperCase()}
+            </span>
+          )}
+        </div>
+
+        {/* Heart button below the picture */}
+        <button
+          onClick={toggleLiked}
+          aria-label={liked ? "Unlike" : "Like"}
+          className="mt-2"
+          type="button"
+        >
+          {liked ? (
+            // Filled heart (light blue filled)
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="w-6 h-6 text-blue-400 fill-current"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              stroke="none"
+            >
+              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 
+              4.42 3 7.5 3c1.74 0 3.41 0.81 4.5 2.09C13.09 3.81 14.76 3 
+              16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 
+              11.54L12 21.35z" />
+            </svg>
+          ) : (
+            // Outline heart (light blue stroke, no fill)
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="w-6 h-6 text-blue-400"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 
+                4.42 3 7.5 3c1.74 0 3.41 0.81 4.5 2.09C13.09 3.81 14.76 3 
+                16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 
+                11.54L12 21.35z"
+              />
+            </svg>
+          )}
+        </button>
       </div>
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        {/* Add indicator for uploaded stories */}
         {isUploadedStory && (
           <div className="mb-2">
             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -42,16 +93,17 @@ export default function NewsCard({
             </span>
           </div>
         )}
-        
-        <h3 className="text-base font-bold text-gray-900">
-          {truncate(title, 90)}
-        </h3>
-        <p className="text-sm text-gray-600 mb-3">
-          {truncate(description || '', 140)}
+
+        <p className="text-sm font-semibold text-gray-800 mb-1">
+          {publicationName.toUpperCase()}
         </p>
 
+        {summary && (
+          <p className="text-sm text-gray-600 mb-2 line-clamp-3">{summary}</p>
+        )}
+
         <div className="flex items-center justify-between text-[11px] text-gray-500">
-          <span className="truncate max-w-[40%]">By: {author || 'Unknown'}</span>
+          <span className="truncate max-w-[40%]">By: {author || "Unknown"}</span>
           <span>{time}</span>
           {readMoreLink ? (
             <a
@@ -60,7 +112,7 @@ export default function NewsCard({
               rel="noopener noreferrer"
               className="text-blue-600 hover:underline cursor-pointer"
             >
-              {isUploadedStory && pdfUrl ? 'View PDF' : 'Read more'}
+              {isUploadedStory && pdfUrl ? "View PDF" : "Read more"}
             </a>
           ) : (
             <span className="text-blue-600 cursor-default">Read more</span>
