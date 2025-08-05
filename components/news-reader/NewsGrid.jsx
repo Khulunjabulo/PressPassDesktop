@@ -3,7 +3,6 @@
 import { timeAgo } from '@/lib/time';
 import NewsCard from '@/components/news-reader/NewsCard';
 import AdSlot from '@/components/news-reader/AdsSlot';
-import PublicationCard from '@/components/news-reader/PublicationCard';
 import RecommendedOverlayBottom from '@/components/news-reader/Overlay';
 
 function dedupeArticles(articles = []) {
@@ -34,27 +33,31 @@ export default function NewsGrid({ articles }) {
           {/* 3 columns on large screens */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {unique.map((article, index) => {
-              // Check if this is an uploaded story (has source_id as 'presspass')
               const isUploadedStory = article.source_id === 'presspass';
               
               return (
-                <NewsCard
-                  key={index}
-                  imageUrl={article.image_url}
-                  logoText={(article.source_id || 'News').slice(0, 10)}
-                  logoBgColor={isUploadedStory ? "#1f2937" : "#008000"}
-                  title={article.title || ''}
-                  description={article.description || ''}
-                  author={
-                    Array.isArray(article.creator)
-                      ? article.creator[0]
-                      : article.creator || 'Unknown'
-                  }
-                  time={timeAgo(article.pubDate || article.publishedAt || article.createdAt)}
-                  isUploadedStory={isUploadedStory}
-                  pdfUrl={article.pdfUrl}
-                  link={article.link}
-                />
+              <NewsCard
+                key={index}
+                imageUrl={article.image_url}
+                publicationName={(article.source_id || 'News').slice(0, 10)}
+                logoBgColor={isUploadedStory ? "#1f2937" : "#008000"}
+                author={
+                  Array.isArray(article.creator)
+                    ? article.creator[0]
+                    : article.creator || 'Unknown'
+                }
+                time={timeAgo(article.pubDate || article.publishedAt || article.createdAt)}
+                isUploadedStory={isUploadedStory}
+                pdfUrl={article.pdfUrl}
+                link={article.link}
+                summary={
+                  article.description ||
+                  article.content ||
+                  'No summary available.'
+                }
+              />
+
+
               );
             })}
           </div>
