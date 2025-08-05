@@ -3,116 +3,26 @@ import { useState } from "react"
 import Link from "next/link"
 import { Newspaper, FilePen, Check, BarChart3, Smartphone } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { signInWithGoogle, setAuthPersistence } from "@/Firebase/auth"
-import { getFirestore, doc, getDoc } from "firebase/firestore"
-import { getAuth } from "firebase/auth"
 import Image from "next/image"
+import { handleSignIn, handleGoogleSignIn } from "../../lib/authLogic"
 
 export default function SignIn() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [keepSignedIn, setKeepSignedIn] = useState(false)
+  // Changed default to reader to show News Reader first
   const [role, setRole] = useState("reader")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const router = useRouter()
-  const db = getFirestore()
-  const auth = getAuth()
 
-  const redirectToRoleHome = (userRole) => {
-    if (userRole === "reader") {
-      router.push("/news-reader")
-    } else if (userRole === "publisher") {
-      router.push("/print-media/overview")
-    }
-  }
-
-  const handleSignIn = async (e) => {
+  const handleFormSubmit = async (e) => {
     e.preventDefault()
-    setLoading(true)
-    setError("")
-    try {
-      await setAuthPersistence(keepSignedIn)
-
-      // Call the sign-in API endpoint
-      const response = await fetch("/api/signin", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: email.toLowerCase().trim(),
-          password,
-          role,
-        }),
-      })
-
-      const data = await response.json()
-      if (!data.success) {
-        setError(data.error || "Failed to sign in.")
-        return
-      }
-
-      console.log("✅ Sign-in successful:", data.user)
-
-      // Store user data in localStorage or session storage for the app to use
-      if (typeof window !== "undefined") {
-        localStorage.setItem("currentUser", JSON.stringify(data.user))
-      }
-
-      redirectToRoleHome(data.user.role)
-    } catch (err) {
-      console.error("❌ Sign-in error:", err)
-      setError(err.message || "Failed to sign in. Please try again.")
-    } finally {
-      setLoading(false)
-    }
+    await handleSignIn(email, password, role, keepSignedIn, router, setError, setLoading)
   }
 
-  const handleGoogleSignIn = async () => {
-    setLoading(true)
-    setError("")
-    try {
-      await setAuthPersistence(keepSignedIn)
-      const result = await signInWithGoogle()
-      const firebaseUser = result.user
-      // Generate role-specific UID to check user data
-      const roleSpecificUid = `${role}_${firebaseUser.uid}`
-      const collectionName = role === "reader" ? "readers" : "publishers"
-
-      // Check if user exists in the role-specific collection
-      const userDocRef = doc(db, collectionName, roleSpecificUid)
-      const userDocSnap = await getDoc(userDocRef)
-
-      if (!userDocSnap.exists()) {
-        setError(
-          `No ${role} account found with this Google account. Please sign up first or check your role selection.`,
-        )
-        return
-      }
-
-      const userData = userDocSnap.data()
-
-      // Check if account is active
-      if (!userData.isActive) {
-        setError("Your account is currently inactive. Please contact support.")
-        return
-      }
-
-      console.log("✅ Google sign-in successful:", userData)
-
-      // Store user data in localStorage for the app to use
-      if (typeof window !== "undefined") {
-        localStorage.setItem("currentUser", JSON.stringify(userData))
-      }
-
-      redirectToRoleHome(userData.role)
-    } catch (err) {
-      console.error("❌ Google sign-in error:", err)
-      setError(err.message || "Google sign-in failed. Please try again.")
-    } finally {
-      setLoading(false)
-    }
+  const handleGoogleSignInClick = async () => {
+    await handleGoogleSignIn(role, keepSignedIn, router, setError, setLoading)
   }
 
   const RoleIcon = () => {
@@ -168,20 +78,20 @@ export default function SignIn() {
           <div className="md:w-3/5 p-8">
             <div className="flex mb-8 bg-blue-100 rounded-lg p-1">
               <button
-                onClick={() => setRole("publisher")}
-                className={`flex-1 py-2 px-4 rounded-md text-center font-medium transition ${
-                  role === "publisher" ? "bg-[#329ae1] text-white" : "text-black-600"
-                }`}
-              >
-                Print Media Sign In
-              </button>
-              <button
                 onClick={() => setRole("reader")}
                 className={`flex-1 py-2 px-4 rounded-md text-center font-medium transition ${
                   role === "reader" ? "bg-[#329ae1] text-white" : "text-black-600"
                 }`}
               >
                 News Reader Sign In
+              </button>
+              <button
+                onClick={() => setRole("publisher")}
+                className={`flex-1 py-2 px-4 rounded-md text-center font-medium transition ${
+                  role === "publisher" ? "bg-[#329ae1] text-white" : "text-black-600"
+                }`}
+              >
+                Print Media Sign In
               </button>
             </div>
 
@@ -199,7 +109,7 @@ export default function SignIn() {
               {/* Google Sign In Button */}
               <div className="mb-6">
                 <button
-                  onClick={handleGoogleSignIn}
+                  onClick={handleGoogleSignInClick}
                   disabled={loading}
                   className="w-full bg-white text-gray-700 font-semibold py-3 px-4 rounded-lg border border-gray-300 hover:bg-gray-50 transition duration-300 flex items-center justify-center shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -234,7 +144,7 @@ export default function SignIn() {
                 </div>
               </div>
 
-              <form onSubmit={handleSignIn} className="space-y-4">
+              <form onSubmit={handleFormSubmit} className="space-y-4">
                 <input
                   type="email"
                   placeholder="Email"
