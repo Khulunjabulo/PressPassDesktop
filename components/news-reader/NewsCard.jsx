@@ -1,4 +1,7 @@
+"use client";
+
 import { useState } from "react";
+import FavoriteButton from "../../components/FavoriteButton";
 
 export default function NewsCard({
   imageUrl = "",
@@ -17,7 +20,22 @@ export default function NewsCard({
     setLiked(!liked);
   };
 
+  // Use PDF link for uploaded stories, otherwise regular link
   const readMoreLink = isUploadedStory && pdfUrl ? pdfUrl : link;
+
+  // Build the favorite item object to pass to FavoriteButton
+  const favoriteItem = {
+    id: link || pdfUrl || `story_${Date.now()}`,
+    title: summary || publicationName,
+    description: summary || "",
+    image: imageUrl || "",
+    link: link || "",
+    pdfUrl: pdfUrl || "",
+    source: publicationName || "Unknown",
+    publicationName: publicationName || "Unknown",
+    category: "general",
+    type: isUploadedStory ? "story" : "story",
+  };
 
   return (
     <div className="flex items-start gap-4 bg-white rounded-xl shadow-sm hover:shadow-md transition p-4">
@@ -40,48 +58,10 @@ export default function NewsCard({
           )}
         </div>
 
-        {/* Heart button below the picture */}
-        <button
-          onClick={toggleLiked}
-          aria-label={liked ? "Unlike" : "Like"}
-          className="mt-2"
-          type="button"
-        >
-          {liked ? (
-            // Filled heart (light blue filled)
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="w-6 h-6 text-blue-400 fill-current"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              stroke="none"
-            >
-              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 
-              4.42 3 7.5 3c1.74 0 3.41 0.81 4.5 2.09C13.09 3.81 14.76 3 
-              16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 
-              11.54L12 21.35z" />
-            </svg>
-          ) : (
-            // Outline heart (light blue stroke, no fill)
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="w-6 h-6 text-blue-400"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 
-                4.42 3 7.5 3c1.74 0 3.41 0.81 4.5 2.09C13.09 3.81 14.76 3 
-                16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 
-                11.54L12 21.35z"
-              />
-            </svg>
-          )}
-        </button>
+        {/* Favorite button below the picture */}
+        <div className="mt-2">
+          <FavoriteButton item={favoriteItem} size="default" />
+        </div>
       </div>
 
       {/* Content */}
