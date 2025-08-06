@@ -1,17 +1,58 @@
 "use client";
 import { useState } from "react";
 import Header from "@/components/UI/header";
-import { FileText, Users, Megaphone } from "lucide-react";
+import { FileText, Users, Megaphone, LayoutDashboard } from "lucide-react";
+import Link from "next/link";
 
 export default function Monetization() {
   const [selectedTemplate, setSelectedTemplate] = useState(null);
 
   const templates = [
-    { id: 1, name: "Headline", dimension: "300w x 250h(px)", fileSize: "100kb (JPEG, PNG, HTML)", price: "Publisher to Quote", link: "Payment Link", upload: "Upload" },
-    { id: 2, name: "Feed", dimension: "250w x 250h(px)", fileSize: "100kb (JPEG, PNG, HTML)", price: "Publisher to Quote", link: "Payment Link", upload: "Upload" },
-    { id: 3, name: "Within Article", dimension: "300w x 250h(px)", fileSize: "100kb (JPEG, PNG, HTML)", price: "Publisher to Quote", link: "Payment Link", upload: "Upload" },
-    { id: 4, name: "Page Wrap 1", dimension: "200w x 200h(px)", fileSize: "100kb (JPEG, PNG, HTML)", price: "Publisher to Quote", link: "Payment Link", upload: "Upload" },
-    { id: 5, name: "Page Wrap 2", dimension: "200w x 200h(px)", fileSize: "100kb (JPEG, PNG, HTML)", price: "Publisher to Quote", link: "Payment Link", upload: "Upload" },
+    {
+      id: 1,
+      name: "Headline",
+      dimension: "300w x 250h(px)",
+      fileSize: "100kb (JPEG, PNG, HTML)",
+      price: "Publisher to Quote",
+      link: "Payment Link",
+      upload: "Upload",
+    },
+    {
+      id: 2,
+      name: "Feed",
+      dimension: "250w x 250h(px)",
+      fileSize: "100kb (JPEG, PNG, HTML)",
+      price: "Publisher to Quote",
+      link: "Payment Link",
+      upload: "Upload",
+    },
+    {
+      id: 3,
+      name: "Within Article",
+      dimension: "300w x 250h(px)",
+      fileSize: "100kb (JPEG, PNG, HTML)",
+      price: "Publisher to Quote",
+      link: "Payment Link",
+      upload: "Upload",
+    },
+    {
+      id: 4,
+      name: "Page Wrap 1",
+      dimension: "200w x 200h(px)",
+      fileSize: "100kb (JPEG, PNG, HTML)",
+      price: "Publisher to Quote",
+      link: "Payment Link",
+      upload: "Upload",
+    },
+    {
+      id: 5,
+      name: "Page Wrap 2",
+      dimension: "200w x 200h(px)",
+      fileSize: "100kb (JPEG, PNG, HTML)",
+      price: "Publisher to Quote",
+      link: "Payment Link",
+      upload: "Upload",
+    },
   ];
 
   return (
@@ -26,17 +67,44 @@ export default function Monetization() {
           <div className="p-6">
             <h2 className="text-xl font-semibold mb-6">Menu</h2>
             <ul className="space-y-4">
-              <li className="flex items-center gap-3 cursor-pointer hover:text-blue-600">
-                <FileText className="w-5 h-5 text-gray-500" />
-                <span>Publish with us</span>
+              <li>
+                <Link
+                  href="/print-media/monetization/publish"
+                  className="flex items-center gap-3 cursor-pointer hover:text-blue-600"
+                >
+                  <FileText className="w-5 h-5 text-gray-500" />
+                  <span>Publish with us</span>
+                </Link>
               </li>
-              <li className="flex items-center gap-3 cursor-pointer hover:text-blue-600">
-                <Users className="w-5 h-5 text-gray-500" />
-                <span>Partner with us</span>
+
+              <li>
+                <Link
+                  href="/print-media/monetization/partner"
+                  className="flex items-center gap-3 cursor-pointer hover:text-blue-600"
+                >
+                  <Users className="w-5 h-5 text-gray-500" />
+                  <span>Partner with us</span>
+                </Link>
               </li>
-              <li className="flex items-center gap-3 cursor-pointer hover:text-blue-600">
-                <Megaphone className="w-5 h-5 text-gray-500" />
-                <span>Advertise with us</span>
+
+              <li>
+                <Link
+                  href="/print-media/monetization/advertise"
+                  className="flex items-center gap-3 cursor-pointer hover:text-blue-600"
+                >
+                  <Megaphone className="w-5 h-5 text-gray-500" />
+                  <span>Advertise with us</span>
+                </Link>
+              </li>
+
+              <li>
+                <Link
+                  href="/print-media/monetization/dashboard"
+                  className="flex items-center gap-3 cursor-pointer hover:text-blue-600"
+                >
+                  <LayoutDashboard className="w-5 h-5 text-gray-500" />
+                  <span>Dashboard</span>
+                </Link>
               </li>
             </ul>
           </div>
@@ -56,7 +124,9 @@ export default function Monetization() {
               >
                 <div className="p-4">
                   <div className="text-center mb-3">
-                    <span className="text-2xl font-bold text-gray-600">{template.id}</span>
+                    <span className="text-2xl font-bold text-gray-600">
+                      {template.id}
+                    </span>
                   </div>
                   <div className="bg-gray-100 rounded-lg p-4 h-32 flex flex-col justify-between">
                     {template.id === 1 && (
@@ -122,12 +192,24 @@ export default function Monetization() {
               <thead className="bg-gray-50 border-b">
                 <tr>
                   <th className="text-left p-4 font-medium text-gray-700">#</th>
-                  <th className="text-left p-4 font-medium text-gray-700">Banner</th>
-                  <th className="text-left p-4 font-medium text-gray-700">Dimension</th>
-                  <th className="text-left p-4 font-medium text-gray-700">File Size</th>
-                  <th className="text-left p-4 font-medium text-gray-700">Price</th>
-                  <th className="text-left p-4 font-medium text-gray-700">Link</th>
-                  <th className="text-left p-4 font-medium text-gray-700">Upload</th>
+                  <th className="text-left p-4 font-medium text-gray-700">
+                    Banner
+                  </th>
+                  <th className="text-left p-4 font-medium text-gray-700">
+                    Dimension
+                  </th>
+                  <th className="text-left p-4 font-medium text-gray-700">
+                    File Size
+                  </th>
+                  <th className="text-left p-4 font-medium text-gray-700">
+                    Price
+                  </th>
+                  <th className="text-left p-4 font-medium text-gray-700">
+                    Link
+                  </th>
+                  <th className="text-left p-4 font-medium text-gray-700">
+                    Upload
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -135,11 +217,21 @@ export default function Monetization() {
                   <tr key={template.id} className="border-b hover:bg-gray-50">
                     <td className="p-4 font-medium">{template.id}</td>
                     <td className="p-4">{template.name}</td>
-                    <td className="p-4 text-sm text-gray-600">{template.dimension}</td>
-                    <td className="p-4 text-sm text-gray-600">{template.fileSize}</td>
-                    <td className="p-4 text-sm text-gray-600">{template.price}</td>
-                    <td className="p-4 text-blue-600 underline cursor-pointer">{template.link}</td>
-                    <td className="p-4 text-blue-600 underline cursor-pointer">{template.upload}</td>
+                    <td className="p-4 text-sm text-gray-600">
+                      {template.dimension}
+                    </td>
+                    <td className="p-4 text-sm text-gray-600">
+                      {template.fileSize}
+                    </td>
+                    <td className="p-4 text-sm text-gray-600">
+                      {template.price}
+                    </td>
+                    <td className="p-4 text-blue-600 underline cursor-pointer">
+                      {template.link}
+                    </td>
+                    <td className="p-4 text-blue-600 underline cursor-pointer">
+                      {template.upload}
+                    </td>
                   </tr>
                 ))}
               </tbody>
