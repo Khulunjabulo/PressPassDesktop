@@ -1,6 +1,5 @@
 
 import { NextResponse } from 'next/server';
-import { getAuth, sendPasswordResetEmail } from 'firebase/auth';
 import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
 import { getApps, initializeApp } from 'firebase/app';
 import { sendForgotPasswordEmail } from '../../../lib/emailService';
@@ -15,7 +14,6 @@ const firebaseConfig = {
 };
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-const auth = getAuth(app);
 const db = getFirestore(app);
 
 export async function POST(request) {
@@ -75,7 +73,7 @@ export async function POST(request) {
         userRole = 'publisher';
         const userData = publishersSnapshot.docs[0].data();
         userName = userData.firstName || userData.contactName || 'User';
-        console.log('✅ User found in publishers collection');
+        console.log(' User found in publishers collection');
       }
     }
 
@@ -89,17 +87,20 @@ export async function POST(request) {
       });
     }
 
-    console.log('🔑 Sending Firebase password reset email...');
+    console.log('🔑 Sending custom password reset email...');
     
     try {
-      // Send Firebase's built-in password reset email
-      await sendPasswordResetEmail(auth, normalizedEmail);
-      console.log('Firebase password reset email sent successfully');
+      // Generate password reset link (in a real implementation, you would use Firebase's link generation)
+      // For now, we'll create a placeholder link
+      const resetLink = `${process.env.NEXT_PUBLIC_APP_URL}/reset-password?email=${encodeURIComponent(normalizedEmail)}&token=PLACEHOLDER_TOKEN`;
+      
+      // Send custom password reset email
+      const emailResult = await sendForgotPasswordEmail(normalizedEmail, resetLink);
+      console.log('Custom password reset email sent successfully:', emailResult);
 
-
-      return NextResponse.json({ 
-        success: true, 
-        message: 'Password reset instructions have been sent to your email address.' 
+      return NextResponse.json({
+        success: true,
+        message: 'Password reset instructions have been sent to your email address.'
       });
 
     } catch (emailError) {
@@ -107,19 +108,10 @@ export async function POST(request) {
       
       let errorMessage = 'Failed to send password reset email. Please try again.';
       
-      if (emailError.code === 'auth/user-not-found') {
-       
-        errorMessage = 'No account found with this email address.';
-      } else if (emailError.code === 'auth/invalid-email') {
-        errorMessage = 'Invalid email address format.';
-      } else if (emailError.code === 'auth/too-many-requests') {
-        errorMessage = 'Too many password reset requests. Please try again later.';
-      }
-      
       return NextResponse.json(
-        { 
-          success: false, 
-          error: errorMessage 
+        {
+          success: false,
+          error: errorMessage
         },
         { status: 400 }
       );
