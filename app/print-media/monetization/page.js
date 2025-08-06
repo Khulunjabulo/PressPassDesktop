@@ -14,7 +14,7 @@ export default function Monetization() {
       fileSize: "100kb (JPEG, PNG, HTML)",
       price: "Publisher to Quote",
       link: "Payment Link",
-      upload: ["Share", "Preview", "View Preview", "Share"],
+      upload: "Upload",
     },
     {
       id: 2,
@@ -23,7 +23,7 @@ export default function Monetization() {
       fileSize: "100kb (JPEG, PNG, HTML)",
       price: "Publisher to Quote",
       link: "Payment Link",
-      upload: ["Share", "Preview", "View Preview", "Share"],
+      upload: "Upload",
     },
     {
       id: 3,
@@ -32,7 +32,7 @@ export default function Monetization() {
       fileSize: "100kb (JPEG, PNG, HTML)",
       price: "Publisher to Quote",
       link: "Payment Link",
-      upload: ["Share", "Preview", "View Preview", "Share"],
+      upload: "Upload",
     },
     {
       id: 4,
@@ -41,7 +41,7 @@ export default function Monetization() {
       fileSize: "100kb (JPEG, PNG, HTML)",
       price: "Publisher to Quote",
       link: "Payment Link",
-      upload: ["Share", "Preview", "View Preview", "Share"],
+      upload: "Upload",
     },
     {
       id: 5,
@@ -50,7 +50,7 @@ export default function Monetization() {
       fileSize: "100kb (JPEG, PNG, HTML)",
       price: "Publisher to Quote",
       link: "Payment Link",
-      upload: ["Share", "Preview", "View Preview", "Share"],
+      upload: "Upload",
     },
   ];
 
@@ -109,18 +109,26 @@ export default function Monetization() {
                           <div className="bg-gray-300 h-6 w-full rounded"></div>
                         </div>
                       </div>
-                      <div className="bg-blue-400 w-6 rounded self-stretch"></div>
+                      <div className="flex flex-col w-6 gap-1">
+                        <div className="bg-blue-400 flex-1 rounded"></div>
+                        <div className="bg-gray-300 flex-1 rounded"></div>
+                      </div>
                     </div>
                   )}
 
                   {num === 5 && (
                     <div className="flex gap-2 items-stretch">
-                      <div className="flex-1 space-y-2">
-                        <div className="bg-gray-300 h-6 w-2/3 rounded"></div>
-                        <div className="bg-gray-300 h-6 w-2/3 rounded"></div>
-                        <div className="bg-gray-300 h-6 w-2/3 rounded"></div>
+                      <div className="flex-1">
+                        <div className="bg-gray-300 h-6 w-full rounded mb-1"></div>
+                        <div className="space-y-2">
+                          <div className="bg-gray-300 h-6 w-full rounded"></div>
+                          <div className="bg-gray-300 h-6 w-full rounded"></div>
+                        </div>
                       </div>
-                      <div className="bg-blue-400 w-6 rounded self-stretch"></div>
+                      <div className="flex flex-col w-6 gap-1">
+                        <div className="bg-gray-300 flex-1 rounded"></div>
+                        <div className="bg-blue-400 flex-1 rounded"></div>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -169,9 +177,11 @@ export default function Monetization() {
                   <td className="p-4 text-sm text-gray-600">
                     {template.price}
                   </td>
-
-                  <td className="p-4">
-                    <div className="flex gap-1"></div>
+                  <td className="p-4 text-blue-600 underline cursor-pointer">
+                    {template.link}
+                  </td>
+                  <td className="p-4 text-blue-600 underline cursor-pointer">
+                    {template.upload}
                   </td>
                 </tr>
               ))}
