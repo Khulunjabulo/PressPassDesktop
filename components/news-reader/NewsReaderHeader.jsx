@@ -36,7 +36,7 @@ export default function NewsReaderHeader() {
           </div>
         </Link>
 
-        <Link href="/news-reader/favorite">
+        <Link href="/news-reader/favorites">
           <div className="flex flex-col items-center hover:text-gray-200 transition">
             <Star size={24} />
             <span className="text-xs mt-1">Favorite</span>
