@@ -1,57 +1,17 @@
 "use client";
 import { useState } from "react";
 import Header from "@/components/UI/header";
-//import { Badge } from "@/components/ui/badge"
+import { FileText, Users, Megaphone } from "lucide-react";
 
 export default function Monetization() {
   const [selectedTemplate, setSelectedTemplate] = useState(null);
 
   const templates = [
-    {
-      id: 1,
-      name: "Headline",
-      dimension: "970w x 930 pixels",
-      fileSize: "100kb (JPEG, PNG, HTML)",
-      price: "Publisher to Quote",
-      link: "Payment Link",
-      upload: "Upload",
-    },
-    {
-      id: 2,
-      name: "Feed",
-      dimension: "970w x 930 pixels",
-      fileSize: "100kb (JPEG, PNG, HTML)",
-      price: "Publisher to Quote",
-      link: "Payment Link",
-      upload: "Upload",
-    },
-    {
-      id: 3,
-      name: "Within Article",
-      dimension: "970w x 930 pixels",
-      fileSize: "100kb (JPEG, PNG, HTML)",
-      price: "Publisher to Quote",
-      link: "Payment Link",
-      upload: "Upload",
-    },
-    {
-      id: 4,
-      name: "Page Wrap 1",
-      dimension: "970w x 930 pixels",
-      fileSize: "100kb (JPEG, PNG, HTML)",
-      price: "Publisher to Quote",
-      link: "Payment Link",
-      upload: "Upload",
-    },
-    {
-      id: 5,
-      name: "Page Wrap 2",
-      dimension: "970w x 930 pixels",
-      fileSize: "100kb (JPEG, PNG, HTML)",
-      price: "Publisher to Quote",
-      link: "Payment Link",
-      upload: "Upload",
-    },
+    { id: 1, name: "Headline", dimension: "300w x 250h(px)", fileSize: "100kb (JPEG, PNG, HTML)", price: "Publisher to Quote", link: "Payment Link", upload: "Upload" },
+    { id: 2, name: "Feed", dimension: "250w x 250h(px)", fileSize: "100kb (JPEG, PNG, HTML)", price: "Publisher to Quote", link: "Payment Link", upload: "Upload" },
+    { id: 3, name: "Within Article", dimension: "300w x 250h(px)", fileSize: "100kb (JPEG, PNG, HTML)", price: "Publisher to Quote", link: "Payment Link", upload: "Upload" },
+    { id: 4, name: "Page Wrap 1", dimension: "200w x 200h(px)", fileSize: "100kb (JPEG, PNG, HTML)", price: "Publisher to Quote", link: "Payment Link", upload: "Upload" },
+    { id: 5, name: "Page Wrap 2", dimension: "200w x 200h(px)", fileSize: "100kb (JPEG, PNG, HTML)", price: "Publisher to Quote", link: "Payment Link", upload: "Upload" },
   ];
 
   return (
@@ -59,135 +19,133 @@ export default function Monetization() {
       {/* Header */}
       <Header />
 
-      {/* Main Content */}
-      <div className="max-w-6xl mx-auto p-6">
-        {/* Template Grid */}
-        <div className="grid grid-cols-5 gap-4 mb-8">
-          {[1, 2, 3, 4, 5].map((num) => (
-            <div
-              key={num}
-              className={`cursor-pointer rounded-lg border bg-white shadow-sm hover:shadow-lg transition-all ${
-                selectedTemplate === num ? "ring-2 ring-blue-500" : ""
-              }`}
-              onClick={() => setSelectedTemplate(num)}
-            >
-              <div className="p-4">
-                <div className="text-center mb-3">
-                  <span className="text-2xl font-bold text-gray-600">
-                    {num}
-                  </span>
-                </div>
-                <div className="bg-gray-100 rounded-lg p-4 h-32 flex flex-col justify-between">
-                  {/* Template Layout Mockup */}
-                  {num === 1 && (
-                    <div className="space-y-2">
-                      <div className="bg-blue-400 h-6 w-3/4 rounded"></div>
-                      <div className="bg-gray-300 h-6 w-3/4 rounded"></div>
-                      <div className="bg-gray-300 h-6 w-3/4 rounded"></div>
-                    </div>
-                  )}
-                  {num === 2 && (
-                    <div className="space-y-2">
-                      <div className="bg-gray-300 h-6 w-3/4 rounded"></div>
-                      <div className="bg-blue-400 h-6 w-3/4 rounded"></div>
-                      <div className="bg-gray-300 h-6 w-3/4 rounded"></div>
-                    </div>
-                  )}
-                  {num === 3 && (
-                    <div className="space-y-2">
-                      <div className="bg-gray-300  h-6 w-3/4 rounded"></div>
-                      <div className="bg-gray-300  h-6 w-3/4 rounded"></div>
-                      <div className="bg-blue-400  h-6 w-3/4 rounded"></div>
-                    </div>
-                  )}
-                  {num === 4 && (
-                    <div className="flex gap-2 items-stretch">
-                      <div className="flex-1">
-                        <div className="bg-gray-300 h-6 w-full rounded mb-1"></div>
-                        <div className="space-y-2">
-                          <div className="bg-gray-300 h-6 w-full rounded"></div>
-                          <div className="bg-gray-300 h-6 w-full rounded"></div>
-                        </div>
-                      </div>
-                      <div className="flex flex-col w-6 gap-1">
-                        <div className="bg-blue-400 flex-1 rounded"></div>
-                        <div className="bg-gray-300 flex-1 rounded"></div>
-                      </div>
-                    </div>
-                  )}
+      {/* Body Layout: Sidebar under header */}
+      <div className="flex">
+        {/* Sidebar */}
+        <aside className="w-64 bg-white shadow-md border-r flex flex-col">
+          <div className="p-6">
+            <h2 className="text-xl font-semibold mb-6">Menu</h2>
+            <ul className="space-y-4">
+              <li className="flex items-center gap-3 cursor-pointer hover:text-blue-600">
+                <FileText className="w-5 h-5 text-gray-500" />
+                <span>Publish with us</span>
+              </li>
+              <li className="flex items-center gap-3 cursor-pointer hover:text-blue-600">
+                <Users className="w-5 h-5 text-gray-500" />
+                <span>Partner with us</span>
+              </li>
+              <li className="flex items-center gap-3 cursor-pointer hover:text-blue-600">
+                <Megaphone className="w-5 h-5 text-gray-500" />
+                <span>Advertise with us</span>
+              </li>
+            </ul>
+          </div>
+        </aside>
 
-                  {num === 5 && (
-                    <div className="flex gap-2 items-stretch">
-                      <div className="flex-1">
-                        <div className="bg-gray-300 h-6 w-full rounded mb-1"></div>
-                        <div className="space-y-2">
-                          <div className="bg-gray-300 h-6 w-full rounded"></div>
-                          <div className="bg-gray-300 h-6 w-full rounded"></div>
+        {/* Main Content */}
+        <main className="flex-1 p-6">
+          {/* Template Grid */}
+          <div className="grid grid-cols-5 gap-4 mb-8">
+            {templates.map((template) => (
+              <div
+                key={template.id}
+                className={`cursor-pointer rounded-lg border bg-white shadow-sm hover:shadow-lg transition-all ${
+                  selectedTemplate === template.id ? "ring-2 ring-blue-500" : ""
+                }`}
+                onClick={() => setSelectedTemplate(template.id)}
+              >
+                <div className="p-4">
+                  <div className="text-center mb-3">
+                    <span className="text-2xl font-bold text-gray-600">{template.id}</span>
+                  </div>
+                  <div className="bg-gray-100 rounded-lg p-4 h-32 flex flex-col justify-between">
+                    {template.id === 1 && (
+                      <div className="space-y-2">
+                        <div className="bg-blue-400 h-6 w-3/4 rounded"></div>
+                        <div className="bg-gray-300 h-6 w-3/4 rounded"></div>
+                        <div className="bg-gray-300 h-6 w-3/4 rounded"></div>
+                      </div>
+                    )}
+                    {template.id === 2 && (
+                      <div className="space-y-2">
+                        <div className="bg-gray-300 h-6 w-3/4 rounded"></div>
+                        <div className="bg-blue-400 h-6 w-3/4 rounded"></div>
+                        <div className="bg-gray-300 h-6 w-3/4 rounded"></div>
+                      </div>
+                    )}
+                    {template.id === 3 && (
+                      <div className="space-y-2">
+                        <div className="bg-gray-300 h-6 w-3/4 rounded"></div>
+                        <div className="bg-gray-300 h-6 w-3/4 rounded"></div>
+                        <div className="bg-blue-400 h-6 w-3/4 rounded"></div>
+                      </div>
+                    )}
+                    {template.id === 4 && (
+                      <div className="flex gap-2 items-stretch">
+                        <div className="flex-1">
+                          <div className="bg-gray-300 h-6 w-full rounded mb-1"></div>
+                          <div className="space-y-2">
+                            <div className="bg-gray-300 h-6 w-full rounded"></div>
+                            <div className="bg-gray-300 h-6 w-full rounded"></div>
+                          </div>
+                        </div>
+                        <div className="flex flex-col w-6 gap-1">
+                          <div className="bg-blue-400 flex-1 rounded"></div>
+                          <div className="bg-gray-300 flex-1 rounded"></div>
                         </div>
                       </div>
-                      <div className="flex flex-col w-6 gap-1">
-                        <div className="bg-gray-300 flex-1 rounded"></div>
-                        <div className="bg-blue-400 flex-1 rounded"></div>
+                    )}
+                    {template.id === 5 && (
+                      <div className="flex gap-2 items-stretch">
+                        <div className="flex-1">
+                          <div className="bg-gray-300 h-6 w-full rounded mb-1"></div>
+                          <div className="space-y-2">
+                            <div className="bg-gray-300 h-6 w-full rounded"></div>
+                            <div className="bg-gray-300 h-6 w-full rounded"></div>
+                          </div>
+                        </div>
+                        <div className="flex flex-col w-6 gap-1">
+                          <div className="bg-gray-300 flex-1 rounded"></div>
+                          <div className="bg-blue-400 flex-1 rounded"></div>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
 
-        {/* Data Table */}
-        <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b">
-              <tr>
-                <th className="text-left p-4 font-medium text-gray-700">#</th>
-                <th className="text-left p-4 font-medium text-gray-700">
-                  Banner
-                </th>
-                <th className="text-left p-4 font-medium text-gray-700">
-                  Dimension
-                </th>
-                <th className="text-left p-4 font-medium text-gray-700">
-                  File Size
-                </th>
-                <th className="text-left p-4 font-medium text-gray-700">
-                  Price
-                </th>
-                <th className="text-left p-4 font-medium text-gray-700">
-                  Link
-                </th>
-                <th className="text-left p-4 font-medium text-gray-700">
-                  Upload
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {templates.map((template) => (
-                <tr key={template.id} className="border-b hover:bg-gray-50">
-                  <td className="p-4 font-medium">{template.id}</td>
-                  <td className="p-4">{template.name}</td>
-                  <td className="p-4 text-sm text-gray-600">
-                    {template.dimension}
-                  </td>
-                  <td className="p-4 text-sm text-gray-600">
-                    {template.fileSize}
-                  </td>
-                  <td className="p-4 text-sm text-gray-600">
-                    {template.price}
-                  </td>
-                  <td className="p-4 text-blue-600 underline cursor-pointer">
-                    {template.link}
-                  </td>
-                  <td className="p-4 text-blue-600 underline cursor-pointer">
-                    {template.upload}
-                  </td>
+          {/* Data Table */}
+          <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b">
+                <tr>
+                  <th className="text-left p-4 font-medium text-gray-700">#</th>
+                  <th className="text-left p-4 font-medium text-gray-700">Banner</th>
+                  <th className="text-left p-4 font-medium text-gray-700">Dimension</th>
+                  <th className="text-left p-4 font-medium text-gray-700">File Size</th>
+                  <th className="text-left p-4 font-medium text-gray-700">Price</th>
+                  <th className="text-left p-4 font-medium text-gray-700">Link</th>
+                  <th className="text-left p-4 font-medium text-gray-700">Upload</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {templates.map((template) => (
+                  <tr key={template.id} className="border-b hover:bg-gray-50">
+                    <td className="p-4 font-medium">{template.id}</td>
+                    <td className="p-4">{template.name}</td>
+                    <td className="p-4 text-sm text-gray-600">{template.dimension}</td>
+                    <td className="p-4 text-sm text-gray-600">{template.fileSize}</td>
+                    <td className="p-4 text-sm text-gray-600">{template.price}</td>
+                    <td className="p-4 text-blue-600 underline cursor-pointer">{template.link}</td>
+                    <td className="p-4 text-blue-600 underline cursor-pointer">{template.upload}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </main>
       </div>
     </div>
   );
