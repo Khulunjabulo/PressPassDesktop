@@ -8,6 +8,16 @@ function logApiCall(method, info) {
   console.log('===============================================================');
 }
 
+// Generate custom UID in the format: role_13numbers_4numbers
+function generateCustomUid(role, originalUid) {
+  // Extract numbers from the original UID or generate random ones
+  const timestamp = Date.now().toString();
+  const random4 = Math.floor(1000 + Math.random() * 9000); // 4-digit number
+  const first13 = timestamp.slice(-13); // Last 13 digits of timestamp
+  
+  return `${role}_${first13}_${random4}`;
+}
+
 // ✅ GET - Test Firebase configuration
 export async function GET() {
   try {
@@ -45,10 +55,10 @@ export async function GET() {
 export async function POST(req) {
   try {
     const body = await req.json();
-    const { uid, email, firstName, lastName, role, profilePicture, ...additionalData } = body;
+    const { uid: originalUid, email, firstName, lastName, role, profilePicture, ...additionalData } = body;
 
     logApiCall('POST', { 
-      uid, 
+      originalUid, 
       email, 
       firstName, 
       lastName, 
@@ -58,7 +68,7 @@ export async function POST(req) {
     });
 
     // Validation
-    if (!uid || !email || !firstName || !lastName || !role) {
+    if (!originalUid || !email || !firstName || !lastName || !role) {
       console.warn('⚠️ Missing required fields');
       return NextResponse.json({ 
         success: false, 
@@ -77,13 +87,18 @@ export async function POST(req) {
     const db = getFirestoreDb();
     console.log('✅ Firestore DB instance acquired for POST');
 
-    // Determine collection and document structure based on role
+    // Generate custom UID in the desired format
+    const customUid = generateCustomUid(role, originalUid);
+    console.log('🆔 Generated custom UID:', customUid);
+
+    // Determine collection based on role
     const collectionName = role === 'reader' ? 'readers' : 'publishers';
     const timestamp = new Date().toISOString();
 
     // Base user data
     const userData = {
-      uid,
+      uid: customUid, // Custom UID for document ID and internal reference
+      originalUid, // Store original Firebase Auth UID for authentication
       email: email.toLowerCase().trim(),
       firstName: firstName.trim(),
       lastName: lastName.trim(),
@@ -109,25 +124,51 @@ export async function POST(req) {
       userData.subscribers = 0;
       userData.totalPublications = 0;
       userData.verified = false;
+      // Publisher specific fields from your sign-in code
+      userData.companyName = additionalData.companyName || '';
+      userData.industry = additionalData.industry || '';
+      userData.companyWebsite = additionalData.companyWebsite || '';
+      userData.jobTitle = additionalData.jobTitle || '';
+      userData.phone = additionalData.phone || '';
+      userData.publicationType = additionalData.publicationType || '';
+      userData.audienceType = additionalData.audienceType || '';
+      userData.monthlyReadership = additionalData.monthlyReadership || 0;
+      userData.isVerified = false;
+      userData.subscriptionStatus = additionalData.subscriptionStatus || 'free';
+      userData.totalArticles = 0;
+      userData.totalViews = 0;
     }
 
-    console.log(`📝 Creating ${role} document with ID:`, uid);
+    console.log(`📝 Creating ${role} document with custom ID:`, customUid);
     console.log('📝 User data preview:', {
       uid: userData.uid,
+      originalUid: userData.originalUid,
       email: userData.email,
       firstName: userData.firstName,
       role: userData.role
     });
 
-    // Save to Firestore
-    const userDocRef = db.collection(collectionName).doc(uid);
+    // Check if user already exists
+    const existingUserDoc = await db.collection(collectionName).doc(customUid).get();
+    if (existingUserDoc.exists) {
+      console.warn('⚠️ User already exists with custom UID:', customUid);
+      return NextResponse.json({
+        success: false,
+        error: 'User account already exists'
+      }, { status: 409 });
+    }
+
+    // Save to Firestore using custom UID as document ID
+    const userDocRef = db.collection(collectionName).doc(customUid);
     await userDocRef.set(userData);
 
     console.log(`✅ ${role} account created successfully in collection:`, collectionName);
+    console.log(`✅ Document ID: ${customUid}`);
 
     // Return user data (excluding sensitive information)
     const returnData = {
       uid: userData.uid,
+      originalUid: userData.originalUid,
       email: userData.email,
       firstName: userData.firstName,
       lastName: userData.lastName,
