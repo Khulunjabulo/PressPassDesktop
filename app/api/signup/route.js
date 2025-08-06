@@ -1,7 +1,8 @@
-// app/api/signup/route.js
+
 import { getFirestore, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { getApps, initializeApp } from 'firebase/app';
 import { NextResponse } from 'next/server';
+import { sendWelcomeEmail } from '../../../lib/emailService';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -16,11 +17,11 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0
 const db = getFirestore(app);
 
 export async function POST(request) {
-  console.log('📝 /api/signup POST route called');
+  console.log('/api/signup POST route called');
 
   try {
     const body = await request.json();
-    console.log('📊 Request body:', body);
+    console.log(' Request body:', body);
 
     const {
       uid,
@@ -39,11 +40,11 @@ export async function POST(request) {
       monthlyReadership,
     } = body;
 
-    console.log('🔍 Processing signup for:', email, 'Role:', role);
+    console.log('Processing signup for:', email, 'Role:', role);
 
     // Validate required fields
     if (!uid || !email || !firstName || !role) {
-      console.warn('❌ Missing required fields');
+      console.warn(' Missing required fields');
       return NextResponse.json(
         { 
           success: false, 
@@ -55,7 +56,7 @@ export async function POST(request) {
 
     // Validate role
     if (!['reader', 'publisher'].includes(role)) {
-      console.warn('❌ Invalid role:', role);
+      console.warn(' Invalid role:', role);
       return NextResponse.json(
         { 
           success: false, 
@@ -65,11 +66,11 @@ export async function POST(request) {
       );
     }
 
-    console.log('✅ Validation passed. Preparing user data...');
+    console.log(' Validation passed. Preparing user data...');
 
     // Generate role-specific UID
     const roleSpecificUid = `${role}_${uid}`;
-    console.log('🆔 Generated role-specific UID:', roleSpecificUid);
+    console.log(' Generated role-specific UID:', roleSpecificUid);
 
     // Prepare base user data
     const userData = {
@@ -86,11 +87,11 @@ export async function POST(request) {
     };
 
     if (role === 'publisher') {
-      console.log('📋 Processing publisher signup...');
+      console.log(' Processing publisher signup...');
       
       // Validate publisher required fields
       if (!companyName || !industry || !publicationType || !audienceType) {
-        console.warn('❌ Missing publisher required fields');
+        console.warn(' Missing publisher required fields');
         return NextResponse.json(
           { 
             success: false, 
@@ -114,17 +115,17 @@ export async function POST(request) {
       userData.totalArticles = 0;
       userData.totalViews = 0;
 
-      console.log('💾 Saving publisher data to Firestore...');
-      console.log('📄 Final publisher userData:', JSON.stringify(userData, null, 2));
+      console.log(' Saving publisher data to Firestore...');
+      console.log(' Final publisher userData:', JSON.stringify(userData, null, 2));
 
       // Save to publishers collection only
       const publisherDocRef = doc(db, 'publishers', roleSpecificUid);
       await setDoc(publisherDocRef, userData);
 
-      console.log('✅ Publisher data saved successfully to Firestore');
+      console.log(' Publisher data saved successfully to Firestore');
 
     } else if (role === 'reader') {
-      console.log('👤 Processing reader signup...');
+      console.log(' Processing reader signup...');
       
       // Add reader-specific fields
       userData.preferences = {
@@ -135,20 +136,30 @@ export async function POST(request) {
       userData.bookmarks = [];
       userData.following = [];
 
-      console.log('💾 Saving reader data to Firestore...');
-      console.log('📄 Final reader userData:', JSON.stringify(userData, null, 2));
+      console.log(' Saving reader data to Firestore...');
+      console.log(' Final reader userData:', JSON.stringify(userData, null, 2));
 
       // Save to readers collection only
       const readerDocRef = doc(db, 'readers', roleSpecificUid);
       await setDoc(readerDocRef, userData);
 
-      console.log('✅ Reader data saved successfully to Firestore');
+      console.log(' Reader data saved successfully to Firestore');
     }
 
     console.log('🎉 Registration completed successfully');
 
-    return NextResponse.json({ 
-      success: true, 
+    // Send welcome email
+    try {
+      console.log(' Sending welcome email...');
+      await sendWelcomeEmail(userData.email, userData.firstName, userData.role);
+      console.log('Welcome email sent successfully');
+    } catch (emailError) {
+      console.warn(' Failed to send welcome email:', emailError);
+      // Don't fail the registration if email fails
+    }
+
+    return NextResponse.json({
+      success: true,
       message: 'User registered successfully',
       user: {
         uid: roleSpecificUid,
@@ -161,7 +172,7 @@ export async function POST(request) {
     });
 
   } catch (error) {
-    console.error('❌ Error in /api/signup:', error);
+    console.error(' Error in /api/signup:', error);
     
     // Handle specific Firestore errors
     if (error.code === 'permission-denied') {

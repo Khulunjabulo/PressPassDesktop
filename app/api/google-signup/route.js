@@ -1,9 +1,11 @@
-// pages/api/google-signup.js
+
 import { getFirestore, doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { getApps, initializeApp } from 'firebase/app';
 import { getAuth, createCustomToken } from 'firebase-admin/auth';
 import { initializeApp as initializeAdminApp, getApps as getAdminApps } from 'firebase-admin/app';
 import { credential } from 'firebase-admin';
+import { NextResponse } from 'next/server';
+import { sendWelcomeEmail } from '../../../lib/emailService';
 
 // Initialize Firebase Admin
 if (getAdminApps().length === 0) {
@@ -33,7 +35,7 @@ const adminAuth = getAuth();
 // Function to verify Google ID token
 async function verifyGoogleToken(credential) {
   try {
-    console.log('🔍 Verifying Google ID token...');
+    console.log(' Verifying Google ID token...');
     
     // Decode the JWT token (you might want to use a proper JWT library)
     const payload = JSON.parse(Buffer.from(credential.split('.')[1], 'base64').toString());
@@ -47,75 +49,68 @@ async function verifyGoogleToken(credential) {
       email_verified: payload.email_verified,
     };
   } catch (error) {
-    console.error('❌ Error verifying Google token:', error);
+    console.error(' Error verifying Google token:', error);
     throw new Error('Invalid Google token');
   }
 }
 
-export default async function handler(req, res) {
-  console.log('🔐 /api/google-signup endpoint called');
-  console.log('🔍 Request method:', req.method);
-  console.log('📊 Request body keys:', Object.keys(req.body));
-
-  if (req.method !== 'POST') {
-    console.warn('❌ Invalid request method:', req.method);
-    return res.status(405).json({ 
-      success: false, 
-      error: 'Method not allowed' 
-    });
-  }
+export async function POST(request) {
+  console.log('/api/google-signup endpoint called');
 
   try {
+    const body = await request.json();
+    console.log(' Request body keys:', Object.keys(body));
+
     const {
       credential,
       role,
       firstName: additionalFirstName,
       lastName: additionalLastName,
       profilePicture,
-    } = req.body;
+    } = body;
 
-    console.log('🔍 Validating request data...');
+    console.log(' Validating request data...');
     
     if (!credential) {
-      console.warn('❌ Missing Google credential');
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Missing Google credential' 
-      });
+      console.warn(' Missing Google credential');
+      return NextResponse.json({
+        success: false,
+        error: 'Missing Google credential'
+      }, { status: 400 });
     }
 
     if (!role || !['reader', 'publisher'].includes(role)) {
-      console.warn('❌ Invalid or missing role:', role);
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Invalid role. Must be either "reader" or "publisher"' 
-      });
+      console.warn(' Invalid or missing role:', role);
+      return NextResponse.json({
+        success: false,
+        error: 'Invalid role. Must be either "reader" or "publisher"'
+      }, { status: 400 });
     }
 
-    console.log('🔐 Verifying Google token...');
+    console.log(' Verifying Google token...');
     const googleUser = await verifyGoogleToken(credential);
     
     if (!googleUser.email_verified) {
-      console.warn('❌ Google email not verified');
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Google email not verified' 
-      });
+      console.warn(' Google email not verified');
+      return NextResponse.json({
+        success: false,
+        error: 'Google email not verified'
+      }, { status: 400 });
     }
 
-    console.log('✅ Google token verified for user:', googleUser.email);
+    console.log(' Google token verified for user:', googleUser.email);
 
     // Check if user already exists
     const userDocRef = doc(db, 'users', googleUser.uid);
     const userDoc = await getDoc(userDocRef);
     
     if (userDoc.exists()) {
-      console.log('👤 User already exists, signing them in...');
+      console.log(' User already exists, signing them in...');
       
       // Create custom token for existing user
       const customToken = await adminAuth.createCustomToken(googleUser.uid);
       
-      return res.status(200).json({
+      return NextResponse.json({
         success: true,
         message: 'User signed in successfully',
         customToken,
@@ -124,7 +119,7 @@ export default async function handler(req, res) {
       });
     }
 
-    console.log('👤 Creating new user account...');
+    console.log(' Creating new user account...');
 
     // Parse name from Google or use provided names
     const [googleFirstName, ...googleLastNameParts] = (googleUser.name || '').split(' ');
@@ -151,26 +146,24 @@ export default async function handler(req, res) {
       isActive: true,
     };
 
-    console.log('💾 Saving new user to Firestore...');
-    console.log('📄 User data:', JSON.stringify(userData, null, 2));
+    console.log(' Saving new user to Firestore...');
+    console.log(' User data:', JSON.stringify(userData, null, 2));
 
     // Save user to Firestore
     await setDoc(userDocRef, userData);
-    console.log('✅ User saved to Firestore');
+    console.log('User saved to Firestore');
 
     // Create role-specific profile
     if (role === 'publisher') {
-      console.log('📋 Creating publisher profile...');
+      console.log(' Creating publisher profile...');
       
       // For Google signup, we might not have all publisher data
-      // So we create a basic profile that they can complete later
       const publisherProfileRef = doc(db, 'publishers', googleUser.uid);
       const publisherProfile = {
         uid: googleUser.uid,
         email: userData.email,
         contactName: `${firstName} ${lastName}`.trim(),
-        companyName: '', // To be filled later
-        industry: '',
+        companyName: '', 
         companyWebsite: null,
         jobTitle: '',
         phone: null,
@@ -182,7 +175,7 @@ export default async function handler(req, res) {
         subscriptionStatus: 'trial',
         totalArticles: 0,
         totalViews: 0,
-        profileComplete: false, // Flag to indicate incomplete profile
+        profileComplete: false,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
@@ -223,7 +216,17 @@ export default async function handler(req, res) {
 
     console.log('🎉 Google signup completed successfully');
 
-    res.status(200).json({
+    // Send welcome email
+    try {
+      console.log(' Sending welcome email...');
+      await sendWelcomeEmail(userData.email, userData.firstName, userData.role);
+      console.log(' Welcome email sent successfully');
+    } catch (emailError) {
+      console.warn('Failed to send welcome email:', emailError);
+     
+    }
+
+    return NextResponse.json({
       success: true,
       message: 'User registered successfully with Google',
       customToken,
@@ -236,37 +239,45 @@ export default async function handler(req, res) {
         profilePicture: userData.profilePicture,
       },
       isNewUser: true,
-      needsProfileCompletion: role === 'publisher', // Publishers need to complete their profile
+      needsProfileCompletion: role === 'publisher', 
     });
 
   } catch (error) {
-    console.error('❌ Error in /api/google-signup:', error);
+    console.error(' Error in /api/google-signup:', error);
     
-    // Handle specific errors
+   
     if (error.message === 'Invalid Google token') {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Invalid Google credentials' 
-      });
+      return NextResponse.json({
+        success: false,
+        error: 'Invalid Google credentials'
+      }, { status: 400 });
     }
     
     if (error.code === 'auth/uid-already-exists') {
-      return res.status(409).json({ 
-        success: false, 
-        error: 'User already exists' 
-      });
+      return NextResponse.json({
+        success: false,
+        error: 'User already exists'
+      }, { status: 409 });
     }
 
     if (error.code === 'permission-denied') {
-      return res.status(403).json({ 
-        success: false, 
-        error: 'Permission denied. Check Firestore security rules.' 
-      });
+      return NextResponse.json({
+        success: false,
+        error: 'Permission denied. Check Firestore security rules.'
+      }, { status: 403 });
     }
 
-    res.status(500).json({ 
-      success: false, 
-      error: 'Internal server error. Please try again.' 
-    });
+    return NextResponse.json({
+      success: false,
+      error: 'Internal server error. Please try again.'
+    }, { status: 500 });
   }
+}
+
+// Handle other HTTP methods
+export async function GET() {
+  return NextResponse.json(
+    { error: 'Method not allowed. Only POST is supported.' },
+    { status: 405 }
+  );
 }
