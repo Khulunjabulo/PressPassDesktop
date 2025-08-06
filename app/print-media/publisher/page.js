@@ -1,7 +1,7 @@
 "use client";
 
 import Header from "@/components/UI/header";
-import PublisherSidebar from "@/components/UI/publisherSidebar";
+import PublisherSidebar from "@/components/UI/publisherSidebar.jsx";
 import UploadForm from "@/components/uploadForm";
 import usePrintMediaLogic from "@/hooks/PrintMediaLogic";
 
@@ -31,17 +31,6 @@ export default function Publisher() {
 
           {/* Upload Form */}
           <UploadForm onSubmit={handleFormSubmit} />
-
-          {/* Footer */}
-          <footer className="text-center mt-4 text-xs text-gray-400">
-            <p>Corporate HQ | Terms of Use | Privacy Policy</p>
-            <p>ABOUT PRESS-PASS</p>
-            <div className="mt-1 space-x-2">
-              <span>🔗</span>
-              <span>📘</span>
-              <span>🐦</span>
-            </div>
-          </footer>
         </main>
       </div>
     </>
