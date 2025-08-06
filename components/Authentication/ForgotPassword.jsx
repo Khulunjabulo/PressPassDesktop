@@ -5,7 +5,7 @@ import Link from "next/link"
 import Image from "next/image"
 
 export default function ForgotPasswordForm() {
-  const { email, setEmail, submitted, handleSubmit } = useForgotPassword()
+  const { email, setEmail, submitted, loading, error, handleSubmit } = useForgotPassword()
 
   return (
     <div className="bg-gray-50 min-h-screen flex items-center justify-center p-4">
@@ -78,8 +78,15 @@ export default function ForgotPasswordForm() {
               {!submitted ? (
                 <>
                   <p className="text-sm text-black mb-6 text-center">
-                    Enter your email and we’ll send you instructions to reset your password.
+                    Enter your email and we'll send you instructions to reset your password.
                   </p>
+                  
+                  {error && (
+                    <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg text-sm mb-4">
+                      {error}
+                    </div>
+                  )}
+                  
                   <form onSubmit={handleSubmit} className="space-y-4">
                     <input
                       type="email"
@@ -87,28 +94,35 @@ export default function ForgotPasswordForm() {
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full px-4 py-2 border border-[#67a2c9]  bg-white-500 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-white placeholder-white"
+                      disabled={loading}
+                      className="w-full px-4 py-2 border border-[#67a2c9] bg-white text-black rounded-md focus:outline-none focus:ring-2 focus:ring-[#329ae1] placeholder-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
                     />
                     <button
                       type="submit"
-                      className="text-black w-full bg-[#329ae1] text-black-700 font-bold py-2 rounded-md hover:bg-[#67a2c9] transition"
+                      disabled={loading}
+                      className="w-full bg-[#329ae1] text-white font-bold py-2 rounded-md hover:bg-[#67a2c9] transition disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Send Recovery Email
+                      {loading ? 'Sending...' : 'Send Recovery Email'}
                     </button>
                   </form>
                   <div className="mt-6 text-center">
-                    <Link href="/signin" className="text-sm text-white underline hover:text-gray-200">
+                    <Link href="/signin" className="text-sm text-[#329ae1] underline hover:text-[#67a2c9]">
                       Back to Sign In
                     </Link>
                   </div>
                 </>
               ) : (
                 <div className="text-center space-y-4">
-                  <p className="text-green-200 font-semibold">
-                    Recovery instructions have been sent to <br />
-                    <span className="underline">{email}</span>
-                  </p>
-                  <Link href="/signin" className="text-sm text-white underline hover:text-gray-200">
+                  <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg">
+                    <p className="font-semibold">
+                      Password reset instructions have been sent to:
+                    </p>
+                    <p className="underline mt-1">{email}</p>
+                    <p className="text-sm mt-2">
+                      Please check your email and follow the instructions to reset your password.
+                    </p>
+                  </div>
+                  <Link href="/signin" className="text-sm text-[#329ae1] underline hover:text-[#67a2c9]">
                     Back to Sign In
                   </Link>
                 </div>
