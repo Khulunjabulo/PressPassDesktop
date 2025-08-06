@@ -4,8 +4,24 @@ const { getFirestoreDb } = require('../../../lib/firebase-admin');
 
 function logApiCall(method, info) {
   console.log(`================ API DEBUG: /api/favorites [${method}] ================`);
-  console.log('Info:', info);
+  console.log('Info:', JSON.stringify(info, null, 2));
   console.log('===============================================================');
+}
+
+function validateUserId(userId) {
+  if (!userId) {
+    return { valid: false, error: 'User ID is required' };
+  }
+  if (typeof userId !== 'string') {
+    return { valid: false, error: 'User ID must be a string' };
+  }
+  if (userId.trim() === '') {
+    return { valid: false, error: 'User ID cannot be empty' };
+  }
+  if (userId.includes('/')) {
+    return { valid: false, error: 'User ID cannot contain forward slashes' };
+  }
+  return { valid: true };
 }
 
 // ✅ GET Favorites
@@ -13,31 +29,51 @@ export async function GET(req) {
   const { searchParams } = new URL(req.url);
   const userId = searchParams.get('userId');
 
-  logApiCall('GET', { userId });
+  logApiCall('GET', { 
+    userId, 
+    userIdType: typeof userId,
+    userIdLength: userId?.length,
+    searchParams: Object.fromEntries(searchParams.entries())
+  });
 
-  if (!userId) {
-    console.warn('⚠️ Missing userId in GET request');
-    return NextResponse.json({ success: false, error: 'User ID is required' }, { status: 400 });
+  const userValidation = validateUserId(userId);
+  if (!userValidation.valid) {
+    console.warn('⚠️ Invalid userId in GET request:', userValidation.error);
+    return NextResponse.json({ success: false, error: userValidation.error }, { status: 400 });
   }
 
   try {
     const db = getFirestoreDb();
     console.log('✅ Firestore DB instance acquired for GET');
 
-    const favoritesRef = db.collection('favorites').doc(userId);
-    const favoritesDoc = await favoritesRef.get();
+    // Construct path safely
+    const readerPath = `readers/${userId}`;
+    const favoritesPath = `${readerPath}/favorites`;
+    console.log('🔍 Using Firestore path:', favoritesPath);
 
-    if (!favoritesDoc.exists) {
+    // Access favorites as subcollection under readers/userId/favorites
+    const favoritesRef = db.collection('readers').doc(userId).collection('favorites');
+    const favoritesSnapshot = await favoritesRef.orderBy('addedAt', 'desc').get();
+
+    if (favoritesSnapshot.empty) {
       console.log('📝 No favorites found, returning empty array');
       return NextResponse.json({ success: true, favorites: [] }, { status: 200 });
     }
 
-    const data = favoritesDoc.data();
-    console.log('✅ Favorites found:', data?.items?.length || 0, 'items');
+    // Convert subcollection documents to array
+    const favorites = [];
+    favoritesSnapshot.forEach(doc => {
+      favorites.push({
+        id: doc.id,
+        ...doc.data()
+      });
+    });
+
+    console.log('✅ Favorites found:', favorites.length, 'items');
 
     return NextResponse.json({
       success: true,
-      favorites: data?.items || []
+      favorites: favorites
     }, { status: 200 });
 
   } catch (error) {
@@ -57,55 +93,110 @@ export async function POST(req) {
     const body = await req.json();
     const { userId, item } = body;
 
-    logApiCall('POST', { userId, itemPreview: item?.title || item?.id });
+    logApiCall('POST', { 
+      userId, 
+      userIdType: typeof userId,
+      userIdLength: userId?.length,
+      itemPreview: {
+        id: item?.id,
+        title: item?.title?.substring(0, 50) + '...',
+        url: item?.url
+      },
+      bodyKeys: Object.keys(body || {})
+    });
 
-    if (!userId || !item) {
-      console.warn('⚠️ Missing userId or item in POST');
-      return NextResponse.json({ success: false, error: 'User ID and item are required' }, { status: 400 });
+    // Validate userId
+    const userValidation = validateUserId(userId);
+    if (!userValidation.valid) {
+      console.warn('⚠️ Invalid userId in POST request:', userValidation.error);
+      return NextResponse.json({ success: false, error: userValidation.error }, { status: 400 });
+    }
+
+    if (!item) {
+      console.warn('⚠️ Missing item in POST');
+      return NextResponse.json({ success: false, error: 'Item is required' }, { status: 400 });
     }
 
     const db = getFirestoreDb();
     console.log('✅ Firestore DB instance acquired for POST');
 
-    const favoritesRef = db.collection('favorites').doc(userId);
-    const favoritesDoc = await favoritesRef.get();
+    // Create unique ID for the favorite item - create safe document ID
+    let favoriteId;
+    if (item.url || item.link) {
+      // Use URL/link to create a consistent ID, but make it Firestore-safe
+      const urlToUse = item.url || item.link;
+      // Create a hash-like ID from the URL to ensure uniqueness and avoid duplicates
+      favoriteId = 'url_' + Buffer.from(urlToUse).toString('base64')
+        .replace(/[^a-zA-Z0-9]/g, '')  // Remove non-alphanumeric characters
+        .substring(0, 50) + '_' + Date.now();
+    } else if (item.id && typeof item.id === 'string') {
+      // Clean existing ID to make it Firestore-safe
+      favoriteId = item.id.replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 100);
+    } else {
+      favoriteId = `story_${Date.now()}`;
+    }
+    
+    console.log('🆔 Generated safe document ID:', favoriteId);
 
     const favoriteItem = {
       ...item,
       addedAt: new Date().toISOString(),
-      id: item.id || `article_${Date.now()}`
+      id: favoriteId
     };
 
-    if (!favoritesDoc.exists) {
-      console.log('🆕 Creating new favorites document for user:', userId);
-      await favoritesRef.set({
-        userId,
-        items: [favoriteItem],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      });
-    } else {
-      const existingItems = favoritesDoc.data()?.items || [];
-      const exists = existingItems.some(i => i.id === favoriteItem.id);
+    // Construct path safely
+    const readerPath = `readers/${userId}`;
+    const favoritePath = `${readerPath}/favorites/${favoriteId}`;
+    console.log('🔍 Using Firestore path:', favoritePath);
 
-      if (exists) {
+    // Access favorites as subcollection under readers/userId/favorites
+    const favoriteRef = db.collection('readers').doc(userId).collection('favorites').doc(favoriteId);
+    
+    // Check if item already exists (by URL if available, otherwise by ID)
+    if (item.url || item.link) {
+      const urlToCheck = item.url || item.link;
+      console.log('🔍 Checking for existing favorite with URL:', urlToCheck);
+      
+      const existingQuery = db.collection('readers').doc(userId).collection('favorites')
+        .where('url', '==', urlToCheck)
+        .limit(1);
+      
+      const existingSnapshot = await existingQuery.get();
+      if (!existingSnapshot.empty) {
+        console.warn('⚠️ Item with this URL already exists in favorites');
+        return NextResponse.json({ success: false, error: 'Item already in favorites' }, { status: 400 });
+      }
+      
+      // Also check 'link' field if different
+      if (item.link && item.link !== urlToCheck) {
+        const linkQuery = db.collection('readers').doc(userId).collection('favorites')
+          .where('link', '==', item.link)
+          .limit(1);
+        
+        const linkSnapshot = await linkQuery.get();
+        if (!linkSnapshot.empty) {
+          console.warn('⚠️ Item with this link already exists in favorites');
+          return NextResponse.json({ success: false, error: 'Item already in favorites' }, { status: 400 });
+        }
+      }
+    } else {
+      const existingDoc = await favoriteRef.get();
+      if (existingDoc.exists) {
         console.warn('⚠️ Item already exists in favorites');
         return NextResponse.json({ success: false, error: 'Item already in favorites' }, { status: 400 });
       }
-
-      console.log('➕ Adding item to existing favorites');
-      await favoritesRef.update({
-        items: [...existingItems, favoriteItem],
-        updatedAt: new Date().toISOString()
-      });
     }
 
-    console.log('✅ Favorite successfully added:', favoriteItem.id);
+    // Add to favorites subcollection
+    await favoriteRef.set(favoriteItem);
+
+    console.log('✅ Favorite successfully added:', favoriteId);
 
     return NextResponse.json({ success: true, item: favoriteItem }, { status: 200 });
 
   } catch (error) {
     console.error('❌ POST /favorites error:', error.message);
+    console.error('❌ Error stack:', error.stack);
     console.error('❌ Full error:', error);
     return NextResponse.json({
       success: false,
@@ -121,36 +212,45 @@ export async function DELETE(req) {
     const body = await req.json();
     const { userId, itemId } = body;
 
-    logApiCall('DELETE', { userId, itemId });
+    logApiCall('DELETE', { 
+      userId, 
+      userIdType: typeof userId,
+      userIdLength: userId?.length,
+      itemId,
+      bodyKeys: Object.keys(body || {})
+    });
 
-    if (!userId || !itemId) {
-      console.warn('⚠️ Missing userId or itemId in DELETE');
-      return NextResponse.json({ success: false, error: 'User ID and item ID are required' }, { status: 400 });
+    // Validate userId
+    const userValidation = validateUserId(userId);
+    if (!userValidation.valid) {
+      console.warn('⚠️ Invalid userId in DELETE request:', userValidation.error);
+      return NextResponse.json({ success: false, error: userValidation.error }, { status: 400 });
+    }
+
+    if (!itemId) {
+      console.warn('⚠️ Missing itemId in DELETE');
+      return NextResponse.json({ success: false, error: 'Item ID is required' }, { status: 400 });
     }
 
     const db = getFirestoreDb();
     console.log('✅ Firestore DB instance acquired for DELETE');
 
-    const favoritesRef = db.collection('favorites').doc(userId);
-    const favoritesDoc = await favoritesRef.get();
+    // Construct path safely
+    const readerPath = `readers/${userId}`;
+    const favoritePath = `${readerPath}/favorites/${itemId}`;
+    console.log('🔍 Using Firestore path:', favoritePath);
 
-    if (!favoritesDoc.exists) {
-      console.warn('⚠️ No favorites found for this user');
-      return NextResponse.json({ success: false, error: 'No favorites found' }, { status: 404 });
-    }
+    // Access specific favorite document in subcollection
+    const favoriteRef = db.collection('readers').doc(userId).collection('favorites').doc(itemId);
+    const favoriteDoc = await favoriteRef.get();
 
-    const existingItems = favoritesDoc.data()?.items || [];
-    const filteredItems = existingItems.filter(i => i.id !== itemId);
-
-    if (filteredItems.length === existingItems.length) {
+    if (!favoriteDoc.exists) {
       console.warn('⚠️ Item not found in favorites');
       return NextResponse.json({ success: false, error: 'Item not found' }, { status: 404 });
     }
 
-    await favoritesRef.update({
-      items: filteredItems,
-      updatedAt: new Date().toISOString()
-    });
+    // Delete the favorite document
+    await favoriteRef.delete();
 
     console.log('✅ Removed item from favorites:', itemId);
 
