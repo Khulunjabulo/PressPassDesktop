@@ -1,3 +1,6 @@
+'use client';
+
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 export default function NewsCard({
@@ -12,6 +15,7 @@ export default function NewsCard({
   link = null,
 }) {
   const [liked, setLiked] = useState(false);
+  const router = useRouter();
 
   const toggleLiked = () => {
     setLiked(!liked);
@@ -19,12 +23,20 @@ export default function NewsCard({
 
   const readMoreLink = isUploadedStory && pdfUrl ? pdfUrl : link;
 
+  const handlePublicationClick = () => {
+    const slug = publicationName.toLowerCase().replace(/\s+/g, "-");
+
+    console.log("Navigating to:", `/news-reader/${slug}`);
+    router.push(`/news-reader/${slug}`);
+  };
+
   return (
     <div className="flex items-start gap-4 bg-white rounded-xl shadow-sm hover:shadow-md transition p-4">
       {/* Left image or logo box with heart button */}
       <div className="flex flex-col items-center flex-shrink-0">
         <div
-          className="w-20 h-20 rounded-md flex items-center justify-center overflow-hidden"
+          onClick={handlePublicationClick}
+          className="w-20 h-20 rounded-md flex items-center justify-center overflow-hidden cursor-pointer"
           style={{ backgroundColor: imageUrl ? "transparent" : logoBgColor }}
         >
           {imageUrl ? (
@@ -48,7 +60,6 @@ export default function NewsCard({
           type="button"
         >
           {liked ? (
-            // Filled heart (light blue filled)
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="w-6 h-6 text-blue-400 fill-current"
@@ -62,7 +73,6 @@ export default function NewsCard({
               11.54L12 21.35z" />
             </svg>
           ) : (
-            // Outline heart (light blue stroke, no fill)
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="w-6 h-6 text-blue-400"
@@ -94,7 +104,10 @@ export default function NewsCard({
           </div>
         )}
 
-        <p className="text-sm font-semibold text-gray-800 mb-1">
+        <p
+          onClick={handlePublicationClick}
+          className="text-sm font-semibold text-gray-800 mb-1 cursor-pointer hover:underline"
+        >
           {publicationName.toUpperCase()}
         </p>
 
