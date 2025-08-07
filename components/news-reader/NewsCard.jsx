@@ -26,7 +26,7 @@ export default function NewsCard({
   const handlePublicationClick = () => {
     const slug = publicationName.toLowerCase().replace(/\s+/g, "-");
 
-    console.log("Navigating to:", `/news-reader/${slug}`); // ✅ Console test
+    console.log("Navigating to:", `/news-reader/${slug}`);
     router.push(`/news-reader/${slug}`);
   };
 
