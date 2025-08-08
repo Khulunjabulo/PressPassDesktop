@@ -1,12 +1,13 @@
 import React, { useState, useRef } from "react"
 
-export default function FileUpload({ setFile, uploadProgress, onPreview }) {
+export default function FileUpload({ setFile, uploadProgress, onPreview, onExtract }) {
   const [selectedFile, setSelectedFile] = useState(null)
   const [error, setError] = useState("")
   const [isDragOver, setIsDragOver] = useState(false)
+  const [isExtracting, setIsExtracting] = useState(false)
   const fileInputRef = useRef(null)
 
-  const handleFileChange = (file) => {
+ {/**  const handleFileChange = (file) => {
     setError("")
 
     if (file) {
@@ -36,7 +37,41 @@ export default function FileUpload({ setFile, uploadProgress, onPreview }) {
         onPreview(previewUrl)
       }
     }
+ }
+ **/}
+
+ const handleFileChange = async (file) => {
+  setError("");
+  if (!file || file.type !== "application/pdf" || file.size > 10 * 1024 * 1024) {
+    setError("Please select a valid PDF file under 10MB");
+    setSelectedFile(null);
+    setFile(null);
+    return;
   }
+
+  setSelectedFile(file);
+  setFile(file);
+
+  if (onPreview) {
+    const previewUrl = URL.createObjectURL(file);
+    onPreview(previewUrl);
+  }
+
+  if (onExtract) {
+    setIsExtracting(true);
+    try {
+      const { extractTextFromPDF, extractArticleInfo } = await import("../lib/pdfExtractor");
+      const text = await extractTextFromPDF(file);
+      const info = extractArticleInfo(text);
+      onExtract(info); // Pass to parent
+    } catch (err) {
+      console.error("PDF extraction failed:", err);
+    } finally {
+      setIsExtracting(false);
+    }
+  }
+};
+
 
   const handleInputChange = (e) => {
     const file = e.target.files[0]
@@ -178,6 +213,15 @@ export default function FileUpload({ setFile, uploadProgress, onPreview }) {
           </div>
         )}
       </div>
+      
+      {isExtracting && (
+        <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
+          <div className="flex items-center">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+            <p className="text-sm text-blue-600">Extracting text from PDF...</p>
+          </div>
+        </div>
+      )}
       
       {error && (
         <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-md">
