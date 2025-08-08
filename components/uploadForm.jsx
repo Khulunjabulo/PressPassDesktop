@@ -6,6 +6,7 @@ import PrioritySelector from "./prioritySelector"
 import PreviewToggle from "./previviewToogle"
 import { storage } from "../Firebase/firebase"
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage"
+import { useRouter } from "next/navigation"; // Add this import
 
 export default function UploadForm({ onSubmit }) {
   const [priority, setPriority] = useState(null)
@@ -17,72 +18,96 @@ export default function UploadForm({ onSubmit }) {
   const [isLoadingPreview, setIsLoadingPreview] = useState(false)
   const [previewError, setPreviewError] = useState("")
   const [immediatePreviewUrl, setImmediatePreviewUrl] = useState(null)
+  const [autofill, setAutofill] = useState({ headline: "", byline: "", location: "" });
+  const [isSubmitting, setIsSubmitting] = useState(false); // Add loading state
+  const router = useRouter(); // For navigation
 
   const handlePreview = (previewUrl) => {
     setImmediatePreviewUrl(previewUrl)
   }
 
   const handleSubmit = async (e, action = 'publish') => {
-    e.preventDefault()
-    setUploadError("")
-    
-    const formData = Object.fromEntries(new FormData(e.target))
-    formData.priority = priority
-    formData.previewStyle = previewStyle
-    formData.action = action
+    e.preventDefault();
+    setUploadError("");
+    setIsSubmitting(true); // Start loading
 
-    if (file) {
-      // Validate file type
-      if (file.type !== "application/pdf") {
-        setUploadError("Please select a valid PDF file")
-        return
-      }
+    try {
+      // Get the form element
+      const form = e.target.form || e.target.closest("form");
+      const formData = Object.fromEntries(new FormData(form));
+      formData.priority = priority;
+      formData.previewStyle = previewStyle;
+      formData.action = action;
 
-      const storageRef = ref(storage, `uploads/${Date.now()}_${file.name}`)
-      const uploadTask = uploadBytesResumable(storageRef, file)
-
-      uploadTask.on(
-        "state_changed",
-        (snapshot) => {
-          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100
-          setUploadProgress(progress.toFixed(0))
-        },
-        (error) => {
-          console.error("Upload error:", error)
-          setUploadError(`Upload failed: ${error.message}`)
-          setUploadProgress(null)
-        },
-        async () => {
-          try {
-            const url = await getDownloadURL(uploadTask.snapshot.ref)
-            formData.pdfUrl = url
-            formData.fileName = file.name
-            formData.fileSize = file.size
-
-            // Set loading state for preview
-            setIsLoadingPreview(true)
-            setPreviewError("")
-            
-            // Save URL for preview
-            setPdfPreviewUrl(url)
-            
-            // Clear loading state after a short delay to allow iframe to load
-            setTimeout(() => {
-              setIsLoadingPreview(false)
-            }, 1000)
-
-            setUploadProgress(null)
-            onSubmit(formData)
-          } catch (error) {
-            console.error("Error getting download URL:", error)
-            setUploadError("Failed to get file URL")
-            setUploadProgress(null)
-            setIsLoadingPreview(false)
-          }
+      if (file) {
+        // Validate file type
+        if (file.type !== "application/pdf") {
+          setUploadError("Please select a valid PDF file");
+          setIsSubmitting(false);
+          return;
         }
-      )
-    } else {
-      onSubmit(formData)
+
+        const storageRef = ref(storage, `uploads/${Date.now()}_${file.name}`);
+        const uploadTask = uploadBytesResumable(storageRef, file);
+
+        uploadTask.on(
+          "state_changed",
+          (snapshot) => {
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            setUploadProgress(progress.toFixed(0));
+          },
+          (error) => {
+            console.error("Upload error:", error);
+            setUploadError(`Upload failed: ${error.message}`);
+            setUploadProgress(null);
+            setIsSubmitting(false);
+          },
+          async () => {
+            try {
+              const url = await getDownloadURL(uploadTask.snapshot.ref);
+              formData.pdfUrl = url;
+              formData.fileName = file.name;
+              formData.fileSize = file.size;
+
+              setIsLoadingPreview(true);
+              setPreviewError("");
+              setPdfPreviewUrl(url);
+
+              setTimeout(() => {
+                setIsLoadingPreview(false);
+              }, 1000);
+
+              setUploadProgress(null);
+
+              // Call parent onSubmit and handle navigation
+              const result = await onSubmit(formData);
+              setIsSubmitting(false);
+
+              // If publish was successful, open the reader 
+              if (action === "publish" && result?.storyId) {
+                router.push(`/reader/${result.storyId}`);
+              }
+            } catch (error) {
+              console.error("Error getting download URL:", error);
+              setUploadError("Failed to get file URL");
+              setUploadProgress(null);
+              setIsLoadingPreview(false);
+              setIsSubmitting(false);
+            }
+          }
+        );
+      } else {
+        // No file, just submit form
+        const result = await onSubmit(formData);
+        setIsSubmitting(false);
+
+        if (action === "publish" && result?.storyId) {
+          router.push(`/news-reader/${result.storyId}`);
+        }
+      }
+    } catch (error) {
+      setUploadError("An unexpected error occurred. Please try again.");
+      setIsSubmitting(false);
     }
   }
 
@@ -142,7 +167,13 @@ export default function UploadForm({ onSubmit }) {
       <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md p-3 w-full">
         <h2 className="text-base font-bold mb-2 text-center">Document Upload</h2>
 
-        <FileUpload setFile={setFile} uploadProgress={uploadProgress} onPreview={handlePreview} />
+            <FileUpload
+        setFile={setFile}
+        uploadProgress={uploadProgress}
+        onPreview={handlePreview}
+        onExtract={(data) => setAutofill(data)}
+      />
+
 
         {uploadError && (
           <div className="bg-red-50 border border-red-200 rounded-md p-3 mb-4">
@@ -152,9 +183,30 @@ export default function UploadForm({ onSubmit }) {
 
         {/* Form Fields */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-3">
-          <input name="headline" id="headline" placeholder="Enter headline..." className="border p-1.5 rounded-md w-full text-xs" />
-          <input name="byline" id="byline" placeholder="Byline Name" className="border p-1.5 rounded-md w-full text-xs" />
-          <input name="location" id="location" placeholder="City/Town" className="border p-1.5 rounded-md w-full text-xs" />
+<input
+  name="headline"
+  id="headline"
+  placeholder="Enter headline..."
+  defaultValue={autofill.headline}
+  className="border p-1.5 rounded-md w-full text-xs"
+/>
+
+          <input
+            name="byline"
+            id="byline"
+            placeholder="Byline Name"
+            defaultValue={autofill.byline}
+            className="border p-1.5 rounded-md w-full text-xs"
+          />
+
+          <input
+            name="location"
+            id="location"
+            placeholder="City/Town"
+            defaultValue={autofill.location}
+            className="border p-1.5 rounded-md w-full text-xs"
+          />
+
           
           <select name="section" id="section" className="border p-1.5 rounded-md w-full text-xs">
             <option>Select Section</option>
@@ -170,30 +222,45 @@ export default function UploadForm({ onSubmit }) {
 
         <PrioritySelector priority={priority} setPriority={setPriority} />
 
-        <textarea name="lead" id="lead" placeholder="Write the lead paragraph..." className="w-full border p-1.5 rounded-md mb-2 text-xs" rows="2" />
-        <textarea name="body" id="body" placeholder="Continue with the article body..." className="w-full border p-1.5 rounded-md mb-3 text-xs" rows="2" />
+        <textarea
+          name="lead"
+          id="lead"
+          placeholder="Write the lead paragraph..."
+          className="w-full border p-1.5 rounded-md mb-2 text-xs"
+          rows="2"
+        />
+        <textarea
+          name="body"
+          id="body"
+          placeholder="Continue with the article body..."
+          className="w-full border p-1.5 rounded-md mb-3 text-xs"
+          rows="2"
+        />
 
         <div className="flex justify-between mb-3">
           <button
             type="button"
             onClick={handleSaveDraft}
             className="bg-blue-900 text-white px-3 py-1.5 rounded-md hover:bg-blue-800 transition-colors text-xs"
+            disabled={isSubmitting}
           >
-            SAVE DRAFT
+            {isSubmitting ? "Saving..." : "SAVE DRAFT"}
           </button>
           <button
             type="button"
             onClick={(e) => handleSubmit(e, 'review')}
             className="bg-yellow-400 text-black font-semibold px-3 py-1.5 rounded-md hover:bg-yellow-500 transition-colors text-xs"
+            disabled={isSubmitting}
           >
-            SUBMIT FOR REVIEW
+            {isSubmitting ? "Submitting..." : "SUBMIT FOR REVIEW"}
           </button>
           <button
             type="button"
             onClick={(e) => handleSubmit(e, 'publish')}
             className="bg-red-600 text-white px-3 py-1.5 rounded-md hover:bg-red-700 transition-colors text-xs"
+            disabled={isSubmitting}
           >
-            PUBLISH NOW
+            {isSubmitting ? "Publishing..." : "PUBLISH NOW"}
           </button>
         </div>
 

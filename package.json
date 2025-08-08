@@ -2,6 +2,7 @@
   "name": "presspassdesktop",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -11,6 +12,7 @@
   "dependencies": {
     "@fortawesome/fontawesome-free": "^7.0.0",
     "@next/swc-win32-x64-msvc": "^15.4.2",
+    "@radix-ui/react-popover": "^1.1.14",
     "axios": "^1.10.0",
     "firebase": "^11.10.0",
     "firebase-admin": "^13.4.0",
@@ -18,7 +20,9 @@
     "lucide-react": "^0.525.0",
     "next": "15.3.5",
     "nodemailer": "^7.0.5",
+    "pdfjs-dist": "^5.4.54",
     "react": "^19.0.0",
+    "react-day-picker": "^9.8.1",
     "react-dom": "^19.0.0",
     "react-image-crop": "^11.0.10",
     "react-is": "^19.1.0",
