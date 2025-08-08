@@ -1,9 +1,12 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { timeAgo } from '@/lib/time';
 import NewsCard from '@/components/news-reader/NewsCard';
 import AdSlot from '@/components/news-reader/AdsSlot';
 import RecommendedOverlayBottom from '@/components/news-reader/Overlay';
+import { Card, CardContent } from '@/components/ui/newscard';
+import { FileText, Clock, Globe, Building, Users } from 'lucide-react';
 
 function dedupeArticles(articles = []) {
   const seen = new Set();
@@ -20,6 +23,34 @@ function dedupeArticles(articles = []) {
 
 export default function NewsGrid({ articles }) {
   const unique = dedupeArticles(articles || []);
+  const [newsources, setNewsources] = useState([]);
+  const [loadingSources, setLoadingSources] = useState(true);
+
+  // Fetch news sources
+  useEffect(() => {
+    const fetchNewsSources = async () => {
+      try {
+        const response = await fetch('/api/news-sources');
+        const data = await response.json();
+        if (data.success) {
+          setNewsources(data.newsources);
+        }
+      } catch (error) {
+        console.error('Error fetching news sources:', error);
+      } finally {
+        setLoadingSources(false);
+      }
+    };
+
+    fetchNewsSources();
+  }, []);
+
+  const handleSourceClick = (source) => {
+    // Navigate to specific publisher's articles or profile
+    console.log('Clicked on source:', source.name);
+    // You can implement navigation logic here
+    // e.g., router.push(`/news-reader/source/${source.id}`);
+  };
 
   return (
     <div className="relative">
@@ -56,21 +87,121 @@ export default function NewsGrid({ articles }) {
                   'No summary available.'
                 }
               />
-
-
               );
             })}
           </div>
 
-          {/* Publications */}
-          {/* <section className="mt-10">
-            <h2 className="text-xl font-bold mb-4">Publications</h2>
-            <div className="space-y-3">
-              <PublicationCard logoText="Isolezwe" logoBgColor="#008000" publicationName="Isolezwe" />
-              <PublicationCard logoText="Briefly" logoBgColor="#000000" publicationName="Briefly" />
-              <PublicationCard logoText="Sowetan" logoBgColor="#E31B23" publicationName="Sowetan" />
-            </div>
-          </section> */}
+          {/* News Sources Section */}
+          <section className="mt-10">
+            <h2 className="text-xl font-bold mb-4">News Sources</h2>
+            
+            {loadingSources ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[1, 2, 3].map((i) => (
+                  <Card key={i} className="animate-pulse">
+                    <CardContent className="p-4">
+                      <div className="flex items-start space-x-3">
+                        <div className="w-8 h-8 bg-gray-300 rounded-lg"></div>
+                        <div className="flex-1 space-y-2">
+                          <div className="h-3 bg-gray-300 rounded w-3/4"></div>
+                          <div className="h-2 bg-gray-300 rounded w-1/2"></div>
+                          <div className="h-2 bg-gray-300 rounded w-2/3"></div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : newsources.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {newsources.map((source) => (
+                  <Card 
+                    key={source.id} 
+                    className="hover:shadow-lg transition-shadow duration-200 cursor-pointer border-0 shadow-sm"
+                    onClick={() => handleSourceClick(source)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start space-x-3">
+                        {/* Logo */}
+                        <div className="flex-shrink-0">
+                          {source.logo ? (
+                            <img
+                              src={source.logo}
+                              alt={`${source.name} logo`}
+                              className="w-8 h-8 rounded-lg object-cover border border-gray-200"
+                            />
+                          ) : (
+                            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                              <span className="text-white font-semibold text-xs">
+                                {source.name.charAt(0)}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                          {/* Source Name */}
+                          <h3 className="text-sm font-semibold text-gray-900 truncate mb-1">
+                            {source.name}
+                          </h3>
+                          
+                          {/* Industry Badge */}
+                          <div className="mb-2">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              {source.industry}
+                            </span>
+                          </div>
+                          
+                          {/* Article Count */}
+                          <div className="flex items-center space-x-1 mb-1">
+                            <FileText className="w-3 h-3 text-blue-600" />
+                            <span className="text-xs font-medium text-gray-700">
+                              {source.articleCount} {source.articleCount === 1 ? 'post' : 'posts'}
+                            </span>
+                          </div>
+                          
+                          {/* Publication Type */}
+                          <div className="flex items-center space-x-1 mb-1">
+                            <Users className="w-3 h-3 text-gray-500" />
+                            <span className="text-xs text-gray-600 capitalize truncate">
+                              {source.publicationType}
+                            </span>
+                          </div>
+                          
+                          {/* Website */}
+                          {source.website && (
+                            <div className="flex items-center space-x-1 mb-1">
+                              <Globe className="w-3 h-3 text-gray-500" />
+                              <span className="text-xs text-gray-600 truncate">
+                                {source.website.replace(/^https?:\/\//, '')}
+                              </span>
+                            </div>
+                          )}
+                          
+                          {/* Last Posted */}
+                          <div className="flex items-center space-x-1">
+                            <Clock className="w-3 h-3 text-gray-500" />
+                            <span className="text-xs text-gray-500">
+                              {source.lastPosted === '--' ? '--' : `Last: ${source.lastPosted}`}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Building className="mx-auto h-8 w-8 text-gray-400" />
+                <h3 className="mt-2 text-sm font-medium text-gray-900">No news sources yet</h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  Publishers will appear here once they register and start publishing content.
+                </p>
+              </div>
+            )}
+          </section>
         </div>
 
         {/* RIGHT SIDEBAR (ads) */}
