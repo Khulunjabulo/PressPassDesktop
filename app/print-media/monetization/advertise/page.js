@@ -1,27 +1,14 @@
 "use client";
-"use client";
 
 import dynamic from "next/dynamic";
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/MonetizationCards";
+import { Card, CardContent, CardDescription, CardHeader,  CardTitle, } from "@/components/MonetizationCards";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger,  SelectValue, } from "@/components/ui/select";
 import { Upload } from "lucide-react";
 
 const Header = dynamic(() => import("@/components/UI/header"), { ssr: false });
@@ -116,7 +103,7 @@ export default function advertise() {
             <div>
               <h3 className="text-lg font-semibold mb-4">Content Interest</h3>
               <div className="flex flex-wrap gap-6 mb-4">
-                {['Newspaper', 'Lingazine', 'Blog'].map((item) => (
+                {['Newspaper', 'Magazine', 'Blog'].map((item) => (
                   <div key={item} className="flex items-center space-x-2">
                     <Checkbox id={item} checked={formData.contentInterests.includes(item)} onChange={(e) => handleCheckboxChange("contentInterests", item, e.target.checked)} />
                     <Label htmlFor={item}>{item}</Label>
@@ -130,7 +117,7 @@ export default function advertise() {
                     <SelectValue placeholder="Select languages" />
                   </SelectTrigger>
                   <SelectContent>
-                    {['english', 'spanish', 'french', 'german', 'other'].map((lang) => (
+                    {['english', 'Afrikaans', 'Isizulu', 'IsiXhosa', 'Sesotho', 'Setswana', 'Sepedi', 'Vhenda', 'Ndebele', 'Tsonga'].map((lang) => (
                       <SelectItem key={lang} value={lang}>{lang}</SelectItem>
                     ))}
                   </SelectContent>
