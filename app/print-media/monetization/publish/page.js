@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/MonetizationCards";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,9 +13,34 @@ import { cn } from "@/lib/utils";
 import Header from "@/components/UI/header";
 
 
-export default function publish() {
+export default function Publish() {
   const [date, setDate] = useState(null);
   const [selectedFile, setSelectedFile] = useState("example-article.pdf");
+const [publisherInfo, setPublisherInfo] = useState({
+    fullName: "",
+    email: "",
+    organization: ""
+  });
+  const [articleDetails, setArticleDetails] = useState({
+    title: "",
+    abstract: "",
+    keywords: ""
+  });
+  const [additionalNotes, setAdditionalNotes] = useState("");
+
+  const handlePublisherInfoChange = (field, value) => {
+    setPublisherInfo(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleArticleDetailsChange = (field, value) => {
+    setArticleDetails(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
 
   return (
     <>
@@ -38,9 +63,25 @@ export default function publish() {
             <div className="space-y-4">
               <h3 className="font-medium text-gray-900">Publisher Information</h3>
               <div className="space-y-3">
-                <Input placeholder="Full Name" className="w-full" />
-                <Input placeholder="Email Address" type="email" className="w-full" />
-                <Input placeholder="Organization / Affiliation" className="w-full" />
+                <Input 
+  placeholder="Full Name" 
+  className="w-full" 
+  value={publisherInfo.fullName}
+  onChange={(e) => handlePublisherInfoChange("fullName", e.target.value)}
+/>
+                <Input 
+  placeholder="Email Address" 
+  type="email" 
+  className="w-full" 
+  value={publisherInfo.email}
+  onChange={(e) => handlePublisherInfoChange("email", e.target.value)}
+/>
+                <Input 
+  placeholder="Organization / Affiliation" 
+  className="w-full" 
+  value={publisherInfo.organization}
+  onChange={(e) => handlePublisherInfoChange("organization", e.target.value)}
+/>
               </div>
             </div>
 
@@ -48,9 +89,24 @@ export default function publish() {
             <div className="space-y-4">
               <h3 className="font-medium text-gray-900">Article Details</h3>
               <div className="space-y-3">
-                <Input placeholder="Article Title" className="w-full" />
-                <Textarea placeholder="Short Abstract / Summary (max 300 words)" className="w-full min-h-[80px] resize-none" />
-                <Input placeholder="Keywords / Tags (comma-separated)" className="w-full" />
+                <Input 
+  placeholder="Article Title" 
+  className="w-full" 
+  value={articleDetails.title}
+  onChange={(e) => handleArticleDetailsChange("title", e.target.value)}
+/>
+                <Textarea 
+  placeholder="Short Abstract / Summary (max 300 words)" 
+  className="w-full min-h-[80px] resize-none" 
+  value={articleDetails.abstract}
+  onChange={(e) => handleArticleDetailsChange("abstract", e.target.value)}
+/>
+                <Input 
+  placeholder="Keywords / Tags (comma-separated)" 
+  className="w-full" 
+  value={articleDetails.keywords}
+  onChange={(e) => handleArticleDetailsChange("keywords", e.target.value)}
+/>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
@@ -97,7 +153,12 @@ export default function publish() {
             {/* Notes */}
             <div className="space-y-4">
               <h3 className="font-medium text-gray-900">Additional Notes (Optional)</h3>
-              <Textarea placeholder="Additional Notes" className="w-full min-h-[80px] resize-none" />
+              <Textarea 
+  placeholder="Additional Notes" 
+  className="w-full min-h-[80px] resize-none" 
+  value={additionalNotes}
+  onChange={(e) => setAdditionalNotes(e.target.value)}
+/>
             </div>
 
             {/* Submit */}
