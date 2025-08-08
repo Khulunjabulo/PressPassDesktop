@@ -21,14 +21,17 @@ export default function NewsCard({
     setLiked(!liked);
   };
 
-  const readMoreLink = isUploadedStory && pdfUrl ? pdfUrl : link;
+  // Create URL-friendly slug for navigation
+  const slug = publicationName?.toLowerCase().replace(/\s+/g, "-");
 
   const handlePublicationClick = () => {
-    const slug = publicationName.toLowerCase().replace(/\s+/g, "-");
-
-    console.log("Navigating to:", `/news-reader/${slug}`);
-    router.push(`/news-reader/${slug}`);
+    if (slug) {
+      console.log("Navigating to:", `/news-reader/${slug}`);
+      router.push(`/news-reader/${slug}`);
+    }
   };
+
+  const readMoreLink = isUploadedStory && pdfUrl ? pdfUrl : link;
 
   return (
     <div className="flex items-start gap-4 bg-white rounded-xl shadow-sm hover:shadow-md transition p-4">
@@ -52,7 +55,7 @@ export default function NewsCard({
           )}
         </div>
 
-        {/* Heart button below the picture */}
+        {/* Heart button */}
         <button
           onClick={toggleLiked}
           aria-label={liked ? "Unlike" : "Like"}
@@ -94,7 +97,7 @@ export default function NewsCard({
         </button>
       </div>
 
-      {/* Content */}
+      {/* Right content */}
       <div className="flex-1 min-w-0">
         {isUploadedStory && (
           <div className="mb-2">
@@ -104,6 +107,7 @@ export default function NewsCard({
           </div>
         )}
 
+        {/* Publication name - clickable */}
         <p
           onClick={handlePublicationClick}
           className="text-sm font-semibold text-gray-800 mb-1 cursor-pointer hover:underline"
@@ -111,10 +115,12 @@ export default function NewsCard({
           {publicationName.toUpperCase()}
         </p>
 
+        {/* Summary */}
         {summary && (
           <p className="text-sm text-gray-600 mb-2 line-clamp-3">{summary}</p>
         )}
 
+        {/* Footer info */}
         <div className="flex items-center justify-between text-[11px] text-gray-500">
           <span className="truncate max-w-[40%]">By: {author || "Unknown"}</span>
           <span>{time}</span>
