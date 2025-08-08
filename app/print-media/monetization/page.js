@@ -3,9 +3,13 @@ import { useState } from "react";
 import Header from "@/components/UI/header";
 import { FileText, Users, Megaphone, LayoutDashboard } from "lucide-react";
 import Link from "next/link";
+import { Button } from "@/components/UI/Button";
+import AdUploadOverlay from "@/components/AdUploadOverlay";
 
 export default function Monetization() {
   const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [isUploadOverlayOpen, setIsUploadOverlayOpen] = useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState(null);
 
   const templates = [
     {
@@ -16,6 +20,7 @@ export default function Monetization() {
       price: "Publisher to Quote",
       link: "Payment Link",
       upload: "Upload",
+      button: "Submit",
     },
     {
       id: 2,
@@ -25,6 +30,7 @@ export default function Monetization() {
       price: "Publisher to Quote",
       link: "Payment Link",
       upload: "Upload",
+      button: "Submit",
     },
     {
       id: 3,
@@ -34,6 +40,7 @@ export default function Monetization() {
       price: "Publisher to Quote",
       link: "Payment Link",
       upload: "Upload",
+      button: "Submit",
     },
     {
       id: 4,
@@ -43,6 +50,7 @@ export default function Monetization() {
       price: "Publisher to Quote",
       link: "Payment Link",
       upload: "Upload",
+      button: "Submit",
     },
     {
       id: 5,
@@ -52,8 +60,33 @@ export default function Monetization() {
       price: "Publisher to Quote",
       link: "Payment Link",
       upload: "Upload",
+      button: "Submit",
     },
   ];
+
+  const handleOpenUploadOverlay = (templateId) => {
+    setSelectedTemplateId(templateId);
+    setIsUploadOverlayOpen(true);
+  };
+
+  const handleUpload = async (file) => {
+    // This is where you would implement the actual file upload logic
+    // For now, we'll just log the file and show a success message
+    console.log("Uploading file for template:", selectedTemplateId, file);
+    
+    // Simulate upload process
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        console.log("File uploaded successfully!");
+        resolve();
+      }, 1000);
+    });
+  };
+
+  const handleSubmit = (template) => {
+    // This is where you would implement the submit logic
+    console.log("Submitting template:", template);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -210,6 +243,9 @@ export default function Monetization() {
                   <th className="text-left p-4 font-medium text-gray-700">
                     Upload
                   </th>
+                  <th className="text-left p-4 font-medium text-gray-700">
+                    Submit
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -229,8 +265,19 @@ export default function Monetization() {
                     <td className="p-4 text-blue-600 underline cursor-pointer">
                       {template.link}
                     </td>
-                    <td className="p-4 text-blue-600 underline cursor-pointer">
+                    <td
+                      className="p-4 text-blue-600 underline cursor-pointer"
+                      onClick={() => handleOpenUploadOverlay(template.id)}
+                    >
                       {template.upload}
+                    </td>
+                    <td className="p-4">
+                      <Button
+                        variant="default"
+                        onClick={() => handleSubmit(template)}
+                      >
+                        Submit
+                      </Button>
                     </td>
                   </tr>
                 ))}
@@ -239,6 +286,11 @@ export default function Monetization() {
           </div>
         </main>
       </div>
+      <AdUploadOverlay
+        isOpen={isUploadOverlayOpen}
+        onClose={() => setIsUploadOverlayOpen(false)}
+        onUpload={handleUpload}
+      />
     </div>
   );
 }
