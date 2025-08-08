@@ -1,792 +1,792 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { 
-  FileText, 
-  Upload, 
-  Save, 
-  Send, 
-  Bold, 
-  Italic, 
-  Underline, 
-  List, 
-  AlignLeft, 
-  AlignCenter, 
-  AlignRight, 
-  Link,
-  AlertCircle,
-  CheckCircle
-} from 'lucide-react';
+// import React, { useState, useRef, useEffect } from 'react';
+// import { 
+//   FileText, 
+//   Upload, 
+//   Save, 
+//   Send, 
+//   Bold, 
+//   Italic, 
+//   Underline, 
+//   List, 
+//   AlignLeft, 
+//   AlignCenter, 
+//   AlignRight, 
+//   Link,
+//   AlertCircle,
+//   CheckCircle
+// } from 'lucide-react';
 
-export default function ManualArticleForm({ onSubmit, onClose }) {
-  const [formData, setFormData] = useState({
-    title: '',
-    subtitle: '',
-    author: '',
-    authorTitle: '',
-    category: '',
-    tags: '',
-    featuredImage: null,
-    style: 'modern',
-    content: '',
-    metaDescription: '',
-    publishNow: true,
-    allowComments: true,
-    sendNewsletter: false
-  });
+// export default function ManualArticleForm({ onSubmit, onClose }) {
+//   const [formData, setFormData] = useState({
+//     title: '',
+//     subtitle: '',
+//     author: '',
+//     authorTitle: '',
+//     category: '',
+//     tags: '',
+//     featuredImage: null,
+//     style: 'modern',
+//     content: '',
+//     metaDescription: '',
+//     publishNow: true,
+//     allowComments: true,
+//     sendNewsletter: false
+//   });
 
-  const [wordCount, setWordCount] = useState(0);
-  const [readingTime, setReadingTime] = useState(0);
-  const [metaCharCount, setMetaCharCount] = useState(0);
-  const [fileName, setFileName] = useState('No file chosen');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errors, setErrors] = useState({});
-  const [submitStatus, setSubmitStatus] = useState(null);
-  const [currentUser, setCurrentUser] = useState(null);
+//   const [wordCount, setWordCount] = useState(0);
+//   const [readingTime, setReadingTime] = useState(0);
+//   const [metaCharCount, setMetaCharCount] = useState(0);
+//   const [fileName, setFileName] = useState('No file chosen');
+//   const [isSubmitting, setIsSubmitting] = useState(false);
+//   const [errors, setErrors] = useState({});
+//   const [submitStatus, setSubmitStatus] = useState(null);
+//   const [currentUser, setCurrentUser] = useState(null);
 
-  const editorRef = useRef(null);
-  const fileInputRef = useRef(null);
+//   const editorRef = useRef(null);
+//   const fileInputRef = useRef(null);
 
-  const categories = [
-    { value: '', label: 'Select a category' },
-    { value: 'technology', label: 'Technology' },
-    { value: 'business', label: 'Business' },
-    { value: 'lifestyle', label: 'Lifestyle' },
-    { value: 'health', label: 'Health & Wellness' },
-    { value: 'education', label: 'Education' },
-    { value: 'science', label: 'Science' },
-    { value: 'arts', label: 'Arts & Culture' },
-    { value: 'politics', label: 'Politics' },
-    { value: 'sports', label: 'Sports' },
-    { value: 'other', label: 'Other' }
-  ];
+//   const categories = [
+//     { value: '', label: 'Select a category' },
+//     { value: 'technology', label: 'Technology' },
+//     { value: 'business', label: 'Business' },
+//     { value: 'lifestyle', label: 'Lifestyle' },
+//     { value: 'health', label: 'Health & Wellness' },
+//     { value: 'education', label: 'Education' },
+//     { value: 'science', label: 'Science' },
+//     { value: 'arts', label: 'Arts & Culture' },
+//     { value: 'politics', label: 'Politics' },
+//     { value: 'sports', label: 'Sports' },
+//     { value: 'other', label: 'Other' }
+//   ];
 
-  const styleOptions = [
-    { value: 'modern', label: 'Modern', color: 'bg-blue-500', description: 'Clean, contemporary design' },
-    { value: 'classic', label: 'Classic', color: 'bg-gray-800', description: 'Traditional serif typography' },
-    { value: 'minimal', label: 'Minimal', color: 'bg-gray-300', description: 'Simple, distraction-free' },
-    { value: 'academic', label: 'Academic', color: 'bg-green-600', description: 'Formal, research-oriented' }
-  ];
+//   const styleOptions = [
+//     { value: 'modern', label: 'Modern', color: 'bg-blue-500', description: 'Clean, contemporary design' },
+//     { value: 'classic', label: 'Classic', color: 'bg-gray-800', description: 'Traditional serif typography' },
+//     { value: 'minimal', label: 'Minimal', color: 'bg-gray-300', description: 'Simple, distraction-free' },
+//     { value: 'academic', label: 'Academic', color: 'bg-green-600', description: 'Formal, research-oriented' }
+//   ];
 
-  // Get current user from localStorage or context
-  useEffect(() => {
-    console.log('🎯 ManualArticleForm mounted');
+//   // Get current user from localStorage or context
+//   useEffect(() => {
+//     console.log('🎯 ManualArticleForm mounted');
     
-    // Get user info from localStorage
-    if (typeof window !== 'undefined') {
-      const userData = localStorage.getItem('currentUser');
-      if (userData) {
-        try {
-          const parsedUser = JSON.parse(userData);
-          console.log('👤 Current user loaded:', { uid: parsedUser.uid, role: parsedUser.role });
-          setCurrentUser(parsedUser);
+//     // Get user info from localStorage
+//     if (typeof window !== 'undefined') {
+//       const userData = localStorage.getItem('currentUser');
+//       if (userData) {
+//         try {
+//           const parsedUser = JSON.parse(userData);
+//           console.log('👤 Current user loaded:', { uid: parsedUser.uid, role: parsedUser.role });
+//           setCurrentUser(parsedUser);
           
-          // Pre-fill author name if available
-          if (parsedUser.companyName && !formData.author) {
-            setFormData(prev => ({ ...prev, author: parsedUser.companyName }));
-          }
-        } catch (error) {
-          console.error('❌ Error parsing user data:', error);
-        }
-      } else {
-        console.warn('⚠️ No current user found in localStorage');
-      }
-    }
+//           // Pre-fill author name if available
+//           if (parsedUser.companyName && !formData.author) {
+//             setFormData(prev => ({ ...prev, author: parsedUser.companyName }));
+//           }
+//         } catch (error) {
+//           console.error('❌ Error parsing user data:', error);
+//         }
+//       } else {
+//         console.warn('⚠️ No current user found in localStorage');
+//       }
+//     }
     
-    updateWordCount();
+//     updateWordCount();
     
-    return () => {
-      console.log('🎯 ManualArticleForm unmounted');
-    };
-  }, []);
+//     return () => {
+//       console.log('🎯 ManualArticleForm unmounted');
+//     };
+//   }, []);
 
-  // Format text function
-  const formatText = (command, value = null) => {
-    console.log('🎨 Formatting text with command:', command, value);
-    try {
-      document.execCommand(command, false, value);
-      editorRef.current?.focus();
-      updateWordCount();
-    } catch (error) {
-      console.error('❌ Error formatting text:', error);
-    }
-  };
+//   // Format text function
+//   const formatText = (command, value = null) => {
+//     console.log('🎨 Formatting text with command:', command, value);
+//     try {
+//       document.execCommand(command, false, value);
+//       editorRef.current?.focus();
+//       updateWordCount();
+//     } catch (error) {
+//       console.error('❌ Error formatting text:', error);
+//     }
+//   };
 
-  // Handle toolbar button clicks
-  const handleToolbarClick = (command) => {
-    console.log('🔧 Toolbar button clicked:', command);
-    try {
-      if (command === 'createLink') {
-        const url = prompt('Enter the URL:');
-        if (url) formatText(command, url);
-      } else if (command === 'insertImage') {
-        const imageUrl = prompt('Enter the image URL:');
-        if (imageUrl) formatText(command, imageUrl);
-      } else {
-        formatText(command);
-      }
-    } catch (error) {
-      console.error('❌ Error handling toolbar click:', error);
-    }
-  };
+//   // Handle toolbar button clicks
+//   const handleToolbarClick = (command) => {
+//     console.log('🔧 Toolbar button clicked:', command);
+//     try {
+//       if (command === 'createLink') {
+//         const url = prompt('Enter the URL:');
+//         if (url) formatText(command, url);
+//       } else if (command === 'insertImage') {
+//         const imageUrl = prompt('Enter the image URL:');
+//         if (imageUrl) formatText(command, imageUrl);
+//       } else {
+//         formatText(command);
+//       }
+//     } catch (error) {
+//       console.error('❌ Error handling toolbar click:', error);
+//     }
+//   };
 
-  // Update word count and reading time
-  const updateWordCount = () => {
-    try {
-      if (!editorRef.current) {
-        console.log('⚠️ Editor ref not available for word count');
-        return;
-      }
+//   // Update word count and reading time
+//   const updateWordCount = () => {
+//     try {
+//       if (!editorRef.current) {
+//         console.log('⚠️ Editor ref not available for word count');
+//         return;
+//       }
       
-      const text = editorRef.current.textContent || '';
-      const words = text.trim().split(/\s+/).filter(word => word.length > 0).length;
-      const readingTimeCalc = Math.ceil(words / 200);
+//       const text = editorRef.current.textContent || '';
+//       const words = text.trim().split(/\s+/).filter(word => word.length > 0).length;
+//       const readingTimeCalc = Math.ceil(words / 200);
       
-      console.log('📊 Word count updated:', { words, readingTime: readingTimeCalc });
+//       console.log('📊 Word count updated:', { words, readingTime: readingTimeCalc });
       
-      setWordCount(words);
-      setReadingTime(readingTimeCalc);
-      setFormData(prev => ({ ...prev, content: editorRef.current.innerHTML }));
-    } catch (error) {
-      console.error('❌ Error updating word count:', error);
-    }
-  };
+//       setWordCount(words);
+//       setReadingTime(readingTimeCalc);
+//       setFormData(prev => ({ ...prev, content: editorRef.current.innerHTML }));
+//     } catch (error) {
+//       console.error('❌ Error updating word count:', error);
+//     }
+//   };
 
-  // Handle file upload
-  const handleFileChange = (e) => {
-    console.log('📁 File input changed');
-    try {
-      const file = e.target.files[0];
-      console.log('📁 Selected file:', file ? {
-        name: file.name,
-        size: file.size,
-        type: file.type
-      } : 'No file');
+//   // Handle file upload
+//   const handleFileChange = (e) => {
+//     console.log('📁 File input changed');
+//     try {
+//       const file = e.target.files[0];
+//       console.log('📁 Selected file:', file ? {
+//         name: file.name,
+//         size: file.size,
+//         type: file.type
+//       } : 'No file');
 
-      if (file) {
-        // Validate file type
-        if (!file.type.startsWith('image/')) {
-          setErrors(prev => ({ ...prev, featuredImage: 'Please select a valid image file' }));
-          return;
-        }
+//       if (file) {
+//         // Validate file type
+//         if (!file.type.startsWith('image/')) {
+//           setErrors(prev => ({ ...prev, featuredImage: 'Please select a valid image file' }));
+//           return;
+//         }
 
-        // Validate file size (5MB limit)
-        if (file.size > 5 * 1024 * 1024) {
-          setErrors(prev => ({ ...prev, featuredImage: 'Image size must be less than 5MB' }));
-          return;
-        }
+//         // Validate file size (5MB limit)
+//         if (file.size > 5 * 1024 * 1024) {
+//           setErrors(prev => ({ ...prev, featuredImage: 'Image size must be less than 5MB' }));
+//           return;
+//         }
 
-        setFileName(file.name);
-        setFormData(prev => ({ ...prev, featuredImage: file }));
-        setErrors(prev => ({ ...prev, featuredImage: null }));
-      } else {
-        setFileName('No file chosen');
-        setFormData(prev => ({ ...prev, featuredImage: null }));
-      }
-    } catch (error) {
-      console.error('❌ Error handling file change:', error);
-      setErrors(prev => ({ ...prev, featuredImage: 'Error processing file' }));
-    }
-  };
+//         setFileName(file.name);
+//         setFormData(prev => ({ ...prev, featuredImage: file }));
+//         setErrors(prev => ({ ...prev, featuredImage: null }));
+//       } else {
+//         setFileName('No file chosen');
+//         setFormData(prev => ({ ...prev, featuredImage: null }));
+//       }
+//     } catch (error) {
+//       console.error('❌ Error handling file change:', error);
+//       setErrors(prev => ({ ...prev, featuredImage: 'Error processing file' }));
+//     }
+//   };
 
-  // Handle input changes
-  const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    console.log('📝 Input changed:', { name, value: type === 'checkbox' ? checked : value });
+//   // Handle input changes
+//   const handleInputChange = (e) => {
+//     const { name, value, type, checked } = e.target;
+//     console.log('📝 Input changed:', { name, value: type === 'checkbox' ? checked : value });
     
-    try {
-      setFormData(prev => ({
-        ...prev,
-        [name]: type === 'checkbox' ? checked : value
-      }));
+//     try {
+//       setFormData(prev => ({
+//         ...prev,
+//         [name]: type === 'checkbox' ? checked : value
+//       }));
 
-      // Clear errors for this field
-      if (errors[name]) {
-        setErrors(prev => ({ ...prev, [name]: null }));
-      }
+//       // Clear errors for this field
+//       if (errors[name]) {
+//         setErrors(prev => ({ ...prev, [name]: null }));
+//       }
 
-      if (name === 'metaDescription') {
-        setMetaCharCount(value.length);
-      }
-    } catch (error) {
-      console.error('❌ Error handling input change:', error);
-    }
-  };
+//       if (name === 'metaDescription') {
+//         setMetaCharCount(value.length);
+//       }
+//     } catch (error) {
+//       console.error('❌ Error handling input change:', error);
+//     }
+//   };
 
-  // Validate form
-  const validateForm = () => {
-    console.log('✅ Validating form...');
-    const newErrors = {};
+//   // Validate form
+//   const validateForm = () => {
+//     console.log('✅ Validating form...');
+//     const newErrors = {};
 
-    if (!formData.title.trim()) {
-      newErrors.title = 'Title is required';
-    }
+//     if (!formData.title.trim()) {
+//       newErrors.title = 'Title is required';
+//     }
 
-    if (!formData.author.trim()) {
-      newErrors.author = 'Author name is required';
-    }
+//     if (!formData.author.trim()) {
+//       newErrors.author = 'Author name is required';
+//     }
 
-    if (!formData.category) {
-      newErrors.category = 'Please select a category';
-    }
+//     if (!formData.category) {
+//       newErrors.category = 'Please select a category';
+//     }
 
-    const content = editorRef.current?.innerHTML?.trim();
-    if (!content || content === '<br>' || content === '<div><br></div>') {
-      newErrors.content = 'Article content is required';
-    }
+//     const content = editorRef.current?.innerHTML?.trim();
+//     if (!content || content === '<br>' || content === '<div><br></div>') {
+//       newErrors.content = 'Article content is required';
+//     }
 
-    if (!currentUser) {
-      newErrors.auth = 'User authentication required';
-    }
+//     if (!currentUser) {
+//       newErrors.auth = 'User authentication required';
+//     }
 
-    console.log('✅ Validation result:', { hasErrors: Object.keys(newErrors).length > 0, errors: newErrors });
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+//     console.log('✅ Validation result:', { hasErrors: Object.keys(newErrors).length > 0, errors: newErrors });
+//     setErrors(newErrors);
+//     return Object.keys(newErrors).length === 0;
+//   };
 
-  // Create auth token for API call
-  const getAuthToken = () => {
-    if (!currentUser) {
-      console.error('❌ No current user for auth token');
-      return null;
-    }
+//   // Create auth token for API call
+//   const getAuthToken = () => {
+//     if (!currentUser) {
+//       console.error('❌ No current user for auth token');
+//       return null;
+//     }
     
-    // For now, use user ID as token (in production, use proper JWT)
-    // You should replace this with proper token generation
-    const token = currentUser.uid || `mock_token_${Date.now()}`;
-    console.log('🔑 Generated auth token preview:', token.substring(0, 20) + '...');
-    return token;
-  };
+//     // For now, use user ID as token (in production, use proper JWT)
+//     // You should replace this with proper token generation
+//     const token = currentUser.uid || `mock_token_${Date.now()}`;
+//     console.log('🔑 Generated auth token preview:', token.substring(0, 20) + '...');
+//     return token;
+//   };
 
-  // Submit article to API
-  const submitArticle = async (submitData) => {
-    console.log('📡 Submitting article to API...');
+//   // Submit article to API
+//   const submitArticle = async (submitData) => {
+//     console.log('📡 Submitting article to API...');
     
-    const authToken = getAuthToken();
-    if (!authToken) {
-      throw new Error('Authentication token required');
-    }
+//     const authToken = getAuthToken();
+//     if (!authToken) {
+//       throw new Error('Authentication token required');
+//     }
 
-    // Add publisher ID to the form data as well
-    submitData.append('publisherId', currentUser.uid);
+//     // Add publisher ID to the form data as well
+//     submitData.append('publisherId', currentUser.uid);
 
-    const headers = {
-      'Authorization': `Bearer ${authToken}`
-    };
+//     const headers = {
+//       'Authorization': `Bearer ${authToken}`
+//     };
 
-    // Add publisher ID to URL params as backup
-    const url = `/api/publish-article?publisherId=${encodeURIComponent(currentUser.uid || 'unknown')}`;
+//     // Add publisher ID to URL params as backup
+//     const url = `/api/publish-article?publisherId=${encodeURIComponent(currentUser.uid || 'unknown')}`;
     
-    console.log('📡 Making request to:', url);
-    console.log('📡 Request headers:', headers);
-    console.log('📡 FormData keys:', [...submitData.keys()]);
-    console.log('📡 Publisher ID:', currentUser.uid);
+//     console.log('📡 Making request to:', url);
+//     console.log('📡 Request headers:', headers);
+//     console.log('📡 FormData keys:', [...submitData.keys()]);
+//     console.log('📡 Publisher ID:', currentUser.uid);
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers,
-      body: submitData
-    });
+//     const response = await fetch(url, {
+//       method: 'POST',
+//       headers,
+//       body: submitData
+//     });
 
-    console.log('📡 Response status:', response.status);
-    console.log('📡 Response ok:', response.ok);
+//     console.log('📡 Response status:', response.status);
+//     console.log('📡 Response ok:', response.ok);
 
-    const result = await response.json();
-    console.log('📡 Response data:', result);
+//     const result = await response.json();
+//     console.log('📡 Response data:', result);
 
-    if (!response.ok) {
-      throw new Error(result.error || `HTTP error! status: ${response.status}`);
-    }
+//     if (!response.ok) {
+//       throw new Error(result.error || `HTTP error! status: ${response.status}`);
+//     }
 
-    return result;
-  };
+//     return result;
+//   };
 
-  // Handle form submission
-  const handleSubmit = async (e, isDraft = false) => {
-    e.preventDefault();
-    console.log('🚀 Form submission started', { isDraft, currentUser: !!currentUser });
+//   // Handle form submission
+//   const handleSubmit = async (e, isDraft = false) => {
+//     e.preventDefault();
+//     console.log('🚀 Form submission started', { isDraft, currentUser: !!currentUser });
     
-    // Clear previous status
-    setSubmitStatus(null);
+//     // Clear previous status
+//     setSubmitStatus(null);
     
-    if (!isDraft && !validateForm()) {
-      console.log('❌ Validation failed, submission cancelled');
-      return;
-    }
+//     if (!isDraft && !validateForm()) {
+//       console.log('❌ Validation failed, submission cancelled');
+//       return;
+//     }
 
-    // Check authentication even for drafts
-    if (!currentUser) {
-      console.error('❌ No authenticated user');
-      setErrors(prev => ({ ...prev, auth: 'Please sign in to publish articles' }));
-      return;
-    }
+//     // Check authentication even for drafts
+//     if (!currentUser) {
+//       console.error('❌ No authenticated user');
+//       setErrors(prev => ({ ...prev, auth: 'Please sign in to publish articles' }));
+//       return;
+//     }
 
-    setIsSubmitting(true);
+//     setIsSubmitting(true);
     
-    try {
-      console.log('📦 Creating FormData...');
-      const submitData = new FormData();
+//     try {
+//       console.log('📦 Creating FormData...');
+//       const submitData = new FormData();
       
-      // Add all form data
-      Object.keys(formData).forEach(key => {
-        if (key === 'featuredImage' && formData[key]) {
-          console.log('🖼️ Adding featured image to FormData');
-          submitData.append(key, formData[key]);
-        } else if (key !== 'featuredImage') {
-          submitData.append(key, formData[key]);
-        }
-      });
+//       // Add all form data
+//       Object.keys(formData).forEach(key => {
+//         if (key === 'featuredImage' && formData[key]) {
+//           console.log('🖼️ Adding featured image to FormData');
+//           submitData.append(key, formData[key]);
+//         } else if (key !== 'featuredImage') {
+//           submitData.append(key, formData[key]);
+//         }
+//       });
 
-      const content = editorRef.current?.innerHTML?.trim() || '';
-      submitData.append('content', content);
-      submitData.append('isDraft', isDraft.toString());
-      submitData.append('wordCount', wordCount.toString());
-      submitData.append('readingTime', readingTime.toString());
+//       const content = editorRef.current?.innerHTML?.trim() || '';
+//       submitData.append('content', content);
+//       submitData.append('isDraft', isDraft.toString());
+//       submitData.append('wordCount', wordCount.toString());
+//       submitData.append('readingTime', readingTime.toString());
 
-      // Add publisher information
-      submitData.append('publisherId', currentUser.uid);
-      if (currentUser.companyName) {
-        submitData.append('publisherName', currentUser.companyName);
-      }
+//       // Add publisher information
+//       submitData.append('publisherId', currentUser.uid);
+//       if (currentUser.companyName) {
+//         submitData.append('publisherName', currentUser.companyName);
+//       }
 
-      console.log('📦 FormData prepared:', {
-        title: formData.title,
-        author: formData.author,
-        category: formData.category,
-        isDraft,
-        contentLength: content.length,
-        hasImage: !!formData.featuredImage,
-        publisherId: currentUser.uid
-      });
+//       console.log('📦 FormData prepared:', {
+//         title: formData.title,
+//         author: formData.author,
+//         category: formData.category,
+//         isDraft,
+//         contentLength: content.length,
+//         hasImage: !!formData.featuredImage,
+//         publisherId: currentUser.uid
+//       });
 
-      console.log('📡 Calling submitArticle...');
-      let result;
+//       console.log('📡 Calling submitArticle...');
+//       let result;
       
-      if (onSubmit && typeof onSubmit === 'function') {
-        // Use custom onSubmit handler if provided
-        console.log('📡 Using custom onSubmit handler...');
-        result = await onSubmit(submitData);
-      } else {
-        // Use built-in API call
-        console.log('📡 Using built-in API call...');
-        result = await submitArticle(submitData);
-      }
+//       if (onSubmit && typeof onSubmit === 'function') {
+//         // Use custom onSubmit handler if provided
+//         console.log('📡 Using custom onSubmit handler...');
+//         result = await onSubmit(submitData);
+//       } else {
+//         // Use built-in API call
+//         console.log('📡 Using built-in API call...');
+//         result = await submitArticle(submitData);
+//       }
       
-      console.log('✅ Submit successful:', result);
-      setSubmitStatus('success');
+//       console.log('✅ Submit successful:', result);
+//       setSubmitStatus('success');
       
-      // Clear form data on successful publish (but not for drafts)
-      if (!isDraft) {
-        console.log('🧹 Clearing form after successful publish...');
-        setFormData({
-          title: '',
-          subtitle: '',
-          author: currentUser.companyName || '',
-          authorTitle: '',
-          category: '',
-          tags: '',
-          featuredImage: null,
-          style: 'modern',
-          content: '',
-          metaDescription: '',
-          publishNow: true,
-          allowComments: true,
-          sendNewsletter: false
-        });
-        setFileName('No file chosen');
-        if (editorRef.current) {
-          editorRef.current.innerHTML = '';
-        }
-        updateWordCount();
-      }
+//       // Clear form data on successful publish (but not for drafts)
+//       if (!isDraft) {
+//         console.log('🧹 Clearing form after successful publish...');
+//         setFormData({
+//           title: '',
+//           subtitle: '',
+//           author: currentUser.companyName || '',
+//           authorTitle: '',
+//           category: '',
+//           tags: '',
+//           featuredImage: null,
+//           style: 'modern',
+//           content: '',
+//           metaDescription: '',
+//           publishNow: true,
+//           allowComments: true,
+//           sendNewsletter: false
+//         });
+//         setFileName('No file chosen');
+//         if (editorRef.current) {
+//           editorRef.current.innerHTML = '';
+//         }
+//         updateWordCount();
+//       }
       
-      // Auto-close after success (optional)
-      setTimeout(() => {
-        onClose?.();
-      }, 2000);
+//       // Auto-close after success (optional)
+//       setTimeout(() => {
+//         onClose?.();
+//       }, 2000);
 
-    } catch (error) {
-      console.error('💥 Submit error:', error);
-      console.error('💥 Error details:', {
-        message: error.message,
-        stack: error.stack,
-        name: error.name
-      });
+//     } catch (error) {
+//       console.error('💥 Submit error:', error);
+//       console.error('💥 Error details:', {
+//         message: error.message,
+//         stack: error.stack,
+//         name: error.name
+//       });
       
-      setSubmitStatus('error');
+//       setSubmitStatus('error');
       
-      // Show user-friendly error message
-      setErrors(prev => ({
-        ...prev,
-        submit: error.message || 'An error occurred while submitting. Please try again.'
-      }));
-    } finally {
-      setIsSubmitting(false);
-      console.log('🏁 Submit process completed');
-    }
-  };
+//       // Show user-friendly error message
+//       setErrors(prev => ({
+//         ...prev,
+//         submit: error.message || 'An error occurred while submitting. Please try again.'
+//       }));
+//     } finally {
+//       setIsSubmitting(false);
+//       console.log('🏁 Submit process completed');
+//     }
+//   };
 
-  // Handle save draft
-  const handleSaveDraft = async (e) => {
-    console.log('💾 Save draft requested');
-    const title = formData.title.trim();
-    const content = editorRef.current?.innerHTML?.trim();
+//   // Handle save draft
+//   const handleSaveDraft = async (e) => {
+//     console.log('💾 Save draft requested');
+//     const title = formData.title.trim();
+//     const content = editorRef.current?.innerHTML?.trim();
     
-    if (!title && (!content || content === '<br>' || content === '<div><br></div>')) {
-      console.log('⚠️ Empty draft - showing warning');
-      setErrors(prev => ({ 
-        ...prev, 
-        submit: 'Please add a title or some content before saving as draft.' 
-      }));
-      return;
-    }
+//     if (!title && (!content || content === '<br>' || content === '<div><br></div>')) {
+//       console.log('⚠️ Empty draft - showing warning');
+//       setErrors(prev => ({ 
+//         ...prev, 
+//         submit: 'Please add a title or some content before saving as draft.' 
+//       }));
+//       return;
+//     }
     
-    await handleSubmit(e, true);
-  };
+//     await handleSubmit(e, true);
+//   };
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-800">Publish an Article</h2>
-            <button
-              onClick={onClose}
-              className="text-gray-500 hover:text-gray-700 text-2xl"
-            >
-              ×
-            </button>
-          </div>
+//   return (
+//     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+//       <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+//         <div className="p-6">
+//           <div className="flex justify-between items-center mb-6">
+//             <h2 className="text-2xl font-bold text-gray-800">Publish an Article</h2>
+//             <button
+//               onClick={onClose}
+//               className="text-gray-500 hover:text-gray-700 text-2xl"
+//             >
+//               ×
+//             </button>
+//           </div>
 
-          {/* User Info Display */}
-          {currentUser && (
-            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-              <p className="text-sm text-blue-800">
-                Publishing as: <strong>{currentUser.companyName || currentUser.displayName || 'Unknown Publisher'}</strong>
-                {currentUser.role && ` (${currentUser.role})`}
-              </p>
-            </div>
-          )}
+//           {/* User Info Display */}
+//           {currentUser && (
+//             <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+//               <p className="text-sm text-blue-800">
+//                 Publishing as: <strong>{currentUser.companyName || currentUser.displayName || 'Unknown Publisher'}</strong>
+//                 {currentUser.role && ` (${currentUser.role})`}
+//               </p>
+//             </div>
+//           )}
 
-          {/* Status Messages */}
-          {submitStatus === 'success' && (
-            <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-md flex items-center">
-              <CheckCircle className="w-5 h-5 text-green-500 mr-2" />
-              <span className="text-green-800">Article submitted successfully!</span>
-            </div>
-          )}
+//           {/* Status Messages */}
+//           {submitStatus === 'success' && (
+//             <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-md flex items-center">
+//               <CheckCircle className="w-5 h-5 text-green-500 mr-2" />
+//               <span className="text-green-800">Article submitted successfully!</span>
+//             </div>
+//           )}
 
-          {errors.submit && (
-            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md flex items-center">
-              <AlertCircle className="w-5 h-5 text-red-500 mr-2" />
-              <span className="text-red-800">{errors.submit}</span>
-            </div>
-          )}
+//           {errors.submit && (
+//             <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md flex items-center">
+//               <AlertCircle className="w-5 h-5 text-red-500 mr-2" />
+//               <span className="text-red-800">{errors.submit}</span>
+//             </div>
+//           )}
 
-          {errors.auth && (
-            <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md flex items-center">
-              <AlertCircle className="w-5 h-5 text-yellow-500 mr-2" />
-              <span className="text-yellow-800">{errors.auth}</span>
-            </div>
-          )}
+//           {errors.auth && (
+//             <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md flex items-center">
+//               <AlertCircle className="w-5 h-5 text-yellow-500 mr-2" />
+//               <span className="text-yellow-800">{errors.auth}</span>
+//             </div>
+//           )}
           
-          <form onSubmit={(e) => handleSubmit(e, false)}>
-            {/* Article Title */}
-            <div className="mb-4">
-              <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
-                Article Title <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                id="title"
-                name="title"
-                value={formData.title}
-                onChange={handleInputChange}
-                className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  errors.title ? 'border-red-500' : 'border-gray-300'
-                }`}
-                placeholder="Enter your article title"
-              />
-              {errors.title && <p className="text-red-500 text-sm mt-1">{errors.title}</p>}
-            </div>
+//           <form onSubmit={(e) => handleSubmit(e, false)}>
+//             {/* Article Title */}
+//             <div className="mb-4">
+//               <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
+//                 Article Title <span className="text-red-500">*</span>
+//               </label>
+//               <input
+//                 type="text"
+//                 id="title"
+//                 name="title"
+//                 value={formData.title}
+//                 onChange={handleInputChange}
+//                 className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+//                   errors.title ? 'border-red-500' : 'border-gray-300'
+//                 }`}
+//                 placeholder="Enter your article title"
+//               />
+//               {errors.title && <p className="text-red-500 text-sm mt-1">{errors.title}</p>}
+//             </div>
 
-            {/* Subtitle */}
-            <div className="mb-4">
-              <label htmlFor="subtitle" className="block text-sm font-medium text-gray-700 mb-2">
-                Subtitle
-              </label>
-              <input
-                type="text"
-                id="subtitle"
-                name="subtitle"
-                value={formData.subtitle}
-                onChange={handleInputChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Enter a subtitle (optional)"
-              />
-            </div>
+//             {/* Subtitle */}
+//             <div className="mb-4">
+//               <label htmlFor="subtitle" className="block text-sm font-medium text-gray-700 mb-2">
+//                 Subtitle
+//               </label>
+//               <input
+//                 type="text"
+//                 id="subtitle"
+//                 name="subtitle"
+//                 value={formData.subtitle}
+//                 onChange={handleInputChange}
+//                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+//                 placeholder="Enter a subtitle (optional)"
+//               />
+//             </div>
 
-            {/* Author Information */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <label htmlFor="author" className="block text-sm font-medium text-gray-700 mb-2">
-                  Author Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  id="author"
-                  name="author"
-                  value={formData.author}
-                  onChange={handleInputChange}
-                  className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    errors.author ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                  placeholder="Your name"
-                />
-                {errors.author && <p className="text-red-500 text-sm mt-1">{errors.author}</p>}
-              </div>
-              <div>
-                <label htmlFor="authorTitle" className="block text-sm font-medium text-gray-700 mb-2">
-                  Author Title/Position
-                </label>
-                <input
-                  type="text"
-                  id="authorTitle"
-                  name="authorTitle"
-                  value={formData.authorTitle}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="e.g., Senior Writer, Editor"
-                />
-              </div>
-            </div>
+//             {/* Author Information */}
+//             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+//               <div>
+//                 <label htmlFor="author" className="block text-sm font-medium text-gray-700 mb-2">
+//                   Author Name <span className="text-red-500">*</span>
+//                 </label>
+//                 <input
+//                   type="text"
+//                   id="author"
+//                   name="author"
+//                   value={formData.author}
+//                   onChange={handleInputChange}
+//                   className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+//                     errors.author ? 'border-red-500' : 'border-gray-300'
+//                   }`}
+//                   placeholder="Your name"
+//                 />
+//                 {errors.author && <p className="text-red-500 text-sm mt-1">{errors.author}</p>}
+//               </div>
+//               <div>
+//                 <label htmlFor="authorTitle" className="block text-sm font-medium text-gray-700 mb-2">
+//                   Author Title/Position
+//                 </label>
+//                 <input
+//                   type="text"
+//                   id="authorTitle"
+//                   name="authorTitle"
+//                   value={formData.authorTitle}
+//                   onChange={handleInputChange}
+//                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+//                   placeholder="e.g., Senior Writer, Editor"
+//                 />
+//               </div>
+//             </div>
 
-            {/* Category and Tags */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
-                  Category <span className="text-red-500">*</span>
-                </label>
-                <select
-                  id="category"
-                  name="category"
-                  value={formData.category}
-                  onChange={handleInputChange}
-                  className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    errors.category ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                >
-                  {categories.map(cat => (
-                    <option key={cat.value} value={cat.value}>{cat.label}</option>
-                  ))}
-                </select>
-                {errors.category && <p className="text-red-500 text-sm mt-1">{errors.category}</p>}
-              </div>
-              <div>
-                <label htmlFor="tags" className="block text-sm font-medium text-gray-700 mb-2">
-                  Tags (comma separated)
-                </label>
-                <input
-                  type="text"
-                  id="tags"
-                  name="tags"
-                  value={formData.tags}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="e.g., innovation, AI, future"
-                />
-              </div>
-            </div>
+//             {/* Category and Tags */}
+//             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+//               <div>
+//                 <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
+//                   Category <span className="text-red-500">*</span>
+//                 </label>
+//                 <select
+//                   id="category"
+//                   name="category"
+//                   value={formData.category}
+//                   onChange={handleInputChange}
+//                   className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+//                     errors.category ? 'border-red-500' : 'border-gray-300'
+//                   }`}
+//                 >
+//                   {categories.map(cat => (
+//                     <option key={cat.value} value={cat.value}>{cat.label}</option>
+//                   ))}
+//                 </select>
+//                 {errors.category && <p className="text-red-500 text-sm mt-1">{errors.category}</p>}
+//               </div>
+//               <div>
+//                 <label htmlFor="tags" className="block text-sm font-medium text-gray-700 mb-2">
+//                   Tags (comma separated)
+//                 </label>
+//                 <input
+//                   type="text"
+//                   id="tags"
+//                   name="tags"
+//                   value={formData.tags}
+//                   onChange={handleInputChange}
+//                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+//                   placeholder="e.g., innovation, AI, future"
+//                 />
+//               </div>
+//             </div>
 
-            {/* Featured Image */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Featured Image
-              </label>
-              <div className="flex items-center space-x-4">
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors flex items-center"
-                >
-                  <Upload className="w-4 h-4 mr-2" />
-                  Upload Image
-                </button>
-                <span className="text-gray-500 text-sm">{fileName}</span>
-              </div>
-              {errors.featuredImage && <p className="text-red-500 text-sm mt-1">{errors.featuredImage}</p>}
-            </div>
+//             {/* Featured Image */}
+//             <div className="mb-4">
+//               <label className="block text-sm font-medium text-gray-700 mb-2">
+//                 Featured Image
+//               </label>
+//               <div className="flex items-center space-x-4">
+//                 <input
+//                   type="file"
+//                   ref={fileInputRef}
+//                   accept="image/*"
+//                   onChange={handleFileChange}
+//                   className="hidden"
+//                 />
+//                 <button
+//                   type="button"
+//                   onClick={() => fileInputRef.current?.click()}
+//                   className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors flex items-center"
+//                 >
+//                   <Upload className="w-4 h-4 mr-2" />
+//                   Upload Image
+//                 </button>
+//                 <span className="text-gray-500 text-sm">{fileName}</span>
+//               </div>
+//               {errors.featuredImage && <p className="text-red-500 text-sm mt-1">{errors.featuredImage}</p>}
+//             </div>
 
-            {/* Article Style */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Article Style/Format
-              </label>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                {styleOptions.map(style => (
-                  <div
-                    key={style.value}
-                    onClick={() => setFormData(prev => ({ ...prev, style: style.value }))}
-                    className={`cursor-pointer border rounded-lg p-3 transition-all hover:shadow-md ${
-                      formData.style === style.value ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
-                    }`}
-                  >
-                    <div className={`w-8 h-8 ${style.color} rounded-full mb-2`}></div>
-                    <h4 className="font-medium text-gray-800 text-sm">{style.label}</h4>
-                    <p className="text-xs text-gray-500">{style.description}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
+//             {/* Article Style */}
+//             <div className="mb-4">
+//               <label className="block text-sm font-medium text-gray-700 mb-2">
+//                 Article Style/Format
+//               </label>
+//               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+//                 {styleOptions.map(style => (
+//                   <div
+//                     key={style.value}
+//                     onClick={() => setFormData(prev => ({ ...prev, style: style.value }))}
+//                     className={`cursor-pointer border rounded-lg p-3 transition-all hover:shadow-md ${
+//                       formData.style === style.value ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
+//                     }`}
+//                   >
+//                     <div className={`w-8 h-8 ${style.color} rounded-full mb-2`}></div>
+//                     <h4 className="font-medium text-gray-800 text-sm">{style.label}</h4>
+//                     <p className="text-xs text-gray-500">{style.description}</p>
+//                   </div>
+//                 ))}
+//               </div>
+//             </div>
 
-            {/* Rich Text Editor */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Article Content <span className="text-red-500">*</span>
-              </label>
-              <div className={`border rounded-md overflow-hidden ${
-                errors.content ? 'border-red-500' : 'border-gray-300'
-              }`}>
-                {/* Toolbar */}
-                <div className="flex flex-wrap gap-1 p-2 bg-gray-50 border-b">
-                  <button type="button" onClick={() => handleToolbarClick('bold')} className="p-1 hover:bg-gray-200 rounded">
-                    <Bold className="w-4 h-4" />
-                  </button>
-                  <button type="button" onClick={() => handleToolbarClick('italic')} className="p-1 hover:bg-gray-200 rounded">
-                    <Italic className="w-4 h-4" />
-                  </button>
-                  <button type="button" onClick={() => handleToolbarClick('underline')} className="p-1 hover:bg-gray-200 rounded">
-                    <Underline className="w-4 h-4" />
-                  </button>
-                  <div className="border-r mx-2"></div>
-                  <button type="button" onClick={() => handleToolbarClick('insertUnorderedList')} className="p-1 hover:bg-gray-200 rounded">
-                    <List className="w-4 h-4" />
-                  </button>
-                  <div className="border-r mx-2"></div>
-                  <button type="button" onClick={() => handleToolbarClick('justifyLeft')} className="p-1 hover:bg-gray-200 rounded">
-                    <AlignLeft className="w-4 h-4" />
-                  </button>
-                  <button type="button" onClick={() => handleToolbarClick('justifyCenter')} className="p-1 hover:bg-gray-200 rounded">
-                    <AlignCenter className="w-4 h-4" />
-                  </button>
-                  <button type="button" onClick={() => handleToolbarClick('justifyRight')} className="p-1 hover:bg-gray-200 rounded">
-                    <AlignRight className="w-4 h-4" />
-                  </button>
-                  <div className="border-r mx-2"></div>
-                  <button type="button" onClick={() => handleToolbarClick('createLink')} className="p-1 hover:bg-gray-200 rounded">
-                    <Link className="w-4 h-4" />
-                  </button>
-                  <button type="button" onClick={() => handleToolbarClick('insertImage')} className="p-1 hover:bg-gray-200 rounded">
-                    📷
-                  </button>
-                </div>
+//             {/* Rich Text Editor */}
+//             <div className="mb-4">
+//               <label className="block text-sm font-medium text-gray-700 mb-2">
+//                 Article Content <span className="text-red-500">*</span>
+//               </label>
+//               <div className={`border rounded-md overflow-hidden ${
+//                 errors.content ? 'border-red-500' : 'border-gray-300'
+//               }`}>
+//                 {/* Toolbar */}
+//                 <div className="flex flex-wrap gap-1 p-2 bg-gray-50 border-b">
+//                   <button type="button" onClick={() => handleToolbarClick('bold')} className="p-1 hover:bg-gray-200 rounded">
+//                     <Bold className="w-4 h-4" />
+//                   </button>
+//                   <button type="button" onClick={() => handleToolbarClick('italic')} className="p-1 hover:bg-gray-200 rounded">
+//                     <Italic className="w-4 h-4" />
+//                   </button>
+//                   <button type="button" onClick={() => handleToolbarClick('underline')} className="p-1 hover:bg-gray-200 rounded">
+//                     <Underline className="w-4 h-4" />
+//                   </button>
+//                   <div className="border-r mx-2"></div>
+//                   <button type="button" onClick={() => handleToolbarClick('insertUnorderedList')} className="p-1 hover:bg-gray-200 rounded">
+//                     <List className="w-4 h-4" />
+//                   </button>
+//                   <div className="border-r mx-2"></div>
+//                   <button type="button" onClick={() => handleToolbarClick('justifyLeft')} className="p-1 hover:bg-gray-200 rounded">
+//                     <AlignLeft className="w-4 h-4" />
+//                   </button>
+//                   <button type="button" onClick={() => handleToolbarClick('justifyCenter')} className="p-1 hover:bg-gray-200 rounded">
+//                     <AlignCenter className="w-4 h-4" />
+//                   </button>
+//                   <button type="button" onClick={() => handleToolbarClick('justifyRight')} className="p-1 hover:bg-gray-200 rounded">
+//                     <AlignRight className="w-4 h-4" />
+//                   </button>
+//                   <div className="border-r mx-2"></div>
+//                   <button type="button" onClick={() => handleToolbarClick('createLink')} className="p-1 hover:bg-gray-200 rounded">
+//                     <Link className="w-4 h-4" />
+//                   </button>
+//                   <button type="button" onClick={() => handleToolbarClick('insertImage')} className="p-1 hover:bg-gray-200 rounded">
+//                     📷
+//                   </button>
+//                 </div>
                 
-                {/* Editor */}
-                <div
-                  ref={editorRef}
-                  contentEditable
-                  className="min-h-[200px] p-4 focus:outline-none"
-                  onInput={updateWordCount}
-                  style={{ minHeight: '200px' }}
-                  suppressContentEditableWarning={true}
-                />
-              </div>
-              {errors.content && <p className="text-red-500 text-sm mt-1">{errors.content}</p>}
-            </div>
+//                 {/* Editor */}
+//                 <div
+//                   ref={editorRef}
+//                   contentEditable
+//                   className="min-h-[200px] p-4 focus:outline-none"
+//                   onInput={updateWordCount}
+//                   style={{ minHeight: '200px' }}
+//                   suppressContentEditableWarning={true}
+//                 />
+//               </div>
+//               {errors.content && <p className="text-red-500 text-sm mt-1">{errors.content}</p>}
+//             </div>
 
-            {/* Word Count */}
-            <div className="flex justify-between text-sm text-gray-500 mb-4">
-              <span>Words: {wordCount}</span>
-              <span>Reading time: {readingTime} min</span>
-            </div>
+//             {/* Word Count */}
+//             <div className="flex justify-between text-sm text-gray-500 mb-4">
+//               <span>Words: {wordCount}</span>
+//               <span>Reading time: {readingTime} min</span>
+//             </div>
 
-            {/* Meta Description */}
-            <div className="mb-4">
-              <label htmlFor="metaDescription" className="block text-sm font-medium text-gray-700 mb-2">
-                Meta Description (for SEO)
-              </label>
-              <textarea
-                id="metaDescription"
-                name="metaDescription"
-                value={formData.metaDescription}
-                onChange={handleInputChange}
-                rows="3"
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Enter a brief description for search engines (150-160 characters)"
-              />
-              <div className="flex justify-between mt-1">
-                <span className="text-xs text-gray-500">Recommended: 150-160 characters</span>
-                <span className={`text-xs ${metaCharCount > 160 ? 'text-red-500' : 'text-gray-500'}`}>
-                  {metaCharCount}/160
-                </span>
-              </div>
-            </div>
+//             {/* Meta Description */}
+//             <div className="mb-4">
+//               <label htmlFor="metaDescription" className="block text-sm font-medium text-gray-700 mb-2">
+//                 Meta Description (for SEO)
+//               </label>
+//               <textarea
+//                 id="metaDescription"
+//                 name="metaDescription"
+//                 value={formData.metaDescription}
+//                 onChange={handleInputChange}
+//                 rows="3"
+//                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+//                 placeholder="Enter a brief description for search engines (150-160 characters)"
+//               />
+//               <div className="flex justify-between mt-1">
+//                 <span className="text-xs text-gray-500">Recommended: 150-160 characters</span>
+//                 <span className={`text-xs ${metaCharCount > 160 ? 'text-red-500' : 'text-gray-500'}`}>
+//                   {metaCharCount}/160
+//                 </span>
+//               </div>
+//             </div>
 
-            {/* Publishing Options */}
-            <div className="bg-gray-50 rounded-lg p-4 mb-6">
-              <h3 className="font-medium text-gray-800 mb-3">Publishing Options</h3>
-              <div className="space-y-3">
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    name="publishNow"
-                    checked={formData.publishNow}
-                    onChange={handleInputChange}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <span className="ml-2 text-sm text-gray-700">Publish immediately</span>
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    name="allowComments"
-                    checked={formData.allowComments}
-                    onChange={handleInputChange}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <span className="ml-2 text-sm text-gray-700">Allow reader comments</span>
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    name="sendNewsletter"
-                    checked={formData.sendNewsletter}
-                    onChange={handleInputChange}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <span className="ml-2 text-sm text-gray-700">Send notification to subscribers</span>
-                </label>
-              </div>
-            </div>
+//             {/* Publishing Options */}
+//             <div className="bg-gray-50 rounded-lg p-4 mb-6">
+//               <h3 className="font-medium text-gray-800 mb-3">Publishing Options</h3>
+//               <div className="space-y-3">
+//                 <label className="flex items-center">
+//                   <input
+//                     type="checkbox"
+//                     name="publishNow"
+//                     checked={formData.publishNow}
+//                     onChange={handleInputChange}
+//                     className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+//                   />
+//                   <span className="ml-2 text-sm text-gray-700">Publish immediately</span>
+//                 </label>
+//                 <label className="flex items-center">
+//                   <input
+//                     type="checkbox"
+//                     name="allowComments"
+//                     checked={formData.allowComments}
+//                     onChange={handleInputChange}
+//                     className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+//                   />
+//                   <span className="ml-2 text-sm text-gray-700">Allow reader comments</span>
+//                 </label>
+//                 <label className="flex items-center">
+//                   <input
+//                     type="checkbox"
+//                     name="sendNewsletter"
+//                     checked={formData.sendNewsletter}
+//                     onChange={handleInputChange}
+//                     className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+//                   />
+//                   <span className="ml-2 text-sm text-gray-700">Send notification to subscribers</span>
+//                 </label>
+//               </div>
+//             </div>
 
-            {/* Submit Buttons */}
-            <div className="flex gap-3 pt-4">
-              <button
-                type="button"
-                onClick={handleSaveDraft}
-                disabled={isSubmitting || !currentUser}
-                className="flex-1 px-6 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors flex items-center justify-center disabled:opacity-50"
-              >
-                <Save className="w-4 h-4 mr-2" />
-                {isSubmitting ? 'Saving...' : 'Save Draft'}
-              </button>
-              <button
-                type="submit"
-                disabled={isSubmitting || !currentUser}
-                className="flex-1 px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center disabled:opacity-50"
-              >
-                <Send className="w-4 h-4 mr-2" />
-                {isSubmitting ? 'Publishing...' : 'Publish Article'}
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-  );
-}
+//             {/* Submit Buttons */}
+//             <div className="flex gap-3 pt-4">
+//               <button
+//                 type="button"
+//                 onClick={handleSaveDraft}
+//                 disabled={isSubmitting || !currentUser}
+//                 className="flex-1 px-6 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors flex items-center justify-center disabled:opacity-50"
+//               >
+//                 <Save className="w-4 h-4 mr-2" />
+//                 {isSubmitting ? 'Saving...' : 'Save Draft'}
+//               </button>
+//               <button
+//                 type="submit"
+//                 disabled={isSubmitting || !currentUser}
+//                 className="flex-1 px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center disabled:opacity-50"
+//               >
+//                 <Send className="w-4 h-4 mr-2" />
+//                 {isSubmitting ? 'Publishing...' : 'Publish Article'}
+//               </button>
+//             </div>
+//           </form>
+//         </div>
+//       </div>
+//     </div>
+//   );
+// }
