@@ -66,28 +66,35 @@
 //     { value: 'academic', label: 'Academic', color: 'bg-green-600', description: 'Formal, research-oriented' }
 //   ];
 
-//   // Get current user from localStorage or context
+//   // Get current user from localStorage
 //   useEffect(() => {
 //     console.log('🎯 ManualArticleForm mounted');
     
-//     // Get user info from localStorage
 //     if (typeof window !== 'undefined') {
-//       const userData = localStorage.getItem('currentUser');
-//       if (userData) {
-//         try {
+//       try {
+//         const userData = localStorage.getItem('currentUser');
+//         console.log('👤 Raw user data from localStorage:', userData);
+        
+//         if (userData) {
 //           const parsedUser = JSON.parse(userData);
-//           console.log('👤 Current user loaded:', { uid: parsedUser.uid, role: parsedUser.role });
+//           console.log('👤 Current user loaded:', { 
+//             uid: parsedUser.uid, 
+//             role: parsedUser.role,
+//             companyName: parsedUser.companyName,
+//             email: parsedUser.email
+//           });
 //           setCurrentUser(parsedUser);
           
 //           // Pre-fill author name if available
 //           if (parsedUser.companyName && !formData.author) {
+//             console.log('👤 Pre-filling author name:', parsedUser.companyName);
 //             setFormData(prev => ({ ...prev, author: parsedUser.companyName }));
 //           }
-//         } catch (error) {
-//           console.error('❌ Error parsing user data:', error);
+//         } else {
+//           console.warn('⚠️ No current user found in localStorage');
 //         }
-//       } else {
-//         console.warn('⚠️ No current user found in localStorage');
+//       } catch (error) {
+//         console.error('❌ Error parsing user data:', error);
 //       }
 //     }
     
@@ -164,12 +171,14 @@
 //       if (file) {
 //         // Validate file type
 //         if (!file.type.startsWith('image/')) {
+//           console.error('❌ Invalid file type:', file.type);
 //           setErrors(prev => ({ ...prev, featuredImage: 'Please select a valid image file' }));
 //           return;
 //         }
 
 //         // Validate file size (5MB limit)
 //         if (file.size > 5 * 1024 * 1024) {
+//           console.error('❌ File too large:', file.size);
 //           setErrors(prev => ({ ...prev, featuredImage: 'Image size must be less than 5MB' }));
 //           return;
 //         }
@@ -177,6 +186,7 @@
 //         setFileName(file.name);
 //         setFormData(prev => ({ ...prev, featuredImage: file }));
 //         setErrors(prev => ({ ...prev, featuredImage: null }));
+//         console.log('✅ File validated and set');
 //       } else {
 //         setFileName('No file chosen');
 //         setFormData(prev => ({ ...prev, featuredImage: null }));
@@ -218,26 +228,36 @@
 
 //     if (!formData.title.trim()) {
 //       newErrors.title = 'Title is required';
+//       console.log('❌ Validation error: Missing title');
 //     }
 
 //     if (!formData.author.trim()) {
 //       newErrors.author = 'Author name is required';
+//       console.log('❌ Validation error: Missing author');
 //     }
 
 //     if (!formData.category) {
 //       newErrors.category = 'Please select a category';
+//       console.log('❌ Validation error: Missing category');
 //     }
 
 //     const content = editorRef.current?.innerHTML?.trim();
 //     if (!content || content === '<br>' || content === '<div><br></div>') {
 //       newErrors.content = 'Article content is required';
+//       console.log('❌ Validation error: Missing content');
 //     }
 
 //     if (!currentUser) {
 //       newErrors.auth = 'User authentication required';
+//       console.log('❌ Validation error: No authenticated user');
 //     }
 
-//     console.log('✅ Validation result:', { hasErrors: Object.keys(newErrors).length > 0, errors: newErrors });
+//     console.log('✅ Validation result:', { 
+//       hasErrors: Object.keys(newErrors).length > 0, 
+//       errorCount: Object.keys(newErrors).length,
+//       errors: Object.keys(newErrors)
+//     });
+    
 //     setErrors(newErrors);
 //     return Object.keys(newErrors).length === 0;
 //   };
@@ -249,37 +269,68 @@
 //       return null;
 //     }
     
-//     // For now, use user ID as token (in production, use proper JWT)
-//     // You should replace this with proper token generation
 //     const token = currentUser.uid || `mock_token_${Date.now()}`;
 //     console.log('🔑 Generated auth token preview:', token.substring(0, 20) + '...');
 //     return token;
 //   };
 
 //   // Submit article to API
-//   const submitArticle = async (submitData) => {
-//     console.log('📡 Submitting article to API...');
+//   const submitArticle = async (isDraft = false) => {
+//     console.log('📡 Submitting article to API...', { isDraft, currentUser: !!currentUser });
     
 //     const authToken = getAuthToken();
 //     if (!authToken) {
 //       throw new Error('Authentication token required');
 //     }
 
-//     // Add publisher ID to the form data as well
-//     submitData.append('publisherId', currentUser.uid);
+//     // Create FormData for proper file upload
+//     const submitData = new FormData();
 
+//     // Add all form data fields
+//     Object.keys(formData).forEach(key => {
+//       if (key === 'featuredImage' && formData[key]) {
+//         console.log('🖼️ Adding featured image to FormData');
+//         submitData.append(key, formData[key]);
+//       } else if (key !== 'featuredImage') {
+//         submitData.append(key, formData[key]);
+//       }
+//     });
+
+//     // Add content from editor
+//     const content = editorRef.current?.innerHTML?.trim() || '';
+//     submitData.append('content', content);
+//     submitData.append('isDraft', isDraft.toString());
+//     submitData.append('wordCount', wordCount.toString());
+//     submitData.append('readingTime', readingTime.toString());
+
+//     // Add publisher information
+//     submitData.append('publisherId', currentUser.uid);
+//     if (currentUser.companyName) {
+//       submitData.append('publisherName', currentUser.companyName);
+//     }
+
+//     // Prepare headers and URL
 //     const headers = {
 //       'Authorization': `Bearer ${authToken}`
 //     };
 
-//     // Add publisher ID to URL params as backup
-//     const url = `/api/publish-article?publisherId=${encodeURIComponent(currentUser.uid || 'unknown')}`;
+//     const url = `/api/publish-article?publisherId=${encodeURIComponent(currentUser.uid)}`;
     
 //     console.log('📡 Making request to:', url);
 //     console.log('📡 Request headers:', headers);
 //     console.log('📡 FormData keys:', [...submitData.keys()]);
 //     console.log('📡 Publisher ID:', currentUser.uid);
+//     console.log('📦 Form data summary:', {
+//       title: formData.title,
+//       author: formData.author,
+//       category: formData.category,
+//       isDraft,
+//       contentLength: content.length,
+//       hasImage: !!formData.featuredImage,
+//       publisherId: currentUser.uid
+//     });
 
+//     // Make API call
 //     const response = await fetch(url, {
 //       method: 'POST',
 //       headers,
@@ -302,10 +353,15 @@
 //   // Handle form submission
 //   const handleSubmit = async (e, isDraft = false) => {
 //     e.preventDefault();
-//     console.log('🚀 Form submission started', { isDraft, currentUser: !!currentUser });
+//     console.log('🚀 Form submission started', { 
+//       isDraft, 
+//       currentUser: !!currentUser,
+//       userId: currentUser?.uid
+//     });
     
 //     // Clear previous status
 //     setSubmitStatus(null);
+//     setErrors({});
     
 //     if (!isDraft && !validateForm()) {
 //       console.log('❌ Validation failed, submission cancelled');
@@ -322,52 +378,29 @@
 //     setIsSubmitting(true);
     
 //     try {
-//       console.log('📦 Creating FormData...');
-//       const submitData = new FormData();
-      
-//       // Add all form data
-//       Object.keys(formData).forEach(key => {
-//         if (key === 'featuredImage' && formData[key]) {
-//           console.log('🖼️ Adding featured image to FormData');
-//           submitData.append(key, formData[key]);
-//         } else if (key !== 'featuredImage') {
-//           submitData.append(key, formData[key]);
-//         }
-//       });
-
-//       const content = editorRef.current?.innerHTML?.trim() || '';
-//       submitData.append('content', content);
-//       submitData.append('isDraft', isDraft.toString());
-//       submitData.append('wordCount', wordCount.toString());
-//       submitData.append('readingTime', readingTime.toString());
-
-//       // Add publisher information
-//       submitData.append('publisherId', currentUser.uid);
-//       if (currentUser.companyName) {
-//         submitData.append('publisherName', currentUser.companyName);
-//       }
-
-//       console.log('📦 FormData prepared:', {
-//         title: formData.title,
-//         author: formData.author,
-//         category: formData.category,
-//         isDraft,
-//         contentLength: content.length,
-//         hasImage: !!formData.featuredImage,
-//         publisherId: currentUser.uid
-//       });
-
 //       console.log('📡 Calling submitArticle...');
-//       let result;
       
+//       let result;
 //       if (onSubmit && typeof onSubmit === 'function') {
 //         // Use custom onSubmit handler if provided
 //         console.log('📡 Using custom onSubmit handler...');
+        
+//         // Prepare data for custom handler
+//         const submitData = {
+//           ...formData,
+//           content: editorRef.current?.innerHTML?.trim() || '',
+//           isDraft,
+//           wordCount,
+//           readingTime,
+//           publisherId: currentUser.uid,
+//           publisherName: currentUser.companyName
+//         };
+        
 //         result = await onSubmit(submitData);
 //       } else {
 //         // Use built-in API call
 //         console.log('📡 Using built-in API call...');
-//         result = await submitArticle(submitData);
+//         result = await submitArticle(isDraft);
 //       }
       
 //       console.log('✅ Submit successful:', result);
@@ -460,8 +493,11 @@
 //           {currentUser && (
 //             <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
 //               <p className="text-sm text-blue-800">
-//                 Publishing as: <strong>{currentUser.companyName || currentUser.displayName || 'Unknown Publisher'}</strong>
+//                 <strong>Publishing as:</strong> {currentUser.companyName || currentUser.displayName || 'Unknown Publisher'}
 //                 {currentUser.role && ` (${currentUser.role})`}
+//               </p>
+//               <p className="text-xs text-blue-600 mt-1">
+//                 Publisher ID: {currentUser.uid}
 //               </p>
 //             </div>
 //           )}
@@ -784,6 +820,16 @@
 //                 {isSubmitting ? 'Publishing...' : 'Publish Article'}
 //               </button>
 //             </div>
+
+//             {/* Debug Information (remove in production) */}
+//             {process.env.NODE_ENV === 'development' && currentUser && (
+//               <div className="mt-4 p-3 bg-gray-100 rounded-md text-xs">
+//                 <h4 className="font-medium text-gray-800 mb-2">Debug Info:</h4>
+//                 <p><strong>User ID:</strong> {currentUser.uid}</p>
+//                 <p><strong>Company:</strong> {currentUser.companyName || 'Not set'}</p>
+//                 <p><strong>Firebase Path:</strong> publishers/{currentUser.uid}/articles/[articleId]</p>
+//               </div>
+//             )}
 //           </form>
 //         </div>
 //       </div>
