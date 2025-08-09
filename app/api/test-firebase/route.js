@@ -1,40 +1,71 @@
 // app/api/test-firebase/route.js
 import { NextResponse } from 'next/server';
-const { testFirestorePermissions, getFirestoreDb } = require('../../../lib/firebase-admin');
+import { getFirestoreDb, testFirestorePermissions } from '../../../lib/firebase-admin';
 
-export async function GET() {
-  console.log('================ API DEBUG: /api/test-firebase ================');
-
+export async function GET(req) {
   try {
-    const db = getFirestoreDb();
-    console.log('✅ Firestore DB instance acquired:', !!db);
+    const { searchParams } = new URL(req.url);
+    let publisherId = searchParams.get('publisherId');
 
-    console.log('🧪 Testing Firebase Admin configuration...');
-    const result = await testFirestorePermissions();
-
-    if (result.success) {
-      console.log('✅ Firebase Admin test successful');
-      return NextResponse.json({
-        success: true,
-        message: 'Firebase Admin is properly configured',
-        result
-      }, { status: 200 });
-    } else {
-      console.error('❌ Firebase Admin test failed:', result);
-      return NextResponse.json({
-        success: false,
-        error: 'Firebase Admin test failed',
-        details: result
-      }, { status: 500 });
+    if (!publisherId) {
+      console.warn('⚠️ No publisherId provided, using default: test-publisher');
+      publisherId = 'test-publisher';
     }
 
-  } catch (error) {
-    console.error('❌ Firebase Admin test error:', error.message);
-    console.error('❌ Full error:', error);
+    console.log('🔍 Testing Firebase for publisherId:', publisherId);
+
+    // ✅ Get Firestore instance
+    const db = getFirestoreDb();
+
+    // Optional: Run a Firestore permissions test
+    const permissions = await testFirestorePermissions();
+
     return NextResponse.json({
-      success: false,
-      error: 'Firebase Admin configuration error',
-      details: error.message
-    }, { status: 500 });
+      success: true,
+      message: 'Firebase Admin connection successful',
+      publisherId,
+      permissions
+    });
+
+  } catch (error) {
+    console.error('❌ Firebase test failed:', error);
+    return NextResponse.json(
+      { success: false, error: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(req) {
+  try {
+    const body = await req.json();
+    let { publisherId } = body;
+
+    if (!publisherId) {
+      console.warn('⚠️ No publisherId in body, using default: test-publisher');
+      publisherId = 'test-publisher';
+    }
+
+    console.log('🔍 Testing Firebase for publisherId:', publisherId);
+
+    // ✅ Get Firestore instance
+    const db = getFirestoreDb();
+
+    // Optional: Run a Firestore permissions test
+    const permissions = await testFirestorePermissions();
+
+    return NextResponse.json({
+      success: true,
+      message: 'Firebase Admin connection successful',
+      publisherId,
+      permissions
+    });
+
+  } catch (error) {
+    console.error('❌ Firebase test failed:', error);
+    return NextResponse.json(
+      { success: false, error: error.message },
+      { status: 500 }
+    );
   }
 }

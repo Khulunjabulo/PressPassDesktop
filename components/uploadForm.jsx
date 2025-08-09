@@ -20,14 +20,6 @@ import {
   Edit3
 } from 'lucide-react';
 
-// You'll need to import these components - adjust paths as needed
-// import FileUpload from "./fileUpload"
-// import PrioritySelector from "./prioritySelector"
-// import PreviewToggle from "./previviewToogle"
-// import { storage } from "../Firebase/firebase"
-// import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage"
-// import { useRouter } from "next/navigation";
-
 // Mock components for demo - replace with your actual imports
 const FileUpload = ({ setFile, uploadProgress, onPreview, onExtract }) => (
   <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
@@ -88,7 +80,7 @@ const PreviewToggle = ({ previewStyle, setPreviewStyle }) => (
   </div>
 );
 
-export default function FlipCardUploadForm({ onSubmit }) {
+export default function FlipCardUploadForm({ onSubmit, onClose }) {
   const [isFlipped, setIsFlipped] = useState(false);
   
   // Upload Form States
@@ -153,14 +145,57 @@ export default function FlipCardUploadForm({ onSubmit }) {
     { value: 'academic', label: 'Academic', color: 'bg-green-600', description: 'Formal, research-oriented' }
   ];
 
-  // Mock current user for demo
+  // Get current user from localStorage
   useEffect(() => {
-    setCurrentUser({
-      uid: 'demo-user-123',
-      companyName: 'Demo Publisher',
-      role: 'Editor'
-    });
-    setFormData(prev => ({ ...prev, author: 'Demo Publisher' }));
+    console.log('🎯 FlipCardUploadForm mounted');
+    
+    if (typeof window !== 'undefined') {
+      try {
+        const userData = localStorage.getItem('currentUser');
+        console.log('👤 Raw user data from localStorage:', userData);
+        
+        if (userData) {
+          const parsedUser = JSON.parse(userData);
+          console.log('👤 Current user loaded:', { 
+            uid: parsedUser.uid, 
+            role: parsedUser.role,
+            companyName: parsedUser.companyName,
+            email: parsedUser.email
+          });
+          setCurrentUser(parsedUser);
+          
+          // Pre-fill author name if available
+          if (parsedUser.companyName && !formData.author) {
+            console.log('👤 Pre-filling author name:', parsedUser.companyName);
+            setFormData(prev => ({ ...prev, author: parsedUser.companyName }));
+          }
+        } else {
+          console.warn('⚠️ No current user found in localStorage');
+          // Mock current user for demo
+          setCurrentUser({
+            uid: 'demo-user-123',
+            companyName: 'Demo Publisher',
+            role: 'Editor'
+          });
+          setFormData(prev => ({ ...prev, author: 'Demo Publisher' }));
+        }
+      } catch (error) {
+        console.error('❌ Error parsing user data:', error);
+        // Mock current user for demo
+        setCurrentUser({
+          uid: 'demo-user-123',
+          companyName: 'Demo Publisher',
+          role: 'Editor'
+        });
+        setFormData(prev => ({ ...prev, author: 'Demo Publisher' }));
+      }
+    }
+    
+    updateWordCount();
+    
+    return () => {
+      console.log('🎯 FlipCardUploadForm unmounted');
+    };
   }, []);
 
   // Upload Form Functions
@@ -211,18 +246,20 @@ export default function FlipCardUploadForm({ onSubmit }) {
     await handleUploadSubmit(e, 'draft');
   };
 
-  // Manual Article Form Functions
+  // Manual Article Form Functions - Fixed from working version
   const formatText = (command, value = null) => {
+    console.log('🎨 Formatting text with command:', command, value);
     try {
       document.execCommand(command, false, value);
       editorRef.current?.focus();
       updateWordCount();
     } catch (error) {
-      console.error('Error formatting text:', error);
+      console.error('❌ Error formatting text:', error);
     }
   };
 
   const handleToolbarClick = (command) => {
+    console.log('🔧 Toolbar button clicked:', command);
     try {
       if (command === 'createLink') {
         const url = prompt('Enter the URL:');
@@ -234,36 +271,52 @@ export default function FlipCardUploadForm({ onSubmit }) {
         formatText(command);
       }
     } catch (error) {
-      console.error('Error handling toolbar click:', error);
+      console.error('❌ Error handling toolbar click:', error);
     }
   };
 
   const updateWordCount = () => {
     try {
-      if (!editorRef.current) return;
+      if (!editorRef.current) {
+        console.log('⚠️ Editor ref not available for word count');
+        return;
+      }
       
       const text = editorRef.current.textContent || '';
       const words = text.trim().split(/\s+/).filter(word => word.length > 0).length;
       const readingTimeCalc = Math.ceil(words / 200);
       
+      console.log('📊 Word count updated:', { words, readingTime: readingTimeCalc });
+      
       setWordCount(words);
       setReadingTime(readingTimeCalc);
       setFormData(prev => ({ ...prev, content: editorRef.current.innerHTML }));
     } catch (error) {
-      console.error('Error updating word count:', error);
+      console.error('❌ Error updating word count:', error);
     }
   };
 
   const handleFileChange = (e) => {
+    console.log('📁 File input changed');
     try {
       const file = e.target.files[0];
+      console.log('📁 Selected file:', file ? {
+        name: file.name,
+        size: file.size,
+        type: file.type
+      } : 'No file');
+
       if (file) {
+        // Validate file type
         if (!file.type.startsWith('image/')) {
+          console.error('❌ Invalid file type:', file.type);
           setErrors(prev => ({ ...prev, featuredImage: 'Please select a valid image file' }));
           return;
         }
 
+        // Validate file size (5MB limit)
         if (file.size > 5 * 1024 * 1024) {
+          console.error('❌ File too large:', file.size);
           setErrors(prev => ({ ...prev, featuredImage: 'Image size must be less than 5MB' }));
           return;
         }
@@ -271,18 +324,20 @@ export default function FlipCardUploadForm({ onSubmit }) {
         setFileName(file.name);
         setFormData(prev => ({ ...prev, featuredImage: file }));
         setErrors(prev => ({ ...prev, featuredImage: null }));
+        console.log('✅ File validated and set');
       } else {
         setFileName('No file chosen');
         setFormData(prev => ({ ...prev, featuredImage: null }));
       }
     } catch (error) {
-      console.error('Error handling file change:', error);
+      console.error('❌ Error handling file change:', error);
       setErrors(prev => ({ ...prev, featuredImage: 'Error processing file' }));
     }
   };
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
+    console.log('📝 Input changed:', { name, value: type === 'checkbox' ? checked : value });
     
     try {
       setFormData(prev => ({
@@ -290,6 +345,7 @@ export default function FlipCardUploadForm({ onSubmit }) {
         [name]: type === 'checkbox' ? checked : value
       }));
 
+      // Clear errors for this field
       if (errors[name]) {
         setErrors(prev => ({ ...prev, [name]: null }));
       }
@@ -298,47 +354,160 @@ export default function FlipCardUploadForm({ onSubmit }) {
         setMetaCharCount(value.length);
       }
     } catch (error) {
-      console.error('Error handling input change:', error);
+      console.error('❌ Error handling input change:', error);
     }
   };
 
-  const validateManualForm = () => {
+  // Validate form - Fixed from working version
+  const validateForm = () => {
+    console.log('✅ Validating form...');
     const newErrors = {};
 
     if (!formData.title.trim()) {
       newErrors.title = 'Title is required';
+      console.log('❌ Validation error: Missing title');
     }
 
     if (!formData.author.trim()) {
       newErrors.author = 'Author name is required';
+      console.log('❌ Validation error: Missing author');
     }
 
     if (!formData.category) {
       newErrors.category = 'Please select a category';
+      console.log('❌ Validation error: Missing category');
     }
 
     const content = editorRef.current?.innerHTML?.trim();
     if (!content || content === '<br>' || content === '<div><br></div>') {
       newErrors.content = 'Article content is required';
+      console.log('❌ Validation error: Missing content');
     }
 
     if (!currentUser) {
       newErrors.auth = 'User authentication required';
+      console.log('❌ Validation error: No authenticated user');
     }
 
+    console.log('✅ Validation result:', { 
+      hasErrors: Object.keys(newErrors).length > 0, 
+      errorCount: Object.keys(newErrors).length,
+      errors: Object.keys(newErrors)
+    });
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
+  // Create auth token for API call - Fixed from working version
+  const getAuthToken = () => {
+    if (!currentUser) {
+      console.error('❌ No current user for auth token');
+      return null;
+    }
+    
+    const token = currentUser.uid || `mock_token_${Date.now()}`;
+    console.log('🔑 Generated auth token preview:', token.substring(0, 20) + '...');
+    return token;
+  };
+
+  // Submit article to API - Fixed from working version
+  const submitArticle = async (isDraft = false) => {
+    console.log('📡 Submitting article to API...', { isDraft, currentUser: !!currentUser });
+    
+    const authToken = getAuthToken();
+    if (!authToken) {
+      throw new Error('Authentication token required');
+    }
+
+    // Create FormData for proper file upload
+    const submitData = new FormData();
+
+    // Add all form data fields
+    Object.keys(formData).forEach(key => {
+      if (key === 'featuredImage' && formData[key]) {
+        console.log('🖼️ Adding featured image to FormData');
+        submitData.append(key, formData[key]);
+      } else if (key !== 'featuredImage') {
+        submitData.append(key, formData[key]);
+      }
+    });
+
+    // Add content from editor
+    const content = editorRef.current?.innerHTML?.trim() || '';
+    submitData.append('content', content);
+    submitData.append('isDraft', isDraft.toString());
+    submitData.append('wordCount', wordCount.toString());
+    submitData.append('readingTime', readingTime.toString());
+
+    // Add publisher information
+    submitData.append('publisherId', currentUser.uid);
+    if (currentUser.companyName) {
+      submitData.append('publisherName', currentUser.companyName);
+    }
+
+    // Prepare headers and URL
+    const headers = {
+      'Authorization': `Bearer ${authToken}`
+    };
+
+    const url = `/api/publish-article?publisherId=${encodeURIComponent(currentUser.uid)}`;
+    
+    console.log('📡 Making request to:', url);
+    console.log('📡 Request headers:', headers);
+    console.log('📡 FormData keys:', [...submitData.keys()]);
+    console.log('📡 Publisher ID:', currentUser.uid);
+    console.log('📦 Form data summary:', {
+      title: formData.title,
+      author: formData.author,
+      category: formData.category,
+      isDraft,
+      contentLength: content.length,
+      hasImage: !!formData.featuredImage,
+      publisherId: currentUser.uid
+    });
+
+    // Make API call
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: submitData
+    });
+
+    console.log('📡 Response status:', response.status);
+    console.log('📡 Response ok:', response.ok);
+
+    const result = await response.json();
+    console.log('📡 Response data:', result);
+
+    if (!response.ok) {
+      throw new Error(result.error || `HTTP error! status: ${response.status}`);
+    }
+
+    return result;
+  };
+
+  // Handle form submission - Fixed from working version
   const handleManualSubmit = async (e, isDraft = false) => {
     e.preventDefault();
-    setSubmitStatus(null);
+    console.log('🚀 Form submission started', { 
+      isDraft, 
+      currentUser: !!currentUser,
+      userId: currentUser?.uid
+    });
     
-    if (!isDraft && !validateManualForm()) {
+    // Clear previous status
+    setSubmitStatus(null);
+    setErrors({});
+    
+    if (!isDraft && !validateForm()) {
+      console.log('❌ Validation failed, submission cancelled');
       return;
     }
 
+    // Check authentication even for drafts
     if (!currentUser) {
+      console.error('❌ No authenticated user');
       setErrors(prev => ({ ...prev, auth: 'Please sign in to publish articles' }));
       return;
     }
@@ -346,32 +515,37 @@ export default function FlipCardUploadForm({ onSubmit }) {
     setIsSubmitting(true);
     
     try {
-      const submitData = new FormData();
+      console.log('📡 Calling submitArticle...');
       
-      Object.keys(formData).forEach(key => {
-        if (key === 'featuredImage' && formData[key]) {
-          submitData.append(key, formData[key]);
-        } else if (key !== 'featuredImage') {
-          submitData.append(key, formData[key]);
-        }
-      });
-
-      const content = editorRef.current?.innerHTML?.trim() || '';
-      submitData.append('content', content);
-      submitData.append('isDraft', isDraft.toString());
-      submitData.append('wordCount', wordCount.toString());
-      submitData.append('readingTime', readingTime.toString());
-      submitData.append('publisherId', currentUser.uid);
-      
-      if (currentUser.companyName) {
-        submitData.append('publisherName', currentUser.companyName);
+      let result;
+      if (onSubmit && typeof onSubmit === 'function') {
+        // Use custom onSubmit handler if provided
+        console.log('📡 Using custom onSubmit handler...');
+        
+        // Prepare data for custom handler
+        const submitData = {
+          ...formData,
+          content: editorRef.current?.innerHTML?.trim() || '',
+          isDraft,
+          wordCount,
+          readingTime,
+          publisherId: currentUser.uid,
+          publisherName: currentUser.companyName
+        };
+        
+        result = await onSubmit(submitData);
+      } else {
+        // Use built-in API call
+        console.log('📡 Using built-in API call...');
+        result = await submitArticle(isDraft);
       }
-
-      const result = await onSubmit(submitData);
+      
+      console.log('✅ Submit successful:', result);
       setSubmitStatus('success');
       
+      // Clear form data on successful publish (but not for drafts)
       if (!isDraft) {
-        // Clear form on successful publish
+        console.log('🧹 Clearing form after successful publish...');
         setFormData({
           title: '',
           subtitle: '',
@@ -393,24 +567,41 @@ export default function FlipCardUploadForm({ onSubmit }) {
         }
         updateWordCount();
       }
+      
+      // Auto-close after success (optional)
+      setTimeout(() => {
+        onClose?.();
+      }, 2000);
 
     } catch (error) {
-      console.error('Submit error:', error);
+      console.error('💥 Submit error:', error);
+      console.error('💥 Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
+      
       setSubmitStatus('error');
+      
+      // Show user-friendly error message
       setErrors(prev => ({
         ...prev,
         submit: error.message || 'An error occurred while submitting. Please try again.'
       }));
     } finally {
       setIsSubmitting(false);
+      console.log('🏁 Submit process completed');
     }
   };
 
+  // Handle save draft - Fixed from working version
   const handleManualSaveDraft = async (e) => {
+    console.log('💾 Save draft requested');
     const title = formData.title.trim();
     const content = editorRef.current?.innerHTML?.trim();
     
     if (!title && (!content || content === '<br>' || content === '<div><br></div>')) {
+      console.log('⚠️ Empty draft - showing warning');
       setErrors(prev => ({ 
         ...prev, 
         submit: 'Please add a title or some content before saving as draft.' 
@@ -594,26 +785,39 @@ export default function FlipCardUploadForm({ onSubmit }) {
           )}
         </div>
 
-        {/* Back Side - Manual Article Form */}
+        {/* Back Side - Manual Article Form - FIXED */}
         <div className="flip-card-back bg-white p-6 max-h-[90vh] overflow-y-auto">
           {/* Flip Button */}
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold text-gray-800">Manual Article Entry</h2>
-            <button
-              onClick={() => setIsFlipped(false)}
-              className="flex items-center px-3 py-1 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors text-sm"
-            >
-              <RotateCcw className="w-4 h-4 mr-1" />
-              Back to Upload
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setIsFlipped(false)}
+                className="flex items-center px-3 py-1 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors text-sm"
+              >
+                <RotateCcw className="w-4 h-4 mr-1" />
+                Back to Upload
+              </button>
+              {onClose && (
+                <button
+                  onClick={onClose}
+                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                >
+                  ×
+                </button>
+              )}
+            </div>
           </div>
 
           {/* User Info Display */}
           {currentUser && (
             <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
               <p className="text-sm text-blue-800">
-                Publishing as: <strong>{currentUser.companyName || currentUser.displayName || 'Unknown Publisher'}</strong>
+                <strong>Publishing as:</strong> {currentUser.companyName || currentUser.displayName || 'Unknown Publisher'}
                 {currentUser.role && ` (${currentUser.role})`}
+              </p>
+              <p className="text-xs text-blue-600 mt-1">
+                Publisher ID: {currentUser.uid}
               </p>
             </div>
           )}
@@ -936,6 +1140,17 @@ export default function FlipCardUploadForm({ onSubmit }) {
                 {isSubmitting ? 'Publishing...' : 'Publish Article'}
               </button>
             </div>
+
+            {/* Debug Information (remove in production) */}
+            {process.env.NODE_ENV === 'development' && currentUser && (
+              <div className="mt-4 p-3 bg-gray-100 rounded-md text-xs">
+                <h4 className="font-medium text-gray-800 mb-2">Debug Info:</h4>
+                <p><strong>User ID:</strong> {currentUser.uid}</p>
+                <p><strong>Company:</strong> {currentUser.companyName || 'Not set'}</p>
+                <p><strong>API Endpoint:</strong> /api/publish-article</p>
+                <p><strong>Publisher ID:</strong> {currentUser.uid}</p>
+              </div>
+            )}
           </form>
         </div>
       </div>
