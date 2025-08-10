@@ -1,3 +1,4 @@
+// components/FavoriteButton.jsx
 "use client";
 
 import { useState } from 'react';
@@ -15,7 +16,7 @@ export default function FavoriteButton({
 
   // Determine item type based on source or category
   const determineItemType = (item) => {
-    const source = item.source?.name || item.source || '';
+    const source = item.source?.name || item.source || item.publicationName || '';
     const magazines = ['Drum', 'You', 'Fairlady', 'GQ', 'Sarie', 'Huis Genoot'];
     const newspapers = ['Isolezwe', 'The Star', 'City Press', 'Mail & Guardian'];
 
@@ -37,18 +38,25 @@ export default function FavoriteButton({
 
     setIsLoading(true);
     try {
+      // Prepare comprehensive favorite item data
       const favoriteItem = {
         id: item.id || `story_${Date.now()}`,
-        title: item.title,
-        description: item.description || item.content || '',
-        image: item.image || item.urlToImage || '',
-        link: item.link || item.url || '',
-        source: item.source?.name || item.source || 'Unknown Source',
-        publicationName: item.source?.name || item.source || 'Unknown',
+        title: item.title || 'Untitled',
+        description: item.description || item.summary || item.content?.substring(0, 300) || '',
+        image: item.image || item.imageUrl || item.urlToImage || null,
+        link: item.link || item.url || `${window.location.origin}/news-reader/article/${item.id}`,
+        source: item.source?.name || item.source || item.publicationName || 'Unknown Source',
+        publicationName: item.source?.name || item.source || item.publicationName || 'Unknown',
+        publicationLogo: item.publicationLogo || item.logo || null,
         category: item.category || 'general',
-        pubDate: item.pubDate || item.publishedAt || new Date().toISOString(),
+        pubDate: item.pubDate || item.publishedAt || item.createdAt || new Date().toISOString(),
         type: determineItemType(item),
-        ...item // Preserve any extra fields
+        publisherId: item.publisherId || null,
+        // Include any additional fields
+        tags: item.tags || [],
+        author: item.author || item.creator || 'Unknown',
+        readTime: item.readTime || 0,
+        views: item.views || 0
       };
 
       const result = await toggleFavorite(favoriteItem);
@@ -65,7 +73,8 @@ export default function FavoriteButton({
   };
 
   // Determine if current item is in favorites
-  const isItemFavorite = item.id ? isFavorite(item.id) : false;
+  const itemId = item.id || `item_${item.title}_${item.source}`;
+  const isItemFavorite = isFavorite(itemId);
 
   // Dynamic size configs
   const sizeConfig = {
@@ -81,8 +90,9 @@ export default function FavoriteButton({
       disabled={isLoading}
       className={`
         ${config.button} 
-        ${isItemFavorite ? 'text-red-500' : 'text-gray-400 hover:text-red-500'} 
-        transition-colors rounded-full hover:bg-gray-100 disabled:opacity-50
+        ${isItemFavorite ? 'text-red-500 bg-red-50' : 'text-gray-400 hover:text-red-500 hover:bg-red-50'} 
+        transition-all duration-200 rounded-full disabled:opacity-50 border border-transparent
+        ${isItemFavorite ? 'border-red-200' : 'hover:border-red-200'}
         ${className}
       `}
       title={isItemFavorite ? 'Remove from favorites' : 'Add to favorites'}
@@ -94,11 +104,11 @@ export default function FavoriteButton({
           />
         ) : (
           <Heart
-            className={`${config.icon} ${isItemFavorite ? 'fill-current' : ''}`}
+            className={`${config.icon} ${isItemFavorite ? 'fill-current' : ''} transition-all duration-200`}
           />
         )}
         {showText && (
-          <span className={config.text}>
+          <span className={`${config.text} font-medium`}>
             {isItemFavorite ? 'Favorited' : 'Favorite'}
           </span>
         )}
