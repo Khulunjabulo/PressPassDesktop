@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { timeAgo } from '@/lib/time';
 import NewsCard from '@/components/news-reader/NewsCard';
 import AdSlot from '@/components/news-reader/AdsSlot';
 import RecommendedOverlayBottom from '@/components/news-reader/Overlay';
 import { Card, CardContent } from '@/components/ui/newscard';
-import { FileText, Clock, Globe, Building, Users } from 'lucide-react';
+import { FileText, Clock, Globe, Building, Users, ArrowRight, Plus } from 'lucide-react';
 
 function dedupeArticles(articles = []) {
   const seen = new Set();
@@ -25,18 +26,33 @@ export default function NewsGrid({ articles }) {
   const unique = dedupeArticles(articles || []);
   const [newsources, setNewsources] = useState([]);
   const [loadingSources, setLoadingSources] = useState(true);
+  const [sourcesError, setSourcesError] = useState(null);
+  const router = useRouter();
 
   // Fetch news sources
   useEffect(() => {
     const fetchNewsSources = async () => {
       try {
+        setLoadingSources(true);
+        setSourcesError(null);
+        
         const response = await fetch('/api/news-sources');
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const data = await response.json();
+        
         if (data.success) {
-          setNewsources(data.newsources);
+          setNewsources(data.newsources || []);
+        } else {
+          throw new Error(data.error || 'Failed to fetch news sources');
         }
       } catch (error) {
         console.error('Error fetching news sources:', error);
+        setSourcesError(error.message);
+        setNewsources([]); // Set empty array on error
       } finally {
         setLoadingSources(false);
       }
@@ -46,10 +62,15 @@ export default function NewsGrid({ articles }) {
   }, []);
 
   const handleSourceClick = (source) => {
-    // Navigate to specific publisher's articles or profile
-    console.log('Clicked on source:', source.name);
-    // You can implement navigation logic here
-    // e.g., router.push(`/news-reader/source/${source.id}`);
+    // Navigate to specific publisher's articles page
+    router.push(`/news-reader/publisher/${source.id}`);
+  };
+
+  const retryFetchSources = () => {
+    setSourcesError(null);
+    setLoadingSources(true);
+    // Re-run the effect by changing a dependency
+    window.location.reload(); // Simple reload for now
   };
 
   return (
@@ -93,11 +114,37 @@ export default function NewsGrid({ articles }) {
 
           {/* News Sources Section */}
           <section className="mt-10">
-            <h2 className="text-xl font-bold mb-4">News Sources</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold">News Sources</h2>
+              {!loadingSources && !sourcesError && (
+                <span className="text-sm text-gray-500">
+                  {newsources.length} publisher{newsources.length !== 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
             
-            {loadingSources ? (
+            {/* Error State */}
+            {sourcesError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-red-800 font-medium">Failed to load news sources</p>
+                    <p className="text-red-600 text-sm mt-1">{sourcesError}</p>
+                  </div>
+                  <button 
+                    onClick={retryFetchSources}
+                    className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700 transition-colors"
+                  >
+                    Retry
+                  </button>
+                </div>
+              </div>
+            )}
+            
+            {/* Loading State */}
+            {loadingSources && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {[1, 2, 3].map((i) => (
+                {[1, 2, 3, 4, 5, 6].map((i) => (
                   <Card key={i} className="animate-pulse">
                     <CardContent className="p-4">
                       <div className="flex items-start space-x-3">
@@ -112,12 +159,15 @@ export default function NewsGrid({ articles }) {
                   </Card>
                 ))}
               </div>
-            ) : newsources.length > 0 ? (
+            )}
+            
+            {/* News Sources Grid */}
+            {!loadingSources && !sourcesError && newsources.length > 0 && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {newsources.map((source) => (
                   <Card 
                     key={source.id} 
-                    className="hover:shadow-lg transition-shadow duration-200 cursor-pointer border-0 shadow-sm"
+                    className="hover:shadow-lg hover:scale-[1.02] transition-all duration-200 cursor-pointer border-0 shadow-sm bg-white"
                     onClick={() => handleSourceClick(source)}
                   >
                     <CardContent className="p-4">
@@ -141,10 +191,13 @@ export default function NewsGrid({ articles }) {
                         
                         {/* Content */}
                         <div className="flex-1 min-w-0">
-                          {/* Source Name */}
-                          <h3 className="text-sm font-semibold text-gray-900 truncate mb-1">
-                            {source.name}
-                          </h3>
+                          {/* Source Name with Arrow */}
+                          <div className="flex items-center justify-between mb-1">
+                            <h3 className="text-sm font-semibold text-gray-900 truncate">
+                              {source.name}
+                            </h3>
+                            <ArrowRight className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                          </div>
                           
                           {/* Industry Badge */}
                           <div className="mb-2">
@@ -153,12 +206,20 @@ export default function NewsGrid({ articles }) {
                             </span>
                           </div>
                           
-                          {/* Article Count */}
-                          <div className="flex items-center space-x-1 mb-1">
-                            <FileText className="w-3 h-3 text-blue-600" />
-                            <span className="text-xs font-medium text-gray-700">
-                              {source.articleCount} {source.articleCount === 1 ? 'post' : 'posts'}
-                            </span>
+                          {/* Article Count with New Badge */}
+                          <div className="flex items-center space-x-2 mb-1">
+                            <div className="flex items-center space-x-1">
+                              <FileText className="w-3 h-3 text-blue-600" />
+                              <span className="text-xs font-medium text-gray-700">
+                                {source.articleCount} {source.articleCount === 1 ? 'post' : 'posts'}
+                              </span>
+                            </div>
+                            {!source.hasArticles && (
+                              <div className="flex items-center space-x-1">
+                                <Plus className="w-2 h-2 text-orange-500" />
+                                <span className="text-xs text-orange-600 font-medium">New</span>
+                              </div>
+                            )}
                           </div>
                           
                           {/* Publication Type */}
@@ -179,11 +240,24 @@ export default function NewsGrid({ articles }) {
                             </div>
                           )}
                           
-                          {/* Last Posted */}
+                          {/* Last Posted with Status Color */}
                           <div className="flex items-center space-x-1">
                             <Clock className="w-3 h-3 text-gray-500" />
+                            <span className={`text-xs ${source.hasArticles ? 'text-gray-500' : 'text-green-600 font-medium'}`}>
+                              {source.lastPosted === '--' ? 'Ready' : (source.hasArticles ? `Last: ${source.lastPosted}` : source.lastPosted)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Status Indicator */}
+                      <div className="mt-3 pt-2 border-t border-gray-100">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-gray-400">Folder</span>
+                          <div className="flex items-center space-x-1">
+                            <div className={`w-1.5 h-1.5 rounded-full ${source.hasArticles ? 'bg-green-400' : 'bg-yellow-400'}`}></div>
                             <span className="text-xs text-gray-500">
-                              {source.lastPosted === '--' ? '--' : `Last: ${source.lastPosted}`}
+                              {source.hasArticles ? 'Active' : 'Ready'}
                             </span>
                           </div>
                         </div>
@@ -192,12 +266,15 @@ export default function NewsGrid({ articles }) {
                   </Card>
                 ))}
               </div>
-            ) : (
+            )}
+            
+            {/* Empty State */}
+            {!loadingSources && !sourcesError && newsources.length === 0 && (
               <div className="text-center py-8">
                 <Building className="mx-auto h-8 w-8 text-gray-400" />
-                <h3 className="mt-2 text-sm font-medium text-gray-900">No news sources yet</h3>
+                <h3 className="mt-2 text-sm font-medium text-gray-900">No publishers yet</h3>
                 <p className="mt-1 text-sm text-gray-500">
-                  Publishers will appear here once they register and start publishing content.
+                  Publisher folders will automatically appear here when they register.
                 </p>
               </div>
             )}
