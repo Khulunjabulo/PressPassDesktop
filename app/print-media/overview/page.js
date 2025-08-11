@@ -144,7 +144,7 @@ export default function Dashboard() {
   return (
     <>
       <Header />
-      <div className="flex">
+      <div className="h-screen bg-gray-50 flex overflow-hidden">
         <PublisherSidebar />
         <div className="flex-1 min-h-screen bg-gray-100 p-6">
           {/* Top Grid */}
