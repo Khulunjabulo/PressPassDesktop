@@ -8,11 +8,11 @@ export default function AdvancedAnalytics() {
     return (
         <> 
             <Header />
-            <div className="flex">
+           <div className="h-screen bg-gray-50 flex overflow-hidden">
                 <PublisherSidebar />
                 <div className="flex-1 p-4 md:p-6 bg-gray-50 min-h-screen">
                     <div className="flex justify-between items-center mb-6">
-                        <h1 className="text-xl md:text-2xl font-bold text-gray-800">Advanced Analytics</h1>
+                       <h1 className="text-xl md:text-2xl font-bold text-gray-800">Advanced Analytics</h1>
                         <div />
                         <div />
                         <div />
