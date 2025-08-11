@@ -1,16 +1,16 @@
 import { fetchNews } from '@/lib/fetchNews';
 
 export default async function PublicationPage({ params }) {
-  const { publicationId } = await params;
+  const { publicationId } = params;
 
   const allNews = await fetchNews();
 
-  // Debug log (heck variations)
+  console.log("Publication ID from URL:", publicationId);
   console.log("All source IDs for debugging:", allNews.map(s => s.source_id));
 
   const filteredNews = allNews.filter((story) => {
     const sourceId = (story?.source_id || '').toLowerCase();
-    return sourceId.includes(publicationId.toLowerCase());
+    return sourceId === publicationId.toLowerCase();
   });
 
   return (
