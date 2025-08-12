@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent } from '@/components/ui/newscard';
+import { Card, CardContent } from '@/components/ui/Cards';
 import { 
   Home, Search, Heart, Tag, ChevronRight, User, Plus, 
   Linkedin, Youtube, Facebook, Volume2, ArrowRight, Clock, FileText,
