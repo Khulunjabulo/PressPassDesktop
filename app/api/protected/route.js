@@ -1,5 +1,5 @@
 import { getAuth } from "firebase-admin/auth";
-import { db } from '@firebase/firebase';
+import { db } from '@/Firebase/firebase';
 
 export async function GET(req) {
   const authHeader = req.headers.get("authorization");
