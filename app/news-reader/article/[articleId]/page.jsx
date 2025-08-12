@@ -4,7 +4,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/newscard';
-import { ArrowLeft, Calendar, Clock, Eye, Hash, User, Globe } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, Eye, Hash, User, Globe, Share2, Bookmark } from 'lucide-react';
+import FavoriteButton from '@/components/FavoriteButton';
 
 export default function ArticleViewPage() {
   const params = useParams();
@@ -181,9 +182,50 @@ export default function ArticleViewPage() {
 
         {/* Article Header */}
         <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 leading-tight">
-            {article.title}
-          </h1>
+          <div className="flex items-start justify-between mb-4">
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 leading-tight flex-1 mr-4">
+              {article.title}
+            </h1>
+            
+            {/* Action Buttons */}
+            <div className="flex items-center space-x-2 flex-shrink-0">
+              <FavoriteButton 
+                item={{
+                  id: article.id,
+                  title: article.title,
+                  description: article.summary || article.content?.substring(0, 200) + '...',
+                  image: article.imageUrl,
+                  link: `${window.location.origin}/news-reader/article/${article.id}?publisherId=${publisherId}`,
+                  source: publisher?.name || 'Unknown',
+                  publicationName: publisher?.name || 'Unknown',
+                  publicationLogo: publisher?.logo,
+                  category: article.category,
+                  pubDate: article.createdAt,
+                  type: 'story',
+                  publisherId: publisherId
+                }}
+                size="large"
+                showText={false}
+              />
+              <button 
+                className="p-3 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all"
+                title="Share article"
+                onClick={() => {
+                  if (navigator.share) {
+                    navigator.share({
+                      title: article.title,
+                      url: window.location.href
+                    });
+                  } else {
+                    navigator.clipboard.writeText(window.location.href);
+                    alert('Link copied to clipboard!');
+                  }
+                }}
+              >
+                <Share2 className="w-6 h-6" />
+              </button>
+            </div>
+          </div>
           
           {/* Article Meta */}
           <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 mb-6">
