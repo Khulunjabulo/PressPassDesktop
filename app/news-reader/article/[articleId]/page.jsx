@@ -300,11 +300,27 @@ export default function ArticleViewPage() {
     featuredImageUrl: article.featuredImageUrl?.substring(0, 50) + '...',
     hasPublisher: !!publisher,
     publisherName: publisher?.name,
-    contentImages: contentImages.length
+    contentImages: contentImages.length,
+    fullArticleObject: article // Full debug
   });
 
-  // Determine the main image to show at the top left
-  const mainImage = article.featuredImageUrl || article.imageUrl || contentImages[0]?.src;
+  // Determine the main image to show - check all possible image fields
+  const mainImage = article.featuredImageUrl || 
+                   article.imageUrl || 
+                   article.image || 
+                   article.featured_image ||
+                   article.featuredImage ||
+                   contentImages[0]?.src;
+  
+  console.log('🖼️ Main image determination:', {
+    featuredImageUrl: article.featuredImageUrl,
+    imageUrl: article.imageUrl,
+    image: article.image,
+    featured_image: article.featured_image,
+    featuredImage: article.featuredImage,
+    contentImages: contentImages.length,
+    selectedMainImage: mainImage
+  });
 
   return (
     <div className="min-h-screen bg-white">
@@ -337,29 +353,59 @@ export default function ArticleViewPage() {
         
         .main-image-container {
           float: left;
-          width: 300px;
-          margin: 0 2rem 1rem 0;
-          border: 2px solid #333;
-          background: #f9f9f9;
-          box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+          width: 350px;
+          margin: 0 2rem 1.5rem 0;
+          border: 3px solid #000;
+          background: #fff;
+          box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+          clear: left;
         }
         
         .main-image {
           width: 100%;
-          height: 200px;
+          height: 250px;
           object-fit: cover;
           display: block;
-          border-bottom: 1px solid #333;
+          border-bottom: 2px solid #000;
         }
         
         .main-image-caption {
-          padding: 0.75rem;
-          font-size: 0.8em;
+          padding: 1rem;
+          font-size: 0.85em;
           font-style: italic;
-          color: #666;
-          background: #f9f9f9;
-          border-top: 1px solid #ddd;
-          line-height: 1.4;
+          color: #333;
+          background: #f8f8f8;
+          line-height: 1.5;
+          font-family: 'Times New Roman', serif;
+          border-top: 1px solid #ccc;
+        }
+        
+        .hero-image-container {
+          width: 100%;
+          margin-bottom: 2rem;
+          border: 3px solid #000;
+          background: #fff;
+          box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+        }
+        
+        .hero-image {
+          width: 100%;
+          height: 400px;
+          object-fit: cover;
+          display: block;
+          border-bottom: 2px solid #000;
+        }
+        
+        .hero-image-caption {
+          padding: 1rem;
+          font-size: 0.9em;
+          font-style: italic;
+          color: #333;
+          background: #f8f8f8;
+          line-height: 1.5;
+          font-family: 'Times New Roman', serif;
+          border-top: 1px solid #ccc;
+          text-align: center;
         }
         
         .newspaper-content {
@@ -455,13 +501,15 @@ export default function ArticleViewPage() {
         }
         
         @media (max-width: 768px) {
-          .main-image-container {
+          .main-image-container,
+          .hero-image-container {
             float: none;
             width: 100%;
             margin: 0 0 2rem 0;
           }
           
-          .main-image {
+          .main-image,
+          .hero-image {
             height: 250px;
           }
           
@@ -475,7 +523,8 @@ export default function ArticleViewPage() {
         }
         
         @media (max-width: 480px) {
-          .main-image {
+          .main-image,
+          .hero-image {
             height: 200px;
           }
           
@@ -486,6 +535,12 @@ export default function ArticleViewPage() {
           .newspaper-paragraph {
             font-size: 0.95em;
             line-height: 1.6;
+          }
+          
+          .main-image-container,
+          .hero-image-container {
+            width: 100%;
+            margin: 0 0 1.5rem 0;
           }
         }
       `}</style>
@@ -616,23 +671,94 @@ export default function ArticleViewPage() {
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
             {/* Main Article Content */}
             <div className="lg:col-span-3">
+              {/* Debug Image Information */}
+              {process.env.NODE_ENV === 'development' && (
+                <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded text-xs">
+                  <h4 className="font-bold mb-2">🐛 Image Debug Info:</h4>
+                  <p><strong>Main Image Selected:</strong> {mainImage || 'None'}</p>
+                  <p><strong>Featured Image URL:</strong> {article.featuredImageUrl || 'None'}</p>
+                  <p><strong>Image URL:</strong> {article.imageUrl || 'None'}</p>
+                  <p><strong>Content Images Found:</strong> {contentImages.length}</p>
+                  {contentImages.length > 0 && (
+                    <div>
+                      <strong>Content Images:</strong>
+                      {contentImages.map((img, i) => (
+                        <div key={i} className="ml-4">
+                          {i + 1}. {img.src.substring(0, 60)}...
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Hero Image - Full width if important article */}
+              {mainImage && article.priority === 'high' && (
+                <div className="hero-image-container">
+                  <img
+                    src={mainImage}
+                    alt={article.title}
+                    className="hero-image"
+                    loading="eager"
+                    onLoad={() => console.log('✅ Hero image loaded successfully:', mainImage)}
+                    onError={(e) => {
+                      console.error('❌ Hero image failed to load:', mainImage);
+                      console.error('Error details:', e);
+                      e.target.parentElement.style.display = 'none';
+                    }}
+                  />
+                  <div className="hero-image-caption">
+                    <strong>{article.imageCaption || article.subtitle || article.title}</strong>
+                    {article.imageCredit && (
+                      <span className="block text-sm mt-1 text-gray-600">
+                        Photo: {article.imageCredit}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Article Body with Image Float */}
               <div className="article-content-wrapper">
-                {/* Main Image - Positioned at top left */}
-                {mainImage && (
+                {/* Main Image - Positioned at top left for regular articles */}
+                {mainImage && article.priority !== 'high' && (
                   <div className="main-image-container">
                     <img
                       src={mainImage}
                       alt={article.title}
                       className="main-image"
                       loading="eager"
+                      onLoad={() => console.log('✅ Main image loaded successfully:', mainImage)}
                       onError={(e) => {
-                        console.log('Main image failed to load:', mainImage);
-                        e.target.parentElement.style.display = 'none';
+                        console.error('❌ Main image failed to load:', mainImage);
+                        console.error('Error details:', e);
+                        // Try to show a placeholder or hide the container
+                        e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzUwIiBoZWlnaHQ9IjI1MCIgdmlld0JveD0iMCAwIDM1MCAyNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzNTAiIGhlaWdodD0iMjUwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xNzUgMTEwVjE0MEgxNDVWMTEwSDE3NVoiIGZpbGw9IiM2QjczODAiLz4KPHA+SW1hZ2UgTm90IEZvdW5kPC9wPgo8L3N2Zz4K';
+                        e.target.alt = 'Image not available';
                       }}
                     />
                     <div className="main-image-caption">
-                      {article.imageCaption || article.subtitle || article.title}
+                      <strong>{article.imageCaption || article.title}</strong>
+                      {article.imageCredit && (
+                        <span className="block text-sm mt-1 text-gray-500">
+                          Photo: {article.imageCredit}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* No Image Placeholder for Debug */}
+                {!mainImage && process.env.NODE_ENV === 'development' && (
+                  <div className="main-image-container">
+                    <div className="main-image bg-gray-200 flex items-center justify-center text-gray-500">
+                      <div className="text-center">
+                        <div className="text-2xl mb-2">📷</div>
+                        <div className="text-sm">No Image Available</div>
+                      </div>
+                    </div>
+                    <div className="main-image-caption">
+                      <em>No featured image found for this article</em>
                     </div>
                   </div>
                 )}
