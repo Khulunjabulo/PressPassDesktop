@@ -10,17 +10,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/MonetizationCards";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/UI/Input";
+import { Label } from "@/components/UI/label";
+import { RadioGroup, RadioGroupItem } from "@/components/UI/radio-group";
+import { Checkbox } from "@/components/UI/checkbox";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/components/UI/select";
 import { Upload } from "lucide-react";
 
 const Header = dynamic(() => import("@/components/UI/header"), { ssr: false });
