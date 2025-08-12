@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { Card, CardContent } from '@/components/ui/newscard';
+import { Card, CardContent } from '@/components/UI/Cards';
 import { ArrowLeft, Calendar, Clock, Eye, Hash, User, Globe, Share2, Bookmark } from 'lucide-react';
 import FavoriteButton from '@/components/FavoriteButton';
 
