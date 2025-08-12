@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { storage } from '@/lib/firebase-admin';
+import { getStorage } from '@/lib/firebaseAdmin';
 
 export async function POST(req) {
   try {
@@ -8,6 +8,7 @@ export async function POST(req) {
     if (!file) throw new Error('No file uploaded');
 
     const buffer = Buffer.from(await file.arrayBuffer());
+    const storage = getStorage();
     const bucket = storage.bucket();
     const filename = `test/${Date.now()}-${file.name}`;
     const fileRef = bucket.file(filename);

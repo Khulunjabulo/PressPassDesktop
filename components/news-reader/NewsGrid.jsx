@@ -83,34 +83,40 @@ export default function NewsGrid({ articles }) {
         <div className="space-y-6">
           
           {/* 3 columns on large screens */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {unique.map((article, index) => {
-              const isUploadedStory = article.source_id === 'presspass';
-              
-              return (
-              <NewsCard
-                key={index}
-                imageUrl={article.image_url}
-                publicationName={(article.source_id || 'News').slice(0, 10)}
-                logoBgColor={isUploadedStory ? "#1f2937" : "#008000"}
-                author={
-                  Array.isArray(article.creator)
-                    ? article.creator[0]
-                    : article.creator || 'Unknown'
-                }
-                time={timeAgo(article.pubDate || article.publishedAt || article.createdAt)}
-                isUploadedStory={isUploadedStory}
-                pdfUrl={article.pdfUrl}
-                link={article.link}
-                summary={
-                  article.description ||
-                  article.content ||
-                  'No summary available.'
-                }
-              />
-              );
-            })}
-          </div>
+          {unique.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {unique.map((article, index) => {
+                const isUploadedStory = article.source_id === 'presspass';
+                
+                return (
+                <NewsCard
+                  key={index}
+                  imageUrl={article.image_url}
+                  publicationName={(article.source_id || 'News').slice(0, 10)}
+                  logoBgColor={isUploadedStory ? "#1f2937" : "#008000"}
+                  author={
+                    Array.isArray(article.creator)
+                      ? article.creator[0]
+                      : article.creator || 'Unknown'
+                  }
+                  time={timeAgo(article.pubDate || article.publishedAt || article.createdAt)}
+                  isUploadedStory={isUploadedStory}
+                  pdfUrl={article.pdfUrl}
+                  link={article.link}
+                  summary={
+                    article.description ||
+                    article.content ||
+                    'No summary available.'
+                  }
+                />
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-10">
+              <p className="text-gray-500">No articles found for this category.</p>
+            </div>
+          )}
 
           {/* News Sources Section */}
           <section className="mt-10">
