@@ -64,9 +64,7 @@ export default function ArticleViewPage() {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      day: 'numeric'
     });
   };
 
@@ -75,20 +73,185 @@ export default function ArticleViewPage() {
     return `${readTime} min read`;
   };
 
+  // Fixed function to process article content with proper paragraph handling and overflow prevention
+  const processArticleContent = (content) => {
+    if (!content) {
+      console.log('❌ No content provided');
+      return '';
+    }
+    
+    console.log('🔍 Processing content type:', typeof content);
+    console.log('🔍 Content preview:', content.substring(0, 200) + '...');
+    
+    // Handle content that might be a JSON string with embedded images
+    try {
+      // If content starts with array bracket, it might be JSON
+      if (content.startsWith('[')) {
+        console.log('📋 Detected JSON array content');
+        const parsedContent = JSON.parse(content);
+        if (Array.isArray(parsedContent)) {
+          console.log('✅ Successfully parsed JSON array with', parsedContent.length, 'items');
+          return parsedContent.map((item, index) => {
+            if (item.type === 'text') {
+              // Break text into proper paragraphs and handle overflow
+              const paragraphs = item.content.split(/\n\s*\n/).filter(p => p.trim());
+              return paragraphs.map((paragraph, pIndex) => 
+                `<p key="${index}-${pIndex}" class="newspaper-paragraph">${paragraph.trim()}</p>`
+              ).join('');
+            } else if (item.type === 'image') {
+              console.log('🖼️ Found image in content:', item.src?.substring(0, 50) + '...');
+              return `<div key="${index}" class="newspaper-image-container">
+                        <img src="${item.src}" alt="${item.caption || 'Article image'}" class="newspaper-image" 
+                             loading="lazy" 
+                             onerror="console.log('Image load error:', this.src); this.parentElement.style.display='none';" />
+                        ${item.caption ? `<div class="newspaper-image-caption">${item.caption}</div>` : ''}
+                      </div>`;
+            }
+            return '';
+          }).join('');
+        }
+      }
+    } catch (e) {
+      console.log('ℹ️ Content is not JSON, processing as regular text/HTML');
+    }
+    
+    // Process regular HTML/text content with better paragraph handling
+    let processedContent = content;
+    
+    // Handle line breaks and create proper paragraphs
+    if (!content.includes('<p>') && !content.includes('<div>')) {
+      // Split by double line breaks for paragraphs
+      const paragraphs = content.split(/\n\s*\n/).filter(p => p.trim());
+      if (paragraphs.length > 1) {
+        processedContent = paragraphs.map(paragraph => 
+          `<p class="newspaper-paragraph">${paragraph.trim().replace(/\n/g, ' ')}</p>`
+        ).join('');
+      } else {
+        // Single paragraph, handle single line breaks
+        processedContent = `<p class="newspaper-paragraph">${content.replace(/\n/g, ' ').trim()}</p>`;
+      }
+    } else {
+      // Already has HTML structure, clean it up
+      processedContent = content
+        .replace(/<div><br><\/div>/g, '</p><p class="newspaper-paragraph">')
+        .replace(/<br\s*\/?>\s*<br\s*\/?>/g, '</p><p class="newspaper-paragraph">')
+        .replace(/<br\s*\/?>/g, ' ')
+        .replace(/<div[^>]*>/g, '<p class="newspaper-paragraph">')
+        .replace(/<\/div>/g, '</p>');
+    }
+    
+    // Handle Firebase Storage URLs and other image sources
+    processedContent = processedContent.replace(
+      /<img([^>]*)src="([^"]+)"([^>]*)>/g, 
+      (match, before, src, after) => {
+        console.log('🖼️ Found image URL:', src.substring(0, 50) + '...');
+        return `<div class="newspaper-image-container">
+                  <img${before}src="${src}"${after} class="newspaper-image" loading="lazy" 
+                       onerror="console.log('Image load error:', this.src); this.parentElement.style.display='none';" />
+                </div>`;
+      }
+    );
+    
+    // Ensure we have at least one paragraph wrapper
+    if (!processedContent.includes('<p')) {
+      processedContent = `<p class="newspaper-paragraph">${processedContent}</p>`;
+    }
+    
+    console.log('✅ Processed content length:', processedContent.length);
+    return processedContent;
+  };
+
+  // Enhanced function to extract images from content - including Firebase URLs
+  const extractImagesFromContent = (content) => {
+    const images = [];
+    if (!content) {
+      console.log('❌ No content provided for image extraction');
+      return images;
+    }
+    
+    console.log('🔍 Extracting images from content...');
+    
+    try {
+      if (content.startsWith('[')) {
+        console.log('📋 Parsing JSON content for images');
+        const parsedContent = JSON.parse(content);
+        if (Array.isArray(parsedContent)) {
+          parsedContent.forEach((item, index) => {
+            if (item.type === 'image') {
+              console.log('🖼️ Found image in JSON:', item.src?.substring(0, 50) + '...');
+              images.push({
+                src: item.src,
+                caption: item.caption || '',
+                index: index
+              });
+            }
+          });
+        }
+      }
+    } catch (e) {
+      console.log('ℹ️ Not JSON content, looking for HTML img tags and Firebase URLs');
+      
+      // Look for Firebase Storage URLs
+      const firebaseMatches = content.match(/https:\/\/firebasestorage\.googleapis\.com\/[^"\s]+/g);
+      if (firebaseMatches) {
+        console.log('🔥 Found', firebaseMatches.length, 'Firebase Storage URLs');
+        firebaseMatches.forEach((url, index) => {
+          console.log('🔥 Firebase image URL:', url.substring(0, 50) + '...');
+          images.push({
+            src: url,
+            caption: '',
+            index: `firebase-${index}`
+          });
+        });
+      }
+      
+      // Look for img tags in HTML content
+      const imgMatches = content.match(/<img[^>]+src="([^"]+)"[^>]*>/g);
+      if (imgMatches) {
+        console.log('🖼️ Found', imgMatches.length, 'img tags in HTML');
+        imgMatches.forEach((match, index) => {
+          const srcMatch = match.match(/src="([^"]+)"/);
+          if (srcMatch) {
+            console.log('🖼️ Extracted image URL:', srcMatch[1].substring(0, 50) + '...');
+            images.push({
+              src: srcMatch[1],
+              caption: '',
+              index: `html-${index}`
+            });
+          }
+        });
+      }
+      
+      // Look for data:image URLs
+      const dataImageMatches = content.match(/data:image\/[^"\s]+/g);
+      if (dataImageMatches) {
+        console.log('📊 Found', dataImageMatches.length, 'data:image URLs');
+        dataImageMatches.forEach((url, index) => {
+          console.log('📊 Data image URL found');
+          images.push({
+            src: url,
+            caption: '',
+            index: `data-${index}`
+          });
+        });
+      }
+    }
+    
+    console.log('✅ Extracted', images.length, 'images from content');
+    return images;
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 p-6">
-        <div className="max-w-4xl mx-auto">
-          <div className="mb-8">
-            <div className="w-32 h-6 bg-gray-300 rounded animate-pulse mb-6"></div>
-            <div className="w-3/4 h-8 bg-gray-300 rounded animate-pulse mb-4"></div>
-            <div className="w-1/2 h-6 bg-gray-300 rounded animate-pulse mb-8"></div>
-            <div className="w-full h-64 bg-gray-300 rounded-lg animate-pulse mb-6"></div>
-            <div className="space-y-3">
-              <div className="w-full h-4 bg-gray-300 rounded animate-pulse"></div>
-              <div className="w-full h-4 bg-gray-300 rounded animate-pulse"></div>
-              <div className="w-3/4 h-4 bg-gray-300 rounded animate-pulse"></div>
-            </div>
+      <div className="min-h-screen bg-white">
+        <div className="max-w-6xl mx-auto px-8 py-12">
+          <div className="animate-pulse">
+            <div className="h-4 bg-gray-200 w-24 mb-8"></div>
+            <div className="h-12 bg-gray-200 w-3/4 mb-4"></div>
+            <div className="h-4 bg-gray-200 w-1/2 mb-8"></div>
+            <div className="h-6 bg-gray-200 w-full mb-3"></div>
+            <div className="h-6 bg-gray-200 w-full mb-3"></div>
+            <div className="h-6 bg-gray-200 w-2/3 mb-3"></div>
           </div>
         </div>
       </div>
@@ -96,28 +259,24 @@ export default function ArticleViewPage() {
   }
 
   if (error || !article) {
+    console.log('❌ Article error or not found:', { error, hasArticle: !!article });
     return (
-      <div className="min-h-screen bg-gray-50 p-6">
-        <div className="max-w-4xl mx-auto">
+      <div className="min-h-screen bg-white">
+        <div className="max-w-6xl mx-auto px-8 py-12">
           <button
             onClick={handleBackClick}
-            className="flex items-center space-x-2 text-blue-600 hover:text-blue-800 mb-6"
+            className="text-sm text-gray-600 hover:text-black mb-8 flex items-center"
           >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Back</span>
+            <ArrowLeft className="w-4 h-4 mr-1" />
+            Back
           </button>
           
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-                  <span className="text-red-600 text-sm">⚠</span>
-                </div>
-              </div>
-              <div className="ml-3">
-                <p className="text-red-800 font-medium">Article not found</p>
-                <p className="text-red-600 text-sm mt-1">{error || 'This article may have been removed or moved.'}</p>
-              </div>
+          <div className="border border-gray-300 p-8 text-center">
+            <h2 className="text-2xl font-bold mb-4">Article Not Found</h2>
+            <p className="text-gray-600">{error || 'This article may have been removed or moved.'}</p>
+            <div className="mt-4 text-xs text-gray-500">
+              Article ID: {params.articleId}<br/>
+              Publisher ID: {publisherId}
             </div>
           </div>
         </div>
@@ -125,209 +284,625 @@ export default function ArticleViewPage() {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm">
-        <div className="max-w-4xl mx-auto px-6 py-4">
-          <button
-            onClick={handleBackClick}
-            className="flex items-center space-x-2 text-blue-600 hover:text-blue-800 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Back to {publisher?.name || 'Articles'}</span>
-          </button>
-        </div>
-      </div>
+  const contentImages = extractImagesFromContent(article.content);
+  const processedContent = processArticleContent(article.content);
 
-      {/* Article Content */}
-      <div className="max-w-4xl mx-auto px-6 py-8">
-        {/* Publisher Info */}
-        {publisher && (
-          <Card className="mb-6 bg-white">
-            <CardContent className="p-4">
+  // Debug logging for the article data
+  console.log('📰 Article Data:', {
+    id: article.id,
+    title: article.title,
+    author: article.author,
+    hasContent: !!article.content,
+    contentLength: article.content?.length,
+    hasImage: !!article.imageUrl,
+    hasFeatureImageUrl: !!article.featuredImageUrl,
+    imageUrl: article.imageUrl?.substring(0, 50) + '...',
+    featuredImageUrl: article.featuredImageUrl?.substring(0, 50) + '...',
+    hasPublisher: !!publisher,
+    publisherName: publisher?.name,
+    contentImages: contentImages.length,
+    fullArticleObject: article // Full debug
+  });
+
+  // Determine the main image to show - check all possible image fields
+  const mainImage = article.featuredImageUrl || 
+                   article.imageUrl || 
+                   article.image || 
+                   article.featured_image ||
+                   article.featuredImage ||
+                   contentImages[0]?.src;
+  
+  console.log('🖼️ Main image determination:', {
+    featuredImageUrl: article.featuredImageUrl,
+    imageUrl: article.imageUrl,
+    image: article.image,
+    featured_image: article.featured_image,
+    featuredImage: article.featuredImage,
+    contentImages: contentImages.length,
+    selectedMainImage: mainImage
+  });
+
+  return (
+    <div className="min-h-screen bg-white">
+      <style jsx global>{`
+        .newspaper-container {
+          font-family: 'Times New Roman', 'Times', serif;
+          line-height: 1.6;
+          color: #1a1a1a;
+        }
+        
+        .newspaper-header {
+          border-bottom: 4px solid #000;
+          margin-bottom: 2rem;
+        }
+        
+        .newspaper-title {
+          font-family: 'Times New Roman', 'Times', serif;
+          font-weight: bold;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+        }
+        
+        .newspaper-date-line {
+          border-top: 2px solid #000;
+          border-bottom: 2px solid #000;
+          padding: 0.5rem 0;
+          margin: 1rem 0;
+          text-align: center;
+        }
+        
+        .main-image-container {
+          float: left;
+          width: 350px;
+          margin: 0 2rem 1.5rem 0;
+          border: 3px solid #000;
+          background: #fff;
+          box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+          clear: left;
+        }
+        
+        .main-image {
+          width: 100%;
+          height: 250px;
+          object-fit: cover;
+          display: block;
+          border-bottom: 2px solid #000;
+        }
+        
+        .main-image-caption {
+          padding: 1rem;
+          font-size: 0.85em;
+          font-style: italic;
+          color: #333;
+          background: #f8f8f8;
+          line-height: 1.5;
+          font-family: 'Times New Roman', serif;
+          border-top: 1px solid #ccc;
+        }
+        
+        .hero-image-container {
+          width: 100%;
+          margin-bottom: 2rem;
+          border: 3px solid #000;
+          background: #fff;
+          box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+        }
+        
+        .hero-image {
+          width: 100%;
+          height: 400px;
+          object-fit: cover;
+          display: block;
+          border-bottom: 2px solid #000;
+        }
+        
+        .hero-image-caption {
+          padding: 1rem;
+          font-size: 0.9em;
+          font-style: italic;
+          color: #333;
+          background: #f8f8f8;
+          line-height: 1.5;
+          font-family: 'Times New Roman', serif;
+          border-top: 1px solid #ccc;
+          text-align: center;
+        }
+        
+        .newspaper-content {
+          text-align: justify;
+          hyphens: auto;
+          overflow-wrap: break-word;
+          word-wrap: break-word;
+          word-break: break-word;
+        }
+        
+        .newspaper-paragraph {
+          margin-bottom: 1.2rem;
+          text-indent: 1.5em;
+          line-height: 1.7;
+          overflow-wrap: break-word;
+          word-wrap: break-word;
+          word-break: break-word;
+          hyphens: auto;
+          max-width: 100%;
+        }
+        
+        .newspaper-paragraph:first-of-type {
+          text-indent: 0;
+          font-weight: 500;
+          font-size: 1.1em;
+          margin-bottom: 1.5rem;
+        }
+        
+        .drop-cap {
+          float: left;
+          font-size: 4em;
+          line-height: 0.8;
+          padding-right: 0.1em;
+          margin-top: 0.1em;
+          margin-bottom: -0.1em;
+          font-weight: bold;
+          color: #000;
+        }
+        
+        .newspaper-image-container {
+          margin: 1.5rem auto;
+          max-width: 100%;
+          text-align: center;
+          clear: both;
+        }
+        
+        .newspaper-image {
+          max-width: 100%;
+          height: auto;
+          border: 1px solid #333;
+          display: block;
+          margin: 0 auto;
+        }
+        
+        .newspaper-image-caption {
+          font-size: 0.85em;
+          font-style: italic;
+          color: #666;
+          margin-top: 0.5rem;
+          padding: 0.5rem;
+          border-left: 3px solid #333;
+          background: #f9f9f9;
+          text-align: left;
+          max-width: 100%;
+        }
+        
+        .newspaper-sidebar {
+          border: 2px solid #000;
+          padding: 1rem;
+          background: #fafafa;
+          margin-bottom: 1.5rem;
+        }
+        
+        .newspaper-sidebar h3 {
+          border-bottom: 2px solid #000;
+          padding-bottom: 0.5rem;
+          margin-bottom: 1rem;
+          font-weight: bold;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+        }
+        
+        .article-content-wrapper {
+          overflow: hidden;
+        }
+        
+        .article-content-wrapper p,
+        .article-content-wrapper div {
+          overflow-wrap: break-word;
+          word-wrap: break-word;
+          word-break: break-word;
+          hyphens: auto;
+        }
+        
+        @media (max-width: 768px) {
+          .main-image-container,
+          .hero-image-container {
+            float: none;
+            width: 100%;
+            margin: 0 0 2rem 0;
+          }
+          
+          .main-image,
+          .hero-image {
+            height: 250px;
+          }
+          
+          .newspaper-paragraph {
+            text-indent: 0;
+          }
+          
+          .drop-cap {
+            font-size: 3em;
+          }
+        }
+        
+        @media (max-width: 480px) {
+          .main-image,
+          .hero-image {
+            height: 200px;
+          }
+          
+          .newspaper-title {
+            font-size: 2.5rem !important;
+          }
+          
+          .newspaper-paragraph {
+            font-size: 0.95em;
+            line-height: 1.6;
+          }
+          
+          .main-image-container,
+          .hero-image-container {
+            width: 100%;
+            margin: 0 0 1.5rem 0;
+          }
+        }
+      `}</style>
+
+      <div className="newspaper-container">
+        {/* Newspaper Header */}
+        <div className="newspaper-header">
+          <div className="max-w-6xl mx-auto px-8 py-6">
+            <div className="flex items-center justify-between mb-4">
+              <button
+                onClick={handleBackClick}
+                className="text-sm text-gray-600 hover:text-black flex items-center"
+              >
+                <ArrowLeft className="w-4 h-4 mr-1" />
+                Back to {publisher?.name || 'Articles'}
+              </button>
+              
               <div className="flex items-center space-x-3">
-                {publisher.logo ? (
+                <FavoriteButton 
+                  item={{
+                    id: article.id,
+                    title: article.title,
+                    description: article.summary || article.content?.substring(0, 200) + '...',
+                    image: mainImage,
+                    link: `${typeof window !== 'undefined' ? window.location.origin : ''}/news-reader/article/${article.id}?publisherId=${publisherId}`,
+                    source: publisher?.name || 'Unknown',
+                    publicationName: publisher?.name || 'Unknown',
+                    publicationLogo: publisher?.logo,
+                    category: article.category,
+                    pubDate: article.createdAt,
+                    type: 'story',
+                    publisherId: publisherId
+                  }}
+                  size="small"
+                  showText={false}
+                />
+                <button 
+                  className="p-2 text-gray-600 hover:text-black transition-colors"
+                  title="Share article"
+                  onClick={() => {
+                    if (typeof window !== 'undefined') {
+                      if (navigator.share) {
+                        navigator.share({
+                          title: article.title,
+                          url: window.location.href
+                        });
+                      } else {
+                        navigator.clipboard.writeText(window.location.href);
+                        alert('Link copied to clipboard!');
+                      }
+                    }
+                  }}
+                >
+                  <Share2 className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            
+            {/* Publication Header */}
+            <div className="text-center mb-6">
+              <h1 className="newspaper-title text-6xl mb-2">
+                {publisher?.name?.toUpperCase() || 'DAILY NEWS'}
+              </h1>
+              <div className="newspaper-date-line">
+                <p className="text-sm font-medium">
+                  {formatDate(article.createdAt)} • {publisher?.industry || 'News'} • EDITION
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Article Content */}
+        <div className="max-w-6xl mx-auto px-8 py-6">
+          {/* Article Header */}
+          <div className="mb-8">
+            {/* Category Badge */}
+            {article.category && (
+              <div className="mb-4">
+                <span className="inline-block bg-black text-white px-4 py-2 text-xs font-bold uppercase tracking-widest">
+                  {article.category}
+                </span>
+              </div>
+            )}
+
+            {/* Main Headline */}
+            <h1 className="newspaper-title text-5xl leading-tight mb-6 pb-4 border-b-4 border-black">
+              {article.title}
+            </h1>
+            
+            {/* Subtitle */}
+            {article.subtitle && (
+              <h2 className="text-xl italic text-gray-700 mb-4 font-medium">
+                {article.subtitle}
+              </h2>
+            )}
+            
+            {/* Byline and Meta */}
+            <div className="flex items-center justify-between mb-6 text-sm border-b-2 border-gray-400 pb-4">
+              <div className="flex items-center space-x-6">
+                <div className="flex items-center space-x-2">
+                  <User className="w-4 h-4" />
+                  <span className="font-bold">
+                    By {article.author || publisher?.name || 'Staff Writer'}
+                    {article.authorTitle && ` • ${article.authorTitle}`}
+                  </span>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <Calendar className="w-4 h-4" />
+                  <span>{formatDate(article.createdAt)}</span>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <Clock className="w-4 h-4" />
+                  <span>{formatReadTime(article.readTime)}</span>
+                </div>
+              </div>
+              
+              {article.views && article.views > 0 && (
+                <div className="flex items-center space-x-1 text-gray-600">
+                  <Eye className="w-4 h-4" />
+                  <span>{article.views.toLocaleString()} views</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Article Layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            {/* Main Article Content */}
+            <div className="lg:col-span-3">
+              {/* Debug Image Information */}
+              {process.env.NODE_ENV === 'development' && (
+                <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded text-xs">
+                  <h4 className="font-bold mb-2">🐛 Image Debug Info:</h4>
+                  <p><strong>Main Image Selected:</strong> {mainImage || 'None'}</p>
+                  <p><strong>Featured Image URL:</strong> {article.featuredImageUrl || 'None'}</p>
+                  <p><strong>Image URL:</strong> {article.imageUrl || 'None'}</p>
+                  <p><strong>Content Images Found:</strong> {contentImages.length}</p>
+                  {contentImages.length > 0 && (
+                    <div>
+                      <strong>Content Images:</strong>
+                      {contentImages.map((img, i) => (
+                        <div key={i} className="ml-4">
+                          {i + 1}. {img.src.substring(0, 60)}...
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Hero Image - Full width if important article */}
+              {mainImage && article.priority === 'high' && (
+                <div className="hero-image-container">
                   <img
-                    src={publisher.logo}
-                    alt={`${publisher.name} logo`}
-                    className="w-10 h-10 rounded-lg object-cover border border-gray-200"
+                    src={mainImage}
+                    alt={article.title}
+                    className="hero-image"
+                    loading="eager"
+                    onLoad={() => console.log('✅ Hero image loaded successfully:', mainImage)}
+                    onError={(e) => {
+                      console.error('❌ Hero image failed to load:', mainImage);
+                      console.error('Error details:', e);
+                      e.target.parentElement.style.display = 'none';
+                    }}
                   />
-                ) : (
-                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
-                    <span className="text-white font-semibold text-sm">
-                      {publisher.name.charAt(0)}
-                    </span>
+                  <div className="hero-image-caption">
+                    <strong>{article.imageCaption || article.subtitle || article.title}</strong>
+                    {article.imageCredit && (
+                      <span className="block text-sm mt-1 text-gray-600">
+                        Photo: {article.imageCredit}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Article Body with Image Float */}
+              <div className="article-content-wrapper">
+                {/* Main Image - Positioned at top left for regular articles */}
+                {mainImage && article.priority !== 'high' && (
+                  <div className="main-image-container">
+                    <img
+                      src={mainImage}
+                      alt={article.title}
+                      className="main-image"
+                      loading="eager"
+                      onLoad={() => console.log('✅ Main image loaded successfully:', mainImage)}
+                      onError={(e) => {
+                        console.error('❌ Main image failed to load:', mainImage);
+                        console.error('Error details:', e);
+                        // Try to show a placeholder or hide the container
+                        e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzUwIiBoZWlnaHQ9IjI1MCIgdmlld0JveD0iMCAwIDM1MCAyNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzNTAiIGhlaWdodD0iMjUwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xNzUgMTEwVjE0MEgxNDVWMTEwSDE3NVoiIGZpbGw9IiM2QjczODAiLz4KPHA+SW1hZ2UgTm90IEZvdW5kPC9wPgo8L3N2Zz4K';
+                        e.target.alt = 'Image not available';
+                      }}
+                    />
+                    <div className="main-image-caption">
+                      <strong>{article.imageCaption || article.title}</strong>
+                      {article.imageCredit && (
+                        <span className="block text-sm mt-1 text-gray-500">
+                          Photo: {article.imageCredit}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 )}
-                <div className="flex-1">
-                  <div className="flex items-center space-x-2">
-                    <User className="w-4 h-4 text-gray-500" />
-                    <span className="font-medium text-gray-900">{publisher.name}</span>
+
+                {/* No Image Placeholder for Debug */}
+                {!mainImage && process.env.NODE_ENV === 'development' && (
+                  <div className="main-image-container">
+                    <div className="main-image bg-gray-200 flex items-center justify-center text-gray-500">
+                      <div className="text-center">
+                        <div className="text-2xl mb-2">📷</div>
+                        <div className="text-sm">No Image Available</div>
+                      </div>
+                    </div>
+                    <div className="main-image-caption">
+                      <em>No featured image found for this article</em>
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-4 text-sm text-gray-500">
-                    <span className="capitalize">{publisher.industry}</span>
+                )}
+
+                {/* Summary/Lead with drop cap */}
+                {article.summary && (
+                  <div className="mb-6 p-4 border-l-4 border-black bg-gray-50 clear-both">
+                    <p className="text-lg font-medium leading-relaxed italic">
+                      <span className="drop-cap">{article.summary.charAt(0)}</span>
+                      {article.summary.substring(1)}
+                    </p>
+                  </div>
+                )}
+
+                {/* Article Body - Fixed overflow and paragraph handling */}
+                <div className="newspaper-content">
+                  <div 
+                    dangerouslySetInnerHTML={{ 
+                      __html: processedContent
+                    }}
+                  />
+                </div>
+                
+                {/* Additional content images (excluding the main one) */}
+                {contentImages.slice(mainImage ? 1 : 0).map((img, index) => (
+                  <div key={`content-image-${index}`} className="newspaper-image-container">
+                    <img
+                      src={img.src}
+                      alt={img.caption || `Article image ${index + 1}`}
+                      className="newspaper-image"
+                      loading="lazy"
+                      onError={(e) => {
+                        console.log('Content image failed to load:', img.src);
+                        e.target.parentElement.style.display = 'none';
+                      }}
+                    />
+                    {img.caption && (
+                      <div className="newspaper-image-caption">
+                        {img.caption}
+                      </div>
+                    )}
+                  </div>
+                ))}
+                
+                <div className="clear-both"></div>
+              </div>
+            </div>
+
+            {/* Sidebar */}
+            <div className="lg:col-span-1">
+              {/* Related Stories */}
+              {article.relatedStories && article.relatedStories.length > 0 && (
+                <div className="newspaper-sidebar">
+                  <h3>Related Stories</h3>
+                  <div className="space-y-4 text-sm">
+                    {article.relatedStories.slice(0, 3).map((story, index) => (
+                      <div key={index}>
+                        <h4 className="font-bold mb-1 text-black">{story.title}</h4>
+                        <p className="text-gray-700 leading-relaxed">{story.description || story.summary}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Publication Info */}
+              {publisher && (
+                <div className="newspaper-sidebar">
+                  <h3>About {publisher.name}</h3>
+                  <div className="space-y-3 text-sm">
+                    <div className="flex items-center space-x-3">
+                      {publisher.logo ? (
+                        <img
+                          src={publisher.logo}
+                          alt={`${publisher.name} logo`}
+                          className="w-12 h-12 object-cover border-2 border-black"
+                          onError={(e) => {
+                            console.log('Publisher logo failed to load:', publisher.logo);
+                            e.target.style.display = 'none';
+                            e.target.nextSibling.style.display = 'flex';
+                          }}
+                        />
+                      ) : null}
+                      <div className="w-12 h-12 bg-black text-white flex items-center justify-center text-xl font-bold border-2 border-black" 
+                           style={{display: publisher.logo ? 'none' : 'flex'}}>
+                        {publisher.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <span className="font-bold text-black block">{publisher.name}</span>
+                        <span className="text-gray-600 text-xs uppercase">{publisher.industry || 'Publishing'}</span>
+                      </div>
+                    </div>
+                    {publisher.description && (
+                      <p className="text-gray-700 text-xs leading-relaxed">{publisher.description}</p>
+                    )}
                     {publisher.website && (
-                      <div className="flex items-center space-x-1">
-                        <Globe className="w-3 h-3" />
-                        <span>{publisher.website.replace(/^https?:\/\//, '')}</span>
+                      <div className="flex items-center space-x-2 text-gray-600">
+                        <Globe className="w-4 h-4" />
+                        <a href={publisher.website} target="_blank" rel="noopener noreferrer" 
+                           className="text-xs hover:text-black transition-colors break-all">
+                          {publisher.website.replace(/^https?:\/\//, '')}
+                        </a>
                       </div>
                     )}
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+              )}
 
-        {/* Article Header */}
-        <div className="mb-8">
-          <div className="flex items-start justify-between mb-4">
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 leading-tight flex-1 mr-4">
-              {article.title}
-            </h1>
-            
-            {/* Action Buttons */}
-            <div className="flex items-center space-x-2 flex-shrink-0">
-              <FavoriteButton 
-                item={{
-                  id: article.id,
-                  title: article.title,
-                  description: article.summary || article.content?.substring(0, 200) + '...',
-                  image: article.imageUrl,
-                  link: `${window.location.origin}/news-reader/article/${article.id}?publisherId=${publisherId}`,
-                  source: publisher?.name || 'Unknown',
-                  publicationName: publisher?.name || 'Unknown',
-                  publicationLogo: publisher?.logo,
-                  category: article.category,
-                  pubDate: article.createdAt,
-                  type: 'story',
-                  publisherId: publisherId
-                }}
-                size="large"
-                showText={false}
-              />
-              <button 
-                className="p-3 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all"
-                title="Share article"
-                onClick={() => {
-                  if (navigator.share) {
-                    navigator.share({
-                      title: article.title,
-                      url: window.location.href
-                    });
-                  } else {
-                    navigator.clipboard.writeText(window.location.href);
-                    alert('Link copied to clipboard!');
-                  }
-                }}
-              >
-                <Share2 className="w-6 h-6" />
-              </button>
-            </div>
-          </div>
-          
-          {/* Article Meta */}
-          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 mb-6">
-            <div className="flex items-center space-x-1">
-              <Calendar className="w-4 h-4" />
-              <span>{formatDate(article.createdAt)}</span>
-            </div>
-            
-            <div className="flex items-center space-x-1">
-              <Clock className="w-4 h-4" />
-              <span>{formatReadTime(article.readTime)}</span>
-            </div>
-            
-            {article.views > 0 && (
-              <div className="flex items-center space-x-1">
-                <Eye className="w-4 h-4" />
-                <span>{article.views} views</span>
-              </div>
-            )}
-
-            {article.category && (
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                {article.category}
-              </span>
-            )}
-          </div>
-
-          {/* Tags */}
-          {article.tags && article.tags.length > 0 && (
-            <div className="flex items-center space-x-2 mb-6">
-              <Hash className="w-4 h-4 text-gray-400" />
-              <div className="flex flex-wrap gap-2">
-                {article.tags.map((tag, index) => (
-                  <span 
-                    key={index}
-                    className="inline-flex items-center px-2 py-1 rounded-md text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Featured Image */}
-        {article.imageUrl && (
-          <div className="mb-8">
-            <img
-              src={article.imageUrl}
-              alt={article.title}
-              className="w-full h-64 md:h-96 object-cover rounded-lg shadow-lg"
-            />
-          </div>
-        )}
-
-        {/* Article Summary */}
-        {article.summary && (
-          <Card className="mb-8 bg-blue-50 border-blue-200">
-            <CardContent className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Summary</h3>
-              <p className="text-gray-700 leading-relaxed italic">
-                {article.summary}
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Article Content */}
-        <Card className="bg-white">
-          <CardContent className="p-8">
-            <div className="prose prose-lg max-w-none">
-              <div 
-                className="text-gray-800 leading-relaxed"
-                style={{ 
-                  lineHeight: '1.7',
-                  fontSize: '1.1rem'
-                }}
-                dangerouslySetInnerHTML={{ 
-                  __html: article.content.replace(/\n/g, '<br />')
-                }}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Article Footer */}
-        <div className="mt-8 pt-6 border-t border-gray-200">
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-gray-500">
-              Published on {formatDate(article.createdAt)}
-              {article.updatedAt && article.updatedAt !== article.createdAt && (
-                <span> • Last updated {formatDate(article.updatedAt)}</span>
+              {/* Tags */}
+              {article.tags && article.tags.length > 0 && (
+                <div className="newspaper-sidebar">
+                  <h3>Tags</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {article.tags.map((tag, index) => (
+                      <span 
+                        key={index}
+                        className="inline-block bg-black text-white px-3 py-1 text-xs font-bold uppercase tracking-wider"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
               )}
             </div>
-            
-            <button
-              onClick={handleBackClick}
-              className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-            >
-              Back to {publisher?.name || 'Articles'}
-            </button>
+          </div>
+
+          {/* Article Footer */}
+          <div className="mt-12 pt-6 border-t-4 border-black">
+            <div className="flex items-center justify-between text-sm">
+              <div>
+                <p className="font-bold">Published: {formatDate(article.createdAt)}</p>
+                {article.updatedAt && article.updatedAt !== article.createdAt && (
+                  <p className="text-gray-600 mt-1">Last updated: {formatDate(article.updatedAt)}</p>
+                )}
+              </div>
+              
+              <button
+                onClick={handleBackClick}
+                className="bg-black text-white px-8 py-3 text-sm font-bold uppercase tracking-widest hover:bg-gray-800 transition-colors"
+              >
+                Back to {publisher?.name || 'Articles'}
+              </button>
+            </div>
           </div>
         </div>
       </div>
