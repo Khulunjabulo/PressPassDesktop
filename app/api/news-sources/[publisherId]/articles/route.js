@@ -7,7 +7,8 @@ const db = getFirestore(app);
 
 export async function GET(request, { params }) {
   try {
-    const { publisherId } = params;
+    // Await params before destructuring (Next.js 15 requirement)
+    const { publisherId } = await params;
     
     // First, get publisher info
     const publisherRef = doc(db, 'publishers', publisherId);
