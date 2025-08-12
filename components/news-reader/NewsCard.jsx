@@ -141,3 +141,152 @@ export default function NewsCard({
     </div>
   );
 }
+
+
+// 'use client';
+
+// import { useState } from 'react';
+// import { Clock, ExternalLink } from 'lucide-react';
+// import FavoriteButton from '@/components/FavoriteButton';
+
+// export default function NewsCard({ 
+//   imageUrl, 
+//   publicationName, 
+//   logoBgColor, 
+//   author, 
+//   time, 
+//   isUploadedStory, 
+//   pdfUrl, 
+//   link, 
+//   summary,
+//   title,
+//   category,
+//   pubDate,
+//   articleId,
+//   publisherId
+// }) {
+//   const [imageError, setImageError] = useState(false);
+
+//   const handleCardClick = (e) => {
+//     // Don't navigate if clicking on favorite button
+//     if (e.target.closest('button')) {
+//       return;
+//     }
+
+//     if (isUploadedStory && pdfUrl) {
+//       window.open(pdfUrl, '_blank');
+//     } else if (link) {
+//       window.open(link, '_blank');
+//     }
+//   };
+
+//   const handleImageError = () => {
+//     setImageError(true);
+//   };
+
+//   // Prepare item data for favorite button
+//   const favoriteItemData = {
+//     id: articleId || `article_${title}_${publicationName}`,
+//     title: title || summary?.substring(0, 100) + '...' || 'Untitled',
+//     description: summary || '',
+//     image: imageUrl,
+//     link: link,
+//     source: publicationName,
+//     publicationName: publicationName,
+//     category: category || 'general',
+//     pubDate: pubDate || new Date().toISOString(),
+//     author: author,
+//     publisherId: publisherId
+//   };
+
+//   return (
+//     <div 
+//       className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 cursor-pointer overflow-hidden"
+//       onClick={handleCardClick}
+//     >
+//       {/* Image Section */}
+//       <div className="relative h-48 bg-gray-200">
+//         {imageUrl && !imageError ? (
+//           <img
+//             src={imageUrl}
+//             alt={title || "News article"}
+//             className="w-full h-full object-cover"
+//             onError={handleImageError}
+//           />
+//         ) : (
+//           <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center">
+//             <span className="text-gray-600 text-4xl font-bold">
+//               {publicationName.charAt(0)}
+//             </span>
+//           </div>
+//         )}
+
+//         {/* Favorite Button Overlay */}
+//         <div className="absolute top-3 right-3">
+//           <FavoriteButton 
+//             item={favoriteItemData}
+//             size="small"
+//             className="bg-white/90 backdrop-blur-sm shadow-lg"
+//           />
+//         </div>
+
+//         {/* Publication Logo */}
+//         <div className="absolute bottom-3 left-3">
+//           <div 
+//             className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg"
+//             style={{ backgroundColor: logoBgColor }}
+//           >
+//             {publicationName.charAt(0)}
+//           </div>
+//         </div>
+//       </div>
+
+//       {/* Content Section */}
+//       <div className="p-4">
+//         {/* Header */}
+//         <div className="flex items-center justify-between mb-3">
+//           <span className="text-sm font-semibold text-gray-900 truncate">
+//             {publicationName}
+//           </span>
+//           {isUploadedStory && (
+//             <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+//               PDF
+//             </span>
+//           )}
+//         </div>
+
+//         {/* Summary */}
+//         <p className="text-gray-700 text-sm mb-3 line-clamp-3 leading-relaxed">
+//           {summary || 'No summary available.'}
+//         </p>
+
+//         {/* Footer */}
+//         <div className="flex items-center justify-between text-xs text-gray-500">
+//           <div className="flex items-center space-x-2">
+//             {author && (
+//               <span className="truncate max-w-24">{author}</span>
+//             )}
+//             <div className="flex items-center space-x-1">
+//               <Clock className="w-3 h-3" />
+//               <span>{time}</span>
+//             </div>
+//           </div>
+
+//           {link && (
+//             <button
+//               onClick={(e) => {
+//                 e.stopPropagation();
+//                 window.open(link, '_blank');
+//               }}
+//               className="flex items-center space-x-1 text-blue-600 hover:text-blue-800 transition-colors"
+//               title="Open article"
+//             >
+//               <ExternalLink className="w-3 h-3" />
+//               <span>Read</span>
+//             </button>
+//           )}
+//         </div>
+//       </div>
+//     </div>
+//   );
+// }
