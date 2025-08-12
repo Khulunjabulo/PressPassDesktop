@@ -17,8 +17,22 @@ import {
   AlertCircle,
   CheckCircle,
   RotateCcw,
-  Edit3
+  Edit3,
+  Image as ImageIcon,
+  X
 } from 'lucide-react';
+
+// Firebase imports (you'll need to adjust these based on your Firebase setup)
+// import { storage } from '@/lib/firebase';
+// import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+
+// Mock Firebase storage functions for demo
+const mockUploadToFirebase = async (file) => {
+  // Simulate upload delay
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  // Return a mock URL - replace with actual Firebase upload
+  return `https://firebasestorage.googleapis.com/v0/b/your-project.appspot.com/o/images%2F${Date.now()}-${file.name}?alt=media`;
+};
 
 // Mock components for demo - replace with your actual imports
 const FileUpload = ({ setFile, uploadProgress, onPreview, onExtract }) => (
@@ -105,6 +119,7 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
     category: '',
     tags: '',
     featuredImage: null,
+    featuredImageUrl: '', // Add this to store the uploaded image URL
     style: 'modern',
     content: '',
     metaDescription: '',
@@ -120,6 +135,8 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
   const [errors, setErrors] = useState({});
   const [submitStatus, setSubmitStatus] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   const editorRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -246,12 +263,28 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
     await handleUploadSubmit(e, 'draft');
   };
 
-  // Manual Article Form Functions - Fixed from working version
+  // Fixed text formatting with better paragraph handling
   const formatText = (command, value = null) => {
     console.log('🎨 Formatting text with command:', command, value);
     try {
-      document.execCommand(command, false, value);
-      editorRef.current?.focus();
+      if (!editorRef.current) {
+        console.error('❌ Editor ref not available');
+        return;
+      }
+
+      // Focus the editor first
+      editorRef.current.focus();
+      
+      // Special handling for paragraph formatting
+      if (command === 'formatBlock') {
+        document.execCommand('formatBlock', false, value || 'p');
+      } else if (command === 'insertParagraph') {
+        // Insert a proper paragraph break
+        document.execCommand('insertHTML', false, '<br><br>');
+      } else {
+        document.execCommand(command, false, value);
+      }
+      
       updateWordCount();
     } catch (error) {
       console.error('❌ Error formatting text:', error);
@@ -266,7 +299,14 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
         if (url) formatText(command, url);
       } else if (command === 'insertImage') {
         const imageUrl = prompt('Enter the image URL:');
-        if (imageUrl) formatText(command, imageUrl);
+        if (imageUrl) {
+          // Insert image with proper styling
+          const imageHtml = `<div class="image-container" style="margin: 20px 0; text-align: center;">
+            <img src="${imageUrl}" alt="Article image" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px;" />
+          </div>`;
+          document.execCommand('insertHTML', false, imageHtml);
+          updateWordCount();
+        }
       } else {
         formatText(command);
       }
@@ -275,6 +315,7 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
     }
   };
 
+  // Fixed word count function with better content handling
   const updateWordCount = () => {
     try {
       if (!editorRef.current) {
@@ -284,19 +325,23 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
       
       const text = editorRef.current.textContent || '';
       const words = text.trim().split(/\s+/).filter(word => word.length > 0).length;
-      const readingTimeCalc = Math.ceil(words / 200);
+      const readingTimeCalc = Math.ceil(words / 200) || 1;
       
       console.log('📊 Word count updated:', { words, readingTime: readingTimeCalc });
       
       setWordCount(words);
       setReadingTime(readingTimeCalc);
-      setFormData(prev => ({ ...prev, content: editorRef.current.innerHTML }));
+      
+      // Store the HTML content
+      const content = editorRef.current.innerHTML;
+      setFormData(prev => ({ ...prev, content: content }));
     } catch (error) {
       console.error('❌ Error updating word count:', error);
     }
   };
 
-  const handleFileChange = (e) => {
+  // Fixed file change handler with proper image upload
+  const handleFileChange = async (e) => {
     console.log('📁 File input changed');
     try {
       const file = e.target.files[0];
@@ -306,32 +351,71 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
         type: file.type
       } : 'No file');
 
-      if (file) {
-        // Validate file type
-        if (!file.type.startsWith('image/')) {
-          console.error('❌ Invalid file type:', file.type);
-          setErrors(prev => ({ ...prev, featuredImage: 'Please select a valid image file' }));
-          return;
-        }
-
-        // Validate file size (5MB limit)
-        if (file.size > 5 * 1024 * 1024) {
-          console.error('❌ File too large:', file.size);
-          setErrors(prev => ({ ...prev, featuredImage: 'Image size must be less than 5MB' }));
-          return;
-        }
-
-        setFileName(file.name);
-        setFormData(prev => ({ ...prev, featuredImage: file }));
-        setErrors(prev => ({ ...prev, featuredImage: null }));
-        console.log('✅ File validated and set');
-      } else {
+      if (!file) {
         setFileName('No file chosen');
-        setFormData(prev => ({ ...prev, featuredImage: null }));
+        setFormData(prev => ({ ...prev, featuredImage: null, featuredImageUrl: '' }));
+        setImagePreview(null);
+        return;
       }
+
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        console.error('❌ Invalid file type:', file.type);
+        setErrors(prev => ({ ...prev, featuredImage: 'Please select a valid image file' }));
+        return;
+      }
+
+      // Validate file size (5MB limit)
+      if (file.size > 5 * 1024 * 1024) {
+        console.error('❌ File too large:', file.size);
+        setErrors(prev => ({ ...prev, featuredImage: 'Image size must be less than 5MB' }));
+        return;
+      }
+
+      // Create local preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target.result);
+      };
+      reader.readAsDataURL(file);
+
+      setFileName(file.name);
+      setFormData(prev => ({ ...prev, featuredImage: file }));
+      setErrors(prev => ({ ...prev, featuredImage: null }));
+
+      // Upload to Firebase immediately
+      setIsUploadingImage(true);
+      try {
+        // Replace this with actual Firebase upload
+        const imageUrl = await mockUploadToFirebase(file);
+        console.log('✅ Image uploaded to Firebase:', imageUrl);
+        
+        setFormData(prev => ({ 
+          ...prev, 
+          featuredImage: file,
+          featuredImageUrl: imageUrl 
+        }));
+      } catch (uploadError) {
+        console.error('❌ Error uploading image:', uploadError);
+        setErrors(prev => ({ ...prev, featuredImage: 'Failed to upload image. Please try again.' }));
+      } finally {
+        setIsUploadingImage(false);
+      }
+
+      console.log('✅ File validated and set');
     } catch (error) {
       console.error('❌ Error handling file change:', error);
       setErrors(prev => ({ ...prev, featuredImage: 'Error processing file' }));
+      setIsUploadingImage(false);
+    }
+  };
+
+  const removeImage = () => {
+    setImagePreview(null);
+    setFileName('No file chosen');
+    setFormData(prev => ({ ...prev, featuredImage: null, featuredImageUrl: '' }));
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -358,7 +442,50 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
     }
   };
 
-  // Validate form - Fixed from working version
+  // Handle editor content changes with better paragraph handling
+  const handleEditorInput = () => {
+    try {
+      if (!editorRef.current) return;
+
+      // Fix empty paragraphs and ensure proper line breaks
+      const content = editorRef.current.innerHTML;
+      
+      // Replace multiple <br> tags with proper paragraphs
+      const fixedContent = content
+        .replace(/<br\s*\/?>\s*<br\s*\/?>/g, '</p><p>')
+        .replace(/^(?!<p>)/, '<p>')
+        .replace(/(?!<\/p>)$/, '</p>')
+        .replace(/<p><\/p>/g, '<p><br></p>'); // Fix empty paragraphs
+
+      if (fixedContent !== content) {
+        editorRef.current.innerHTML = fixedContent;
+        
+        // Move cursor to end
+        const range = document.createRange();
+        const selection = window.getSelection();
+        range.selectNodeContents(editorRef.current);
+        range.collapse(false);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+
+      updateWordCount();
+    } catch (error) {
+      console.error('❌ Error handling editor input:', error);
+    }
+  };
+
+  // Handle Enter key in editor for better paragraph handling
+  const handleEditorKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      // Don't prevent default, but ensure we have proper paragraph structure
+      setTimeout(() => {
+        handleEditorInput();
+      }, 10);
+    }
+  };
+
+  // Validate form
   const validateForm = () => {
     console.log('✅ Validating form...');
     const newErrors = {};
@@ -379,7 +506,7 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
     }
 
     const content = editorRef.current?.innerHTML?.trim();
-    if (!content || content === '<br>' || content === '<div><br></div>') {
+    if (!content || content === '<br>' || content === '<div><br></div>' || content === '<p><br></p>' || content === '<p></p>') {
       newErrors.content = 'Article content is required';
       console.log('❌ Validation error: Missing content');
     }
@@ -399,7 +526,7 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Create auth token for API call - Fixed from working version
+  // Create auth token for API call
   const getAuthToken = () => {
     if (!currentUser) {
       console.error('❌ No current user for auth token');
@@ -411,7 +538,7 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
     return token;
   };
 
-  // Submit article to API - Fixed from working version
+  // Submit article to API with image handling
   const submitArticle = async (isDraft = false) => {
     console.log('📡 Submitting article to API...', { isDraft, currentUser: !!currentUser });
     
@@ -433,7 +560,7 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
       }
     });
 
-    // Add content from editor
+    // Add content from editor with proper formatting
     const content = editorRef.current?.innerHTML?.trim() || '';
     submitData.append('content', content);
     submitData.append('isDraft', isDraft.toString());
@@ -446,6 +573,11 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
       submitData.append('publisherName', currentUser.companyName);
     }
 
+    // Add image URL if available
+    if (formData.featuredImageUrl) {
+      submitData.append('featuredImageUrl', formData.featuredImageUrl);
+    }
+
     // Prepare headers and URL
     const headers = {
       'Authorization': `Bearer ${authToken}`
@@ -456,7 +588,6 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
     console.log('📡 Making request to:', url);
     console.log('📡 Request headers:', headers);
     console.log('📡 FormData keys:', [...submitData.keys()]);
-    console.log('📡 Publisher ID:', currentUser.uid);
     console.log('📦 Form data summary:', {
       title: formData.title,
       author: formData.author,
@@ -464,6 +595,7 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
       isDraft,
       contentLength: content.length,
       hasImage: !!formData.featuredImage,
+      imageUrl: formData.featuredImageUrl,
       publisherId: currentUser.uid
     });
 
@@ -487,7 +619,7 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
     return result;
   };
 
-  // Handle form submission - Fixed from working version
+  // Handle form submission
   const handleManualSubmit = async (e, isDraft = false) => {
     e.preventDefault();
     console.log('🚀 Form submission started', { 
@@ -554,6 +686,7 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
           category: '',
           tags: '',
           featuredImage: null,
+          featuredImageUrl: '',
           style: 'modern',
           content: '',
           metaDescription: '',
@@ -562,6 +695,7 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
           sendNewsletter: false
         });
         setFileName('No file chosen');
+        setImagePreview(null);
         if (editorRef.current) {
           editorRef.current.innerHTML = '';
         }
@@ -594,13 +728,13 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
     }
   };
 
-  // Handle save draft - Fixed from working version
+  // Handle save draft
   const handleManualSaveDraft = async (e) => {
     console.log('💾 Save draft requested');
     const title = formData.title.trim();
     const content = editorRef.current?.innerHTML?.trim();
     
-    if (!title && (!content || content === '<br>' || content === '<div><br></div>')) {
+    if (!title && (!content || content === '<br>' || content === '<div><br></div>' || content === '<p><br></p>' || content === '<p></p>')) {
       console.log('⚠️ Empty draft - showing warning');
       setErrors(prev => ({ 
         ...prev, 
@@ -645,6 +779,35 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
         
         .flip-card-back {
           transform: rotateY(180deg);
+        }
+        
+        /* Fix for editor text overflow and formatting */
+        .rich-editor {
+          word-wrap: break-word;
+          overflow-wrap: break-word;
+          white-space: pre-wrap;
+          line-height: 1.6;
+        }
+        
+        .rich-editor p {
+          margin-bottom: 1em;
+          word-wrap: break-word;
+          overflow-wrap: break-word;
+        }
+        
+        .rich-editor img {
+          max-width: 100%;
+          height: auto;
+          display: block;
+          margin: 10px auto;
+        }
+        
+        .image-preview {
+          border: 2px dashed #e5e7eb;
+          border-radius: 8px;
+          padding: 10px;
+          text-align: center;
+          background: #f9fafb;
         }
       `}</style>
 
@@ -822,6 +985,48 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
             </div>
           )}
 
+          {/* Featured Image Preview at Top Left */}
+          {imagePreview && (
+            <div className="mb-6">
+              <div className="flex items-start gap-4">
+                <div className="w-48 h-32 relative bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg overflow-hidden">
+                  <img
+                    src={imagePreview}
+                    alt="Featured image preview"
+                    className="w-full h-full object-cover"
+                  />
+                  <button
+                    onClick={removeImage}
+                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                    type="button"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                  {isUploadingImage && (
+                    <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                      <div className="text-white text-xs">Uploading...</div>
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm text-gray-600 mb-1">
+                    <strong>Featured Image:</strong> {fileName}
+                  </p>
+                  {formData.featuredImageUrl && (
+                    <p className="text-xs text-green-600">
+                      ✅ Uploaded to Firebase
+                    </p>
+                  )}
+                  {isUploadingImage && (
+                    <p className="text-xs text-blue-600">
+                      ⏳ Uploading to Firebase...
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Status Messages */}
           {submitStatus === 'success' && (
             <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-md flex items-center">
@@ -952,7 +1157,7 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
               </div>
             </div>
 
-            {/* Featured Image */}
+            {/* Featured Image Upload */}
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Featured Image
@@ -968,12 +1173,15 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors flex items-center"
+                  className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors flex items-center disabled:opacity-50"
+                  disabled={isUploadingImage}
                 >
                   <Upload className="w-4 h-4 mr-2" />
-                  Upload Image
+                  {isUploadingImage ? 'Uploading...' : 'Upload Image'}
                 </button>
-                <span className="text-gray-500 text-sm">{fileName}</span>
+                {!imagePreview && (
+                  <span className="text-gray-500 text-sm">{fileName}</span>
+                )}
               </div>
               {errors.featuredImage && <p className="text-red-500 text-sm mt-1">{errors.featuredImage}</p>}
             </div>
@@ -1000,7 +1208,7 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
               </div>
             </div>
 
-            {/* Rich Text Editor */}
+            {/* Rich Text Editor - FIXED */}
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Article Content <span className="text-red-500">*</span>
@@ -1010,46 +1218,60 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
               }`}>
                 {/* Toolbar */}
                 <div className="flex flex-wrap gap-1 p-2 bg-gray-50 border-b">
-                  <button type="button" onClick={() => handleToolbarClick('bold')} className="p-1 hover:bg-gray-200 rounded">
+                  <button type="button" onClick={() => handleToolbarClick('bold')} className="p-2 hover:bg-gray-200 rounded transition-colors" title="Bold">
                     <Bold className="w-4 h-4" />
                   </button>
-                  <button type="button" onClick={() => handleToolbarClick('italic')} className="p-1 hover:bg-gray-200 rounded">
+                  <button type="button" onClick={() => handleToolbarClick('italic')} className="p-2 hover:bg-gray-200 rounded transition-colors" title="Italic">
                     <Italic className="w-4 h-4" />
                   </button>
-                  <button type="button" onClick={() => handleToolbarClick('underline')} className="p-1 hover:bg-gray-200 rounded">
+                  <button type="button" onClick={() => handleToolbarClick('underline')} className="p-2 hover:bg-gray-200 rounded transition-colors" title="Underline">
                     <Underline className="w-4 h-4" />
                   </button>
                   <div className="border-r mx-2"></div>
-                  <button type="button" onClick={() => handleToolbarClick('insertUnorderedList')} className="p-1 hover:bg-gray-200 rounded">
+                  <button type="button" onClick={() => handleToolbarClick('insertUnorderedList')} className="p-2 hover:bg-gray-200 rounded transition-colors" title="Bullet List">
                     <List className="w-4 h-4" />
                   </button>
+                  <button type="button" onClick={() => formatText('formatBlock', 'p')} className="p-2 hover:bg-gray-200 rounded transition-colors text-xs font-medium" title="Paragraph">
+                    P
+                  </button>
+                  <button type="button" onClick={() => formatText('formatBlock', 'h3')} className="p-2 hover:bg-gray-200 rounded transition-colors text-xs font-medium" title="Heading">
+                    H3
+                  </button>
                   <div className="border-r mx-2"></div>
-                  <button type="button" onClick={() => handleToolbarClick('justifyLeft')} className="p-1 hover:bg-gray-200 rounded">
+                  <button type="button" onClick={() => handleToolbarClick('justifyLeft')} className="p-2 hover:bg-gray-200 rounded transition-colors" title="Align Left">
                     <AlignLeft className="w-4 h-4" />
                   </button>
-                  <button type="button" onClick={() => handleToolbarClick('justifyCenter')} className="p-1 hover:bg-gray-200 rounded">
+                  <button type="button" onClick={() => handleToolbarClick('justifyCenter')} className="p-2 hover:bg-gray-200 rounded transition-colors" title="Align Center">
                     <AlignCenter className="w-4 h-4" />
                   </button>
-                  <button type="button" onClick={() => handleToolbarClick('justifyRight')} className="p-1 hover:bg-gray-200 rounded">
+                  <button type="button" onClick={() => handleToolbarClick('justifyRight')} className="p-2 hover:bg-gray-200 rounded transition-colors" title="Align Right">
                     <AlignRight className="w-4 h-4" />
                   </button>
                   <div className="border-r mx-2"></div>
-                  <button type="button" onClick={() => handleToolbarClick('createLink')} className="p-1 hover:bg-gray-200 rounded">
+                  <button type="button" onClick={() => handleToolbarClick('createLink')} className="p-2 hover:bg-gray-200 rounded transition-colors" title="Insert Link">
                     <Link className="w-4 h-4" />
                   </button>
-                  <button type="button" onClick={() => handleToolbarClick('insertImage')} className="p-1 hover:bg-gray-200 rounded">
-                    📷
+                  <button type="button" onClick={() => handleToolbarClick('insertImage')} className="p-2 hover:bg-gray-200 rounded transition-colors" title="Insert Image">
+                    <ImageIcon className="w-4 h-4" />
                   </button>
                 </div>
                 
-                {/* Editor */}
+                {/* Editor - FIXED with better paragraph handling */}
                 <div
                   ref={editorRef}
                   contentEditable
-                  className="min-h-[200px] p-4 focus:outline-none"
-                  onInput={updateWordCount}
-                  style={{ minHeight: '200px' }}
+                  className="rich-editor min-h-[300px] p-4 focus:outline-none text-left"
+                  onInput={handleEditorInput}
+                  onKeyDown={handleEditorKeyDown}
+                  style={{ 
+                    minHeight: '300px',
+                    wordWrap: 'break-word',
+                    overflowWrap: 'break-word',
+                    whiteSpace: 'pre-wrap',
+                    lineHeight: '1.6'
+                  }}
                   suppressContentEditableWarning={true}
+                  placeholder="Start writing your article here..."
                 />
               </div>
               {errors.content && <p className="text-red-500 text-sm mt-1">{errors.content}</p>}
@@ -1072,8 +1294,9 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
                 value={formData.metaDescription}
                 onChange={handleInputChange}
                 rows="3"
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                 placeholder="Enter a brief description for search engines (150-160 characters)"
+                style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}
               />
               <div className="flex justify-between mt-1">
                 <span className="text-xs text-gray-500">Recommended: 150-160 characters</span>
@@ -1149,6 +1372,7 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
                 <p><strong>Company:</strong> {currentUser.companyName || 'Not set'}</p>
                 <p><strong>API Endpoint:</strong> /api/publish-article</p>
                 <p><strong>Publisher ID:</strong> {currentUser.uid}</p>
+                <p><strong>Featured Image URL:</strong> {formData.featuredImageUrl || 'Not uploaded'}</p>
               </div>
             )}
           </form>
