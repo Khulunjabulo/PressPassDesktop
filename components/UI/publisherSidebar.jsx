@@ -1,6 +1,7 @@
 'use client'
 
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { LayoutDashboard ,
     BarChart,
@@ -27,7 +28,15 @@ export default function PublisherSidebar() {
 
   return (
     <aside className="w-64 bg-white shadow-md h-full flex flex-col">
-      <div className="p-6 font-bold text-lg text-blue-600">PressPass</div>
+      <div className="p-6">
+        <Image
+          src="/Presspass.png"
+          alt="PressPass Logo"
+          width={120}
+          height={40}
+          className="object-contain"
+        />
+      </div>
       
       <nav className="px-6 mt-6 space-y-2">
         {menuItems.map((item) => {
