@@ -1,4 +1,4 @@
-// app/news-reader/article/[articleId]/page.jsx
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -57,10 +57,38 @@ export default function ArticleViewPage() {
     }
   };
 
+  // Fixed date formatting - handles Firestore timestamps properly
   const formatDate = (timestamp) => {
     if (!timestamp) return 'No date';
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    
+    let date;
+    if (timestamp && typeof timestamp === 'object') {
+      // Handle Firestore Timestamp objects
+      if (timestamp.toDate && typeof timestamp.toDate === 'function') {
+        date = timestamp.toDate();
+      } else if (timestamp.seconds) {
+        // Handle plain Firestore timestamp objects
+        date = new Date(timestamp.seconds * 1000);
+      } else {
+        date = new Date(timestamp);
+      }
+    } else {
+      // Handle string or number timestamps
+      date = new Date(timestamp);
+    }
+    
     return date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  // Get current date for newspaper header
+  const getCurrentDate = () => {
+    const today = new Date();
+    return today.toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
@@ -73,7 +101,7 @@ export default function ArticleViewPage() {
     return `${readTime} min read`;
   };
 
-  // Fixed function to process article content with proper paragraph handling and overflow prevention
+  // Enhanced function to process article content with proper image handling
   const processArticleContent = (content) => {
     if (!content) {
       console.log('❌ No content provided');
@@ -140,13 +168,25 @@ export default function ArticleViewPage() {
         .replace(/<\/div>/g, '</p>');
     }
     
-    // Handle Firebase Storage URLs and other image sources
+    // Handle Firebase Storage URLs and other image sources - Enhanced regex
     processedContent = processedContent.replace(
-      /<img([^>]*)src="([^"]+)"([^>]*)>/g, 
+      /<img([^>]*)src\s*=\s*["']([^"']+)["']([^>]*)>/gi, 
       (match, before, src, after) => {
-        console.log('🖼️ Found image URL:', src.substring(0, 50) + '...');
+        console.log('🖼️ Found image URL in content:', src.substring(0, 50) + '...');
         return `<div class="newspaper-image-container">
                   <img${before}src="${src}"${after} class="newspaper-image" loading="lazy" 
+                       onerror="console.log('Image load error:', this.src); this.parentElement.style.display='none';" />
+                </div>`;
+      }
+    );
+    
+    // Look for standalone URLs that might be images
+    processedContent = processedContent.replace(
+      /(https?:\/\/[^\s]+\.(?:jpg|jpeg|png|gif|webp|svg))(?:\s|$)/gi,
+      (match, url) => {
+        console.log('🖼️ Found standalone image URL:', url.substring(0, 50) + '...');
+        return `<div class="newspaper-image-container">
+                  <img src="${url.trim()}" alt="Article image" class="newspaper-image" loading="lazy" 
                        onerror="console.log('Image load error:', this.src); this.parentElement.style.display='none';" />
                 </div>`;
       }
@@ -161,7 +201,7 @@ export default function ArticleViewPage() {
     return processedContent;
   };
 
-  // Enhanced function to extract images from content - including Firebase URLs
+  // Enhanced function to extract images from content - including all possible sources
   const extractImagesFromContent = (content) => {
     const images = [];
     if (!content) {
@@ -177,7 +217,7 @@ export default function ArticleViewPage() {
         const parsedContent = JSON.parse(content);
         if (Array.isArray(parsedContent)) {
           parsedContent.forEach((item, index) => {
-            if (item.type === 'image') {
+            if (item.type === 'image' && item.src) {
               console.log('🖼️ Found image in JSON:', item.src?.substring(0, 50) + '...');
               images.push({
                 src: item.src,
@@ -189,57 +229,89 @@ export default function ArticleViewPage() {
         }
       }
     } catch (e) {
-      console.log('ℹ️ Not JSON content, looking for HTML img tags and Firebase URLs');
-      
-      // Look for Firebase Storage URLs
-      const firebaseMatches = content.match(/https:\/\/firebasestorage\.googleapis\.com\/[^"\s]+/g);
-      if (firebaseMatches) {
-        console.log('🔥 Found', firebaseMatches.length, 'Firebase Storage URLs');
-        firebaseMatches.forEach((url, index) => {
-          console.log('🔥 Firebase image URL:', url.substring(0, 50) + '...');
-          images.push({
-            src: url,
-            caption: '',
-            index: `firebase-${index}`
-          });
-        });
-      }
-      
-      // Look for img tags in HTML content
-      const imgMatches = content.match(/<img[^>]+src="([^"]+)"[^>]*>/g);
-      if (imgMatches) {
-        console.log('🖼️ Found', imgMatches.length, 'img tags in HTML');
-        imgMatches.forEach((match, index) => {
-          const srcMatch = match.match(/src="([^"]+)"/);
-          if (srcMatch) {
-            console.log('🖼️ Extracted image URL:', srcMatch[1].substring(0, 50) + '...');
-            images.push({
-              src: srcMatch[1],
-              caption: '',
-              index: `html-${index}`
-            });
-          }
-        });
-      }
-      
-      // Look for data:image URLs
-      const dataImageMatches = content.match(/data:image\/[^"\s]+/g);
-      if (dataImageMatches) {
-        console.log('📊 Found', dataImageMatches.length, 'data:image URLs');
-        dataImageMatches.forEach((url, index) => {
-          console.log('📊 Data image URL found');
-          images.push({
-            src: url,
-            caption: '',
-            index: `data-${index}`
-          });
-        });
-      }
+      console.log('ℹ️ Not JSON content, looking for HTML img tags and URLs');
     }
     
-    console.log('✅ Extracted', images.length, 'images from content');
-    return images;
+    // Look for Firebase Storage URLs
+    const firebaseMatches = content.match(/https?:\/\/firebasestorage\.googleapis\.com\/[^\s"'<>]+/g);
+    if (firebaseMatches) {
+      console.log('🔥 Found', firebaseMatches.length, 'Firebase Storage URLs');
+      firebaseMatches.forEach((url, index) => {
+        console.log('🔥 Firebase image URL:', url.substring(0, 50) + '...');
+        images.push({
+          src: url,
+          caption: '',
+          index: `firebase-${index}`
+        });
+      });
+    }
+    
+    // Look for img tags in HTML content
+    const imgMatches = content.match(/<img[^>]+src\s*=\s*["']([^"']+)["'][^>]*>/gi);
+    if (imgMatches) {
+      console.log('🖼️ Found', imgMatches.length, 'img tags in HTML');
+      imgMatches.forEach((match, index) => {
+        const srcMatch = match.match(/src\s*=\s*["']([^"']+)["']/i);
+        if (srcMatch) {
+          console.log('🖼️ Extracted image URL:', srcMatch[1].substring(0, 50) + '...');
+          images.push({
+            src: srcMatch[1],
+            caption: '',
+            index: `html-${index}`
+          });
+        }
+      });
+    }
+    
+    // Look for standalone image URLs
+    const urlMatches = content.match(/https?:\/\/[^\s"'<>]+\.(?:jpg|jpeg|png|gif|webp|svg)/gi);
+    if (urlMatches) {
+      console.log('🔗 Found', urlMatches.length, 'standalone image URLs');
+      urlMatches.forEach((url, index) => {
+        console.log('🔗 Standalone image URL:', url.substring(0, 50) + '...');
+        images.push({
+          src: url,
+          caption: '',
+          index: `url-${index}`
+        });
+      });
+    }
+    
+    // Look for data:image URLs
+    const dataImageMatches = content.match(/data:image\/[^"\s<>]+/g);
+    if (dataImageMatches) {
+      console.log('📊 Found', dataImageMatches.length, 'data:image URLs');
+      dataImageMatches.forEach((url, index) => {
+        console.log('📊 Data image URL found');
+        images.push({
+          src: url,
+          caption: '',
+          index: `data-${index}`
+        });
+      });
+    }
+    
+    // Remove duplicates
+    const uniqueImages = images.filter((image, index, self) => 
+      index === self.findIndex(img => img.src === image.src)
+    );
+    
+    console.log('✅ Extracted', uniqueImages.length, 'unique images from content');
+    return uniqueImages;
   };
+
+  // Banner Ad Component
+  const BannerAd = () => (
+    <div className="my-8 p-6 bg-gray-100 border-4 border-black text-center">
+      <div className="text-xs uppercase tracking-widest text-gray-600 mb-2">Advertisement</div>
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-8 font-bold text-xl">
+        Your Ad Could Be Here
+      </div>
+      <div className="text-sm text-gray-600 mt-2">
+        Premium advertising space available - Contact us for rates
+      </div>
+    </div>
+  );
 
   if (loading) {
     return (
@@ -291,35 +363,28 @@ export default function ArticleViewPage() {
   console.log('📰 Article Data:', {
     id: article.id,
     title: article.title,
-    author: article.author,
     hasContent: !!article.content,
     contentLength: article.content?.length,
-    hasImage: !!article.imageUrl,
-    hasFeatureImageUrl: !!article.featuredImageUrl,
+    hasImageUrl: !!article.imageUrl,
     imageUrl: article.imageUrl?.substring(0, 50) + '...',
-    featuredImageUrl: article.featuredImageUrl?.substring(0, 50) + '...',
     hasPublisher: !!publisher,
     publisherName: publisher?.name,
     contentImages: contentImages.length,
-    fullArticleObject: article // Full debug
+    createdAt: article.createdAt
   });
 
   // Determine the main image to show - check all possible image fields
-  const mainImage = article.featuredImageUrl || 
-                   article.imageUrl || 
+  const mainImage = article.imageUrl || 
+                   article.featuredImageUrl || 
                    article.image || 
                    article.featured_image ||
                    article.featuredImage ||
                    contentImages[0]?.src;
   
   console.log('🖼️ Main image determination:', {
-    featuredImageUrl: article.featuredImageUrl,
     imageUrl: article.imageUrl,
-    image: article.image,
-    featured_image: article.featured_image,
-    featuredImage: article.featuredImage,
     contentImages: contentImages.length,
-    selectedMainImage: mainImage
+    selectedMainImage: mainImage?.substring(0, 50) + '...'
   });
 
   return (
@@ -606,7 +671,7 @@ export default function ArticleViewPage() {
               </h1>
               <div className="newspaper-date-line">
                 <p className="text-sm font-medium">
-                  {formatDate(article.createdAt)} • {publisher?.industry || 'News'} • EDITION
+                  {getCurrentDate()} • {publisher?.industry || 'News'} • TODAY'S EDITION
                 </p>
               </div>
             </div>
@@ -676,7 +741,6 @@ export default function ArticleViewPage() {
                 <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded text-xs">
                   <h4 className="font-bold mb-2">🐛 Image Debug Info:</h4>
                   <p><strong>Main Image Selected:</strong> {mainImage || 'None'}</p>
-                  <p><strong>Featured Image URL:</strong> {article.featuredImageUrl || 'None'}</p>
                   <p><strong>Image URL:</strong> {article.imageUrl || 'None'}</p>
                   <p><strong>Content Images Found:</strong> {contentImages.length}</p>
                   {contentImages.length > 0 && (
@@ -885,6 +949,9 @@ export default function ArticleViewPage() {
               )}
             </div>
           </div>
+
+          {/* Banner Ad */}
+          <BannerAd />
 
           {/* Article Footer */}
           <div className="mt-12 pt-6 border-t-4 border-black">
