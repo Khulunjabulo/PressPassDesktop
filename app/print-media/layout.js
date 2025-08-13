@@ -1,6 +1,5 @@
 'use client'
 
-import { withRoleProtection } from '@/lib/authHelpers';
 import PublisherSidebar from '@/components/UI/publisherSidebar';
 
 function PrintMediaLayout({ children }) {
@@ -12,4 +11,4 @@ function PrintMediaLayout({ children }) {
   )
 }
 
-export default withRoleProtection(PrintMediaLayout, 'publisher');
+export default PrintMediaLayout;
