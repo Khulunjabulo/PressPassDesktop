@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/UI/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/MonetizationCards";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/UI/Input";
+import { Textarea } from "@/components/UI/textarea";
 import { CalendarIcon, Upload } from "lucide-react";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Calendar } from "@/components/UI/calendar";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/UI/popover";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import Header from "@/components/UI/header";
