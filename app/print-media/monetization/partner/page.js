@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, } from "@/components/MonetizationCards";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/Input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/UI/Button";
+import { Input } from "@/components/UI/Input";
+import { Label } from "@/components/UI/label";
+import { Checkbox } from "@/components/UI/checkbox";
 import {
   Calendar,
   Home,
