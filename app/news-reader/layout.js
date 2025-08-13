@@ -2,7 +2,6 @@
 
 import NewsReaderFooter from "@/components/news-reader/NewsReaderFooter"
 import NewsReaderHeader from "@/components/news-reader/NewsReaderHeader"
-import { withRoleProtection } from '@/lib/authHelpers'
 
 function NewsReaderLayout({ children }) {
   return (
@@ -14,4 +13,4 @@ function NewsReaderLayout({ children }) {
   )
 }
 
-export default withRoleProtection(NewsReaderLayout, 'reader');
+export default NewsReaderLayout;
