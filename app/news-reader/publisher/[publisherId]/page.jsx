@@ -22,19 +22,50 @@ export default function PublisherArticlesPage() {
     router.back();
   };
 
+  // Fixed date formatting function
   const formatDate = (timestamp) => {
     if (!timestamp) return 'No date';
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    return date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+    
+    let date;
+    try {
+      if (timestamp && typeof timestamp === 'object') {
+        // Handle Firestore Timestamp objects
+        if (timestamp.toDate && typeof timestamp.toDate === 'function') {
+          date = timestamp.toDate();
+        } else if (timestamp.seconds) {
+          // Handle plain Firestore timestamp objects
+          date = new Date(timestamp.seconds * 1000);
+        } else {
+          date = new Date(timestamp);
+        }
+      } else if (typeof timestamp === 'string' || typeof timestamp === 'number') {
+        // Handle string/number timestamps
+        date = new Date(timestamp);
+      } else {
+        console.log('Unknown timestamp format:', timestamp);
+        return 'Invalid date';
+      }
+
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        console.log('Invalid date created from timestamp:', timestamp);
+        return 'Invalid date';
+      }
+
+      return date.toLocaleDateString('en-US', {
+        weekday: 'short',
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch (error) {
+      console.error('Error formatting date:', error, 'Timestamp:', timestamp);
+      return 'Invalid date';
+    }
   };
 
   const formatReadTime = (readTime) => {
-    if (!readTime) return '5 min read';
+    if (!readTime || readTime === 0) return '5 min read';
     return `${readTime} min read`;
   };
 
@@ -45,6 +76,65 @@ export default function PublisherArticlesPage() {
       month: 'long',
       day: 'numeric'
     });
+  };
+
+  // Function to extract snippet from article content
+  const extractSnippet = (content, maxLength = 150) => {
+    if (!content) return '';
+    
+    try {
+      let text = '';
+      
+      // Handle JSON content (array format)
+      if (content.startsWith('[')) {
+        const parsedContent = JSON.parse(content);
+        if (Array.isArray(parsedContent)) {
+          // Find the first text content item
+          const textItem = parsedContent.find(item => item.type === 'text');
+          text = textItem ? textItem.content : '';
+        }
+      } else {
+        // Handle HTML/plain text content
+        text = content;
+      }
+      
+      // Remove HTML tags
+      text = text.replace(/<[^>]*>/g, '');
+      
+      // Remove extra whitespace and line breaks
+      text = text.replace(/\s+/g, ' ').trim();
+      
+      // Truncate to maxLength
+      if (text.length > maxLength) {
+        text = text.substring(0, maxLength);
+        // Try to end at a word boundary
+        const lastSpace = text.lastIndexOf(' ');
+        if (lastSpace > maxLength * 0.8) {
+          text = text.substring(0, lastSpace);
+        }
+        text += '...';
+      }
+      
+      return text;
+    } catch (error) {
+      console.error('Error extracting snippet:', error);
+      // Fallback to simple text extraction
+      const plainText = content.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+      return plainText.length > maxLength ? 
+        plainText.substring(0, maxLength) + '...' : 
+        plainText;
+    }
+  };
+
+  // Function to get the best available image
+  const getArticleImage = (article) => {
+    // Check multiple possible image fields
+    return article.imageUrl || 
+           article.featuredImageUrl || 
+           article.image || 
+           article.featured_image ||
+           article.featuredImage ||
+           null;
   };
 
   if (loading) {
@@ -183,93 +273,126 @@ export default function PublisherArticlesPage() {
               </div>
             ) : (
               <div className="space-y-8">
-                {articles.map((article, index) => (
-                  <article 
-                    key={article.id}
-                    className="border-b border-gray-300 pb-6 last:border-b-0 cursor-pointer hover:bg-gray-50 transition-colors p-4 -m-4 rounded"
-                    onClick={() => handleArticleClick(article)}
-                  >
-                    <div className="flex gap-6">
-                      {/* Article Image */}
-                      {article.imageUrl && (
-                        <div className="flex-shrink-0">
-                          <img
-                            src={article.imageUrl}
-                            alt={article.title}
-                            className="w-32 h-24 object-cover border border-gray-400"
-                          />
-                        </div>
-                      )}
-
-                      {/* Article Content */}
-                      <div className="flex-1">
-                        {/* Category */}
-                        {article.category && (
-                          <div className="mb-2">
-                            <span className="inline-block bg-black text-white px-2 py-1 text-xs font-bold uppercase tracking-wider">
-                              {article.category}
-                            </span>
+                {articles.map((article, index) => {
+                  const articleImage = getArticleImage(article);
+                  const snippet = extractSnippet(article.content);
+                  
+                  return (
+                    <article 
+                      key={article.id}
+                      className="border-b border-gray-300 pb-6 last:border-b-0 cursor-pointer hover:bg-gray-50 transition-colors p-4 -m-4 rounded"
+                      onClick={() => handleArticleClick(article)}
+                    >
+                      <div className="flex gap-6">
+                        {/* Article Image */}
+                        {articleImage && (
+                          <div className="flex-shrink-0">
+                            <img
+                              src={articleImage}
+                              alt={article.title}
+                              className="w-32 h-24 object-cover border border-gray-400"
+                              onError={(e) => {
+                                console.log('Image failed to load:', articleImage);
+                                e.target.style.display = 'none';
+                              }}
+                            />
                           </div>
                         )}
 
-                        {/* Headline */}
-                        <h3 className="text-2xl font-bold leading-tight mb-3 hover:underline" 
-                            style={{fontFamily: 'Times, "Times New Roman", serif'}}>
-                          {article.title}
-                        </h3>
-                        
-                        {/* Summary */}
-                        {article.summary && (
-                          <p className="text-gray-700 mb-3 leading-relaxed">
-                            {article.summary}
-                          </p>
-                        )}
-
-                        {/* Article Meta */}
-                        <div className="flex items-center space-x-4 text-sm text-gray-600 mb-3">
-                          <div className="flex items-center space-x-1">
-                            <Calendar className="w-4 h-4" />
-                            <span>{formatDate(article.createdAt)}</span>
-                          </div>
-                          
-                          <div className="flex items-center space-x-1">
-                            <Clock className="w-4 h-4" />
-                            <span>{formatReadTime(article.readTime)}</span>
-                          </div>
-                          
-                          {article.views > 0 && (
-                            <div className="flex items-center space-x-1">
-                              <Eye className="w-4 h-4" />
-                              <span>{article.views} views</span>
+                        {/* Article Content */}
+                        <div className="flex-1">
+                          {/* Category */}
+                          {article.category && (
+                            <div className="mb-2">
+                              <span className="inline-block bg-black text-white px-2 py-1 text-xs font-bold uppercase tracking-wider">
+                                {article.category}
+                              </span>
                             </div>
                           )}
-                        </div>
 
-                        {/* Tags */}
-                        {article.tags && article.tags.length > 0 && (
-                          <div className="flex items-center space-x-2">
-                            <Hash className="w-3 h-3 text-gray-400" />
-                            <div className="flex flex-wrap gap-2">
-                              {article.tags.slice(0, 4).map((tag, tagIndex) => (
-                                <span 
-                                  key={tagIndex}
-                                  className="inline-block bg-gray-200 px-2 py-1 text-xs font-medium uppercase tracking-wider border text-gray-700"
-                                >
-                                  {tag}
-                                </span>
-                              ))}
-                              {article.tags.length > 4 && (
-                                <span className="text-xs text-gray-500 self-center">
-                                  +{article.tags.length - 4} more
-                                </span>
-                              )}
+                          {/* Headline */}
+                          <h3 className="text-2xl font-bold leading-tight mb-3 hover:underline" 
+                              style={{fontFamily: 'Times, "Times New Roman", serif'}}>
+                            {article.title}
+                          </h3>
+                          
+                          {/* Article Snippet - New! */}
+                          {snippet && (
+                            <p className="text-gray-700 mb-3 leading-relaxed text-sm">
+                              {snippet}
+                            </p>
+                          )}
+
+                          {/* Summary (if different from snippet) */}
+                          {article.summary && article.summary !== snippet && (
+                            <p className="text-gray-600 mb-3 leading-relaxed text-sm font-medium italic">
+                              {article.summary}
+                            </p>
+                          )}
+
+                          {/* Article Meta */}
+                          <div className="flex items-center space-x-4 text-sm text-gray-600 mb-3">
+                            <div className="flex items-center space-x-1">
+                              <Calendar className="w-4 h-4" />
+                              <span>{formatDate(article.createdAt)}</span>
                             </div>
+                            
+                            <div className="flex items-center space-x-1">
+                              <Clock className="w-4 h-4" />
+                              <span>{formatReadTime(article.readTime)}</span>
+                            </div>
+                            
+                            {article.views > 0 && (
+                              <div className="flex items-center space-x-1">
+                                <Eye className="w-4 h-4" />
+                                <span>{article.views} views</span>
+                              </div>
+                            )}
+
+                            {/* Author */}
+                            {article.author && (
+                              <div className="flex items-center space-x-1">
+                                <span>by {article.author}</span>
+                              </div>
+                            )}
                           </div>
-                        )}
+
+                          {/* Tags */}
+                          {article.tags && article.tags.length > 0 && (
+                            <div className="flex items-center space-x-2">
+                              <Hash className="w-3 h-3 text-gray-400" />
+                              <div className="flex flex-wrap gap-2">
+                                {article.tags.slice(0, 4).map((tag, tagIndex) => (
+                                  <span 
+                                    key={tagIndex}
+                                    className="inline-block bg-gray-200 px-2 py-1 text-xs font-medium uppercase tracking-wider border text-gray-700"
+                                  >
+                                    {tag}
+                                  </span>
+                                ))}
+                                {article.tags.length > 4 && (
+                                  <span className="text-xs text-gray-500 self-center">
+                                    +{article.tags.length - 4} more
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Debug info in development */}
+                          {/* {process.env.NODE_ENV === 'development' && (
+                            <div className="mt-2 text-xs text-gray-400 border-l-2 border-gray-200 pl-2">
+                              <div>Raw timestamp: {JSON.stringify(article.createdAt)}</div>
+                              <div>Formatted: {formatDate(article.createdAt)}</div>
+                              <div>Has image: {!!articleImage}</div>
+                              <div>Snippet length: {snippet.length}</div>
+                            </div>
+                          )} */}
+                        </div>
                       </div>
-                    </div>
-                  </article>
-                ))}
+                    </article>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -290,6 +413,10 @@ export default function PublisherArticlesPage() {
                         src={publisher.logo}
                         alt={`${publisher.name} logo`}
                         className="w-16 h-16 mx-auto rounded border border-gray-400"
+                        onError={(e) => {
+                          console.log('Publisher logo failed to load:', publisher.logo);
+                          e.target.style.display = 'none';
+                        }}
                       />
                     </div>
                   )}
