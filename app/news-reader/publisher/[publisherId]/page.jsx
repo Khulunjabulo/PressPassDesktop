@@ -2,7 +2,6 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
-import { Card, CardContent } from '@/components/ui/newscard';
 import { ArrowLeft, FileText, Clock, Globe, Building, Users, Calendar, Eye, Hash } from 'lucide-react';
 import { usePublisherArticles } from '@/hooks/useNewsSources';
 import BannerAd from '@/components/news-reader/BannerAd';
