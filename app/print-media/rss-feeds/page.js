@@ -7,7 +7,7 @@ export default function RssFeeds() {
   return (
     <>
       <Header />
-      <div className="flex">
+     <div className="h-screen bg-gray-50 flex overflow-hidden">
         <PublisherSidebar />
         <div className="flex-1 p-4 md:p-6 bg-gray-50 min-h-screen">
       <div className="flex justify-between items-center mb-6">

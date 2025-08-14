@@ -3,7 +3,6 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { Card, CardContent } from '@/components/ui/newscard';
 import { ArrowLeft, Calendar, Clock, Eye, Hash, User, Globe, Share2, Bookmark } from 'lucide-react';
 import FavoriteButton from '@/components/FavoriteButton';
 
@@ -22,32 +21,32 @@ export default function ArticleViewPage() {
     fetchArticleAndPublisher();
   }, [params.articleId, publisherId]);
 
-  const fetchArticleAndPublisher = async () => {
-    if (!params.articleId || !publisherId) return;
+  // const fetchArticleAndPublisher = async () => {
+  //   if (!params.articleId || !publisherId) return;
     
-    try {
-      setLoading(true);
-      const response = await fetch(`/api/news-sources/${publisherId}/articles`);
-      const data = await response.json();
+  //   try {
+  //     setLoading(true);
+  //     const response = await fetch(`/api/news-sources/${publisherId}/articles`);
+  //     const data = await response.json();
 
-      if (data.success) {
-        const foundArticle = data.articles.find(a => a.id === params.articleId);
-        if (foundArticle) {
-          setArticle(foundArticle);
-          setPublisher(data.publisher);
-        } else {
-          setError('Article not found');
-        }
-      } else {
-        setError(data.error || 'Failed to fetch article');
-      }
-    } catch (err) {
-      console.error('Error fetching article:', err);
-      setError('Failed to load article');
-    } finally {
-      setLoading(false);
-    }
-  };
+  //     if (data.success) {
+  //       const foundArticle = data.articles.find(a => a.id === params.articleId);
+  //       if (foundArticle) {
+  //         setArticle(foundArticle);
+  //         setPublisher(data.publisher);
+  //       } else {
+  //         setError('Article not found');
+  //       }
+  //     } else {
+  //       setError(data.error || 'Failed to fetch article');
+  //     }
+  //   } catch (err) {
+  //     console.error('Error fetching article:', err);
+  //     setError('Failed to load article');
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
   const handleBackClick = () => {
     if (publisherId) {
