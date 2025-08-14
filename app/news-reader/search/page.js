@@ -79,7 +79,7 @@ export default function SearchPage() {
                       className="w-full h-full rounded-lg object-cover border border-gray-200"
                     />
                   ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                    <div className="w-full h-full bg-gradient-to-br bg-[#329ae1] rounded-lg flex items-center justify-center">
                       <span className="text-white font-semibold text-2xl">
                         {source.name.charAt(0)}
                       </span>
