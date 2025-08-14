@@ -1,12 +1,11 @@
 'use client';
 
+import { Heart } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { timeAgo } from '@/lib/time';
-import NewsCard from '@/components/news-reader/NewsCard';
 import AdSlot from '@/components/news-reader/AdsSlot';
 import RecommendedOverlayBottom from '@/components/news-reader/Overlay';
-import { Card, CardContent } from '@/components/UI/Cards';
+import { Card, CardContent } from '@/components/ui/newscard';
 import { FileText, Clock, Globe, Building, Users, ArrowRight, Plus } from 'lucide-react';
 
 function dedupeArticles(articles = []) {
@@ -81,47 +80,10 @@ export default function NewsGrid({ articles }) {
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6 px-6 pb-10">
         {/* MAIN COLUMN */}
         <div className="space-y-6">
-          
-          {/* 3 columns on large screens */}
-          {unique.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {unique.map((article, index) => {
-                const isUploadedStory = article.source_id === 'presspass';
-                
-                return (
-                <NewsCard
-                  key={index}
-                  imageUrl={article.image_url}
-                  publicationName={(article.source_id || 'News').slice(0, 10)}
-                  logoBgColor={isUploadedStory ? "#1f2937" : "#008000"}
-                  author={
-                    Array.isArray(article.creator)
-                      ? article.creator[0]
-                      : article.creator || 'Unknown'
-                  }
-                  time={timeAgo(article.pubDate || article.publishedAt || article.createdAt)}
-                  isUploadedStory={isUploadedStory}
-                  pdfUrl={article.pdfUrl}
-                  link={article.link}
-                  summary={
-                    article.description ||
-                    article.content ||
-                    'No summary available.'
-                  }
-                />
-                );
-              })}
-            </div>
-          ) : (
-            <div className="text-center py-10">
-              <p className="text-gray-500">No articles found for this category.</p>
-            </div>
-          )}
-
           {/* News Sources Section */}
           <section className="mt-10">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold">News Sources</h2>
+              <h2 className="text-xl font-bold">Top Headlines</h2>
               {!loadingSources && !sourcesError && (
                 <span className="text-sm text-gray-500">
                   {newsources.length} publisher{newsources.length !== 1 ? 's' : ''}
@@ -255,7 +217,16 @@ export default function NewsGrid({ articles }) {
                           </div>
                         </div>
                       </div>
-                      
+                      <div className="mt-3">
+  <button 
+    type="button" 
+    className="p-2 rounded-full bg-gray-100 hover:bg-red-100 transition-colors"
+    disabled
+  >
+    <Heart className="w-5 h-5 text-red-500" />
+  </button>
+</div> 
+
                       {/* Status Indicator */}
                       <div className="mt-3 pt-2 border-t border-gray-100">
                         <div className="flex items-center justify-between">

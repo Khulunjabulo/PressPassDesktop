@@ -1,9 +1,7 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { Card, CardContent } from '@/components/UI/Cards';
 import { ArrowLeft, Calendar, Clock, Eye, Hash, User, Globe, Share2, Bookmark } from 'lucide-react';
 import FavoriteButton from '@/components/FavoriteButton';
 
@@ -23,22 +21,33 @@ export default function ArticleViewPage() {
   }, [params.articleId, publisherId]);
 
   const fetchArticleAndPublisher = async () => {
-    if (!params.articleId || !publisherId) return;
+    if (!params.articleId || !publisherId) {
+      setError('Missing article ID or publisher ID');
+      setLoading(false);
+      return;
+    }
     
     try {
       setLoading(true);
+      console.log('Fetching article:', params.articleId, 'from publisher:', publisherId);
+      
       const response = await fetch(`/api/news-sources/${publisherId}/articles`);
       const data = await response.json();
+
+      console.log('API Response:', data);
 
       if (data.success) {
         const foundArticle = data.articles.find(a => a.id === params.articleId);
         if (foundArticle) {
+          console.log('Article found:', foundArticle);
           setArticle(foundArticle);
           setPublisher(data.publisher);
         } else {
+          console.log('Article not found in articles list');
           setError('Article not found');
         }
       } else {
+        console.log('API request failed:', data.error);
         setError(data.error || 'Failed to fetch article');
       }
     } catch (err) {
@@ -57,32 +66,55 @@ export default function ArticleViewPage() {
     }
   };
 
-  // Fixed date formatting - handles Firestore timestamps properly
+  // Improved date formatting with better error handling
   const formatDate = (timestamp) => {
-    if (!timestamp) return 'No date';
-    
-    let date;
-    if (timestamp && typeof timestamp === 'object') {
-      // Handle Firestore Timestamp objects
-      if (timestamp.toDate && typeof timestamp.toDate === 'function') {
-        date = timestamp.toDate();
-      } else if (timestamp.seconds) {
-        // Handle plain Firestore timestamp objects
-        date = new Date(timestamp.seconds * 1000);
-      } else {
-        date = new Date(timestamp);
-      }
-    } else {
-      // Handle string or number timestamps
-      date = new Date(timestamp);
+    if (!timestamp) {
+      console.log('No timestamp provided');
+      return 'No date available';
     }
     
-    return date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+    try {
+      let date;
+      
+      // Handle different timestamp formats
+      if (timestamp && typeof timestamp === 'object') {
+        // Handle Firestore Timestamp objects
+        if (timestamp.toDate && typeof timestamp.toDate === 'function') {
+          date = timestamp.toDate();
+        } else if (timestamp.seconds && typeof timestamp.seconds === 'number') {
+          // Handle plain Firestore timestamp objects
+          date = new Date(timestamp.seconds * 1000);
+        } else if (timestamp._seconds) {
+          // Handle some Firestore timestamp variations
+          date = new Date(timestamp._seconds * 1000);
+        } else {
+          // Try to create date from object
+          date = new Date(timestamp);
+        }
+      } else if (typeof timestamp === 'string' || typeof timestamp === 'number') {
+        // Handle string or number timestamps
+        date = new Date(timestamp);
+      } else {
+        console.log('Unknown timestamp format:', typeof timestamp, timestamp);
+        return 'Invalid date format';
+      }
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        console.log('Invalid date created from timestamp:', timestamp);
+        return 'Invalid date';
+      }
+      
+      return date.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch (error) {
+      console.error('Error formatting date:', error, timestamp);
+      return 'Date formatting error';
+    }
   };
 
   // Get current date for newspaper header
@@ -97,7 +129,7 @@ export default function ArticleViewPage() {
   };
 
   const formatReadTime = (readTime) => {
-    if (!readTime) return '5 min read';
+    if (!readTime || readTime === 0) return '5 min read';
     return `${readTime} min read`;
   };
 
@@ -105,7 +137,7 @@ export default function ArticleViewPage() {
   const processArticleContent = (content) => {
     if (!content) {
       console.log('❌ No content provided');
-      return '';
+      return '<p class="newspaper-paragraph">Content not available for this article.</p>';
     }
     
     console.log('🔍 Processing content type:', typeof content);
@@ -345,11 +377,20 @@ export default function ArticleViewPage() {
           
           <div className="border border-gray-300 p-8 text-center">
             <h2 className="text-2xl font-bold mb-4">Article Not Found</h2>
-            <p className="text-gray-600">{error || 'This article may have been removed or moved.'}</p>
+            <p className="text-gray-600 mb-4">{error || 'This article may have been removed or moved.'}</p>
             <div className="mt-4 text-xs text-gray-500">
               Article ID: {params.articleId}<br/>
               Publisher ID: {publisherId}
             </div>
+            <button 
+              onClick={() => {
+                setError(null);
+                fetchArticleAndPublisher();
+              }}
+              className="mt-4 bg-black text-white px-6 py-2 text-sm font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors"
+            >
+              Try Again
+            </button>
           </div>
         </div>
       </div>
@@ -370,7 +411,8 @@ export default function ArticleViewPage() {
     hasPublisher: !!publisher,
     publisherName: publisher?.name,
     contentImages: contentImages.length,
-    createdAt: article.createdAt
+    createdAt: article.createdAt,
+    createdAtType: typeof article.createdAt
   });
 
   // Determine the main image to show - check all possible image fields
@@ -736,23 +778,17 @@ export default function ArticleViewPage() {
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
             {/* Main Article Content */}
             <div className="lg:col-span-3">
-              {/* Debug Image Information */}
+              {/* Debug Article Information (only in development) */}
               {process.env.NODE_ENV === 'development' && (
-                <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded text-xs">
-                  <h4 className="font-bold mb-2">🐛 Image Debug Info:</h4>
+                <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded text-xs">
+                  <h4 className="font-bold mb-2">🐛 Article Debug Info:</h4>
+                  <p><strong>Article ID:</strong> {article.id}</p>
+                  <p><strong>Title:</strong> {article.title}</p>
+                  <p><strong>Content Length:</strong> {article.content?.length || 0} characters</p>
+                  <p><strong>Created At:</strong> {JSON.stringify(article.createdAt)} (Type: {typeof article.createdAt})</p>
                   <p><strong>Main Image Selected:</strong> {mainImage || 'None'}</p>
-                  <p><strong>Image URL:</strong> {article.imageUrl || 'None'}</p>
                   <p><strong>Content Images Found:</strong> {contentImages.length}</p>
-                  {contentImages.length > 0 && (
-                    <div>
-                      <strong>Content Images:</strong>
-                      {contentImages.map((img, i) => (
-                        <div key={i} className="ml-4">
-                          {i + 1}. {img.src.substring(0, 60)}...
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  <p><strong>Publisher:</strong> {publisher?.name || 'None'}</p>
                 </div>
               )}
 
