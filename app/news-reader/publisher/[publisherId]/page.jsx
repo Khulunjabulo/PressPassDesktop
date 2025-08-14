@@ -22,19 +22,59 @@ export default function PublisherArticlesPage() {
     router.back();
   };
 
+  // Improved date formatting with better error handling
   const formatDate = (timestamp) => {
-    if (!timestamp) return 'No date';
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    return date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+    if (!timestamp) {
+      console.log('No timestamp provided');
+      return 'No date available';
+    }
+    
+    try {
+      let date;
+      
+      // Handle different timestamp formats
+      if (timestamp && typeof timestamp === 'object') {
+        // Handle Firestore Timestamp objects
+        if (timestamp.toDate && typeof timestamp.toDate === 'function') {
+          date = timestamp.toDate();
+        } else if (timestamp.seconds && typeof timestamp.seconds === 'number') {
+          // Handle plain Firestore timestamp objects
+          date = new Date(timestamp.seconds * 1000);
+        } else if (timestamp._seconds) {
+          // Handle some Firestore timestamp variations
+          date = new Date(timestamp._seconds * 1000);
+        } else {
+          // Try to create date from object
+          date = new Date(timestamp);
+        }
+      } else if (typeof timestamp === 'string' || typeof timestamp === 'number') {
+        // Handle string or number timestamps
+        date = new Date(timestamp);
+      } else {
+        console.log('Unknown timestamp format:', typeof timestamp, timestamp);
+        return 'Invalid date format';
+      }
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        console.log('Invalid date created from timestamp:', timestamp);
+        return 'Invalid date';
+      }
+      
+      return date.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch (error) {
+      console.error('Error formatting date:', error, timestamp);
+      return 'Date formatting error';
+    }
   };
 
   const formatReadTime = (readTime) => {
-    if (!readTime) return '5 min read';
+    if (!readTime || readTime === 0) return '5 min read';
     return `${readTime} min read`;
   };
 
@@ -46,6 +86,16 @@ export default function PublisherArticlesPage() {
       day: 'numeric'
     });
   };
+
+  // Debug logging
+  console.log('Publisher Page Debug:', {
+    publisherId: params.publisherId,
+    hasPublisher: !!publisher,
+    publisherName: publisher?.name,
+    articlesCount: articles?.length || 0,
+    loading,
+    error
+  });
 
   if (loading) {
     return (
@@ -95,9 +145,12 @@ export default function PublisherArticlesPage() {
               Publisher Not Found
             </h2>
             <p className="text-gray-600 mb-4">{error}</p>
+            <div className="mt-4 text-xs text-gray-500">
+              Publisher ID: {params.publisherId}
+            </div>
             <button 
               onClick={refreshArticles}
-              className="bg-black text-white px-6 py-2 text-sm font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors"
+              className="mt-4 bg-black text-white px-6 py-2 text-sm font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors"
             >
               Try Again
             </button>
@@ -109,6 +162,28 @@ export default function PublisherArticlesPage() {
 
   return (
     <div className="min-h-screen bg-white">
+      {/* Development Debug Info */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="bg-yellow-50 border border-yellow-200 p-4 m-4 rounded text-xs">
+          <h4 className="font-bold mb-2">🐛 Publisher Page Debug Info:</h4>
+          <p><strong>Publisher ID:</strong> {params.publisherId}</p>
+          <p><strong>Publisher Name:</strong> {publisher?.name || 'N/A'}</p>
+          <p><strong>Articles Count:</strong> {articles?.length || 0}</p>
+          <p><strong>Loading:</strong> {loading ? 'Yes' : 'No'}</p>
+          <p><strong>Error:</strong> {error || 'None'}</p>
+          {articles?.length > 0 && (
+            <div>
+              <strong>Sample Article Dates:</strong>
+              {articles.slice(0, 3).map((article, i) => (
+                <div key={i} className="ml-4">
+                  Article {i + 1}: {JSON.stringify(article.createdAt)} (Type: {typeof article.createdAt})
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Newspaper Header */}
       <div className="border-b-4 border-black">
         <div className="max-w-7xl mx-auto px-8 py-6">
@@ -127,7 +202,7 @@ export default function PublisherArticlesPage() {
             </h1>
             <div className="border-t border-b border-black py-2 mb-4">
               <p className="text-sm tracking-widest" style={{fontFamily: 'Times, "Times New Roman", serif'}}>
-                {getCurrentDate()} • {publisher?.industry || 'News'} • {articles.length} {articles.length === 1 ? 'Article' : 'Articles'}
+                {getCurrentDate()} • {publisher?.industry || 'News'} • {articles?.length || 0} {(articles?.length || 0) === 1 ? 'Article' : 'Articles'}
               </p>
             </div>
             
@@ -136,11 +211,11 @@ export default function PublisherArticlesPage() {
               <div className="flex items-center justify-center space-x-8 text-sm">
                 <div className="flex items-center space-x-2">
                   <Building className="w-4 h-4" />
-                  <span>{publisher.publicationType}</span>
+                  <span>{publisher.publicationType || 'Publication'}</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Users className="w-4 h-4" />
-                  <span>{publisher.audienceType}</span>
+                  <span>{publisher.audienceType || 'General'}</span>
                 </div>
                 {publisher.website && (
                   <div className="flex items-center space-x-2">
@@ -167,109 +242,137 @@ export default function PublisherArticlesPage() {
             {/* Section Header */}
             <div className="border-b-2 border-black mb-6 pb-2">
               <h2 className="text-3xl font-bold" style={{fontFamily: 'Times, "Times New Roman", serif'}}>
-                {articles.length === 0 ? 'No Articles Yet' : 'Latest Articles'}
+                {(!articles || articles.length === 0) ? 'No Articles Yet' : 'Latest Articles'}
               </h2>
             </div>
 
-            {articles.length === 0 ? (
+            {(!articles || articles.length === 0) ? (
               <div className="text-center py-16 border border-gray-400">
                 <FileText className="mx-auto h-16 w-16 text-gray-400 mb-4" />
                 <h3 className="text-2xl font-bold mb-4" style={{fontFamily: 'Times, "Times New Roman", serif'}}>
                   No Articles Published
                 </h3>
-                <p className="text-gray-600 max-w-md mx-auto">
+                <p className="text-gray-600 max-w-md mx-auto mb-4">
                   This publisher's newsroom is ready for content. Check back later for breaking news and updates.
                 </p>
+                <button 
+                  onClick={refreshArticles}
+                  className="bg-black text-white px-6 py-2 text-sm font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors"
+                >
+                  Refresh Articles
+                </button>
               </div>
             ) : (
               <div className="space-y-8">
-                {articles.map((article, index) => (
-                  <article 
-                    key={article.id}
-                    className="border-b border-gray-300 pb-6 last:border-b-0 cursor-pointer hover:bg-gray-50 transition-colors p-4 -m-4 rounded"
-                    onClick={() => handleArticleClick(article)}
-                  >
-                    <div className="flex gap-6">
-                      {/* Article Image */}
-                      {article.imageUrl && (
-                        <div className="flex-shrink-0">
-                          <img
-                            src={article.imageUrl}
-                            alt={article.title}
-                            className="w-32 h-24 object-cover border border-gray-400"
-                          />
-                        </div>
-                      )}
+                {articles.map((article, index) => {
+                  // Debug log for each article
+                  console.log(`Article ${index + 1}:`, {
+                    id: article.id,
+                    title: article.title,
+                    hasContent: !!article.content,
+                    createdAt: article.createdAt,
+                    createdAtType: typeof article.createdAt
+                  });
 
-                      {/* Article Content */}
-                      <div className="flex-1">
-                        {/* Category */}
-                        {article.category && (
-                          <div className="mb-2">
-                            <span className="inline-block bg-black text-white px-2 py-1 text-xs font-bold uppercase tracking-wider">
-                              {article.category}
-                            </span>
+                  return (
+                    <article 
+                      key={article.id}
+                      className="border-b border-gray-300 pb-6 last:border-b-0 cursor-pointer hover:bg-gray-50 transition-colors p-4 -m-4 rounded"
+                      onClick={() => handleArticleClick(article)}
+                    >
+                      <div className="flex gap-6">
+                        {/* Article Image */}
+                        {article.imageUrl && (
+                          <div className="flex-shrink-0">
+                            <img
+                              src={article.imageUrl}
+                              alt={article.title}
+                              className="w-32 h-24 object-cover border border-gray-400"
+                              onError={(e) => {
+                                console.log('Article image failed to load:', article.imageUrl);
+                                e.target.style.display = 'none';
+                              }}
+                            />
                           </div>
                         )}
 
-                        {/* Headline */}
-                        <h3 className="text-2xl font-bold leading-tight mb-3 hover:underline" 
-                            style={{fontFamily: 'Times, "Times New Roman", serif'}}>
-                          {article.title}
-                        </h3>
-                        
-                        {/* Summary */}
-                        {article.summary && (
-                          <p className="text-gray-700 mb-3 leading-relaxed">
-                            {article.summary}
-                          </p>
-                        )}
+                        {/* Article Content */}
+                        <div className="flex-1">
+                          {/* Category */}
+                          {article.category && (
+                            <div className="mb-2">
+                              <span className="inline-block bg-black text-white px-2 py-1 text-xs font-bold uppercase tracking-wider">
+                                {article.category}
+                              </span>
+                            </div>
+                          )}
 
-                        {/* Article Meta */}
-                        <div className="flex items-center space-x-4 text-sm text-gray-600 mb-3">
-                          <div className="flex items-center space-x-1">
-                            <Calendar className="w-4 h-4" />
-                            <span>{formatDate(article.createdAt)}</span>
-                          </div>
+                          {/* Headline */}
+                          <h3 className="text-2xl font-bold leading-tight mb-3 hover:underline" 
+                              style={{fontFamily: 'Times, "Times New Roman", serif'}}>
+                            {article.title}
+                          </h3>
                           
-                          <div className="flex items-center space-x-1">
-                            <Clock className="w-4 h-4" />
-                            <span>{formatReadTime(article.readTime)}</span>
-                          </div>
-                          
-                          {article.views > 0 && (
+                          {/* Summary or Content Preview */}
+                          {(article.summary || article.content) && (
+                            <p className="text-gray-700 mb-3 leading-relaxed">
+                              {article.summary || 
+                               (article.content ? article.content.substring(0, 200) + '...' : 'No preview available')}
+                            </p>
+                          )}
+
+                          {/* Article Meta */}
+                          <div className="flex items-center space-x-4 text-sm text-gray-600 mb-3">
                             <div className="flex items-center space-x-1">
-                              <Eye className="w-4 h-4" />
-                              <span>{article.views} views</span>
+                              <Calendar className="w-4 h-4" />
+                              <span>{formatDate(article.createdAt)}</span>
+                            </div>
+                            
+                            <div className="flex items-center space-x-1">
+                              <Clock className="w-4 h-4" />
+                              <span>{formatReadTime(article.readTime)}</span>
+                            </div>
+                            
+                            {article.views && article.views > 0 && (
+                              <div className="flex items-center space-x-1">
+                                <Eye className="w-4 h-4" />
+                                <span>{article.views} views</span>
+                              </div>
+                            )}
+
+                            {article.author && (
+                              <div className="flex items-center space-x-1">
+                                <span>By {article.author}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Tags */}
+                          {article.tags && article.tags.length > 0 && (
+                            <div className="flex items-center space-x-2">
+                              <Hash className="w-3 h-3 text-gray-400" />
+                              <div className="flex flex-wrap gap-2">
+                                {article.tags.slice(0, 4).map((tag, tagIndex) => (
+                                  <span 
+                                    key={tagIndex}
+                                    className="inline-block bg-gray-200 px-2 py-1 text-xs font-medium uppercase tracking-wider border text-gray-700"
+                                  >
+                                    {tag}
+                                  </span>
+                                ))}
+                                {article.tags.length > 4 && (
+                                  <span className="text-xs text-gray-500 self-center">
+                                    +{article.tags.length - 4} more
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           )}
                         </div>
-
-                        {/* Tags */}
-                        {article.tags && article.tags.length > 0 && (
-                          <div className="flex items-center space-x-2">
-                            <Hash className="w-3 h-3 text-gray-400" />
-                            <div className="flex flex-wrap gap-2">
-                              {article.tags.slice(0, 4).map((tag, tagIndex) => (
-                                <span 
-                                  key={tagIndex}
-                                  className="inline-block bg-gray-200 px-2 py-1 text-xs font-medium uppercase tracking-wider border text-gray-700"
-                                >
-                                  {tag}
-                                </span>
-                              ))}
-                              {article.tags.length > 4 && (
-                                <span className="text-xs text-gray-500 self-center">
-                                  +{article.tags.length - 4} more
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        )}
                       </div>
-                    </div>
-                  </article>
-                ))}
+                    </article>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -290,6 +393,10 @@ export default function PublisherArticlesPage() {
                         src={publisher.logo}
                         alt={`${publisher.name} logo`}
                         className="w-16 h-16 mx-auto rounded border border-gray-400"
+                        onError={(e) => {
+                          console.log('Publisher logo failed to load:', publisher.logo);
+                          e.target.style.display = 'none';
+                        }}
                       />
                     </div>
                   )}
@@ -301,14 +408,21 @@ export default function PublisherArticlesPage() {
                   )}
                   
                   <div className="space-y-2 pt-3 border-t border-gray-300">
-                    <div><strong>Industry:</strong> {publisher.industry}</div>
-                    <div><strong>Type:</strong> {publisher.publicationType}</div>
-                    <div><strong>Audience:</strong> {publisher.audienceType}</div>
+                    <div><strong>Industry:</strong> {publisher.industry || 'Publishing'}</div>
+                    <div><strong>Type:</strong> {publisher.publicationType || 'Publication'}</div>
+                    <div><strong>Audience:</strong> {publisher.audienceType || 'General'}</div>
                     {publisher.website && (
                       <div className="flex items-center space-x-1">
                         <strong>Web:</strong>
                         <Globe className="w-3 h-3" />
-                        <span className="text-xs">{publisher.website.replace(/^https?:\/\//, '')}</span>
+                        <a 
+                          href={publisher.website} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-xs hover:underline break-all"
+                        >
+                          {publisher.website.replace(/^https?:\/\//, '')}
+                        </a>
                       </div>
                     )}
                   </div>
@@ -358,6 +472,29 @@ export default function PublisherArticlesPage() {
               preferredType="skyscraper"
               className="border-2 border-gray-400"
             />
+
+            {/* Recent Articles from this Publisher */}
+            {articles && articles.length > 3 && (
+              <div className="border-2 border-black p-4">
+                <h3 className="text-lg font-bold mb-4 border-b border-black pb-2" style={{fontFamily: 'Times, "Times New Roman", serif'}}>
+                  More from {publisher?.name || 'This Publisher'}
+                </h3>
+                <div className="space-y-3 text-sm">
+                  {articles.slice(3, 7).map((article, index) => (
+                    <div 
+                      key={article.id}
+                      className="border-b border-gray-300 pb-2 cursor-pointer hover:bg-gray-50 p-2 -m-2 rounded"
+                      onClick={() => handleArticleClick(article)}
+                    >
+                      <h4 className="font-bold mb-1 hover:underline">{article.title}</h4>
+                      <p className="text-gray-600 text-xs">
+                        {formatDate(article.createdAt)} • {formatReadTime(article.readTime)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Classified Ads Box */}
             <div className="border-2 border-black p-4">
