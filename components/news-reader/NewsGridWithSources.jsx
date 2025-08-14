@@ -6,7 +6,6 @@
 
 import { useState } from 'react';
 import { timeAgo } from '@/lib/time';
-import NewsCard from '@/components/news-reader/NewsCard';
 import AdSlot from '@/components/news-reader/AdsSlot';
 import RecommendedOverlayBottom from '@/components/news-reader/Overlay';
 import NewsSources from '@/components/news-reader/NewsSources';
@@ -64,39 +63,7 @@ export default function NewsGridWithSources({ articles }) {
 
       {/* Tab Content */}
       {activeTab === 'articles' ? (
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6 px-6 pb-10">
-          {/* MAIN COLUMN */}
-          <div className="space-y-6">
-            {/* 3 columns on large screens */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {unique.map((article, index) => {
-                const isUploadedStory = article.source_id === 'presspass';
-                
-                return (
-                  <NewsCard
-                    key={index}
-                    imageUrl={article.image_url}
-                    publicationName={(article.source_id || 'News').slice(0, 10)}
-                    logoBgColor={isUploadedStory ? "#1f2937" : "#008000"}
-                    author={
-                      Array.isArray(article.creator)
-                        ? article.creator[0]
-                        : article.creator || 'Unknown'
-                    }
-                    time={timeAgo(article.pubDate || article.publishedAt || article.createdAt)}
-                    isUploadedStory={isUploadedStory}
-                    pdfUrl={article.pdfUrl}
-                    link={article.link}
-                    summary={
-                      article.description ||
-                      article.content ||
-                      'No summary available.'
-                    }
-                  />
-                );
-              })}
-            </div>
-          </div>
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6 px-6 pb-10">   
 
           {/* RIGHT SIDEBAR (ads) */}
           <aside className="space-y-6 lg:sticky lg:top-20 h-fit">
