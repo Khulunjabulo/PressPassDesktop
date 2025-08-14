@@ -155,7 +155,7 @@ export default function Monetization() {
                 className={`cursor-pointer rounded-lg border bg-white shadow-sm hover:shadow-lg transition-all ${
                   selectedTemplate === template.id ? "ring-2 ring-blue-500" : ""
                 }`}
-                onClick={() => router.push("/print-media/monetization/advertise/ad-demo-article")}
+                onClick={() => router.push(`/print-media/monetization/advertise/ad-demo-article?templateId=${template.id}`)}
               >
                 <div className="p-4">
                   <div className="text-center mb-3">

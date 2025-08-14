@@ -1,16 +1,33 @@
+"use client";
 import React from "react";
+import { useSearchParams } from "next/navigation";
 
 export default function ArticleWithAds() {
+  const searchParams = useSearchParams();
+  const templateId = searchParams.get("templateId");
+  
+  const isHeadlineTemplate = templateId === "1";
+  const isFeedTemplate = templateId === "2";
+  const isWithinArticleTemplate = templateId === "3";
+  const isPageWrap1Template = templateId === "4";
+  const isPageWrap2Template = templateId === "5";
+
   return (
     <div className="max-w-5xl mx-auto p-6">
       {/* Headline Ad */}
       <div className="w-full border-2 border-dashed border-blue-400 p-4 mb-6 text-center">
-        <h2 className="text-3xl font-bold text-blue-600">HEADLINE</h2>
-        <p>300w x 250h(px)</p>
-        <p>100kb: JPEG, PNG, HTML</p>
-        <button className="mt-2 bg-blue-500 text-white px-4 py-2 rounded">
-          Payment Link
-        </button>
+        {isHeadlineTemplate ? (
+          <h2 className="text-3xl font-bold text-blue-600">Your Ad Here</h2>
+        ) : (
+          <>
+            <h2 className="text-3xl font-bold text-blue-600">HEADLINE</h2>
+            <p>300w x 250h(px)</p>
+            <p>100kb: JPEG, PNG, HTML</p>
+            <button className="mt-2 bg-blue-500 text-white px-4 py-2 rounded">
+              Payment Link
+            </button>
+          </>
+        )}
       </div>
 
       {/* Article Section */}
@@ -29,12 +46,18 @@ export default function ArticleWithAds() {
 
           {/* Within Article Ad */}
           <div className="w-full border-2 border-dashed border-blue-400 p-4 my-6 text-center">
-            <h2 className="text-2xl font-bold text-blue-600">WITHIN ARTICLE</h2>
-            <p>300w x 250h(px)</p>
-            <p>100kb: JPEG, PNG, HTML</p>
-            <button className="mt-2 bg-blue-500 text-white px-4 py-2 rounded">
-              Payment Link
-            </button>
+            {isWithinArticleTemplate ? (
+              <h2 className="text-2xl font-bold text-blue-600">Your Ad Here</h2>
+            ) : (
+              <>
+                <h2 className="text-2xl font-bold text-blue-600">WITHIN ARTICLE</h2>
+                <p>300w x 250h(px)</p>
+                <p>100kb: JPEG, PNG, HTML</p>
+                <button className="mt-2 bg-blue-500 text-white px-4 py-2 rounded">
+                  Payment Link
+                </button>
+              </>
+            )}
           </div>
 
           <p className="mb-4">
@@ -54,27 +77,46 @@ export default function ArticleWithAds() {
         <div className="flex flex-col space-y-6">
           {/* Feed Ad */}
           <div className="border-2 border-dashed border-blue-400 p-4 text-center">
-            <h2 className="text-xl font-bold text-blue-600">FEED</h2>
-            <p>250w x 250h(px)</p>
-            <p>100kb JPEG, PNG, HTML</p>
-            <p>Publisher to Quote</p>
-            <button className="mt-2 bg-blue-500 text-white px-4 py-2 rounded">
-              Payment Link
-            </button>
+            {isFeedTemplate ? (
+              <h2 className="text-xl font-bold text-blue-600">Your Ad Here</h2>
+            ) : (
+              <>
+                <h2 className="text-xl font-bold text-blue-600">FEED</h2>
+                <p>250w x 250h(px)</p>
+                <p>100kb JPEG, PNG, HTML</p>
+                <p>Publisher to Quote</p>
+                <button className="mt-2 bg-blue-500 text-white px-4 py-2 rounded">
+                  Payment Link
+                </button>
+              </>
+            )}
           </div>
 
           {/* Page Wrap 2 */}
           <div className="border-2 border-dashed border-blue-400 p-4 text-center">
-            <h2 className="text-xl font-bold text-blue-600">PAGE WRAP 2</h2>
-            <p>200w x 200h(px)</p>
-            <p>100kb JPEG, PNG, HTML</p>
-            <p>Publisher to Quote</p>
-            <button className="mt-2 bg-blue-500 text-white px-4 py-2 rounded">
-              Payment Link
-            </button>
+            {isPageWrap2Template ? (
+              <h2 className="text-xl font-bold text-blue-600">Your Ad Here</h2>
+            ) : (
+              <>
+                <h2 className="text-xl font-bold text-blue-600">PAGE WRAP 2</h2>
+                <p>200w x 200h(px)</p>
+                <p>100kb JPEG, PNG, HTML</p>
+                <p>Publisher to Quote</p>
+                <button className="mt-2 bg-blue-500 text-white px-4 py-2 rounded">
+                  Payment Link
+                </button>
+              </>
+            )}
           </div>
         </div>
       </article>
+
+      {/* Page Wrap 1 Ad */}
+      {isPageWrap1Template && (
+        <div className="w-full border-2 border-dashed border-blue-400 p-4 mt-8 text-center">
+          <h2 className="text-2xl font-bold text-blue-600">Your Ad Here</h2>
+        </div>
+      )}
 
       {/* Footer Ad */}
       <div className="w-full border-2 border-dashed border-blue-400 p-4 mt-8 text-center">
