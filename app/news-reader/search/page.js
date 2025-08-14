@@ -1,24 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getPublications } from '@/lib/fetchNews';
 import Link from 'next/link';
 
-export default function SearchPage() {
-  const [publications, setPublications] = useState([]);
+export default function SearchPage({ publications }) {
   const [query, setQuery] = useState('');
   const [filtered, setFiltered] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  // Fetch publications once
-  useEffect(() => {
-    async function fetchData() {
-      const pubs = await getPublications();
-      setPublications(pubs);
-      setLoading(false);
-    }
-    fetchData();
-  }, []);
 
   // Filter as user types
   useEffect(() => {
@@ -44,7 +31,7 @@ export default function SearchPage() {
           : 'Type to search for publications'}
       </p>
 
-      {/* Input field (live search) */}
+      {/* Input field */}
       <input
         type="text"
         value={query}
@@ -55,7 +42,7 @@ export default function SearchPage() {
       />
 
       {/* Default intro when nothing typed */}
-      {!query && !loading && (
+      {!query && (
         <div className="text-center py-16 text-sm">
           <h2 className="text-4xl font-bold">
             FIND YOUR LOCAL COMMUNITY NEWSPAPER,
