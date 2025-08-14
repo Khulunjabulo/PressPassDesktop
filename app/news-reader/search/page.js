@@ -6,18 +6,30 @@ import Link from 'next/link';
 export default function SearchPage({ publications }) {
   const [query, setQuery] = useState('');
   const [filtered, setFiltered] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  // Filter as user types
   useEffect(() => {
     if (query.trim()) {
-      const lowerQ = query.toLowerCase();
-      setFiltered(
-        publications.filter(pub =>
-          pub.source_id.toLowerCase().includes(lowerQ)
-        )
-      );
+      // Show skeleton while "fetching"
+      setLoading(true);
+
+      // Simulate a fetch delay
+      const timer = setTimeout(() => {
+        const lowerQ = query.toLowerCase();
+        setFiltered(
+          (publications || []).filter(
+            (pub) =>
+              pub.source_id?.toLowerCase().includes(lowerQ) ||
+              pub.publisherId?.toLowerCase().includes(lowerQ)
+          )
+        );
+        setLoading(false); // hide skeleton when results are ready
+      }, 500); // 500ms delay to simulate loading
+
+      return () => clearTimeout(timer);
     } else {
       setFiltered([]);
+      setLoading(false); // no skeleton if input is empty
     }
   }, [query, publications]);
 
@@ -26,9 +38,7 @@ export default function SearchPage({ publications }) {
       {/* Heading */}
       <h2 className="text-4xl font-bold">Search</h2>
       <p className="text-gray-500">
-        {query
-          ? `Results for: ${query}`
-          : 'Type to search for publications'}
+        {query ? `Results for: ${query}` : 'Type to search for publications'}
       </p>
 
       {/* Input field */}
@@ -53,8 +63,26 @@ export default function SearchPage({ publications }) {
         </div>
       )}
 
+      {/* Skeleton Loader ONLY after typing starts */}
+      {loading && query && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div
+              key={i}
+              className="border rounded-lg overflow-hidden animate-pulse"
+            >
+              <div className="w-full h-48 bg-gray-300"></div>
+              <div className="p-4 space-y-2">
+                <div className="h-4 bg-gray-300 rounded w-3/4"></div>
+                <div className="h-3 bg-gray-300 rounded w-1/2"></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Autocomplete results */}
-      {query && (
+      {!loading && query && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4">
           {filtered.length > 0 ? (
             filtered.map((pub, idx) => (
