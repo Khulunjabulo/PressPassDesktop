@@ -3,10 +3,12 @@ import { useState } from "react";
 import Header from "@/components/UI/header";
 import { FileText, Users, Megaphone, LayoutDashboard } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/UI/Button";
 import AdUploadOverlay from "@/components/AdUploadOverlay";
 
 export default function Monetization() {
+  const router = useRouter();
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [isUploadOverlayOpen, setIsUploadOverlayOpen] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState(null);
@@ -153,7 +155,7 @@ export default function Monetization() {
                 className={`cursor-pointer rounded-lg border bg-white shadow-sm hover:shadow-lg transition-all ${
                   selectedTemplate === template.id ? "ring-2 ring-blue-500" : ""
                 }`}
-                onClick={() => setSelectedTemplate(template.id)}
+                onClick={() => router.push(`/print-media/monetization/advertise/ad-demo-article?templateId=${template.id}`)}
               >
                 <div className="p-4">
                   <div className="text-center mb-3">
