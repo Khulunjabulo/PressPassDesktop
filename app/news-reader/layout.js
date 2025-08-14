@@ -1,12 +1,16 @@
+'use client'
+
 import NewsReaderFooter from "@/components/news-reader/NewsReaderFooter"
 import NewsReaderHeader from "@/components/news-reader/NewsReaderHeader"
 
-export default function NewsReaderLayout({ children }) {
+function NewsReaderLayout({ children }) {
   return (
     <div className="min-h-screen flex flex-col">
-      <NewsReaderHeader/>     
+      <NewsReaderHeader/>
       <main className="flex-grow">{children}</main>
       <NewsReaderFooter/>
     </div>
   )
 }
+
+export default NewsReaderLayout;

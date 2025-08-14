@@ -1,4 +1,5 @@
 import Link from "next/link"
+import Image from "next/image"
 
 
 export function PublisherSidebar() {
@@ -27,8 +28,14 @@ export function PublisherSidebar() {
         </div>
       </div>
       <Link href="/">
-        <button variant="outline" className="w-full bg-transparent">
-          Back to Press Pass Home
+        <button variant="outline" className="w-full bg-transparent flex justify-center">
+          <Image
+            src="\press-pass.png"
+            alt="PressPass Logo"
+            width={120}
+            height={40}
+            className="object-contain"
+          />
         </button>
       </Link>
     </aside>
