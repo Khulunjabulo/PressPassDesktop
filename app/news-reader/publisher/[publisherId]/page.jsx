@@ -163,7 +163,7 @@ export default function PublisherArticlesPage() {
   return (
     <div className="min-h-screen bg-white">
       {/* Development Debug Info */}
-      {process.env.NODE_ENV === 'development' && (
+      {/* {process.env.NODE_ENV === 'development' && (
         <div className="bg-yellow-50 border border-yellow-200 p-4 m-4 rounded text-xs">
           <h4 className="font-bold mb-2">🐛 Publisher Page Debug Info:</h4>
           <p><strong>Publisher ID:</strong> {params.publisherId}</p>
@@ -182,7 +182,7 @@ export default function PublisherArticlesPage() {
             </div>
           )}
         </div>
-      )}
+      )} */}
 
       {/* Newspaper Header */}
       <div className="border-b-4 border-black">
