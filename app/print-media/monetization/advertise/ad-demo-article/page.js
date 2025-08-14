@@ -7,9 +7,9 @@ export default function ArticleWithAds() {
   const templateId = searchParams.get("templateId");
   
   const isHeadlineTemplate = templateId === "1";
-  const isFeedTemplate = templateId === "2";
-  const isWithinArticleTemplate = templateId === "3";
-  const isPageWrap1Template = templateId === "4";
+  const isFeedTemplate = templateId === "4";
+  const isWithinArticleTemplate = templateId === "2";
+  const isPageWrap1Template = templateId === "3";
   const isPageWrap2Template = templateId === "5";
 
   return (
