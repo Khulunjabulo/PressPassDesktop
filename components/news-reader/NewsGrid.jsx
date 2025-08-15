@@ -7,6 +7,7 @@ import AdSlot from '@/components/news-reader/AdsSlot';
 import RecommendedOverlayBottom from '@/components/news-reader/Overlay';
 import { Card, CardContent } from '@/components/ui/newscard';
 import { FileText, Clock, Globe, Building, Users, ArrowRight, Plus } from 'lucide-react';
+import PublisherFavoriteButton from '@/components/PublisherFavoriteButton'; // Add this import
 
 function dedupeArticles(articles = []) {
   const seen = new Set();
@@ -217,15 +218,15 @@ export default function NewsGrid({ articles }) {
                           </div>
                         </div>
                       </div>
+                      
+                      {/* FIXED: Replace the disabled button with PublisherFavoriteButton */}
                       <div className="mt-3">
-  <button 
-    type="button" 
-    className="p-2 rounded-full bg-gray-100 hover:bg-red-100 transition-colors"
-    disabled
-  >
-    <Heart className="w-5 h-5 text-red-500" />
-  </button>
-</div> 
+                        <PublisherFavoriteButton 
+                          publisher={source}
+                          size="default"
+                          showText={false}
+                        />
+                      </div>
 
                       {/* Status Indicator */}
                       <div className="mt-3 pt-2 border-t border-gray-100">
