@@ -6,12 +6,15 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/UI/Button";
 import AdUploadOverlay from "@/components/AdUploadOverlay";
+import SubmitConfirmationOverlay from "@/components/SubmitConfirmationOverlay";
 
 export default function Monetization() {
   const router = useRouter();
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [isUploadOverlayOpen, setIsUploadOverlayOpen] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState(null);
+const [isSubmitOverlayOpen, setIsSubmitOverlayOpen] = useState(false);
+  const [selectedTemplateForSubmit, setSelectedTemplateForSubmit] = useState(null);
 
   const templates = [
     {
@@ -86,15 +89,32 @@ export default function Monetization() {
   };
 
   const handleSubmit = (template) => {
+// Set the selected template for submission
+    setSelectedTemplateForSubmit(template);
+    // Open the submit confirmation overlay
+    setIsSubmitOverlayOpen(true);
     // This is where you would implement the submit logic
     console.log("Submitting template:", template);
+  };
+const handleConfirmSubmit = async (template) => {
+    // This is where you would implement the actual submit logic
+    console.log("Submitting template:", template);
+    // For now, we'll just simulate a successful submission
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        console.log("Template submitted successfully!");
+        // Close the overlay
+        setIsSubmitOverlayOpen(false);
+        resolve();
+      }, 1000);
+    });
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <Header />
-
+      <h1 className="text-center text-xl font bold">Click on any of the templates to see where to place your ad!</h1>
       {/* Body Layout: Sidebar under header */}
       <div className="flex">
         {/* Sidebar */}
@@ -292,6 +312,11 @@ export default function Monetization() {
         isOpen={isUploadOverlayOpen}
         onClose={() => setIsUploadOverlayOpen(false)}
         onUpload={handleUpload}
+      />
+<SubmitConfirmationOverlay
+        isOpen={isSubmitOverlayOpen}
+        onClose={() => setIsSubmitOverlayOpen(false)}
+        onSubmit={() => handleConfirmSubmit(selectedTemplateForSubmit)}
       />
     </div>
   );
