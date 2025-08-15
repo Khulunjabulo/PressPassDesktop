@@ -1,4 +1,4 @@
-// pages/publisher.jsx (or wherever your publisher page is located)
+
 "use client";
 
 import { useState } from 'react';
