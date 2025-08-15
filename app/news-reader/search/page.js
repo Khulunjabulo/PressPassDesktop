@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { CardContent } from '@/components/UI/Cards';
 import { ArrowRight, FileText, Plus, Users, Globe, Clock, Heart } from 'lucide-react';
 import { useNewsSources } from '@/hooks/useNewsSources';
@@ -9,21 +10,26 @@ export default function SearchPage() {
   const { newsources, loading: sourcesLoading, error } = useNewsSources();
   const [query, setQuery] = useState('');
   const [filtered, setFiltered] = useState([]);
+  const router = useRouter();
 
   useEffect(() => {
     if (!query.trim()) {
       setFiltered([]);
       return;
     }
-
     const lowerQ = query.toLowerCase();
-    const matches = newsources.filter(source =>
-      source.name.toLowerCase().includes(lowerQ) ||
-      source.source_id?.toLowerCase().includes(lowerQ)
+    const matches = newsources.filter(
+      source =>
+        source.name.toLowerCase().includes(lowerQ) ||
+        source.source_id?.toLowerCase().includes(lowerQ)
     );
-
     setFiltered(matches);
   }, [query, newsources]);
+
+  const handleSourceClick = (source) => {
+    // Navigate to publisher's page (same as teammate's logic)
+    router.push(`/news-reader/publisher/${source.id}`);
+  };
 
   return (
     <div className="py-8 text-center space-y-4">
@@ -46,12 +52,8 @@ export default function SearchPage() {
       {/* Default intro when nothing typed */}
       {!query && (
         <div className="text-center py-16 text-sm space-y-2">
-          <h2 className="text-4xl font-bold">
-            FIND YOUR LOCAL COMMUNITY NEWSPAPER,
-          </h2>
-          <h2 className="text-4xl font-bold">
-            MAGAZINE AND PUBLICATIONS.
-          </h2>
+          <h2 className="text-4xl font-bold"> FIND YOUR LOCAL COMMUNITY NEWSPAPER, </h2>
+          <h2 className="text-4xl font-bold"> MAGAZINE AND PUBLICATIONS. </h2>
         </div>
       )}
 
@@ -64,49 +66,48 @@ export default function SearchPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4">
           {filtered.length > 0 ? (
             filtered.map((source, idx) => (
-            <CardContent
-              key={idx}
-              className="p-4 border rounded-lg hover:shadow-lg transition flex items-start justify-between"
-            >
-              {/* Left side: Image and Name */}
-              <div className="flex items-center space-x-3">
-                {/* Publication Image */}
-                <div className="flex-shrink-0 w-20 h-20 my-2">
-                  {source.logo ? (
-                    <img
-                      src={source.logo}
-                      alt={`${source.name} logo`}
-                      className="w-full h-full rounded-lg object-cover border border-gray-200"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br bg-[#329ae1] rounded-lg flex items-center justify-center">
-                      <span className="text-white font-semibold text-2xl">
-                        {source.name.charAt(0)}
-                      </span>
-                    </div>
-                  )}
+              <CardContent
+                key={idx}
+                className="p-4 border rounded-lg hover:shadow-lg transition flex items-start justify-between cursor-pointer"
+                onClick={() => handleSourceClick(source)}
+              >
+                {/* Left side: Image and Name */}
+                <div className="flex items-center space-x-3">
+                  {/* Publication Image */}
+                  <div className="flex-shrink-0 w-20 h-20 my-2">
+                    {source.logo ? (
+                      <img
+                        src={source.logo}
+                        alt={`${source.name} logo`}
+                        className="w-full h-full rounded-lg object-cover border border-gray-200"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br bg-[#329ae1] rounded-lg flex items-center justify-center">
+                        <span className="text-white font-semibold text-2xl">
+                          {source.name.charAt(0)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  {/* Name */}
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-gray-900 truncate">
+                      {source.name}
+                    </h3>
+                  </div>
                 </div>
 
-                {/* Name */}
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-900 truncate">{source.name}</h3>
+                {/* Favorite Button */}
+                <div className="self-end">
+                  <button
+                    type="button"
+                    className="p-2 rounded-full bg-gray-100 hover:bg-red-100 transition-colors"
+                    disabled
+                  >
+                    <Heart className="w-5 h-5 text-red-500" />
+                  </button>
                 </div>
-              </div>
-
-              {/* Favorite Button: aligned with image */}
-              <div className="self-end">
-                <button
-                  type="button"
-                  className="p-2 rounded-full bg-gray-100 hover:bg-red-100 transition-colors"
-                  disabled
-                >
-                  <Heart className="w-5 h-5 text-red-500" />
-                </button>
-              </div>
-            </CardContent>
-
-
-
+              </CardContent>
             ))
           ) : (
             <p className="text-center col-span-full">No results found.</p>
