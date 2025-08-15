@@ -1,37 +1,35 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { CardContent } from '@/components/UI/Cards';
+import { ArrowRight, FileText, Plus, Users, Globe, Clock, Heart } from 'lucide-react';
+import { useNewsSources } from '@/hooks/useNewsSources';
 
-export default function SearchPage({ publications }) {
+export default function SearchPage() {
+  const { newsources, loading: sourcesLoading, error } = useNewsSources();
   const [query, setQuery] = useState('');
   const [filtered, setFiltered] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
-    if (query.trim()) {
-      // Show skeleton while "fetching"
-      setLoading(true);
-
-      // Simulate a fetch delay
-      const timer = setTimeout(() => {
-        const lowerQ = query.toLowerCase();
-        setFiltered(
-          (publications || []).filter(
-            (pub) =>
-              pub.source_id?.toLowerCase().includes(lowerQ) ||
-              pub.publisherId?.toLowerCase().includes(lowerQ)
-          )
-        );
-        setLoading(false); // hide skeleton when results are ready
-      }, 500); // 500ms delay to simulate loading
-
-      return () => clearTimeout(timer);
-    } else {
+    if (!query.trim()) {
       setFiltered([]);
-      setLoading(false); // no skeleton if input is empty
+      return;
     }
-  }, [query, publications]);
+    const lowerQ = query.toLowerCase();
+    const matches = newsources.filter(
+      source =>
+        source.name.toLowerCase().includes(lowerQ) ||
+        source.source_id?.toLowerCase().includes(lowerQ)
+    );
+    setFiltered(matches);
+  }, [query, newsources]);
+
+  const handleSourceClick = (source) => {
+    // Navigate to publisher's page (same as teammate's logic)
+    router.push(`/news-reader/publisher/${source.id}`);
+  };
 
   return (
     <div className="py-8 text-center space-y-4">
@@ -45,7 +43,7 @@ export default function SearchPage({ publications }) {
       <input
         type="text"
         value={query}
-        onChange={(e) => setQuery(e.target.value)}
+        onChange={e => setQuery(e.target.value)}
         placeholder="Search publications..."
         className="w-full max-w-md border rounded px-4 py-2"
         autoFocus
@@ -53,56 +51,63 @@ export default function SearchPage({ publications }) {
 
       {/* Default intro when nothing typed */}
       {!query && (
-        <div className="text-center py-16 text-sm">
-          <h2 className="text-4xl font-bold">
-            FIND YOUR LOCAL COMMUNITY NEWSPAPER,
-          </h2>
-          <h2 className="text-4xl font-bold">
-            MAGAZINE AND PUBLICATIONS.
-          </h2>
+        <div className="text-center py-16 text-sm space-y-2">
+          <h2 className="text-4xl font-bold"> FIND YOUR LOCAL COMMUNITY NEWSPAPER, </h2>
+          <h2 className="text-4xl font-bold"> MAGAZINE AND PUBLICATIONS. </h2>
         </div>
       )}
 
-      {/* Skeleton Loader ONLY after typing starts */}
-      {loading && query && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div
-              key={i}
-              className="border rounded-lg overflow-hidden animate-pulse"
-            >
-              <div className="w-full h-48 bg-gray-300"></div>
-              <div className="p-4 space-y-2">
-                <div className="h-4 bg-gray-300 rounded w-3/4"></div>
-                <div className="h-3 bg-gray-300 rounded w-1/2"></div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      {/* Loading & error messages */}
+      {sourcesLoading && <p className="text-gray-500 mt-4">Loading news sources...</p>}
+      {error && <p className="text-red-500 mt-4">{error}</p>}
 
-      {/* Autocomplete results */}
-      {!loading && query && (
+      {/* Show filtered results when user types */}
+      {!sourcesLoading && query && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4">
           {filtered.length > 0 ? (
-            filtered.map((pub, idx) => (
-              <Link
-                href={`/news-reader/${pub.source_id}`}
+            filtered.map((source, idx) => (
+              <CardContent
                 key={idx}
-                className="border rounded-lg overflow-hidden hover:shadow-lg transition"
+                className="p-4 border rounded-lg hover:shadow-lg transition flex items-start justify-between cursor-pointer"
+                onClick={() => handleSourceClick(source)}
               >
-                <img
-                  src={pub.image_url}
-                  alt={pub.source_id}
-                  className="w-full h-48 object-cover"
-                />
-                <div className="p-4 flex justify-between items-center">
-                  <span className="font-semibold">{pub.source_id}</span>
-                  <button className="px-3 py-1 text-sm bg-yellow-400 rounded hover:bg-yellow-500">
-                    ★ Fav
+                {/* Left side: Image and Name */}
+                <div className="flex items-center space-x-3">
+                  {/* Publication Image */}
+                  <div className="flex-shrink-0 w-20 h-20 my-2">
+                    {source.logo ? (
+                      <img
+                        src={source.logo}
+                        alt={`${source.name} logo`}
+                        className="w-full h-full rounded-lg object-cover border border-gray-200"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br bg-[#329ae1] rounded-lg flex items-center justify-center">
+                        <span className="text-white font-semibold text-2xl">
+                          {source.name.charAt(0)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  {/* Name */}
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-gray-900 truncate">
+                      {source.name}
+                    </h3>
+                  </div>
+                </div>
+
+                {/* Favorite Button */}
+                <div className="self-end">
+                  <button
+                    type="button"
+                    className="p-2 rounded-full bg-gray-100 hover:bg-red-100 transition-colors"
+                    disabled
+                  >
+                    <Heart className="w-5 h-5 text-red-500" />
                   </button>
                 </div>
-              </Link>
+              </CardContent>
             ))
           ) : (
             <p className="text-center col-span-full">No results found.</p>

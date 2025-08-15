@@ -3,13 +3,18 @@ import { useState } from "react";
 import Header from "@/components/UI/header";
 import { FileText, Users, Megaphone, LayoutDashboard } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/UI/Button";
 import AdUploadOverlay from "@/components/AdUploadOverlay";
+import SubmitConfirmationOverlay from "@/components/SubmitConfirmationOverlay";
 
 export default function Monetization() {
+  const router = useRouter();
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [isUploadOverlayOpen, setIsUploadOverlayOpen] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState(null);
+const [isSubmitOverlayOpen, setIsSubmitOverlayOpen] = useState(false);
+  const [selectedTemplateForSubmit, setSelectedTemplateForSubmit] = useState(null);
 
   const templates = [
     {
@@ -84,15 +89,32 @@ export default function Monetization() {
   };
 
   const handleSubmit = (template) => {
+// Set the selected template for submission
+    setSelectedTemplateForSubmit(template);
+    // Open the submit confirmation overlay
+    setIsSubmitOverlayOpen(true);
     // This is where you would implement the submit logic
     console.log("Submitting template:", template);
+  };
+const handleConfirmSubmit = async (template) => {
+    // This is where you would implement the actual submit logic
+    console.log("Submitting template:", template);
+    // For now, we'll just simulate a successful submission
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        console.log("Template submitted successfully!");
+        // Close the overlay
+        setIsSubmitOverlayOpen(false);
+        resolve();
+      }, 1000);
+    });
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <Header />
-
+      <h1 className="text-center text-xl font bold">Click on any of the templates to see where to place your ad!</h1>
       {/* Body Layout: Sidebar under header */}
       <div className="flex">
         {/* Sidebar */}
@@ -153,7 +175,7 @@ export default function Monetization() {
                 className={`cursor-pointer rounded-lg border bg-white shadow-sm hover:shadow-lg transition-all ${
                   selectedTemplate === template.id ? "ring-2 ring-blue-500" : ""
                 }`}
-                onClick={() => setSelectedTemplate(template.id)}
+                onClick={() => router.push(`/print-media/monetization/advertise/ad-demo-article?templateId=${template.id}`)}
               >
                 <div className="p-4">
                   <div className="text-center mb-3">
@@ -290,6 +312,11 @@ export default function Monetization() {
         isOpen={isUploadOverlayOpen}
         onClose={() => setIsUploadOverlayOpen(false)}
         onUpload={handleUpload}
+      />
+<SubmitConfirmationOverlay
+        isOpen={isSubmitOverlayOpen}
+        onClose={() => setIsSubmitOverlayOpen(false)}
+        onSubmit={() => handleConfirmSubmit(selectedTemplateForSubmit)}
       />
     </div>
   );
