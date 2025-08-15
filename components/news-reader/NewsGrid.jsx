@@ -139,108 +139,111 @@ export default function NewsGrid({ articles }) {
                     className="hover:shadow-lg hover:scale-[1.02] transition-all duration-200 cursor-pointer border-0 shadow-sm bg-white"
                     onClick={() => handleSourceClick(source)}
                   >
-                    <CardContent className="p-4">
-                      <div className="flex items-start space-x-3">
-                        {/* Logo */}
-                        <div className="flex-shrink-0">
-                          {source.logo ? (
-                            <img
-                              src={source.logo}
-                              alt={`${source.name} logo`}
-                              className="w-8 h-8 rounded-lg object-cover border border-gray-200"
-                            />
-                          ) : (
-                            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
-                              <span className="text-white font-semibold text-xs">
-                                {source.name.charAt(0)}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                        
-                        {/* Content */}
-                        <div className="flex-1 min-w-0">
-                          {/* Source Name with Arrow */}
-                          <div className="flex items-center justify-between mb-1">
-                            <h3 className="text-sm font-semibold text-gray-900 truncate">
-                              {source.name}
-                            </h3>
-                            <ArrowRight className="w-3 h-3 text-gray-400 flex-shrink-0" />
-                          </div>
-                          
-                          {/* Industry Badge */}
-                          <div className="mb-2">
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                              {source.industry}
-                            </span>
-                          </div>
-                          
-                          {/* Article Count with New Badge */}
-                          <div className="flex items-center space-x-2 mb-1">
-                            <div className="flex items-center space-x-1">
-                              <FileText className="w-3 h-3 text-blue-600" />
-                              <span className="text-xs font-medium text-gray-700">
-                                {source.articleCount} {source.articleCount === 1 ? 'post' : 'posts'}
-                              </span>
-                            </div>
-                            {!source.hasArticles && (
-                              <div className="flex items-center space-x-1">
-                                <Plus className="w-2 h-2 text-orange-500" />
-                                <span className="text-xs text-orange-600 font-medium">New</span>
-                              </div>
-                            )}
-                          </div>
-                          
-                          {/* Publication Type */}
-                          <div className="flex items-center space-x-1 mb-1">
-                            <Users className="w-3 h-3 text-gray-500" />
-                            <span className="text-xs text-gray-600 capitalize truncate">
-                              {source.publicationType}
-                            </span>
-                          </div>
-                          
-                          {/* Website */}
-                          {source.website && (
-                            <div className="flex items-center space-x-1 mb-1">
-                              <Globe className="w-3 h-3 text-gray-500" />
-                              <span className="text-xs text-gray-600 truncate">
-                                {source.website.replace(/^https?:\/\//, '')}
-                              </span>
-                            </div>
-                          )}
-                          
-                          {/* Last Posted with Status Color */}
-                          <div className="flex items-center space-x-1">
-                            <Clock className="w-3 h-3 text-gray-500" />
-                            <span className={`text-xs ${source.hasArticles ? 'text-gray-500' : 'text-green-600 font-medium'}`}>
-                              {source.lastPosted === '--' ? 'Ready' : (source.hasArticles ? `Last: ${source.lastPosted}` : source.lastPosted)}
-                            </span>
-                          </div>
-                        </div>
+              <CardContent className="p-4">
+                <div className="flex items-start space-x-3">
+                  {/* Logo */}
+                  <div className="flex-shrink-0 w-30 h-30 my-2">
+                    {source.logo ? (
+                      <img
+                        src={source.logo}
+                        alt={`${source.name} logo`}
+                        className="w-full h-full rounded-lg object-cover border border-gray-200"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br bg-[#329ae1] rounded-lg flex items-center justify-center">
+                        <span className="text-white font-semibold text-xl">
+                          {source.name.charAt(0)}
+                        </span>
                       </div>
-                      
-                      {/* FIXED: Replace the disabled button with PublisherFavoriteButton */}
-                      <div className="mt-3">
-                        <PublisherFavoriteButton 
-                          publisher={source}
-                          size="default"
-                          showText={false}
-                        />
-                      </div>
+                    )}
+                  </div>
 
-                      {/* Status Indicator */}
-                      <div className="mt-3 pt-2 border-t border-gray-100">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-gray-400">Folder</span>
-                          <div className="flex items-center space-x-1">
-                            <div className={`w-1.5 h-1.5 rounded-full ${source.hasArticles ? 'bg-green-400' : 'bg-yellow-400'}`}></div>
-                            <span className="text-xs text-gray-500">
-                              {source.hasArticles ? 'Active' : 'Ready'}
-                            </span>
-                          </div>
-                        </div>
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    {/* Source Name with Arrow */}
+                    <div className="flex items-center justify-between mb-1">
+                      <h3 className="text-sm font-semibold text-gray-900 truncate">
+                        {source.name}
+                      </h3>
+                      <ArrowRight className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                    </div>
+
+                    {/* Industry Badge */}
+                    <div className="mb-2">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        {source.industry}
+                      </span>
+                    </div>
+
+                    {/* Article Count with New Badge */}
+                    <div className="flex items-center space-x-2 mb-1">
+                      <div className="flex items-center space-x-1">
+                        <FileText className="w-3 h-3 text-blue-600" />
+                        <span className="text-xs font-medium text-gray-700">
+                          {source.articleCount} {source.articleCount === 1 ? 'post' : 'posts'}
+                        </span>
                       </div>
-                    </CardContent>
+                      {!source.hasArticles && (
+                        <div className="flex items-center space-x-1">
+                          <Plus className="w-2 h-2 text-orange-500" />
+                          <span className="text-xs text-orange-600 font-medium">New</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Publication Type */}
+                    <div className="flex items-center space-x-1 mb-1">
+                      <Users className="w-3 h-3 text-gray-500" />
+                      <span className="text-xs text-gray-600 capitalize truncate">
+                        {source.publicationType}
+                      </span>
+                    </div>
+
+                    {/* Website */}
+                    {source.website && (
+                      <div className="flex items-center space-x-1 mb-1">
+                        <Globe className="w-3 h-3 text-gray-500" />
+                        <span className="text-xs text-gray-600 truncate">
+                          {source.website.replace(/^https?:\/\//, '')}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Last Posted with Status Color */}
+                    <div className="flex items-center space-x-1">
+                      <Clock className="w-3 h-3 text-gray-500" />
+                      <span className={`text-xs ${source.hasArticles ? 'text-gray-500' : 'text-green-600 font-medium'}`}>
+                        {source.lastPosted === '--' ? 'Ready' : (source.hasArticles ? `Last: ${source.lastPosted}` : source.lastPosted)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Favorite Button */}
+                <div className="mt-3 flex justify-end">
+                  <button
+                    type="button"
+                    className="p-2 rounded-full bg-gray-100 hover:bg-red-100 transition-colors"
+                    disabled
+                  >
+                    <Heart className="w-5 h-5 text-red-500" />
+                  </button>
+                </div>
+
+                {/* Status Indicator */}
+                <div className="mt-3 pt-2 border-t border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-400">Folder</span>
+                    <div className="flex items-center space-x-1">
+                      <div className={`w-1.5 h-1.5 rounded-full ${source.hasArticles ? 'bg-green-400' : 'bg-yellow-400'}`}></div>
+                      <span className="text-xs text-gray-500">
+                        {source.hasArticles ? 'Active' : 'Ready'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+
                   </Card>
                 ))}
               </div>

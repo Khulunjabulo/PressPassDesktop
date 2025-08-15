@@ -44,9 +44,9 @@ const pieData = [
  */
 function WeeklyPerformanceChart() {
   return (
-    <div className="col-span-2 bg-white p-4 rounded-xl shadow">
-      <h2 className="font-semibold mb-2 text-sm">Weekly Performance</h2>
-      <div className="h-40 bg-purple-100 rounded-xl flex items-center justify-center text-purple-600 font-bold">
+    <div className="col-span-2 bg-white p-2 rounded-xl shadow">
+      <h2 className="font-semibold mb-8 text-sm">Weekly Performance</h2>
+      <div className="h-50 bg-purple-100 rounded-xl flex items-center justify-center text-purple-600 font-bold">
         <ResponsiveContainer width="100%" height={200}>
           <AreaChart data={weeklyData}>
             <XAxis dataKey="day" />
@@ -104,11 +104,11 @@ function RevenueDistributionChart() {
 function RevenueLegend() {
   return (
     <div className="flex items-center bg-white p-4 rounded-xl shadow">
-      <ul className="mt-4 space-y-1 text-sm">
-        <li><span className="inline-block w-3 h-3 bg-[#9C27B0] mr-2 rounded-full"></span>KZN (45%)</li>
-        <li><span className="inline-block w-3 h-3 bg-[#03A9F4] mr-2 rounded-full"></span>Cape Town (30%)</li>
-        <li><span className="inline-block w-3 h-3 bg-[#FFC107] mr-2 rounded-full"></span>North West (10%)</li>
-        <li><span className="inline-block w-3 h-3 bg-[#4CAF50] mr-2 rounded-full"></span>Gauteng (15%)</li>
+      <ul className="mt-5 space-y-4 text-m">
+        <li><span className="inline-block w-5 h-5 bg-[#9C27B0] mr-4 rounded-full"></span>KZN (45%)</li>
+        <li><span className="inline-block w-5 h-5 bg-[#03A9F4] mr-4 rounded-full"></span>Cape Town (30%)</li>
+        <li><span className="inline-block w-5 h-5 bg-[#FFC107] mr-4 rounded-full"></span>North West (10%)</li>
+        <li><span className="inline-block w-5 h-5 bg-[#4CAF50] mr-4 rounded-full"></span>Gauteng (15%)</li>
       </ul>
     </div>
   );
