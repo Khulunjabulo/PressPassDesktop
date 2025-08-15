@@ -5,18 +5,20 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/UI/Cards';
 import { 
-  Home, Search, Heart, Tag, ChevronRight, User, Plus, 
+  Home, Search, Heart, Tag, ChevronRight, User, Plus, Building,
   Linkedin, Youtube, Facebook, Volume2, ArrowRight, Clock, FileText,
-  Trash2, ExternalLink, Calendar
+  Trash2, ExternalLink, Calendar, Globe, Users
 } from 'lucide-react';
 import { useFavorites } from '@/hooks/useFavorites';
 import AdSlot from '@/components/news-reader/AdsSlot';
 import FavoriteButton from '@/components/FavoriteButton';
+import PublisherFavoriteButton from '@/components/PublisherFavoriteButton';
 
 export default function FavoritesPage() {
   const router = useRouter();
   const {
     favorites,
+    favoritePublishers,
     currentUser,
     loading,
     error,
@@ -41,18 +43,18 @@ export default function FavoritesPage() {
     router.push(`/news-reader/favorites/${encodeURIComponent(publication.name)}?type=${publication.type}`);
   };
 
+  const handlePublisherClick = (publisher) => {
+    router.push(`/news-reader/publisher/${publisher.id}`);
+  };
+
+  // (left in place even though "Recent Articles" was removed; harmless to keep)
   const handleArticleClick = (article) => {
     if (article.link && article.link.startsWith('http')) {
-      // External article
       window.open(article.link, '_blank');
     } else if (article.publisherId) {
-      // Internal article
       router.push(`/news-reader/article/${article.id}?publisherId=${article.publisherId}`);
     } else {
-      // Fallback
-      if (article.link) {
-        window.open(article.link, '_blank');
-      }
+      if (article.link) window.open(article.link, '_blank');
     }
   };
 
@@ -166,7 +168,7 @@ export default function FavoritesPage() {
 
           {/* Tabs */}
           <div className="flex space-x-4 md:space-x-8 mb-6 overflow-x-auto">
-            {['all', 'magazines', 'newspapers', 'stories'].map(tab => (
+            {['all', 'publishers', 'magazines', 'newspapers', 'stories'].map(tab => (
               <button 
                 key={tab}
                 className={`pb-2 whitespace-nowrap transition-colors ${
@@ -183,104 +185,146 @@ export default function FavoritesPage() {
 
           {/* Content */}
           {activeTab === 'all' ? (
-            // All Favorites - Individual Articles
-            <div className="space-y-4">
-              {favorites.length === 0 ? (
-                <div className="text-center py-12">
-                  <Heart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-600 mb-2">No favorites yet</h3>
-                  <p className="text-gray-500 mb-4">Start adding your favorite stories and publications</p>
+            // All Favorites (Recent Articles removed) – show only Favorite Publishers
+            <div className="space-y-6">
+              {favoritePublishers.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <Building className="w-5 h-5 mr-2" />
+                    Favorite Publishers ({favoritePublishers.length})
+                  </h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6 mb-8">
+                    {favoritePublishers.slice(0, 12).map((publisher) => (
+                      <div 
+                        key={publisher.id}
+                        className="flex flex-col items-center cursor-pointer group"
+                        onClick={() => handlePublisherClick(publisher)}
+                      >
+                        {/* Publisher Cover/Logo */}
+                        <div className="relative w-full aspect-[4/5] mb-3 rounded-lg overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 border border-gray-200 shadow-sm group-hover:shadow-md transition-all duration-200 group-hover:scale-105">
+                          {publisher.logo ? (
+                            <img
+                              src={publisher.logo}
+                              alt={`${publisher.name} cover`}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                              <span className="text-white font-bold text-2xl">
+                                {publisher.name.charAt(0)}
+                              </span>
+                            </div>
+                          )}
+                          {/* Favorite Button Overlay */}
+                          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <PublisherFavoriteButton 
+                              publisher={publisher}
+                              size="small"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Publisher Name */}
+                        <div className="text-center">
+                          <h4 className="text-sm font-medium text-gray-900 group-hover:text-blue-600 transition-colors leading-tight">
+                            {publisher.name}
+                          </h4>
+                          <p className="text-xs text-gray-500 mt-1 capitalize">
+                            {publisher.publicationType}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {favoritePublishers.length > 12 && (
+                    <button 
+                      onClick={() => setActiveTab('publishers')}
+                      className="text-blue-600 hover:text-blue-700 text-sm font-medium mb-6"
+                    >
+                      View all {favoritePublishers.length} favorite publishers →
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          ) : activeTab === 'publishers' ? (
+            // Publishers Tab - Magazine Rack Style
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+              {favoritePublishers.length === 0 ? (
+                <div className="col-span-full text-center py-12">
+                  <Building className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-600 mb-2">No favorite publishers yet</h3>
+                  <p className="text-gray-500 mb-4">Start following your favorite news sources</p>
                   <button 
-                    onClick={handleAddMore}
+                    onClick={() => router.push('/news-reader/news-sources')}
                     className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors"
                   >
-                    Browse Stories
+                    Browse Publishers
                   </button>
                 </div>
               ) : (
-                favorites.map((article) => (
-                  <Card 
-                    key={article.id}
-                    className="hover:shadow-lg transition-shadow cursor-pointer"
-                    onClick={() => handleArticleClick(article)}
+                favoritePublishers.map((publisher) => (
+                  <div 
+                    key={publisher.id}
+                    className="flex flex-col items-center cursor-pointer group"
+                    onClick={() => handlePublisherClick(publisher)}
                   >
-                    <CardContent className="p-4">
-                      <div className="flex items-start space-x-4">
-                        {/* Article Image */}
-                        {article.image && (
-                          <div className="flex-shrink-0">
-                            <img
-                              src={article.image}
-                              alt={article.title}
-                              className="w-20 h-20 rounded-lg object-cover border border-gray-200"
-                            />
-                          </div>
-                        )}
-
-                        {/* Article Content */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between">
-                            <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2 flex-1">
-                              {article.title}
-                            </h3>
-                            <div className="flex items-center space-x-2 ml-2">
-                              <FavoriteButton 
-                                item={article}
-                                size="small"
-                              />
-                              {article.link && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    window.open(article.link, '_blank');
-                                  }}
-                                  className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
-                                  title="Open original"
-                                >
-                                  <ExternalLink className="w-4 h-4" />
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                          
-                          {article.description && (
-                            <p className="text-gray-600 mb-3 line-clamp-2">
-                              {article.description}
-                            </p>
-                          )}
-
-                          {/* Article Meta */}
-                          <div className="flex items-center space-x-4 text-sm text-gray-500">
-                            <div className="flex items-center space-x-1">
-                              <User className="w-3 h-3" />
-                              <span>{article.source}</span>
-                            </div>
-                            
-                            <div className="flex items-center space-x-1">
-                              <Calendar className="w-3 h-3" />
-                              <span>{formatDate(article.pubDate)}</span>
-                            </div>
-                            
-                            <div className="flex items-center space-x-1">
-                              <Clock className="w-3 h-3" />
-                              <span>Added {formatDate(article.addedAt)}</span>
-                            </div>
-
-                            {article.type && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 capitalize">
-                                {article.type}
-                              </span>
-                            )}
-                          </div>
+                    {/* Publisher Cover/Logo */}
+                    <div className="relative w-full aspect-[4/5] mb-3 rounded-lg overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 border border-gray-200 shadow-sm group-hover:shadow-lg transition-all duration-200 group-hover:scale-105">
+                      {publisher.logo ? (
+                        <img
+                          src={publisher.logo}
+                          alt={`${publisher.name} cover`}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                          <span className="text-white font-bold text-3xl">
+                            {publisher.name.charAt(0)}
+                          </span>
                         </div>
+                      )}
+                      
+                      {/* Favorite Button Overlay */}
+                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <PublisherFavoriteButton 
+                          publisher={publisher}
+                          size="small"
+                        />
                       </div>
-                    </CardContent>
-                  </Card>
+                      
+                      {/* Publisher Type Badge */}
+                      <div className="absolute bottom-2 left-2">
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-white bg-opacity-90 text-gray-700 capitalize">
+                          {publisher.publicationType}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Publisher Info */}
+                    <div className="text-center">
+                      <h3 className="text-sm font-semibold text-gray-900 group-hover:text-blue-600 transition-colors leading-tight mb-1">
+                        {publisher.name}
+                      </h3>
+                      <div className="flex items-center justify-center space-x-2 text-xs text-gray-500">
+                        <div className="flex items-center space-x-1">
+                          <FileText className="w-3 h-3" />
+                          <span>{publisher.articleCount}</span>
+                        </div>
+                        <span>•</span>
+                        <span className="capitalize">{publisher.audienceType}</span>
+                      </div>
+                      <p className="text-xs text-gray-400 mt-1">
+                        Added {formatDate(publisher.favoritedAt)}
+                      </p>
+                    </div>
+                  </div>
                 ))
               )}
             </div>
           ) : (
-            // Grouped by Publication - Folders
+            // Grouped by Publication - Folders (magazines, newspapers, stories)
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
               {getGroupedFavorites(activeTab).length === 0 ? (
                 <div className="col-span-full text-center py-12">
@@ -406,8 +450,15 @@ export default function FavoritesPage() {
                     onClick={() => router.push('/news-reader/news-sources')}
                     className="w-full flex items-center space-x-2 p-2 text-sm text-blue-700 hover:bg-blue-200 rounded transition-colors"
                   >
+                    <Building className="w-4 h-4" />
+                    <span>Follow Publishers</span>
+                  </button>
+                  <button 
+                    onClick={() => router.push('/news-reader')}
+                    className="w-full flex items-center space-x-2 p-2 text-sm text-blue-700 hover:bg-blue-200 rounded transition-colors"
+                  >
                     <Search className="w-4 h-4" />
-                    <span>Browse Publishers</span>
+                    <span>Browse Articles</span>
                   </button>
                 </div>
               </CardContent>
