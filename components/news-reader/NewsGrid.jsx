@@ -221,14 +221,15 @@ export default function NewsGrid({ articles }) {
 
                 {/* Favorite Button */}
                 <div className="mt-3 flex justify-end">
-                  <button
-                    type="button"
-                    className="p-2 rounded-full bg-gray-100 hover:bg-red-100 transition-colors"
-                    disabled
-                  >
-                    <Heart className="w-5 h-5 text-red-500" />
-                  </button>
-                </div>
+  <PublisherFavoriteButton
+    type="button"
+    publisher={source}
+    size="default"
+    showText={false}
+    className="p-2 rounded-full bg-gray-100 hover:bg-red-100 transition-colors"
+    disabled
+  />
+</div>
 
                 {/* Status Indicator */}
                 <div className="mt-3 pt-2 border-t border-gray-100">
