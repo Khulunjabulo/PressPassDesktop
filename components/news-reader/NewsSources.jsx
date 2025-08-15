@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/UI/Cards';
 import { FileText, Clock, Globe, Building, Users, ArrowRight, Plus } from 'lucide-react';
 import { useNewsSources } from '@/hooks/useNewsSources';
+import PublisherFavoriteButton from '@/components/PublisherFavoriteButton';
 
 export default function NewsSources() {
   const { newsources, loading, error, refreshSources } = useNewsSources();
@@ -101,10 +102,20 @@ export default function NewsSources() {
             {newsources.map((source) => (
               <Card 
                 key={source.id} 
-                className="hover:shadow-xl hover:scale-[1.02] transition-all duration-200 cursor-pointer border-0 shadow-md bg-white"
-                onClick={() => handleSourceClick(source)}
+                className="hover:shadow-xl hover:scale-[1.02] transition-all duration-200 cursor-pointer border-0 shadow-md bg-white relative overflow-hidden"
               >
-                <CardContent className="p-6">
+                {/* Cover Image Background */}
+                {source.logo && (
+                  <div 
+                    className="absolute inset-0 opacity-5 bg-cover bg-center"
+                    style={{
+                      backgroundImage: `url(${source.logo})`,
+                      filter: 'blur(20px)',
+                    }}
+                  />
+                )}
+                
+                <CardContent className="p-6 relative z-10" onClick={() => handleSourceClick(source)}>
                   <div className="flex items-start space-x-4">
                     {/* Logo */}
                     <div className="flex-shrink-0">
@@ -112,11 +123,11 @@ export default function NewsSources() {
                         <img
                           src={source.logo}
                           alt={`${source.name} logo`}
-                          className="w-12 h-12 rounded-lg object-cover border-2 border-gray-200"
+                          className="w-16 h-16 rounded-xl object-cover border-2 border-white shadow-lg"
                         />
                       ) : (
-                        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center border-2 border-blue-300">
-                          <span className="text-white font-bold text-lg">
+                        <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center border-2 border-white shadow-lg">
+                          <span className="text-white font-bold text-xl">
                             {source.name.charAt(0)}
                           </span>
                         </div>
@@ -125,12 +136,19 @@ export default function NewsSources() {
                     
                     {/* Content */}
                     <div className="flex-1 min-w-0">
-                      {/* Source Name */}
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-lg font-bold text-gray-900 truncate">
+                      {/* Header with Name and Favorite Button */}
+                      <div className="flex items-start justify-between mb-2">
+                        <h3 className="text-lg font-bold text-gray-900 truncate flex-1 mr-2">
                           {source.name}
                         </h3>
-                        <ArrowRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                        <div className="flex items-center space-x-1">
+                          <PublisherFavoriteButton 
+                            publisher={source}
+                            size="small"
+                            className="relative z-20"
+                          />
+                          <ArrowRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                        </div>
                       </div>
                       
                       {/* Industry Badge */}
