@@ -3,11 +3,19 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { CardContent } from '@/components/UI/Cards';
-import { ArrowRight, FileText, Plus, Users, Globe, Clock, Heart } from 'lucide-react';
+import { Heart } from 'lucide-react';
 import { useNewsSources } from '@/hooks/useNewsSources';
+import { useFavorites } from '@/hooks/useFavorites';
 
 export default function SearchPage() {
   const { newsources, loading: sourcesLoading, error } = useNewsSources();
+  const { 
+    isPublisherFavorite, 
+    togglePublisherFavorite, 
+    currentUser,
+    loading: favoritesLoading 
+  } = useFavorites();
+  
   const [query, setQuery] = useState('');
   const [filtered, setFiltered] = useState([]);
   const router = useRouter();
@@ -27,8 +35,22 @@ export default function SearchPage() {
   }, [query, newsources]);
 
   const handleSourceClick = (source) => {
-    // Navigate to publisher's page (same as teammate's logic)
     router.push(`/news-reader/publisher/${source.id}`);
+  };
+
+  const handleFavoriteToggle = async (e, source) => {
+    e.stopPropagation();
+    
+    if (!currentUser) {
+      return;
+    }
+
+    try {
+      const result = await togglePublisherFavorite(source);
+      if (!result.success) {
+      }
+    } catch (error) {
+    }
   };
 
   return (
@@ -49,7 +71,7 @@ export default function SearchPage() {
         autoFocus
       />
 
-      {/* Default intro when nothing typed */}
+      {/* Default intro */}
       {!query && (
         <div className="text-center py-16 text-sm space-y-2">
           <h2 className="text-4xl font-bold"> FIND YOUR LOCAL COMMUNITY NEWSPAPER, </h2>
@@ -57,11 +79,10 @@ export default function SearchPage() {
         </div>
       )}
 
-      {/* Loading & error messages */}
+      {/* Loading & error */}
       {sourcesLoading && <p className="text-gray-500 mt-4">Loading news sources...</p>}
       {error && <p className="text-red-500 mt-4">{error}</p>}
 
-      {/* Show filtered results when user types */}
       {!sourcesLoading && query && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4">
           {filtered.length > 0 ? (
@@ -71,9 +92,7 @@ export default function SearchPage() {
                 className="p-4 border rounded-lg hover:shadow-lg transition flex items-start justify-between cursor-pointer"
                 onClick={() => handleSourceClick(source)}
               >
-                {/* Left side: Image and Name */}
                 <div className="flex items-center space-x-3">
-                  {/* Publication Image */}
                   <div className="flex-shrink-0 w-20 h-20 my-2">
                     {source.logo ? (
                       <img
@@ -89,7 +108,6 @@ export default function SearchPage() {
                       </div>
                     )}
                   </div>
-                  {/* Name */}
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold text-gray-900 truncate">
                       {source.name}
@@ -97,14 +115,24 @@ export default function SearchPage() {
                   </div>
                 </div>
 
-                {/* Favorite Button */}
-                <div className="self-end">
+                {/* Right: favorite button */}
+                <div className="self-end" onClick={(e) => e.stopPropagation()}>
                   <button
                     type="button"
-                    className="p-2 rounded-full bg-gray-100 hover:bg-red-100 transition-colors"
-                    disabled
+                    className={`p-2 rounded-full transition-colors ${
+                      isPublisherFavorite(source.id)
+                        ? 'bg-red-100 hover:bg-red-200'
+                        : 'bg-gray-100 hover:bg-gray-200'
+                    }`}
+                    onClick={(e) => handleFavoriteToggle(e, source)}
+                    disabled={favoritesLoading || !currentUser}
                   >
-                    <Heart className="w-5 h-5 text-red-500" />
+                    <Heart
+                      className={`w-5 h-5 ${
+                        isPublisherFavorite(source.id) ? 'text-red-500' : 'text-gray-400'
+                      }`}
+                      fill={isPublisherFavorite(source.id) ? 'currentColor' : 'none'}
+                    />
                   </button>
                 </div>
               </CardContent>
