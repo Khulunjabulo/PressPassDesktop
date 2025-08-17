@@ -1,5 +1,5 @@
 // app/api/signin/route.js
-import { getFirestore, doc, getDoc, updateDoc, serverTimestamp, collection, query, where, getDocs } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { getApps, initializeApp } from 'firebase/app';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import { NextResponse } from 'next/server';
@@ -57,7 +57,7 @@ export async function POST(request) {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email.toLowerCase().trim(), password);
       firebaseUser = userCredential.user;
-      console.log('✅ Firebase Auth successful, original UID:', firebaseUser.uid);
+      console.log('✅ Firebase Auth successful, UID:', firebaseUser.uid);
     } catch (authError) {
       console.error('❌ Firebase Auth failed:', authError.code);
       
@@ -83,18 +83,17 @@ export async function POST(request) {
       );
     }
 
-    // Now find the user document using the original Firebase Auth UID
-    console.log('🔍 Looking up user document with original UID:', firebaseUser.uid);
-    
+    // Now look for the user document using the role-specific UID format
     const collectionName = role === 'reader' ? 'readers' : 'publishers';
+    const roleSpecificUid = `${role}_${firebaseUser.uid}`;
     
-    // Query the collection to find document where originalUid matches the Firebase Auth UID
-    const collectionRef = collection(db, collectionName);
-    const q = query(collectionRef, where('originalUid', '==', firebaseUser.uid));
-    const querySnapshot = await getDocs(q);
+    console.log('🔍 Looking up user document:', collectionName, roleSpecificUid);
+    
+    const userDocRef = doc(db, collectionName, roleSpecificUid);
+    const userDocSnap = await getDoc(userDocRef);
 
-    if (querySnapshot.empty) {
-      console.warn('❌ User not found in', collectionName, 'collection with originalUid:', firebaseUser.uid);
+    if (!userDocSnap.exists()) {
+      console.warn('❌ User not found in', collectionName, 'collection with UID:', roleSpecificUid);
       return NextResponse.json(
         { 
           success: false, 
@@ -104,14 +103,10 @@ export async function POST(request) {
       );
     }
 
-    // Get the first (and should be only) matching document
-    const userDoc = querySnapshot.docs[0];
-    const userData = userDoc.data();
-    const customUid = userDoc.id;
+    const userData = userDocSnap.data();
     
     console.log('📄 User data retrieved successfully');
-    console.log('🆔 Custom UID:', customUid);
-    console.log('🆔 Original UID:', userData.originalUid);
+    console.log('🆔 Document UID:', roleSpecificUid);
 
     // Check if account is active
     if (!userData.isActive) {
@@ -127,7 +122,7 @@ export async function POST(request) {
 
     // Update last login timestamp
     try {
-      await updateDoc(doc(db, collectionName, customUid), {
+      await updateDoc(userDocRef, {
         lastLoginAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
@@ -139,8 +134,8 @@ export async function POST(request) {
 
     // Prepare response data (exclude sensitive information)
     const responseUser = {
-      uid: userData.uid, // This is the custom UID
-      originalUid: userData.originalUid, // This is the Firebase Auth UID
+      uid: roleSpecificUid, // Use the role-specific UID as the main UID
+      originalUid: firebaseUser.uid, // Store the Firebase Auth UID separately
       email: userData.email,
       firstName: userData.firstName,
       lastName: userData.lastName,

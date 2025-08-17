@@ -1,4 +1,4 @@
-
+// app/api/favorites/publishers/route.js
 import { NextResponse } from 'next/server';
 import { 
   getFirestore, 
@@ -7,21 +7,20 @@ import {
   getDocs, 
   getDoc,
   setDoc, 
-  deleteDoc, 
-  query, 
-  where,
-  orderBy,
+  deleteDoc,
   serverTimestamp 
 } from 'firebase/firestore';
 import { app } from '@/Firebase/firebase';
 
 const db = getFirestore(app);
 
-// GET - Fetch user's favorites
+// GET - Fetch user's favorite publishers
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
+
+    console.log('🔍 GET Request received with userId:', userId);
 
     if (!userId) {
       return NextResponse.json(
@@ -30,141 +29,214 @@ export async function GET(request) {
       );
     }
 
-    // Get user's favorites
-    const favoritesRef = collection(db, 'users', userId, 'favorites');
-    const favoritesSnapshot = await getDocs(favoritesRef);
+    // Debug: Log the exact path being queried
+    const publishersPath = `readers/${userId}/favoritePublishers`;
+    console.log('📍 Querying Firestore path:', publishersPath);
+
+    // Get user's favorite publishers from the readers collection subcollection
+    const publishersRef = collection(db, 'readers', userId, 'favoritePublishers');
+    console.log('📁 Publishers collection reference created');
     
-    const favorites = [];
-    favoritesSnapshot.forEach((doc) => {
-      favorites.push({
+    const publishersSnapshot = await getDocs(publishersRef);
+    console.log('📊 Query executed, snapshot size:', publishersSnapshot.size);
+    
+    const publishers = [];
+    publishersSnapshot.forEach((doc) => {
+      console.log('📄 Found publisher document:', doc.id, doc.data());
+      publishers.push({
         id: doc.id,
         ...doc.data()
       });
     });
 
-    // Sort favorites by date added (newest first)
-    favorites.sort((a, b) => {
+    // Sort by date added (newest first)
+    publishers.sort((a, b) => {
       const dateA = a.addedAt?.toDate ? a.addedAt.toDate() : new Date(0);
       const dateB = b.addedAt?.toDate ? b.addedAt.toDate() : new Date(0);
       return dateB - dateA;
     });
 
+    console.log('✅ Final result - Found', publishers.length, 'favorite publishers for user');
+
     return NextResponse.json({
       success: true,
-      favorites,
-      count: favorites.length
+      publishers,
+      count: publishers.length,
+      debug: {
+        userId,
+        queryPath: publishersPath,
+        snapshotSize: publishersSnapshot.size
+      }
     });
 
   } catch (error) {
-    console.error('Error fetching favorites:', error);
+    console.error('❌ Error fetching favorite publishers:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch favorites' },
+      { success: false, error: 'Failed to fetch favorite publishers', details: error.message },
       { status: 500 }
     );
   }
 }
 
-// POST - Add to favorites
+// POST - Add publisher to favorites
 export async function POST(request) {
   try {
-    const { userId, item } = await request.json();
+    const { userId, publisher } = await request.json();
 
-    if (!userId || !item) {
+    console.log('📝 POST Request received:');
+    console.log('  - userId:', userId);
+    console.log('  - publisher:', JSON.stringify(publisher, null, 2));
+
+    if (!userId || !publisher) {
       return NextResponse.json(
-        { success: false, error: 'User ID and item are required' },
+        { success: false, error: 'User ID and publisher are required' },
         { status: 400 }
       );
     }
 
-    // Determine the type of publication
-    const determineItemType = (item) => {
-      const source = item.source || item.publicationName || '';
-      const magazines = ['Drum', 'You', 'Fairlady', 'GQ', 'Sarie', 'Huis Genoot'];
-      const newspapers = ['Isolezwe', 'The Star', 'City Press', 'Mail & Guardian'];
+    // Debug: Log the exact paths being used
+    const userPath = `readers/${userId}`;
+    const publisherPath = `readers/${userId}/favoritePublishers/${publisher.id || `publisher_${Date.now()}`}`;
+    console.log('📍 User document path:', userPath);
+    console.log('📍 Publisher document path:', publisherPath);
 
-      if (magazines.some(mag => source.toLowerCase().includes(mag.toLowerCase()))) {
-        return 'magazine';
-      } else if (newspapers.some(news => source.toLowerCase().includes(news.toLowerCase()))) {
-        return 'newspaper';
-      }
-      return 'story';
-    };
+    // First, verify that the user exists in the readers collection
+    const userDocRef = doc(db, 'readers', userId);
+    console.log('🔍 Checking if user exists at:', userDocRef.path);
+    
+    const userDocSnap = await getDoc(userDocRef);
+    console.log('👤 User document exists:', userDocSnap.exists());
+    
+    if (userDocSnap.exists()) {
+      console.log('👤 User document data:', userDocSnap.data());
+    }
 
-    // Prepare favorite item data
-    const favoriteData = {
-      id: item.id || `item_${Date.now()}`,
-      title: item.title || 'Untitled',
-      description: item.description || item.content || item.summary || '',
-      image: item.image || item.imageUrl || item.urlToImage || null,
-      link: item.link || item.url || '',
-      source: item.source || item.publicationName || 'Unknown Source',
-      publicationName: item.source || item.publicationName || 'Unknown',
-      publicationLogo: item.publicationLogo || item.logo || null,
-      category: item.category || 'general',
-      pubDate: item.pubDate || item.publishedAt || item.createdAt || new Date().toISOString(),
-      type: determineItemType(item),
+    if (!userDocSnap.exists()) {
+      console.error('❌ User not found in readers collection:', userId);
+      return NextResponse.json(
+        { success: false, error: 'User not found in readers collection', userId },
+        { status: 404 }
+      );
+    }
+
+    // Prepare publisher favorite data
+    const publisherData = {
+      id: publisher.id || `publisher_${Date.now()}`,
+      name: publisher.name || publisher.companyName || 'Unknown Publisher',
+      companyName: publisher.companyName || publisher.name || '',
+      industry: publisher.industry || '',
+      publicationType: publisher.publicationType || '',
+      logo: publisher.logo || publisher.companyLogo || null,
+      website: publisher.website || publisher.companyWebsite || '',
+      description: publisher.description || publisher.companyDescription || '',
       addedAt: serverTimestamp(),
       userId: userId,
-      // Preserve any additional fields from the original item
-      ...item
+      // Preserve any additional fields from the original publisher
+      ...publisher
     };
 
-    // Check if already favorited
-    const favoriteRef = doc(db, 'users', userId, 'favorites', favoriteData.id);
-    const existingFavorite = await getDoc(favoriteRef);
+    console.log('📋 Publisher data prepared:', JSON.stringify(publisherData, null, 2));
 
-    if (existingFavorite.exists()) {
+    // Check if already favorited
+    const publisherRef = doc(db, 'readers', userId, 'favoritePublishers', publisherData.id);
+    console.log('🔍 Checking if publisher already exists at:', publisherRef.path);
+    
+    const existingPublisher = await getDoc(publisherRef);
+    console.log('🔍 Publisher already exists:', existingPublisher.exists());
+
+    if (existingPublisher.exists()) {
       return NextResponse.json(
-        { success: false, error: 'Item already in favorites' },
+        { success: false, error: 'Publisher already in favorites' },
         { status: 409 }
       );
     }
 
-    // Add to favorites
-    await setDoc(favoriteRef, favoriteData);
+    // Add to favorite publishers subcollection under the specific reader
+    console.log('💾 Saving publisher to:', publisherRef.path);
+    await setDoc(publisherRef, publisherData);
+    console.log('✅ Publisher saved successfully');
+
+    // Verify the save
+    const verifyDoc = await getDoc(publisherRef);
+    console.log('✅ Verification - Document exists after save:', verifyDoc.exists());
+    if (verifyDoc.exists()) {
+      console.log('✅ Verification - Saved data:', verifyDoc.data());
+    }
 
     return NextResponse.json({
       success: true,
-      message: 'Added to favorites',
-      favorite: favoriteData
+      message: 'Publisher added to favorites',
+      publisher: publisherData,
+      debug: {
+        userId,
+        publisherPath,
+        userExists: userDocSnap.exists(),
+        savedSuccessfully: verifyDoc.exists()
+      }
     });
 
   } catch (error) {
-    console.error('Error adding to favorites:', error);
+    console.error('❌ Error adding publisher to favorites:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to add to favorites' },
+      { success: false, error: 'Failed to add publisher to favorites', details: error.message },
       { status: 500 }
     );
   }
 }
 
-// DELETE - Remove from favorites
+// DELETE - Remove publisher from favorites
 export async function DELETE(request) {
   try {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
-    const itemId = searchParams.get('itemId');
+    const publisherId = searchParams.get('publisherId');
 
-    if (!userId || !itemId) {
+    console.log('🗑️ DELETE Request received:');
+    console.log('  - userId:', userId);
+    console.log('  - publisherId:', publisherId);
+
+    if (!userId || !publisherId) {
       return NextResponse.json(
-        { success: false, error: 'User ID and item ID are required' },
+        { success: false, error: 'User ID and publisher ID are required' },
         { status: 400 }
       );
     }
 
-    // Remove from favorites
-    const favoriteRef = doc(db, 'users', userId, 'favorites', itemId);
-    await deleteDoc(favoriteRef);
+    // Debug: Log the exact path being deleted
+    const publisherPath = `readers/${userId}/favoritePublishers/${publisherId}`;
+    console.log('📍 Deleting from path:', publisherPath);
+
+    // Remove from favorite publishers subcollection under the specific reader
+    const publisherRef = doc(db, 'readers', userId, 'favoritePublishers', publisherId);
+    console.log('🗑️ Deleting document at:', publisherRef.path);
+    
+    // Check if document exists before deleting
+    const existingDoc = await getDoc(publisherRef);
+    console.log('🔍 Document exists before deletion:', existingDoc.exists());
+    
+    await deleteDoc(publisherRef);
+    console.log('✅ Delete operation completed');
+
+    // Verify deletion
+    const verifyDoc = await getDoc(publisherRef);
+    console.log('✅ Verification - Document exists after deletion:', verifyDoc.exists());
 
     return NextResponse.json({
       success: true,
-      message: 'Removed from favorites'
+      message: 'Publisher removed from favorites',
+      debug: {
+        userId,
+        publisherId,
+        publisherPath,
+        existedBefore: existingDoc.exists(),
+        deletedSuccessfully: !verifyDoc.exists()
+      }
     });
 
   } catch (error) {
-    console.error('Error removing from favorites:', error);
+    console.error('❌ Error removing publisher from favorites:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to remove from favorites' },
+      { success: false, error: 'Failed to remove publisher from favorites', details: error.message },
       { status: 500 }
     );
   }
