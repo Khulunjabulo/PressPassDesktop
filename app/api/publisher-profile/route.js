@@ -31,8 +31,42 @@ export async function GET(request) {
     const publisherDoc = await db.collection('publishers').doc(publisherUid).get();
     
     if (!publisherDoc.exists) {
-      console.error('❌ Publisher profile not found');
-      return NextResponse.json({ success: false, error: 'Profile not found' }, { status: 404 });
+      console.warn('⚠️ Publisher profile not found, creating default profile...');
+      
+      // Create default publisher profile
+      const defaultProfile = {
+        uid: uid,
+        email: decodedToken.email || '',
+        companyName: '',
+        industry: '',
+        companyWebsite: '',
+        contactName: '',
+        jobTitle: '',
+        phone: '',
+        publicationType: '',
+        audienceType: '',
+        monthlyReadership: '',
+        companyDescription: '',
+        address: '',
+        foundedYear: '',
+        employeeCount: '',
+        profilePicture: '',
+        companyLogo: '',
+        staff: [],
+        articlesCount: 0,
+        isActive: true,
+        isVerified: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      await db.collection('publishers').doc(publisherUid).set(defaultProfile);
+      console.log('✅ Default publisher profile created');
+      
+      return NextResponse.json({
+        success: true,
+        ...defaultProfile
+      });
     }
 
     const userData = publisherDoc.data();
@@ -100,12 +134,12 @@ export async function PUT(request) {
 
     // Fetch and return updated data
     const updatedDoc = await db.collection('publishers').doc(publisherUid).get();
-    const updatedPublisherData = updatedDoc.data();
+    const updatedUserData = updatedDoc.data();
 
     return NextResponse.json({
       success: true,
       message: 'Profile updated successfully',
-      user: updatedPublisherData
+      user: updatedUserData
     });
 
   } catch (error) {

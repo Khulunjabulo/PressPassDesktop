@@ -1,6 +1,9 @@
+'use client'
+
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getAuth } from 'firebase/auth';
+import { auth } from '../../../Firebase/firebase'; // Make sure this path is correct
+import { onAuthStateChanged } from 'firebase/auth';
 import { 
   Camera, User, Mail, Calendar, MapPin, Phone, Settings, Save, Edit2, X, 
   Building, Users, Globe, FileText, Plus, Trash2, Briefcase, Award
@@ -8,6 +11,8 @@ import {
 
 const PublisherProfile = () => {
   const [user, setUser] = useState(null);
+  const [authUser, setAuthUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [profilePicPreview, setProfilePicPreview] = useState('');
@@ -38,7 +43,6 @@ const PublisherProfile = () => {
   });
 
   const router = useRouter();
-  const auth = getAuth();
 
   const industries = [
     'News & Journalism', 'Magazine', 'Academic Publishing', 'Trade Publications', 
@@ -50,32 +54,54 @@ const PublisherProfile = () => {
     'Design', 'Photography', 'Research', 'Legal', 'Finance'
   ];
 
+  // Handle authentication state changes
   useEffect(() => {
-    console.log('🏢 Loading publisher profile...');
-    loadPublisherProfile();
-  }, []);
+    console.log('🔐 Setting up auth state listener...');
+    
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      console.log('🔐 Auth state changed:', user ? 'User signed in' : 'User signed out');
+      setAuthUser(user);
+      setAuthLoading(false);
+      
+      if (user) {
+        console.log('✅ User authenticated:', user.uid);
+        loadPublisherProfile(user);
+      } else {
+        console.warn('⚠️ No authenticated user, redirecting to sign in');
+        router.push('/signin');
+      }
+    });
 
-  const loadPublisherProfile = async () => {
+    return () => {
+      console.log('🧹 Cleaning up auth listener');
+      unsubscribe();
+    };
+  }, [router]);
+
+  const loadPublisherProfile = async (currentUser = null) => {
     try {
       setIsLoading(true);
-      const currentUser = auth.currentUser;
+      const userToUse = currentUser || authUser;
       
-      if (!currentUser) {
-        console.warn('⚠️ No authenticated user found');
-        router.push('/signin');
+      if (!userToUse) {
+        console.warn('⚠️ No authenticated user available');
         return;
       }
 
       console.log('📡 Fetching publisher profile from API...');
+      const idToken = await userToUse.getIdToken();
+      
       const response = await fetch('/api/publisher-profile', {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${await currentUser.getIdToken()}`
+          'Authorization': `Bearer ${idToken}`,
+          'Content-Type': 'application/json'
         }
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch profile');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to fetch profile');
       }
 
       const userData = await response.json();
@@ -86,7 +112,7 @@ const PublisherProfile = () => {
         companyName: userData.companyName || '',
         industry: userData.industry || '',
         companyWebsite: userData.companyWebsite || '',
-        contactName: userData.contactName || '',
+        contactName: userData.contactName || userData.email || '',
         jobTitle: userData.jobTitle || '',
         phone: userData.phone || '',
         publicationType: userData.publicationType || '',
@@ -105,7 +131,7 @@ const PublisherProfile = () => {
 
     } catch (error) {
       console.error('❌ Error loading profile:', error);
-      alert('Failed to load profile. Please try again.');
+      alert(`Failed to load profile: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -122,6 +148,12 @@ const PublisherProfile = () => {
     console.log(`🖼️ ${type} image selected:`, file?.name);
 
     if (file) {
+      // Check file size (limit to 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('File size must be less than 5MB');
+        return;
+      }
+
       const reader = new FileReader();
       reader.onloadend = () => {
         if (type === 'profile') {
@@ -144,7 +176,7 @@ const PublisherProfile = () => {
   };
 
   const addStaffMember = () => {
-    if (!newStaffMember.name || !newStaffMember.position) {
+    if (!newStaffMember.name.trim() || !newStaffMember.position.trim()) {
       alert('Please fill in name and position');
       return;
     }
@@ -166,31 +198,44 @@ const PublisherProfile = () => {
   };
 
   const handleSaveProfile = async () => {
+    if (!authUser) {
+      alert('Please sign in to save your profile');
+      return;
+    }
+
+    // Basic validation
+    if (!formData.companyName.trim()) {
+      alert('Company name is required');
+      return;
+    }
+
     console.log('💾 Saving publisher profile...');
     setIsLoading(true);
 
     try {
-      const currentUser = auth.currentUser;
-      if (!currentUser) {
-        throw new Error('Not authenticated');
-      }
-
+      const idToken = await authUser.getIdToken();
       console.log('📤 Sending profile update to API...');
+      
+      // Prepare data for submission
+      const dataToSend = {
+        ...formData,
+        // Only send image data if new images were uploaded
+        profilePicture: profilePicPreview !== user?.profilePicture ? profilePicPreview : undefined,
+        companyLogo: companyLogoPreview !== user?.companyLogo ? companyLogoPreview : undefined
+      };
+
       const response = await fetch('/api/publisher-profile', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${await currentUser.getIdToken()}`
+          'Authorization': `Bearer ${idToken}`
         },
-        body: JSON.stringify({
-          ...formData,
-          profilePicture: profilePicPreview !== user?.profilePicture ? profilePicPreview : undefined,
-          companyLogo: companyLogoPreview !== user?.companyLogo ? companyLogoPreview : undefined
-        })
+        body: JSON.stringify(dataToSend)
       });
 
       if (!response.ok) {
-        throw new Error('Failed to update profile');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update profile');
       }
 
       const result = await response.json();
@@ -202,7 +247,7 @@ const PublisherProfile = () => {
 
     } catch (error) {
       console.error('❌ Error saving profile:', error);
-      alert('Failed to update profile. Please try again.');
+      alert(`Failed to update profile: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -234,6 +279,19 @@ const PublisherProfile = () => {
     setCompanyLogoPreview(user?.companyLogo || '');
   };
 
+  // Show loading spinner while checking authentication
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Checking authentication...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading spinner while loading profile data
   if (isLoading && !user) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -310,14 +368,17 @@ const PublisherProfile = () => {
                 </div>
 
                 <div className="text-white">
-                  <h1 className="text-2xl font-bold">{user?.companyName}</h1>
+                  <h1 className="text-2xl font-bold">
+                    {user?.companyName || 'Your Company Name'}
+                  </h1>
                   <p className="text-blue-100 flex items-center">
                     <User className="w-4 h-4 mr-1" />
-                    {user?.contactName} - {user?.jobTitle}
+                    {user?.contactName || authUser?.displayName || authUser?.email} 
+                    {user?.jobTitle && ` - ${user.jobTitle}`}
                   </p>
                   <p className="text-blue-100 flex items-center mt-1">
                     <Mail className="w-4 h-4 mr-1" />
-                    {user?.email}
+                    {user?.email || authUser?.email}
                   </p>
                   <p className="text-blue-100 text-sm mt-1">Print Media Publisher</p>
                 </div>
@@ -368,7 +429,9 @@ const PublisherProfile = () => {
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Company Name <span className="text-red-500">*</span>
+                  </label>
                   {isEditing ? (
                     <input
                       type="text"
@@ -376,6 +439,7 @@ const PublisherProfile = () => {
                       value={formData.companyName}
                       onChange={handleInputChange}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Enter your company name"
                       required
                     />
                   ) : (
@@ -391,7 +455,6 @@ const PublisherProfile = () => {
                       value={formData.industry}
                       onChange={handleInputChange}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      required
                     >
                       <option value="">Select Industry</option>
                       {industries.map(industry => (
@@ -441,6 +504,7 @@ const PublisherProfile = () => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       min="1800"
                       max={new Date().getFullYear()}
+                      placeholder="e.g., 2010"
                     />
                   ) : (
                     <p className="px-3 py-2 bg-gray-50 rounded-lg flex items-center">
@@ -483,6 +547,7 @@ const PublisherProfile = () => {
                       value={formData.phone}
                       onChange={handleInputChange}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="+1 (555) 123-4567"
                     />
                   ) : (
                     <p className="px-3 py-2 bg-gray-50 rounded-lg flex items-center">
@@ -548,6 +613,7 @@ const PublisherProfile = () => {
                       value={formData.contactName}
                       onChange={handleInputChange}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Your full name"
                       required
                     />
                   ) : (
@@ -564,6 +630,7 @@ const PublisherProfile = () => {
                       value={formData.jobTitle}
                       onChange={handleInputChange}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="e.g., Editor-in-Chief, Publisher"
                       required
                     />
                   ) : (
@@ -628,11 +695,12 @@ const PublisherProfile = () => {
                       onChange={handleInputChange}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="Average monthly readers"
+                      min="0"
                     />
                   ) : (
                     <p className="px-3 py-2 bg-gray-50 rounded-lg flex items-center">
                       <Users className="w-4 h-4 mr-2 text-gray-400" />
-                      {user?.monthlyReadership ? `${user.monthlyReadership} readers/month` : 'Not provided'}
+                      {user?.monthlyReadership ? `${user.monthlyReadership.toLocaleString()} readers/month` : 'Not provided'}
                     </p>
                   )}
                 </div>
@@ -743,7 +811,7 @@ const PublisherProfile = () => {
                 
                 <div className="text-center p-4 bg-green-50 rounded-lg">
                   <div className="text-2xl font-bold text-green-600">
-                    {user?.monthlyReadership ? `${user.monthlyReadership}` : '0'}
+                    {user?.monthlyReadership ? user.monthlyReadership.toLocaleString() : '0'}
                   </div>
                   <div className="text-sm text-gray-600">Monthly Readers</div>
                 </div>
