@@ -14,13 +14,29 @@ import { app } from '@/Firebase/firebase';
 
 const db = getFirestore(app);
 
+// Helper function to ensure userId has proper format
+const normalizeReaderId = (userId) => {
+  if (!userId) return null;
+  
+  // If it already starts with "reader_", use as is
+  if (userId.startsWith('reader_')) {
+    console.log('✅ Reader ID already properly formatted:', userId);
+    return userId;
+  }
+  
+  // If it's just the Firebase UID, add "reader_" prefix
+  const readerId = `reader_${userId}`;
+  console.log('🔧 Normalized reader ID from', userId, 'to', readerId);
+  return readerId;
+};
+
 // GET - Fetch user's favorite publishers
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
-
-    console.log('🔍 GET Request received with userId:', userId);
+    
+    console.log('🔍 GET Request - Raw userId from request:', userId);
 
     if (!userId) {
       return NextResponse.json(
@@ -29,20 +45,19 @@ export async function GET(request) {
       );
     }
 
-    // Debug: Log the exact path being queried
-    const publishersPath = `readers/${userId}/favoritePublishers`;
-    console.log('📍 Querying Firestore path:', publishersPath);
+    // Normalize the reader ID
+    const readerId = normalizeReaderId(userId);
+    console.log('🔍 GET Request - Using normalized readerId:', readerId);
 
     // Get user's favorite publishers from the readers collection subcollection
-    const publishersRef = collection(db, 'readers', userId, 'favoritePublishers');
-    console.log('📁 Publishers collection reference created');
+    const publishersRef = collection(db, 'readers', readerId, 'favoritePublishers');
+    console.log('📍 Querying path:', `readers/${readerId}/favoritePublishers`);
     
     const publishersSnapshot = await getDocs(publishersRef);
-    console.log('📊 Query executed, snapshot size:', publishersSnapshot.size);
+    console.log('📊 Found documents:', publishersSnapshot.size);
     
     const publishers = [];
     publishersSnapshot.forEach((doc) => {
-      console.log('📄 Found publisher document:', doc.id, doc.data());
       publishers.push({
         id: doc.id,
         ...doc.data()
@@ -56,23 +71,23 @@ export async function GET(request) {
       return dateB - dateA;
     });
 
-    console.log('✅ Final result - Found', publishers.length, 'favorite publishers for user');
+    console.log('✅ Returning', publishers.length, 'favorite publishers');
 
     return NextResponse.json({
       success: true,
       publishers,
       count: publishers.length,
       debug: {
-        userId,
-        queryPath: publishersPath,
-        snapshotSize: publishersSnapshot.size
+        originalUserId: userId,
+        normalizedReaderId: readerId,
+        queryPath: `readers/${readerId}/favoritePublishers`
       }
     });
 
   } catch (error) {
     console.error('❌ Error fetching favorite publishers:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch favorite publishers', details: error.message },
+      { success: false, error: 'Failed to fetch favorite publishers' },
       { status: 500 }
     );
   }
@@ -84,8 +99,8 @@ export async function POST(request) {
     const { userId, publisher } = await request.json();
 
     console.log('📝 POST Request received:');
-    console.log('  - userId:', userId);
-    console.log('  - publisher:', JSON.stringify(publisher, null, 2));
+    console.log('  - Raw userId:', userId);
+    console.log('  - Publisher name:', publisher?.name || publisher?.companyName);
 
     if (!userId || !publisher) {
       return NextResponse.json(
@@ -94,27 +109,41 @@ export async function POST(request) {
       );
     }
 
-    // Debug: Log the exact paths being used
-    const userPath = `readers/${userId}`;
-    const publisherPath = `readers/${userId}/favoritePublishers/${publisher.id || `publisher_${Date.now()}`}`;
-    console.log('📍 User document path:', userPath);
-    console.log('📍 Publisher document path:', publisherPath);
+    // Normalize the reader ID
+    const readerId = normalizeReaderId(userId);
+    console.log('📝 POST Request - Using normalized readerId:', readerId);
 
-    // First, verify that the user exists in the readers collection
-    const userDocRef = doc(db, 'readers', userId);
-    console.log('🔍 Checking if user exists at:', userDocRef.path);
+    // Check if the user document exists in the readers collection
+    const userDocRef = doc(db, 'readers', readerId);
+    console.log('👤 Checking reader document at:', userDocRef.path);
     
     const userDocSnap = await getDoc(userDocRef);
-    console.log('👤 User document exists:', userDocSnap.exists());
-    
-    if (userDocSnap.exists()) {
-      console.log('👤 User document data:', userDocSnap.data());
-    }
+    console.log('👤 Reader document exists:', userDocSnap.exists());
 
+    // If user doesn't exist, we have a problem - they should exist
     if (!userDocSnap.exists()) {
-      console.error('❌ User not found in readers collection:', userId);
+      console.error('❌ Reader document not found at:', userDocRef.path);
+      console.error('❌ This reader should exist. Available readers in your database might be:');
+      
+      // Let's try to find similar reader documents
+      const readersRef = collection(db, 'readers');
+      const readersSnapshot = await getDocs(readersRef);
+      const existingReaders = [];
+      readersSnapshot.forEach((doc) => {
+        existingReaders.push(doc.id);
+      });
+      console.log('📋 Existing readers in database:', existingReaders);
+      
       return NextResponse.json(
-        { success: false, error: 'User not found in readers collection', userId },
+        { 
+          success: false, 
+          error: 'Reader document not found',
+          debug: {
+            requestedReaderId: readerId,
+            existingReaders: existingReaders.slice(0, 10), // First 10 for debugging
+            suggestion: `Make sure the reader ${readerId} exists in the database`
+          }
+        },
         { status: 404 }
       );
     }
@@ -130,21 +159,19 @@ export async function POST(request) {
       website: publisher.website || publisher.companyWebsite || '',
       description: publisher.description || publisher.companyDescription || '',
       addedAt: serverTimestamp(),
-      userId: userId,
+      userId: readerId, // Store the normalized reader ID
       // Preserve any additional fields from the original publisher
       ...publisher
     };
 
-    console.log('📋 Publisher data prepared:', JSON.stringify(publisherData, null, 2));
-
     // Check if already favorited
-    const publisherRef = doc(db, 'readers', userId, 'favoritePublishers', publisherData.id);
+    const publisherRef = doc(db, 'readers', readerId, 'favoritePublishers', publisherData.id);
     console.log('🔍 Checking if publisher already exists at:', publisherRef.path);
     
     const existingPublisher = await getDoc(publisherRef);
-    console.log('🔍 Publisher already exists:', existingPublisher.exists());
 
     if (existingPublisher.exists()) {
+      console.log('⚠️ Publisher already in favorites');
       return NextResponse.json(
         { success: false, error: 'Publisher already in favorites' },
         { status: 409 }
@@ -154,31 +181,24 @@ export async function POST(request) {
     // Add to favorite publishers subcollection under the specific reader
     console.log('💾 Saving publisher to:', publisherRef.path);
     await setDoc(publisherRef, publisherData);
-    console.log('✅ Publisher saved successfully');
 
-    // Verify the save
-    const verifyDoc = await getDoc(publisherRef);
-    console.log('✅ Verification - Document exists after save:', verifyDoc.exists());
-    if (verifyDoc.exists()) {
-      console.log('✅ Verification - Saved data:', verifyDoc.data());
-    }
+    console.log('✅ Successfully added publisher to favorites');
 
     return NextResponse.json({
       success: true,
       message: 'Publisher added to favorites',
       publisher: publisherData,
       debug: {
-        userId,
-        publisherPath,
-        userExists: userDocSnap.exists(),
-        savedSuccessfully: verifyDoc.exists()
+        originalUserId: userId,
+        normalizedReaderId: readerId,
+        savedToPath: publisherRef.path
       }
     });
 
   } catch (error) {
     console.error('❌ Error adding publisher to favorites:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to add publisher to favorites', details: error.message },
+      { success: false, error: 'Failed to add publisher to favorites' },
       { status: 500 }
     );
   }
@@ -191,9 +211,9 @@ export async function DELETE(request) {
     const userId = searchParams.get('userId');
     const publisherId = searchParams.get('publisherId');
 
-    console.log('🗑️ DELETE Request received:');
-    console.log('  - userId:', userId);
-    console.log('  - publisherId:', publisherId);
+    console.log('🗑️ DELETE Request:');
+    console.log('  - Raw userId:', userId);
+    console.log('  - PublisherId:', publisherId);
 
     if (!userId || !publisherId) {
       return NextResponse.json(
@@ -202,41 +222,32 @@ export async function DELETE(request) {
       );
     }
 
-    // Debug: Log the exact path being deleted
-    const publisherPath = `readers/${userId}/favoritePublishers/${publisherId}`;
-    console.log('📍 Deleting from path:', publisherPath);
+    // Normalize the reader ID
+    const readerId = normalizeReaderId(userId);
+    console.log('🗑️ DELETE Request - Using normalized readerId:', readerId);
 
     // Remove from favorite publishers subcollection under the specific reader
-    const publisherRef = doc(db, 'readers', userId, 'favoritePublishers', publisherId);
-    console.log('🗑️ Deleting document at:', publisherRef.path);
-    
-    // Check if document exists before deleting
-    const existingDoc = await getDoc(publisherRef);
-    console.log('🔍 Document exists before deletion:', existingDoc.exists());
+    const publisherRef = doc(db, 'readers', readerId, 'favoritePublishers', publisherId);
+    console.log('🗑️ Deleting from path:', publisherRef.path);
     
     await deleteDoc(publisherRef);
-    console.log('✅ Delete operation completed');
 
-    // Verify deletion
-    const verifyDoc = await getDoc(publisherRef);
-    console.log('✅ Verification - Document exists after deletion:', verifyDoc.exists());
+    console.log('✅ Successfully removed publisher from favorites');
 
     return NextResponse.json({
       success: true,
       message: 'Publisher removed from favorites',
       debug: {
-        userId,
-        publisherId,
-        publisherPath,
-        existedBefore: existingDoc.exists(),
-        deletedSuccessfully: !verifyDoc.exists()
+        originalUserId: userId,
+        normalizedReaderId: readerId,
+        deletedFromPath: publisherRef.path
       }
     });
 
   } catch (error) {
     console.error('❌ Error removing publisher from favorites:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to remove publisher from favorites', details: error.message },
+      { success: false, error: 'Failed to remove publisher from favorites' },
       { status: 500 }
     );
   }
