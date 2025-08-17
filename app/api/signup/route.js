@@ -1,35 +1,20 @@
-
-import { getFirestore, doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { getApps, initializeApp } from 'firebase/app';
+// app/api/signup/route.js
 import { NextResponse } from 'next/server';
-import { sendWelcomeEmail } from '../../../lib/emailService';
-
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-};
-
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-const db = getFirestore(app);
+import { getFirestoreDb } from '../../../lib/firebase-admin';
 
 export async function POST(request) {
-  console.log('/api/signup POST route called');
-
+  console.log('📝 Processing email signup...');
+  
   try {
-    const body = await request.json();
-    console.log(' Request body:', body);
-
-    const {
-      uid,
-      email,
-      firstName,
-      lastName,
-      role,
+    const { 
+      uid, 
+      email, 
+      firstName, 
+      lastName, 
+      role, 
       profilePicture,
+      signUpMethod,
+      // Publisher specific fields
       companyName,
       industry,
       companyWebsite,
@@ -38,177 +23,123 @@ export async function POST(request) {
       publicationType,
       audienceType,
       monthlyReadership,
-    } = body;
+      contactName
+    } = await request.json();
 
-    console.log('Processing signup for:', email, 'Role:', role);
+    console.log('📥 Received signup data:', { 
+      uid, 
+      email, 
+      role, 
+      signUpMethod,
+      hasProfilePicture: !!profilePicture 
+    });
 
-    // Validate required fields
-    if (!uid || !email || !firstName || !role) {
-      console.warn(' Missing required fields');
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Missing required fields: uid, email, firstName, role' 
-        },
-        { status: 400 }
-      );
+    if (!uid || !email || !role) {
+      console.error('❌ Missing required fields');
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Missing required fields: uid, email, role' 
+      }, { status: 400 });
     }
 
-    // Validate role
-    if (!['reader', 'publisher'].includes(role)) {
-      console.warn(' Invalid role:', role);
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Invalid role. Must be either "reader" or "publisher"' 
-        },
-        { status: 400 }
-      );
-    }
+    // Initialize Firebase
+    console.log('🔥 Initializing Firestore...');
+    const db = getFirestoreDb();
 
-    console.log(' Validation passed. Preparing user data...');
-
-    // Generate role-specific UID
     const roleSpecificUid = `${role}_${uid}`;
-    console.log(' Generated role-specific UID:', roleSpecificUid);
+    const collectionName = role === 'reader' ? 'readers' : 'publishers';
 
-    // Prepare base user data
-    const userData = {
-      originalUid: uid, // Store original Firebase Auth UID for reference
-      uid: roleSpecificUid,
-      email: email.toLowerCase().trim(),
-      firstName: firstName.trim(),
-      lastName: lastName?.trim() || '',
+    // Check if user already exists in role-specific collection
+    console.log('🔍 Checking if user already exists...');
+    const existingDoc = await db.collection(collectionName).doc(roleSpecificUid).get();
+    
+    if (existingDoc.exists) {
+      console.log('⚠️ User already exists in role-specific collection');
+      return NextResponse.json({ 
+        success: false, 
+        error: `You already have a ${role} account.` 
+      }, { status: 409 });
+    }
+
+    // Prepare user data based on role
+    let userData = {
+      uid,
+      email,
       role,
-      profilePicture: profilePicture || null,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
       isActive: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      signUpMethod: signUpMethod || 'email'
     };
 
-    if (role === 'publisher') {
-      console.log(' Processing publisher signup...');
-      
-      // Validate publisher required fields
-      if (!companyName || !industry || !publicationType || !audienceType) {
-        console.warn(' Missing publisher required fields');
-        return NextResponse.json(
-          { 
-            success: false, 
-            error: 'Missing required publisher fields: companyName, industry, publicationType, audienceType' 
-          },
-          { status: 400 }
-        );
-      }
-
-      // Add publisher-specific fields
-      userData.companyName = companyName.trim();
-      userData.industry = industry.trim();
-      userData.companyWebsite = companyWebsite?.trim() || null;
-      userData.jobTitle = jobTitle?.trim() || '';
-      userData.phone = phone?.trim() || null;
-      userData.publicationType = publicationType.trim();
-      userData.audienceType = audienceType.trim();
-      userData.monthlyReadership = monthlyReadership ? parseInt(monthlyReadership) : null;
-      userData.isVerified = false;
-      userData.subscriptionStatus = 'trial';
-      userData.totalArticles = 0;
-      userData.totalViews = 0;
-
-      console.log(' Saving publisher data to Firestore...');
-      console.log(' Final publisher userData:', JSON.stringify(userData, null, 2));
-
-      // Save to publishers collection only
-      const publisherDocRef = doc(db, 'publishers', roleSpecificUid);
-      await setDoc(publisherDocRef, userData);
-
-      console.log(' Publisher data saved successfully to Firestore');
-
-    } else if (role === 'reader') {
-      console.log(' Processing reader signup...');
-      
-      // Add reader-specific fields
-      userData.preferences = {
-        categories: [],
-        notifications: true,
+    if (role === 'reader') {
+      userData = {
+        ...userData,
+        firstName: firstName || '',
+        lastName: lastName || '',
+        profilePicture: profilePicture || null,
+        preferences: {
+          categories: [],
+          notifications: true,
+          emailUpdates: true
+        },
+        articlesRead: 0,
+        // Additional reader fields
+        phone: '',
+        bio: '',
+        location: '',
+        dateOfBirth: ''
       };
-      userData.readingHistory = [];
-      userData.bookmarks = [];
-      userData.following = [];
-
-      console.log(' Saving reader data to Firestore...');
-      console.log(' Final reader userData:', JSON.stringify(userData, null, 2));
-
-      // Save to readers collection only
-      const readerDocRef = doc(db, 'readers', roleSpecificUid);
-      await setDoc(readerDocRef, userData);
-
-      console.log(' Reader data saved successfully to Firestore');
+      console.log('👤 Prepared reader data');
+    } else if (role === 'publisher') {
+      userData = {
+        ...userData,
+        companyName: companyName || '',
+        industry: industry || '',
+        companyWebsite: companyWebsite || '',
+        contactName: contactName || `${firstName} ${lastName}`.trim(),
+        jobTitle: jobTitle || '',
+        phone: phone || '',
+        publicationType: publicationType || '',
+        audienceType: audienceType || '',
+        monthlyReadership: parseInt(monthlyReadership) || 0,
+        firstName: firstName || '',
+        lastName: lastName || '',
+        profilePicture: profilePicture || null,
+        companyLogo: null,
+        staff: [],
+        articlesCount: 0,
+        lastPosted: null,
+        isVerified: false,
+        // Additional publisher fields
+        companyDescription: '',
+        address: '',
+        foundedYear: '',
+        employeeCount: ''
+      };
+      console.log('🏢 Prepared publisher data');
     }
 
-    console.log('🎉 Registration completed successfully');
+    // Save to Firestore
+    console.log('💾 Saving user data to Firestore...');
+    await db.collection(collectionName).doc(roleSpecificUid).set(userData);
+    console.log('✅ User data saved successfully');
 
-    // Send welcome email
-    try {
-      console.log(' Sending welcome email...');
-      await sendWelcomeEmail(userData.email, userData.firstName, userData.role);
-      console.log('Welcome email sent successfully');
-    } catch (emailError) {
-      console.warn(' Failed to send welcome email:', emailError);
-      // Don't fail the registration if email fails
-    }
-
+    console.log('🎉 Email signup process completed successfully');
+    
     return NextResponse.json({
       success: true,
-      message: 'User registered successfully',
-      user: {
-        uid: roleSpecificUid,
-        originalUid: uid,
-        email: userData.email,
-        firstName: userData.firstName,
-        lastName: userData.lastName,
-        role: userData.role,
-      }
+      user: userData,
+      message: `${role} account created successfully`
     });
 
   } catch (error) {
-    console.error(' Error in /api/signup:', error);
+    console.error('❌ Email signup error:', error);
     
-    // Handle specific Firestore errors
-    if (error.code === 'permission-denied') {
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Permission denied. Check Firestore security rules.' 
-        },
-        { status: 403 }
-      );
-    }
-    
-    if (error.code === 'unavailable') {
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Database temporarily unavailable. Please try again.' 
-        },
-        { status: 503 }
-      );
-    }
-
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Internal server error: ' + error.message 
-      },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      success: false,
+      error: error.message || 'Email signup failed',
+      code: error.code || 'unknown'
+    }, { status: 500 });
   }
-}
-
-// Handle other HTTP methods
-export async function GET() {
-  return NextResponse.json(
-    { error: 'Method not allowed. Only POST is supported.' },
-    { status: 405 }
-  );
 }
