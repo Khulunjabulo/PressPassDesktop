@@ -7,6 +7,7 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from '@/Firebase/firebase';
 import { getUserRole } from '@/Firebase/auth';
 import { useRouter } from 'next/navigation';
+import { Newspaper, LogOut, UserPlus, LogIn } from 'lucide-react';
 
 export default function MainHeader() {
   const [user, setUser] = useState(null);
@@ -61,18 +62,27 @@ export default function MainHeader() {
 
         <nav className="flex items-center gap-4 text-white">
           {/* Always show Print Media */}
-          <button onClick={handlePrintMediaClick} className="hover:underline text-sm">
-            Print Media
+          <button onClick={handlePrintMediaClick} className="hover:underline text-sm flex items-center gap-1">
+            <Newspaper size={20}/>
+            <span>Print Media</span>
           </button>
 
           {user ? (
-            <button onClick={handleLogout} className="hover:underline text-sm">
-              Logout
+            <button onClick={handleLogout} className="hover:underline text-sm flex items-center gap-1">
+              <LogOut size={20}/>
+              <span>Logout</span>
             </button>
           ) : (
             <>
-              <Link href="/signup" className="hover:underline">Sign Up</Link>
-              <Link href="/signin" className="hover:underline">Login</Link>
+              <Link href="/signup" className="hover:underline flex items-center gap-1">
+                <UserPlus size={20} />
+                <span>Sign Up</span>
+              </Link>
+
+              <Link href="/signin" className="hover:underline flex items-center gap-1">
+                <LogIn size={20} />
+                <span>Login</span>
+              </Link>
             </>
           )}
         </nav>
