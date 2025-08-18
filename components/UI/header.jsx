@@ -2,35 +2,50 @@
 
 import Link from "next/link";
 import { Home, Newspaper, DollarSign, Wallet } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCurrentPublisher } from "@/hooks/useCurrentPublisher";
+import { useState, useEffect } from "react";
 
 export default function Header() {
-  const [currentUser, setCurrentUser] = useState(null);
+  // 👇 Fetch publisher data using your hook
+  const { publisher: hookPublisher, loading } = useCurrentPublisher("currentPublisherId");
+  const [publisher, setPublisher] = useState(hookPublisher);
 
+  // Update state whenever hookPublisher changes
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const storedUser = localStorage.getItem("currentUser");
-      if (storedUser) {
-        setCurrentUser(JSON.parse(storedUser));
-      }
+    if (hookPublisher) {
+      setPublisher(hookPublisher);
+      localStorage.setItem('currentPublisher', JSON.stringify(hookPublisher));
     }
+  }, [hookPublisher]);
+
+  // Listen for updates from localStorage (e.g., profile page updates)
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const updated = localStorage.getItem('currentPublisher');
+      if (updated) setPublisher(JSON.parse(updated));
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
+
+  // Helper to check if string is a base64 image
+  const isBase64 = (str) => typeof str === 'string' && str.startsWith('data:image/');
 
   return (
     <header className="bg-blue-400 px-4 py-3 flex items-center justify-between">
-      {/* Logo / Name */}
       <Link href="/print-media" className="flex items-center space-x-3">
-        <div className="w-[40px] h-[40px]">
-          {currentUser?.companyLogo ? (
+        <div className="w-[100px] h-[100px]">
+          {publisher?.companyLogo ? (
             <img
-              src={currentUser.companyLogo}
-              alt={`${currentUser?.companyName || "Publisher"} logo`}
+              src={isBase64(publisher.companyLogo) ? publisher.companyLogo : publisher.companyLogo}
+              alt={`${publisher?.companyName || "Publisher"} logo`}
               className="w-full h-full object-contain rounded-lg"
             />
-          ) : currentUser?.companyName ? (
+          ) : publisher?.companyName ? (
             <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-700 rounded-lg flex items-center justify-center">
               <span className="text-white font-semibold text-2xl">
-                {currentUser.companyName.charAt(0).toUpperCase()}
+                {publisher.companyName.charAt(0).toUpperCase()}
               </span>
             </div>
           ) : (
@@ -39,15 +54,15 @@ export default function Header() {
             </div>
           )}
         </div>
-        {/* Publication Name */}
-        {currentUser?.companyName && (
+
+        {publisher?.companyName && (
           <span className="text-white font-semibold text-lg truncate">
-            {currentUser.companyName}
+            {publisher.companyName}
           </span>
         )}
       </Link>
 
-      {/* Navigation */}
+      {/* Nav */}
       <nav className="flex space-x-6 text-white font-medium">
         <Link href="/print-media/overview" className="flex flex-col items-center hover:text-gray-100">
           <Home size={20} />
