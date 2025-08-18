@@ -70,7 +70,7 @@ export default function NewsReaderHeader({
         />
       </Link>
 
-      {/* Navigation Icons */}
+      {/* Navigation Icons - always the same */}
       <nav className="flex gap-8 text-white text-sm font-medium items-center">
         <Link href="/news-reader">
           <div className="flex flex-col items-center hover:text-gray-200 transition">
@@ -100,6 +100,24 @@ export default function NewsReaderHeader({
           </div>
         </Link>
       </nav>
+
+      {/* Debug Info (remove in production) */}
+      {/* {process.env.NODE_ENV === 'development' && (
+        <div className="absolute top-full left-0 w-full bg-yellow-50 border-b border-yellow-200 px-4 py-2 z-50">
+          <details className="text-xs">
+            <summary className="cursor-pointer text-yellow-800 font-medium">
+              🐛 Debug Info (Development Only)
+            </summary>
+            <div className="mt-2 space-y-1 text-yellow-700">
+              <div><strong>Is Publisher Page:</strong> {isPublisherPage.toString()}</div>
+              <div><strong>Pathname:</strong> {pathname}</div>
+              <div><strong>Logo Src:</strong> {logoSrc}</div>
+              <div><strong>Publisher Name:</strong> {publisherName || 'null'}</div>
+              <div><strong>Using Publisher Logo:</strong> {(isPublisherPage && !logoError && logoSrc !== '/Presspass.png').toString()}</div>
+            </div>
+          </details>
+        </div>
+      )} */}
     </header>
   );
 }
