@@ -1,6 +1,8 @@
 "use client"
 
 import { useState } from "react"
+import { ArrowLeft } from "lucide-react"
+import Link from 'next/link'
 
 export default function PaymentMethod() {
   const [withdrawMethod, setWithdrawMethod] = useState("bank")
@@ -13,6 +15,10 @@ export default function PaymentMethod() {
 
   return (
     <div className="bg-white border rounded shadow-sm p-6 max-w-3xl mx-auto">
+               <Link href="/print-media/wallet" className="flex items-center text-blue-600 hover:text-blue-800 mr-4">
+                  <ArrowLeft size={20} />
+                  <span className="ml-1">Back to Wallet</span>
+                </Link>
       <h2 className="text-lg font-bold mb-4">Payment Method</h2>
       <form onSubmit={handleSubmit} className="space-y-6">
 
