@@ -334,15 +334,14 @@ export default function ArticleViewPage() {
 
   // Banner Ad Component
   const BannerAd = () => (
-    <div className="my-8 p-6 bg-gray-100 border-4 border-black text-center">
-      <div className="text-xs uppercase tracking-widest text-gray-600 mb-2">Advertisement</div>
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-8 font-bold text-xl">
-        Your Ad Could Be Here
-      </div>
-      <div className="text-sm text-gray-600 mt-2">
-        Premium advertising space available - Contact us for rates
-      </div>
-    </div>
+    {/* Bottom Banner Ad */}
+        <div className="max-w-7xl mx-auto px-8 py-6">
+          <img 
+    src="/press-bannerAd.png" 
+    alt="Mobile preview" 
+    className="mb-6" 
+  />
+        </div>
   );
 
   if (loading) {

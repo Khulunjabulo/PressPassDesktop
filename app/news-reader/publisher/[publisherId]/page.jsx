@@ -2,16 +2,43 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
+import { useState, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/newscard';
-import { ArrowLeft, FileText, Clock, Globe, Building, Users, Calendar, Eye, Hash } from 'lucide-react';
+import { ArrowLeft, FileText, Clock, Globe, Building, Users, Calendar, Eye, Hash, Filter } from 'lucide-react';
 import { usePublisherArticles } from '@/hooks/useNewsSources';
 import BannerAd from '@/components/news-reader/BannerAd';
 import AdSlot from '@/components/news-reader/AdsSlot';
+import NewsReaderHeader from '@/components/news-reader/NewsReaderHeader'; // Import your header component
 
 export default function PublisherArticlesPage() {
   const params = useParams();
   const router = useRouter();
   const { publisher, articles, loading, error, refreshArticles } = usePublisherArticles(params.publisherId);
+  const [selectedCategory, setSelectedCategory] = useState('all');
+
+  // Get all unique categories from articles
+  const categories = useMemo(() => {
+    if (!articles || articles.length === 0) return [];
+    
+    const categorySet = new Set();
+    articles.forEach(article => {
+      if (article.category) {
+        categorySet.add(article.category);
+      }
+    });
+    
+    return Array.from(categorySet).sort();
+  }, [articles]);
+
+  // Filter articles based on selected category
+  const filteredArticles = useMemo(() => {
+    if (!articles) return [];
+    if (selectedCategory === 'all') return articles;
+    
+    return articles.filter(article => 
+      article.category && article.category.toLowerCase() === selectedCategory.toLowerCase()
+    );
+  }, [articles, selectedCategory]);
 
   const handleArticleClick = (article) => {
     // Navigate to individual article
@@ -20,6 +47,10 @@ export default function PublisherArticlesPage() {
 
   const handleBackClick = () => {
     router.back();
+  };
+
+  const handleCategoryFilter = (category) => {
+    setSelectedCategory(category);
   };
 
   // Improved date formatting with better error handling
@@ -87,19 +118,44 @@ export default function PublisherArticlesPage() {
     });
   };
 
-  // Debug logging
+  // Debug logging - Enhanced to show publisher data
   console.log('Publisher Page Debug:', {
     publisherId: params.publisherId,
     hasPublisher: !!publisher,
     publisherName: publisher?.name,
+    publisherLogo: publisher?.logo,
+    publisherCompanyLogo: publisher?.companyLogo,
     articlesCount: articles?.length || 0,
+    filteredArticlesCount: filteredArticles?.length || 0,
+    categoriesCount: categories?.length || 0,
+    categories,
+    selectedCategory,
     loading,
-    error
+    error,
+    fullPublisherData: publisher // Log full publisher object
+  });
+
+  // Additional debug for header props
+  console.log('🔍 Header Props Debug:', {
+    publisherImage: publisher?.logo || publisher?.companyLogo,
+    publisherName: publisher?.name || publisher?.companyName,
+    publisherExists: !!publisher,
+    logoField: publisher?.logo,
+    companyLogoField: publisher?.companyLogo,
+    nameField: publisher?.name,
+    companyNameField: publisher?.companyName
   });
 
   if (loading) {
     return (
       <div className="min-h-screen bg-white">
+        {/* Show header even during loading, but with loading state */}
+        <NewsReaderHeader 
+          publisherImage={null}
+          publisherName="Loading..."
+          isLoading={true}
+        />
+        
         <div className="max-w-7xl mx-auto px-8 py-12">
           <div className="animate-pulse">
             <div className="h-4 bg-gray-200 w-24 mb-8"></div>
@@ -131,6 +187,13 @@ export default function PublisherArticlesPage() {
   if (error) {
     return (
       <div className="min-h-screen bg-white">
+        {/* Show header even during error state */}
+        <NewsReaderHeader 
+          publisherImage={null}
+          publisherName="Publisher Not Found"
+          isError={true}
+        />
+        
         <div className="max-w-7xl mx-auto px-8 py-12">
           <button
             onClick={handleBackClick}
@@ -162,27 +225,13 @@ export default function PublisherArticlesPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Development Debug Info */}
-      {/* {process.env.NODE_ENV === 'development' && (
-        <div className="bg-yellow-50 border border-yellow-200 p-4 m-4 rounded text-xs">
-          <h4 className="font-bold mb-2">🐛 Publisher Page Debug Info:</h4>
-          <p><strong>Publisher ID:</strong> {params.publisherId}</p>
-          <p><strong>Publisher Name:</strong> {publisher?.name || 'N/A'}</p>
-          <p><strong>Articles Count:</strong> {articles?.length || 0}</p>
-          <p><strong>Loading:</strong> {loading ? 'Yes' : 'No'}</p>
-          <p><strong>Error:</strong> {error || 'None'}</p>
-          {articles?.length > 0 && (
-            <div>
-              <strong>Sample Article Dates:</strong>
-              {articles.slice(0, 3).map((article, i) => (
-                <div key={i} className="ml-4">
-                  Article {i + 1}: {JSON.stringify(article.createdAt)} (Type: {typeof article.createdAt})
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )} */}
+      {/* Pass publisher data to header component */}
+      <NewsReaderHeader 
+        publisherImage={publisher?.logo || publisher?.companyLogo}
+        publisherName={publisher?.name || publisher?.companyName}
+        publisherId={params.publisherId}
+        publisher={publisher} // Pass full publisher object if needed
+      />
 
       {/* Newspaper Header */}
       <div className="border-b-4 border-black">
@@ -231,8 +280,12 @@ export default function PublisherArticlesPage() {
 
       {/* Banner Ad */}
       <div className="max-w-7xl mx-auto px-8 py-4">
-        <BannerAd className="mb-6" />
-      </div>
+  <img 
+    src="/press-bannerAd.png" 
+    alt="Mobile preview" 
+    className="mb-6" 
+  />
+</div>
 
       {/* Main Content Layout */}
       <div className="max-w-7xl mx-auto px-8 py-4">
@@ -246,29 +299,118 @@ export default function PublisherArticlesPage() {
               </h2>
             </div>
 
-            {(!articles || articles.length === 0) ? (
+            {/* Category Filter */}
+            {articles && articles.length > 0 && (
+              <div className="mb-8 border-t border-b border-gray-300 py-4">
+                <div className="flex items-center space-x-2 mb-3">
+                  <Filter className="w-4 h-4" />
+                  <span className="text-sm font-bold uppercase tracking-wider">Filter by Category:</span>
+                </div>
+                
+                <div className="flex flex-wrap gap-2">
+                  {/* All Articles Filter */}
+                  <button
+                    onClick={() => handleCategoryFilter('all')}
+                    className={`px-3 py-2 text-xs font-bold uppercase tracking-wider border transition-colors ${
+                      selectedCategory === 'all'
+                        ? 'bg-black text-white border-black'
+                        : 'bg-white text-black border-gray-400 hover:bg-gray-100'
+                    }`}
+                  >
+                    All Articles ({articles.length})
+                  </button>
+
+                  {/* Dynamic Category Filters */}
+                  {categories.map((category) => {
+                    const categoryCount = articles.filter(article => 
+                      article.category && article.category.toLowerCase() === category.toLowerCase()
+                    ).length;
+                    
+                    return (
+                      <button
+                        key={category}
+                        onClick={() => handleCategoryFilter(category)}
+                        className={`px-3 py-2 text-xs font-bold uppercase tracking-wider border transition-colors ${
+                          selectedCategory.toLowerCase() === category.toLowerCase()
+                            ? 'bg-black text-white border-black'
+                            : 'bg-white text-black border-gray-400 hover:bg-gray-100'
+                        }`}
+                      >
+                        {category} ({categoryCount})
+                      </button>
+                    );
+                  })}
+
+                  {/* Uncategorized Filter (if there are articles without categories) */}
+                  {articles.some(article => !article.category) && (
+                    <button
+                      onClick={() => handleCategoryFilter('uncategorized')}
+                      className={`px-3 py-2 text-xs font-bold uppercase tracking-wider border transition-colors ${
+                        selectedCategory === 'uncategorized'
+                          ? 'bg-black text-white border-black'
+                          : 'bg-white text-black border-gray-400 hover:bg-gray-100'
+                      }`}
+                    >
+                      Uncategorized ({articles.filter(article => !article.category).length})
+                    </button>
+                  )}
+                </div>
+
+                {/* Active Filter Indicator */}
+                {selectedCategory !== 'all' && (
+                  <div className="mt-3 text-sm text-gray-600">
+                    <span>Showing </span>
+                    <span className="font-bold">
+                      {selectedCategory === 'uncategorized' ? 'Uncategorized' : selectedCategory}
+                    </span>
+                    <span> articles ({filteredArticles.length} of {articles.length})</span>
+                    <button
+                      onClick={() => setSelectedCategory('all')}
+                      className="ml-2 text-blue-600 hover:underline"
+                    >
+                      Clear filter
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {(!filteredArticles || filteredArticles.length === 0) ? (
               <div className="text-center py-16 border border-gray-400">
                 <FileText className="mx-auto h-16 w-16 text-gray-400 mb-4" />
                 <h3 className="text-2xl font-bold mb-4" style={{fontFamily: 'Times, "Times New Roman", serif'}}>
-                  No Articles Published
+                  {selectedCategory === 'all' ? 'No Articles Published' : `No ${selectedCategory} Articles`}
                 </h3>
                 <p className="text-gray-600 max-w-md mx-auto mb-4">
-                  This publisher's newsroom is ready for content. Check back later for breaking news and updates.
+                  {selectedCategory === 'all' 
+                    ? "This publisher's newsroom is ready for content. Check back later for breaking news and updates."
+                    : `No articles found in the ${selectedCategory} category. Try selecting a different category or view all articles.`
+                  }
                 </p>
-                <button 
-                  onClick={refreshArticles}
-                  className="bg-black text-white px-6 py-2 text-sm font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors"
-                >
-                  Refresh Articles
-                </button>
+                {selectedCategory !== 'all' ? (
+                  <button 
+                    onClick={() => setSelectedCategory('all')}
+                    className="bg-black text-white px-6 py-2 text-sm font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors mr-4"
+                  >
+                    View All Articles
+                  </button>
+                ) : (
+                  <button 
+                    onClick={refreshArticles}
+                    className="bg-black text-white px-6 py-2 text-sm font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors"
+                  >
+                    Refresh Articles
+                  </button>
+                )}
               </div>
             ) : (
               <div className="space-y-8">
-                {articles.map((article, index) => {
+                {filteredArticles.map((article, index) => {
                   // Debug log for each article
                   console.log(`Article ${index + 1}:`, {
                     id: article.id,
                     title: article.title,
+                    category: article.category,
                     hasContent: !!article.content,
                     createdAt: article.createdAt,
                     createdAtType: typeof article.createdAt
@@ -430,6 +572,37 @@ export default function PublisherArticlesPage() {
               </div>
             )}
 
+            {/* Category Overview Box */}
+            {categories.length > 0 && (
+              <div className="border-2 border-black p-4">
+                <h3 className="text-lg font-bold mb-4 border-b border-black pb-2" style={{fontFamily: 'Times, "Times New Roman", serif'}}>
+                  Categories
+                </h3>
+                <div className="space-y-2 text-sm">
+                  {categories.map((category) => {
+                    const categoryCount = articles.filter(article => 
+                      article.category && article.category.toLowerCase() === category.toLowerCase()
+                    ).length;
+                    
+                    return (
+                      <div 
+                        key={category}
+                        className={`flex justify-between items-center py-2 px-3 border cursor-pointer transition-colors ${
+                          selectedCategory.toLowerCase() === category.toLowerCase()
+                            ? 'bg-black text-white border-black'
+                            : 'bg-gray-50 hover:bg-gray-100 border-gray-300'
+                        }`}
+                        onClick={() => handleCategoryFilter(category)}
+                      >
+                        <span className="font-medium">{category}</span>
+                        <span className="text-xs">{categoryCount}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Square Ad Slot */}
             <AdSlot 
               label="Advertisement"
@@ -524,7 +697,11 @@ export default function PublisherArticlesPage() {
 
         {/* Bottom Banner Ad */}
         <div className="max-w-7xl mx-auto px-8 py-6">
-          <BannerAd className="border-2 border-gray-400" />
+          <img 
+    src="/press-bannerAd.png" 
+    alt="Mobile preview" 
+    className="mb-6" 
+  />
         </div>
 
         {/* Footer */}
