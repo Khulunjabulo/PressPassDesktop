@@ -38,7 +38,7 @@ export default function FavoritesPage() {
   }, [loading, currentUser, router]);
 
   // Navigation handlers
-  const handleAddMore = () => router.push('/news-reader');
+  const handleAddMore = () => router.push('/news-reader/search');
   const handlePublicationClick = (publication) => {
     router.push(`/news-reader/favorites/${encodeURIComponent(publication.name)}?type=${publication.type}`);
   };
