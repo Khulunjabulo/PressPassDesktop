@@ -1,4 +1,3 @@
-// app/news-reader/publisher/[publisherId]/page.jsx
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
@@ -8,7 +7,7 @@ import { ArrowLeft, FileText, Clock, Globe, Building, Users, Calendar, Eye, Hash
 import { usePublisherArticles } from '@/hooks/useNewsSources';
 import BannerAd from '@/components/news-reader/BannerAd';
 import AdSlot from '@/components/news-reader/AdsSlot';
-import NewsReaderHeader from '@/components/news-reader/NewsReaderHeader'; // Import your header component
+import NewsReaderHeader from '@/components/news-reader/NewsReaderHeader'; 
 
 export default function PublisherArticlesPage() {
   const params = useParams();
