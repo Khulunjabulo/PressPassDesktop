@@ -22,6 +22,34 @@ function dedupeArticles(articles = []) {
   return out;
 }
 
+// Helper function to strip HTML tags and clean text
+function stripHtml(html) {
+  if (!html) return '';
+  
+  // Create a temporary div element to parse HTML
+  const temp = document.createElement('div');
+  temp.innerHTML = html;
+  
+  // Get text content and clean it up
+  let text = temp.textContent || temp.innerText || '';
+  
+  // Remove extra whitespace and normalize
+  text = text.replace(/\s+/g, ' ').trim();
+  
+  return text;
+}
+
+// Helper function to truncate text to a specific length
+function truncateText(text, maxLength = 150) {
+  if (!text) return '';
+  
+  const cleaned = stripHtml(text);
+  
+  if (cleaned.length <= maxLength) return cleaned;
+  
+  return cleaned.substring(0, maxLength).trim() + '...';
+}
+
 export default function NewsGrid({ articles }) {
   const unique = dedupeArticles(articles || []);
   const [newsources, setNewsources] = useState([]);
@@ -29,7 +57,7 @@ export default function NewsGrid({ articles }) {
   const [sourcesError, setSourcesError] = useState(null);
   const router = useRouter();
 
-  // Fetch news sources
+  // Fetch news sources with their recent articles
   useEffect(() => {
     const fetchNewsSources = async () => {
       try {
@@ -45,7 +73,61 @@ export default function NewsGrid({ articles }) {
         const data = await response.json();
         
         if (data.success) {
-          setNewsources(data.newsources || []);
+          // Fetch recent articles for each publisher
+          const sourcesWithArticles = await Promise.all(
+            (data.newsources || []).map(async (source) => {
+              try {
+                // Fetch recent articles for this publisher
+                const articlesResponse = await fetch(`/api/news-sources/${source.id}/articles`);
+                
+                if (articlesResponse.ok) {
+                  const articlesData = await articlesResponse.json();
+                  
+                  if (articlesData.success && articlesData.articles && articlesData.articles.length > 0) {
+                    // Get the most recent article
+                    const recentArticle = articlesData.articles[0];
+                    
+                    // Clean the title and content
+                    const cleanTitle = stripHtml(recentArticle.title);
+                    const cleanExcerpt = truncateText(
+                      recentArticle.summary || recentArticle.content,
+                      150
+                    );
+                    
+                    return {
+                      ...source,
+                      recentStory: {
+                        title: cleanTitle,
+                        excerpt: cleanExcerpt || 'No preview available',
+                        url: `/news-reader/article/${recentArticle.id}?publisherId=${source.id}`,
+                        image: recentArticle.imageUrl,
+                        publishedDate: recentArticle.createdAt,
+                        category: recentArticle.category
+                      },
+                      articleCount: articlesData.totalArticles || articlesData.articles.length,
+                      hasArticles: articlesData.articles.length > 0
+                    };
+                  }
+                }
+                
+                // Return source with no recent story if fetch fails or no articles
+                return {
+                  ...source,
+                  recentStory: null,
+                  hasArticles: false
+                };
+              } catch (articleError) {
+                console.warn(`Failed to fetch articles for ${source.name}:`, articleError);
+                return {
+                  ...source,
+                  recentStory: null,
+                  hasArticles: false
+                };
+              }
+            })
+          );
+          
+          setNewsources(sourcesWithArticles);
         } else {
           throw new Error(data.error || 'Failed to fetch news sources');
         }
@@ -64,6 +146,18 @@ export default function NewsGrid({ articles }) {
   const handleSourceClick = (source) => {
     // Navigate to specific publisher's articles page
     router.push(`/news-reader/publisher/${source.id}`);
+  };
+
+  const handleReadMoreClick = (e, storyUrl) => {
+    e.stopPropagation(); // Prevent card click
+    if (storyUrl && storyUrl !== '#') {
+      // Check if it's an internal link
+      if (storyUrl.startsWith('/')) {
+        router.push(storyUrl);
+      } else {
+        window.open(storyUrl, '_blank');
+      }
+    }
   };
 
   const retryFetchSources = () => {
@@ -132,119 +226,106 @@ export default function NewsGrid({ articles }) {
             
             {/* News Sources Grid */}
             {!loadingSources && !sourcesError && newsources.length > 0 && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {newsources.map((source) => (
                   <Card 
                     key={source.id} 
                     className="hover:shadow-lg hover:scale-[1.02] transition-all duration-200 cursor-pointer border-0 shadow-sm bg-white"
                     onClick={() => handleSourceClick(source)}
                   >
-              <CardContent className="p-4">
-                <div className="flex items-start space-x-3">
-                  {/* Logo */}
-                  <div className="flex-shrink-0 w-30 h-30 my-2">
-                    {source.logo ? (
-                      <img
-                        src={source.logo}
-                        alt={`${source.name} logo`}
-                        className="w-full h-full rounded-lg object-cover border border-gray-200"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-gradient-to-br bg-[#329ae1] rounded-lg flex items-center justify-center">
-                        <span className="text-white font-semibold text-xl">
-                          {source.name.charAt(0)}
+                    <CardContent className="p-4">
+                      {/* Top section with content and arrow */}
+                      <div className="flex items-center justify-between mb-1">
+                        <h3 className="text-sm font-semibold text-gray-900 truncate">
+                          {stripHtml(source.name)}
+                        </h3>
+                        <ArrowRight className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                      </div>
+
+                      {/* Industry Badge */}
+                      <div className="mb-3">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          {source.industry}
                         </span>
                       </div>
-                    )}
-                  </div>
 
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    {/* Source Name with Arrow */}
-                    <div className="flex items-center justify-between mb-1">
-                      <h3 className="text-sm font-semibold text-gray-900 truncate">
-                        {source.name}
-                      </h3>
-                      <ArrowRight className="w-3 h-3 text-gray-400 flex-shrink-0" />
-                    </div>
+                      {/* Recent Story Section - Horizontal Layout */}
+                      <div className="mt-3 pt-3 border-t border-gray-100">
+                        <div className="flex items-start space-x-3">
+                          {/* Logo */}
+                          <div className="flex-shrink-0 w-12 h-12">
+                            {source.logo ? (
+                              <img
+                                src={source.logo}
+                                alt={`${source.name} logo`}
+                                className="w-full h-full rounded-lg object-cover border border-gray-200"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-gradient-to-br bg-[#329ae1] rounded-lg flex items-center justify-center">
+                                <span className="text-white font-semibold text-lg">
+                                  {stripHtml(source.name).charAt(0)}
+                                </span>
+                              </div>
+                            )}
+                          </div>
 
-                    {/* Industry Badge */}
-                    <div className="mb-2">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                        {source.industry}
-                      </span>
-                    </div>
-
-                    {/* Article Count with New Badge */}
-                    <div className="flex items-center space-x-2 mb-1">
-                      <div className="flex items-center space-x-1">
-                        <FileText className="w-3 h-3 text-blue-600" />
-                        <span className="text-xs font-medium text-gray-700">
-                          {source.articleCount} {source.articleCount === 1 ? 'post' : 'posts'}
-                        </span>
-                      </div>
-                      {!source.hasArticles && (
-                        <div className="flex items-center space-x-1">
-                          <Plus className="w-2 h-2 text-orange-500" />
-                          <span className="text-xs text-orange-600 font-medium">New</span>
+                          {/* Story Content */}
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-xs font-semibold text-gray-900 mb-1 line-clamp-2">
+                              {source.recentStory?.title || "Ramaphosa pledges to tackle youth unemployment in new economic plan"}
+                            </h4>
+                            <p className="text-xs text-gray-600 mb-2 line-clamp-2">
+                              {source.recentStory?.excerpt || "President announces comprehensive strategy to address rising unemployment rates among South African youth, focusing on skills development and job creation initiatives."}
+                            </p>
+                            <button
+                              onClick={(e) => handleReadMoreClick(e, source.recentStory?.url || '#')}
+                              className="text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors"
+                            >
+                              Read more
+                            </button>
+                          </div>
                         </div>
-                      )}
-                    </div>
-
-                    {/* Publication Type */}
-                    <div className="flex items-center space-x-1 mb-1">
-                      <Users className="w-3 h-3 text-gray-500" />
-                      <span className="text-xs text-gray-600 capitalize truncate">
-                        {source.publicationType}
-                      </span>
-                    </div>
-
-                    {/* Website */}
-                    {source.website && (
-                      <div className="flex items-center space-x-1 mb-1">
-                        <Globe className="w-3 h-3 text-gray-500" />
-                        <span className="text-xs text-gray-600 truncate">
-                          {source.website.replace(/^https?:\/\//, '')}
-                        </span>
+                        
+                        {/* Favorite Button - Below text content */}
+                        <div className="mt-3 flex justify-end">
+                          <PublisherFavoriteButton
+                            type="button"
+                            publisher={source}
+                            size="default"
+                            showText={false}
+                            className="p-2 rounded-full bg-gray-100 hover:bg-red-100 transition-colors"
+                            disabled
+                          />
+                        </div>
                       </div>
-                    )}
 
-                    {/* Last Posted with Status Color */}
-                    <div className="flex items-center space-x-1">
-                      <Clock className="w-3 h-3 text-gray-500" />
-                      <span className={`text-xs ${source.hasArticles ? 'text-gray-500' : 'text-green-600 font-medium'}`}>
-                        {source.lastPosted === '--' ? 'Ready' : (source.hasArticles ? `Last: ${source.lastPosted}` : source.lastPosted)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Favorite Button */}
-                <div className="mt-3 flex justify-end">
-  <PublisherFavoriteButton
-    type="button"
-    publisher={source}
-    size="default"
-    showText={false}
-    className="p-2 rounded-full bg-gray-100 hover:bg-red-100 transition-colors"
-    disabled
-  />
-</div>
-
-                {/* Status Indicator */}
-                <div className="mt-3 pt-2 border-t border-gray-100">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-400">Folder</span>
-                    <div className="flex items-center space-x-1">
-                      <div className={`w-1.5 h-1.5 rounded-full ${source.hasArticles ? 'bg-green-400' : 'bg-yellow-400'}`}></div>
-                      <span className="text-xs text-gray-500">
-                        {source.hasArticles ? 'Active' : 'Ready'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-
+                      {/* Post Information and Status - Single Row Format */}
+                      <div className="mt-3 pt-2 border-t border-gray-100">
+                        <div className="flex items-center justify-between text-xs text-gray-500">
+                          <div className="flex items-center space-x-4">
+                            <span className="flex items-center space-x-1">
+                              📄 <span>{source.articleCount || 6} posts</span>
+                            </span>
+                            <span className="flex items-center space-x-1">
+                              ⏰ <span>Last: {source.lastPosted || '1d ago'}</span>
+                            </span>
+                            <span className="flex items-center space-x-1">
+                              📅 <span>{source.publicationFrequency || 'Quarterly'}</span>
+                            </span>
+                          </div>
+                          <span className="flex items-center space-x-1">
+                            <div className={`w-1.5 h-1.5 rounded-full ${source.hasArticles ? 'bg-green-400' : 'bg-yellow-400'}`}></div>
+                            <span>{source.hasArticles ? 'Active' : 'Ready'}</span>
+                          </span>
+                        </div>
+                        
+                        <div className="mt-1 text-xs text-gray-500">
+                          <span className="flex items-center space-x-1">
+                            🌐 <span>{source.website?.replace(/^https?:\/\//, '') || 'www.sowetanlive.co.za'}</span>
+                          </span>
+                        </div>
+                      </div>
+                    </CardContent>
                   </Card>
                 ))}
               </div>

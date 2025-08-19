@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/UI/Cards';
+import Header from '@/components/news-reader/Header';
 import { 
   Home, Search, Heart, Tag, ChevronRight, User, Plus, Building,
   Linkedin, Youtube, Facebook, Volume2, ArrowRight, Clock, FileText,
@@ -97,6 +98,8 @@ export default function FavoritesPage() {
   }
 
   return (
+    <div>
+    <Header/>
     <div className="min-h-screen bg-white">
       <div className="max-w-7xl mx-auto flex flex-col lg:flex-row">
         {/* Sidebar */}
@@ -502,6 +505,7 @@ export default function FavoritesPage() {
           </div>
         </aside>
       </div>
+    </div>
     </div>
   );
 }
