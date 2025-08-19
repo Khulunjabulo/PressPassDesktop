@@ -4,55 +4,63 @@ import Link from "next/link";
 import { Home, Newspaper, DollarSign, Wallet } from "lucide-react";
 import { useCurrentPublisher } from "@/hooks/useCurrentPublisher";
 import { useState, useEffect } from "react";
+import Image from "next/image";
 
 export default function Header() {
-  // 👇 Fetch publisher data using your hook
   const { publisher: hookPublisher, loading } = useCurrentPublisher("currentPublisherId");
   const [publisher, setPublisher] = useState(hookPublisher);
+  const [logoError, setLogoError] = useState(false);
 
-  // Update state whenever hookPublisher changes
   useEffect(() => {
     if (hookPublisher) {
       setPublisher(hookPublisher);
-      localStorage.setItem('currentPublisher', JSON.stringify(hookPublisher));
+      localStorage.setItem("currentPublisher", JSON.stringify(hookPublisher));
     }
   }, [hookPublisher]);
 
-  // Listen for updates from localStorage (e.g., profile page updates)
   useEffect(() => {
     const handleStorageChange = () => {
-      const updated = localStorage.getItem('currentPublisher');
+      const updated = localStorage.getItem("currentPublisher");
       if (updated) setPublisher(JSON.parse(updated));
     };
 
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
-  // Helper to check if string is a base64 image
-  const isBase64 = (str) => typeof str === 'string' && str.startsWith('data:image/');
+  const getLogoSrc = () => {
+    if (logoError) return "/Presspass.png";
+
+    const logoSources = [
+      publisher?.companyLogo,
+      publisher?.logo,
+      publisher?.image,
+    ];
+
+    for (const src of logoSources) {
+      if (src && typeof src === "string" && src.trim() !== "") {
+        return src;
+      }
+    }
+    return "/Presspass.png";
+  };
+
+  const logoSrc = getLogoSrc();
 
   return (
-    <header className="bg-blue-400 px-4 py-3 flex items-center justify-between">
+    <header className="bg-blue-400 px-4 py-3 flex items-center justify-between shadow-md">
       <Link href="/print-media" className="flex items-center space-x-3">
-        <div className="w-[100px] h-[100px]">
-          {publisher?.companyLogo ? (
-            <img
-              src={isBase64(publisher.companyLogo) ? publisher.companyLogo : publisher.companyLogo}
-              alt={`${publisher?.companyName || "Publisher"} logo`}
-              className="w-full h-full object-contain rounded-lg"
-            />
-          ) : publisher?.companyName ? (
-            <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-700 rounded-lg flex items-center justify-center">
-              <span className="text-white font-semibold text-2xl">
-                {publisher.companyName.charAt(0).toUpperCase()}
-              </span>
-            </div>
-          ) : (
-            <div className="w-full h-full bg-gray-300 rounded-lg flex items-center justify-center">
-              <span className="text-gray-600 font-semibold text-2xl">?</span>
-            </div>
-          )}
+        <div className="w-[100px] h-[100px] flex items-center justify-center">
+          <Image
+            src={logoSrc}
+            alt={publisher?.companyName ? `${publisher.companyName} logo` : "Press Pass"}
+            width={100}
+            height={100}
+            className="object-contain rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
+            priority
+            onError={() => setLogoError(true)}
+            onLoad={() => setLogoError(false)}
+          />
         </div>
 
         {publisher?.companyName && (
