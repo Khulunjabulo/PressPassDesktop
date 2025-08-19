@@ -260,13 +260,13 @@ const handleConfirmSubmit = async (template) => {
                     Price
                   </th>
                   <th className="text-left p-4 font-medium text-gray-700">
+                     Upload 
+                  </th>
+                  <th className="text-left p-4 font-medium text-gray-700">
+                   Submit 
+                  </th>
+                  <th className="text-left p-4 font-medium text-gray-700">
                     Link
-                  </th>
-                  <th className="text-left p-4 font-medium text-gray-700">
-                    Upload
-                  </th>
-                  <th className="text-left p-4 font-medium text-gray-700">
-                    Submit
                   </th>
                 </tr>
               </thead>
@@ -284,9 +284,6 @@ const handleConfirmSubmit = async (template) => {
                     <td className="p-4 text-sm text-gray-600">
                       {template.price}
                     </td>
-                    <td className="p-4 text-blue-600 underline cursor-pointer">
-                      {template.link}
-                    </td>
                     <td
                       className="p-4 text-blue-600 underline cursor-pointer"
                       onClick={() => handleOpenUploadOverlay(template.id)}
@@ -300,6 +297,9 @@ const handleConfirmSubmit = async (template) => {
                       >
                         Submit
                       </Button>
+                    </td>
+                    <td className="p-4  text-blue-600 underline cursor-pointer">
+                      {template.link}
                     </td>
                   </tr>
                 ))}
