@@ -6,6 +6,7 @@ import { CardContent } from '@/components/UI/Cards';
 import { Heart } from 'lucide-react';
 import { useNewsSources } from '@/hooks/useNewsSources';
 import { useFavorites } from '@/hooks/useFavorites';
+import Header from '@/components/news-reader/Header';
 
 export default function SearchPage() {
   const { newsources, loading: sourcesLoading, error } = useNewsSources();
@@ -54,6 +55,8 @@ export default function SearchPage() {
   };
 
   return (
+    <div>
+      <Header/>
     <div className="py-8 text-center space-y-4">
       {/* Heading */}
       <h2 className="text-4xl font-bold">Search</h2>
@@ -142,6 +145,7 @@ export default function SearchPage() {
           )}
         </div>
       )}
+    </div>
     </div>
   );
 }
