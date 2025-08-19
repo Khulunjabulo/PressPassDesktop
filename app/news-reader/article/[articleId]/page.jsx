@@ -333,17 +333,15 @@ export default function ArticleViewPage() {
   };
 
   // Banner Ad Component
-  const BannerAd = () => (
-    <div className="my-8 p-6 bg-gray-100 border-4 border-black text-center">
-      <div className="text-xs uppercase tracking-widest text-gray-600 mb-2">Advertisement</div>
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-8 font-bold text-xl">
-        Your Ad Could Be Here
-      </div>
-      <div className="text-sm text-gray-600 mt-2">
-        Premium advertising space available - Contact us for rates
-      </div>
-    </div>
-  );
+ const BannerAd = () => (
+  <div className="max-w-7xl mx-auto px-8 py-6">
+    <img 
+      src="/press-bannerAd.png" 
+      alt="Mobile preview" 
+      className="mb-6" 
+    />
+  </div>
+);
 
   if (loading) {
     return (
@@ -428,6 +426,8 @@ export default function ArticleViewPage() {
     contentImages: contentImages.length,
     selectedMainImage: mainImage?.substring(0, 50) + '...'
   });
+
+  
 
   return (
     <div className="min-h-screen bg-white">
@@ -666,25 +666,7 @@ export default function ArticleViewPage() {
               </button>
               
               <div className="flex items-center space-x-3">
-                <FavoriteButton 
-                  item={{
-                    id: article.id,
-                    title: article.title,
-                    description: article.summary || article.content?.substring(0, 200) + '...',
-                    image: mainImage,
-                    link: `${typeof window !== 'undefined' ? window.location.origin : ''}/news-reader/article/${article.id}?publisherId=${publisherId}`,
-                    source: publisher?.name || 'Unknown',
-                    publicationName: publisher?.name || 'Unknown',
-                    publicationLogo: publisher?.logo,
-                    category: article.category,
-                    pubDate: article.createdAt,
-                    type: 'story',
-                    publisherId: publisherId
-                  }}
-                  size="small"
-                  showText={false}
-                />
-                <button 
+                               <button 
                   className="p-2 text-gray-600 hover:text-black transition-colors"
                   title="Share article"
                   onClick={() => {
