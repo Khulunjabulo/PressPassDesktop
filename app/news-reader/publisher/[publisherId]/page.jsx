@@ -9,11 +9,59 @@ import BannerAd from '@/components/news-reader/BannerAd';
 import AdSlot from '@/components/news-reader/AdsSlot';
 import NewsReaderHeader from '@/components/news-reader/NewsReaderHeader'; 
 
+// Helper function to strip HTML tags and clean text
+function stripHtml(html) {
+  if (!html) return '';
+  
+  // Create a temporary div element to parse HTML
+  const temp = document.createElement('div');
+  temp.innerHTML = html;
+  
+  // Get text content and clean it up
+  let text = temp.textContent || temp.innerText || '';
+  
+  // Remove extra whitespace and normalize
+  text = text.replace(/\s+/g, ' ').trim();
+  
+  return text;
+}
+
+// Helper function to truncate text to a specific length
+function truncateText(text, maxLength = 200) {
+  if (!text) return '';
+  
+  const cleaned = stripHtml(text);
+  
+  if (cleaned.length <= maxLength) return cleaned;
+  
+  return cleaned.substring(0, maxLength).trim() + '...';
+}
+
+// Helper function to clean and prepare article data
+function cleanArticleData(article) {
+  if (!article) return null;
+  
+  return {
+    ...article,
+    title: stripHtml(article.title),
+    summary: article.summary ? truncateText(article.summary, 200) : null,
+    content: article.content ? truncateText(article.content, 200) : null,
+    category: article.category ? stripHtml(article.category) : null,
+    author: article.author ? stripHtml(article.author) : null
+  };
+}
+
 export default function PublisherArticlesPage() {
   const params = useParams();
   const router = useRouter();
-  const { publisher, articles, loading, error, refreshArticles } = usePublisherArticles(params.publisherId);
+  const { publisher, articles: rawArticles, loading, error, refreshArticles } = usePublisherArticles(params.publisherId);
   const [selectedCategory, setSelectedCategory] = useState('all');
+
+  // Clean articles data to remove HTML
+  const articles = useMemo(() => {
+    if (!rawArticles) return [];
+    return rawArticles.map(cleanArticleData);
+  }, [rawArticles]);
 
   // Get all unique categories from articles
   const categories = useMemo(() => {
@@ -117,13 +165,27 @@ export default function PublisherArticlesPage() {
     });
   };
 
+  // Clean publisher data as well
+  const cleanPublisher = useMemo(() => {
+    if (!publisher) return null;
+    
+    return {
+      ...publisher,
+      name: stripHtml(publisher.name),
+      description: stripHtml(publisher.description),
+      industry: stripHtml(publisher.industry),
+      publicationType: stripHtml(publisher.publicationType),
+      audienceType: stripHtml(publisher.audienceType)
+    };
+  }, [publisher]);
+
   // Debug logging - Enhanced to show publisher data
   console.log('Publisher Page Debug:', {
     publisherId: params.publisherId,
-    hasPublisher: !!publisher,
-    publisherName: publisher?.name,
-    publisherLogo: publisher?.logo,
-    publisherCompanyLogo: publisher?.companyLogo,
+    hasPublisher: !!cleanPublisher,
+    publisherName: cleanPublisher?.name,
+    publisherLogo: cleanPublisher?.logo,
+    publisherCompanyLogo: cleanPublisher?.companyLogo,
     articlesCount: articles?.length || 0,
     filteredArticlesCount: filteredArticles?.length || 0,
     categoriesCount: categories?.length || 0,
@@ -131,18 +193,18 @@ export default function PublisherArticlesPage() {
     selectedCategory,
     loading,
     error,
-    fullPublisherData: publisher // Log full publisher object
+    fullPublisherData: cleanPublisher // Log full publisher object
   });
 
   // Additional debug for header props
   console.log('🔍 Header Props Debug:', {
-    publisherImage: publisher?.logo || publisher?.companyLogo,
-    publisherName: publisher?.name || publisher?.companyName,
-    publisherExists: !!publisher,
-    logoField: publisher?.logo,
-    companyLogoField: publisher?.companyLogo,
-    nameField: publisher?.name,
-    companyNameField: publisher?.companyName
+    publisherImage: cleanPublisher?.logo || cleanPublisher?.companyLogo,
+    publisherName: cleanPublisher?.name || cleanPublisher?.companyName,
+    publisherExists: !!cleanPublisher,
+    logoField: cleanPublisher?.logo,
+    companyLogoField: cleanPublisher?.companyLogo,
+    nameField: cleanPublisher?.name,
+    companyNameField: cleanPublisher?.companyName
   });
 
   if (loading) {
@@ -226,10 +288,10 @@ export default function PublisherArticlesPage() {
     <div className="min-h-screen bg-white">
       {/* Pass publisher data to header component */}
       <NewsReaderHeader 
-        publisherImage={publisher?.logo || publisher?.companyLogo}
-        publisherName={publisher?.name || publisher?.companyName}
+        publisherImage={cleanPublisher?.logo || cleanPublisher?.companyLogo}
+        publisherName={cleanPublisher?.name || cleanPublisher?.companyName}
         publisherId={params.publisherId}
-        publisher={publisher} // Pass full publisher object if needed
+        publisher={cleanPublisher} // Pass full publisher object if needed
       />
 
       {/* Newspaper Header */}
@@ -246,29 +308,29 @@ export default function PublisherArticlesPage() {
           {/* Publication Header */}
           <div className="text-center">
             <h1 className="text-6xl font-bold tracking-wider mb-2" style={{fontFamily: 'Times, "Times New Roman", serif'}}>
-              {publisher?.name?.toUpperCase() || 'NEWS'}
+              {cleanPublisher?.name?.toUpperCase() || 'NEWS'}
             </h1>
             <div className="border-t border-b border-black py-2 mb-4">
               <p className="text-sm tracking-widest" style={{fontFamily: 'Times, "Times New Roman", serif'}}>
-                {getCurrentDate()} • {publisher?.industry || 'News'} • {articles?.length || 0} {(articles?.length || 0) === 1 ? 'Article' : 'Articles'}
+                {getCurrentDate()} • {cleanPublisher?.industry || 'News'} • {articles?.length || 0} {(articles?.length || 0) === 1 ? 'Article' : 'Articles'}
               </p>
             </div>
             
             {/* Publisher Details */}
-            {publisher && (
+            {cleanPublisher && (
               <div className="flex items-center justify-center space-x-8 text-sm">
                 <div className="flex items-center space-x-2">
                   <Building className="w-4 h-4" />
-                  <span>{publisher.publicationType || 'Publication'}</span>
+                  <span>{cleanPublisher.publicationType || 'Publication'}</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Users className="w-4 h-4" />
-                  <span>{publisher.audienceType || 'General'}</span>
+                  <span>{cleanPublisher.audienceType || 'General'}</span>
                 </div>
-                {publisher.website && (
+                {cleanPublisher.website && (
                   <div className="flex items-center space-x-2">
                     <Globe className="w-4 h-4" />
-                    <span>{publisher.website.replace(/^https?:\/\//, '')}</span>
+                    <span>{cleanPublisher.website.replace(/^https?:\/\//, '')}</span>
                   </div>
                 )}
               </div>
@@ -279,12 +341,12 @@ export default function PublisherArticlesPage() {
 
       {/* Banner Ad */}
       <div className="max-w-7xl mx-auto px-8 py-4">
-  <img 
-    src="/press-bannerAd.png" 
-    alt="Mobile preview" 
-    className="mb-6" 
-  />
-</div>
+        <img 
+          src="/press-bannerAd.png" 
+          alt="Mobile preview" 
+          className="mb-6" 
+        />
+      </div>
 
       {/* Main Content Layout */}
       <div className="max-w-7xl mx-auto px-8 py-4">
@@ -457,8 +519,7 @@ export default function PublisherArticlesPage() {
                           {/* Summary or Content Preview */}
                           {(article.summary || article.content) && (
                             <p className="text-gray-700 mb-3 leading-relaxed">
-                              {article.summary || 
-                               (article.content ? article.content.substring(0, 200) + '...' : 'No preview available')}
+                              {article.summary || article.content || 'No preview available'}
                             </p>
                           )}
 
@@ -498,7 +559,7 @@ export default function PublisherArticlesPage() {
                                     key={tagIndex}
                                     className="inline-block bg-gray-200 px-2 py-1 text-xs font-medium uppercase tracking-wider border text-gray-700"
                                   >
-                                    {tag}
+                                    {stripHtml(tag)}
                                   </span>
                                 ))}
                                 {article.tags.length > 4 && (
@@ -521,48 +582,48 @@ export default function PublisherArticlesPage() {
           {/* Right Sidebar */}
           <div className="lg:col-span-1 space-y-6">
             {/* Publication Info Box */}
-            {publisher && (
+            {cleanPublisher && (
               <div className="border-2 border-black p-4">
                 <h3 className="text-lg font-bold mb-4 border-b border-black pb-2" style={{fontFamily: 'Times, "Times New Roman", serif'}}>
-                  About {publisher.name}
+                  About {cleanPublisher.name}
                 </h3>
                 
                 <div className="space-y-3 text-sm">
-                  {publisher.logo && (
+                  {cleanPublisher.logo && (
                     <div className="text-center mb-4">
                       <img
-                        src={publisher.logo}
-                        alt={`${publisher.name} logo`}
+                        src={cleanPublisher.logo}
+                        alt={`${cleanPublisher.name} logo`}
                         className="w-16 h-16 mx-auto rounded border border-gray-400"
                         onError={(e) => {
-                          console.log('Publisher logo failed to load:', publisher.logo);
+                          console.log('Publisher logo failed to load:', cleanPublisher.logo);
                           e.target.style.display = 'none';
                         }}
                       />
                     </div>
                   )}
                   
-                  {publisher.description && (
+                  {cleanPublisher.description && (
                     <p className="text-gray-700 italic leading-relaxed">
-                      "{publisher.description}"
+                      "{cleanPublisher.description}"
                     </p>
                   )}
                   
                   <div className="space-y-2 pt-3 border-t border-gray-300">
-                    <div><strong>Industry:</strong> {publisher.industry || 'Publishing'}</div>
-                    <div><strong>Type:</strong> {publisher.publicationType || 'Publication'}</div>
-                    <div><strong>Audience:</strong> {publisher.audienceType || 'General'}</div>
-                    {publisher.website && (
+                    <div><strong>Industry:</strong> {cleanPublisher.industry || 'Publishing'}</div>
+                    <div><strong>Type:</strong> {cleanPublisher.publicationType || 'Publication'}</div>
+                    <div><strong>Audience:</strong> {cleanPublisher.audienceType || 'General'}</div>
+                    {cleanPublisher.website && (
                       <div className="flex items-center space-x-1">
                         <strong>Web:</strong>
                         <Globe className="w-3 h-3" />
                         <a 
-                          href={publisher.website} 
+                          href={cleanPublisher.website} 
                           target="_blank" 
                           rel="noopener noreferrer"
                           className="text-xs hover:underline break-all"
                         >
-                          {publisher.website.replace(/^https?:\/\//, '')}
+                          {cleanPublisher.website.replace(/^https?:\/\//, '')}
                         </a>
                       </div>
                     )}
@@ -649,7 +710,7 @@ export default function PublisherArticlesPage() {
             {articles && articles.length > 3 && (
               <div className="border-2 border-black p-4">
                 <h3 className="text-lg font-bold mb-4 border-b border-black pb-2" style={{fontFamily: 'Times, "Times New Roman", serif'}}>
-                  More from {publisher?.name || 'This Publisher'}
+                  More from {cleanPublisher?.name || 'This Publisher'}
                 </h3>
                 <div className="space-y-3 text-sm">
                   {articles.slice(3, 7).map((article, index) => (
@@ -697,10 +758,10 @@ export default function PublisherArticlesPage() {
         {/* Bottom Banner Ad */}
         <div className="max-w-7xl mx-auto px-8 py-6">
           <img 
-    src="/press-bannerAd.png" 
-    alt="Mobile preview" 
-    className="mb-6" 
-  />
+            src="/press-bannerAd.png" 
+            alt="Mobile preview" 
+            className="mb-6" 
+          />
         </div>
 
         {/* Footer */}
@@ -709,7 +770,7 @@ export default function PublisherArticlesPage() {
             <div className="flex items-center justify-between text-sm">
               <div className="flex items-center space-x-6">
                 <span className="font-bold" style={{fontFamily: 'Times, "Times New Roman", serif'}}>
-                  © {new Date().getFullYear()} {publisher?.name || 'News Publisher'}
+                  © {new Date().getFullYear()} {cleanPublisher?.name || 'News Publisher'}
                 </span>
                 <span className="text-gray-600">All rights reserved</span>
               </div>
