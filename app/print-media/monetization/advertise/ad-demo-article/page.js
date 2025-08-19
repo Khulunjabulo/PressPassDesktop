@@ -17,7 +17,7 @@ export default function ArticleWithAds() {
       {/* Headline Ad */}
       <div className="w-full border-2 border-dashed border-blue-400 p-4 mb-6 text-center">
         {isHeadlineTemplate ? (
-          <h2 className="text-3xl font-bold text-blue-600">Your Ad Here</h2>
+          <img src="/press-bannerAd.png" alt="Advertisement" className="max-w-full h-auto" />
         ) : (
           <>
             <h2 className="text-3xl font-bold text-blue-600">HEADLINE</h2>
@@ -47,7 +47,7 @@ export default function ArticleWithAds() {
           {/* Within Article Ad */}
           <div className="w-full border-2 border-dashed border-blue-400 p-4 my-6 text-center">
             {isWithinArticleTemplate ? (
-              <h2 className="text-2xl font-bold text-blue-600">Your Ad Here</h2>
+              <img src="/press-bannerAd.png" alt="Advertisement" className="max-w-full h-auto" />
             ) : (
               <>
                 <h2 className="text-2xl font-bold text-blue-600">WITHIN ARTICLE</h2>
@@ -78,7 +78,7 @@ export default function ArticleWithAds() {
           {/* Feed Ad */}
           <div className="border-2 border-dashed border-blue-400 p-4 text-center">
             {isFeedTemplate ? (
-              <h2 className="text-xl font-bold text-blue-600">Your Ad Here</h2>
+              <img src="/press-bannerAd.png" alt="Advertisement" className="max-w-full h-auto" />
             ) : (
               <>
                 <h2 className="text-xl font-bold text-blue-600">FEED</h2>
@@ -95,7 +95,7 @@ export default function ArticleWithAds() {
           {/* Page Wrap 2 */}
           <div className="border-2 border-dashed border-blue-400 p-4 text-center">
             {isPageWrap2Template ? (
-              <h2 className="text-xl font-bold text-blue-600">Your Ad Here</h2>
+              <img src="/press-bannerAd.png" alt="Advertisement" className="max-w-full h-auto" />
             ) : (
               <>
                 <h2 className="text-xl font-bold text-blue-600">PAGE WRAP 2</h2>
@@ -114,7 +114,7 @@ export default function ArticleWithAds() {
       {/* Page Wrap 1 Ad */}
       {isPageWrap1Template && (
         <div className="w-full border-2 border-dashed border-blue-400 p-4 mt-8 text-center">
-          <h2 className="text-2xl font-bold text-blue-600">Your Ad Here</h2>
+          <img src="/press-bannerAd.png" alt="Advertisement" className="max-w-full h-auto" />
         </div>
       )}
 
