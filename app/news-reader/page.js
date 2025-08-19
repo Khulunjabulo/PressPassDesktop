@@ -3,18 +3,20 @@
 import NewsGrid from '@/components/news-reader/NewsGrid';
 import BannerAd from '@/components/news-reader/BannerAd';
 import { useState } from 'react';
+import Header from '@/components/news-reader/Header';
 
 export default function NewsReaderHome() {
   const [selectedCategory, setSelectedCategory] = useState('top');
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Handle category change
   const handleCategoryChange = (category) => {
     setSelectedCategory(category);
   };
 
   return (
+    <div>
+    <Header/>
     <div>
       {/* Top Banner Ad */}
       <div className="px-6 mt-4">
@@ -28,6 +30,7 @@ export default function NewsReaderHome() {
       ) : (
         <NewsGrid articles={articles} />
       )}
+    </div>
     </div>
   );
 }

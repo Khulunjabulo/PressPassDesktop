@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import Header from "@/components/news-reader/Header"
 
 // Classified Item Component
 function ClassifiedItem({ title, description, contact, price }) {
@@ -248,6 +249,8 @@ export default function ClassifiedsPage() {
   ]
 
   return (
+    <div>
+    <Header/>
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white border-b">
         <div className="max-w-4xl mx-auto px-4 py-6">
@@ -282,6 +285,7 @@ export default function ClassifiedsPage() {
           <Publication key={idx} {...pub} />
         ))}
       </div>
+    </div>
     </div>
   )
 }
