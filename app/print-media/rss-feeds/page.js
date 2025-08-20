@@ -2,9 +2,12 @@
 
 import Header from '@/components/UI/header'
 import PublisherSidebar from '@/components/UI/publisherSidebar'
+import { useCurrentPublisher } from "@/hooks/useCurrentPublisher";
 import { useState } from 'react'
 
 export default function RssFeeds() {
+  const { publisher, loading } = useCurrentPublisher("currentPublisherId");
+
   const [showAddFeedForm, setShowAddFeedForm] = useState(false)
   const [feedUrl, setFeedUrl] = useState('')
   const [feedName, setFeedName] = useState('')
@@ -34,7 +37,7 @@ export default function RssFeeds() {
 
   return (
     <>
-      <Header />
+      <Header publisher={publisher} />
      <div className="h-screen bg-gray-50 flex overflow-hidden">
         <PublisherSidebar />
         <div className="flex-1 p-4 md:p-6 bg-gray-50 min-h-screen">

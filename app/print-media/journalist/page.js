@@ -5,6 +5,7 @@ import PublisherSidebar from '@/components/UI/publisherSidebar'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts'
+import { useCurrentPublisher } from "@/hooks/useCurrentPublisher"
 
 const journalists = [
   {
@@ -50,9 +51,11 @@ const journalists = [
 ]
 
 export default function Journalist() {
+  const { publisher, loading } = useCurrentPublisher("currentPublisherId");
+
   return (
     <>
-      <Header />
+      <Header publisher={publisher} />
       <div className="h-screen bg-gray-50 flex overflow-hidden">
         <PublisherSidebar />
         <div className="flex-1 p-4 md:p-6 bg-gray-50 min-h-screen">
