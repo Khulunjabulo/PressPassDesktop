@@ -1,32 +1,12 @@
-'use client';
+"use client";
 
 import Link from "next/link";
 import { Home, Newspaper, DollarSign, Wallet } from "lucide-react";
-import { useCurrentPublisher } from "@/hooks/useCurrentPublisher";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Image from "next/image";
 
-export default function Header() {
-  const { publisher: hookPublisher, loading } = useCurrentPublisher("currentPublisherId");
-  const [publisher, setPublisher] = useState(hookPublisher);
+export default function Header({ publisher }) {
   const [logoError, setLogoError] = useState(false);
-
-  useEffect(() => {
-    if (hookPublisher) {
-      setPublisher(hookPublisher);
-      localStorage.setItem("currentPublisher", JSON.stringify(hookPublisher));
-    }
-  }, [hookPublisher]);
-
-  useEffect(() => {
-    const handleStorageChange = () => {
-      const updated = localStorage.getItem("currentPublisher");
-      if (updated) setPublisher(JSON.parse(updated));
-    };
-
-    window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
-  }, []);
 
   const getLogoSrc = () => {
     if (logoError) return "/Presspass.png";
@@ -49,6 +29,7 @@ export default function Header() {
 
   return (
     <header className="bg-blue-400 px-4 py-3 flex items-center justify-between shadow-md">
+      {/* Logo + Company Name */}
       <Link href="/print-media" className="flex items-center space-x-3">
         <div className="w-[100px] h-[100px] flex items-center justify-center">
           <Image

@@ -4,11 +4,14 @@ import React from 'react'
 import Header from '@/components/UI/header'
 import PublisherSidebar from '@/components/UI/publisherSidebar'
 import { ArrowUpRight, AlertTriangle, Lightbulb } from 'lucide-react'
+import { useCurrentPublisher } from "@/hooks/useCurrentPublisher";
 
 export default function AdvancedAnalytics() {
+  const { publisher, loading } = useCurrentPublisher("currentPublisherId");
+
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
-      <Header />
+      <Header publisher={publisher} />
       <div className="h-screen bg-gray-50 flex overflow-hidden">
         <PublisherSidebar />
         {/* Main Content */}
