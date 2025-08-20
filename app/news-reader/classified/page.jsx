@@ -59,8 +59,10 @@ export default function ClassifiedsPage() {
   // Publication Data
   const publications = [
     {
-      name: "IsolezWe",
-      sections: [
+          name: <div className="flex justify-center items-center">
+  <img src="/isolezwe.png" alt="Isolezwe" className="h-6 w-auto" />
+</div>,
+          sections: [
         {
           title: "REAL ESTATE",
           items: [
@@ -133,7 +135,9 @@ export default function ClassifiedsPage() {
       ],
     },
     {
-      name: "The Citizen",
+      name: <div className="flex justify-center items-center">
+  <img src="/The Citizen.png" alt="Isolezwe" className="h-40 w-60" />
+</div>,
       sections: [
         {
           title: "REAL ESTATE",
@@ -171,7 +175,9 @@ export default function ClassifiedsPage() {
       ],
     },
     {
-      name: "PJ Thermal",
+      name: <div className="flex justify-center items-center">
+  <img src="/The-Star.webp" alt="Isolezwe" className="h-40 w-60 " />
+</div>,
       sections: [
         {
           title: "REAL ESTATE",
@@ -209,7 +215,9 @@ export default function ClassifiedsPage() {
       ],
     },
     {
-      name: "Thabang",
+      name: <div className="flex justify-center items-center ">
+  <img src="/Herald.png" alt="Isolezwe" className="h-40 w-60 " />
+</div>,
       sections: [
         {
           title: "REAL ESTATE",
