@@ -7,6 +7,7 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from '@/Firebase/firebase';
 import { getUserRole } from '@/Firebase/auth';
 import { useRouter } from 'next/navigation';
+import { BookOpen, LogOut, UserPlus, LogIn } from 'lucide-react';
 
 export default function PrintMediaHeader() {
   const [user, setUser] = useState(null);
@@ -32,7 +33,7 @@ export default function PrintMediaHeader() {
     await signOut(auth);
     setUser(null);
     setRole(null);
-    router.push('/print-media'); 
+    router.push('/print-media');
   };
 
   const handleNewsReaderClick = (e) => {
@@ -49,7 +50,7 @@ export default function PrintMediaHeader() {
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Link href="/">
-            <Image  
+            <Image
               src="/Presspass.png"
               alt="Press Pass logo"
               width={200}
@@ -61,18 +62,26 @@ export default function PrintMediaHeader() {
 
         <nav className="flex items-center gap-4 text-white">
           {/* Always show News Reader */}
-          <button onClick={handleNewsReaderClick} className="hover:underline text-sm">
+          <button onClick={handleNewsReaderClick} className="flex items-center gap-1 hover:underline text-sm">
+            <BookOpen size={16} />
             News Reader
           </button>
 
           {user ? (
-            <button onClick={handleLogout} className="hover:underline text-sm">
+            <button onClick={handleLogout} className="flex items-center gap-1 hover:underline text-sm">
+              <LogOut size={16} />
               Logout
             </button>
           ) : (
             <>
-              <Link href="/signup" className="hover:underline">Sign Up</Link>
-              <Link href="/signin" className="hover:underline">Login</Link>
+              <Link href="/signup" className="flex items-center gap-1 hover:underline">
+                <UserPlus size={16} />
+                Sign Up
+              </Link>
+              <Link href="/signin" className="flex items-center gap-1 hover:underline">
+                <LogIn size={16} />
+                Login
+              </Link>
             </>
           )}
         </nav>
