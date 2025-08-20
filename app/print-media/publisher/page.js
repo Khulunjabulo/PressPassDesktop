@@ -7,11 +7,13 @@ import PublisherSidebar from "@/components/UI/publisherSidebar.jsx";
 import UploadForm from "@/components/uploadForm";
 import ManualArticleForm from "@/components/ManualArticleForm";
 import usePrintMediaLogic from "@/hooks/PrintMediaLogic";
+import { useCurrentPublisher } from "@/hooks/useCurrentPublisher";
 
 export default function Publisher() {
   const { submissionStatus, handleFormSubmit } = usePrintMediaLogic();
   const [showManualUpload, setShowManualUpload] = useState(false);
   const [articleSubmissionStatus, setArticleSubmissionStatus] = useState(null);
+  const { publisher, loading } = useCurrentPublisher("currentPublisherId");
 
   // Handle manual article submission
   const handleManualArticleSubmit = async (formData) => {
@@ -69,7 +71,7 @@ export default function Publisher() {
 
   return (
     <>
-      <Header />
+      <Header publisher={publisher} />
       <div className="h-screen bg-gray-50 flex overflow-hidden">
         <PublisherSidebar onManualUploadClick={handleOpenManualUpload} />
 
