@@ -14,6 +14,7 @@ import {
   Cell,
   ResponsiveContainer,
 } from 'recharts'
+import { useCurrentPublisher } from "@/hooks/useCurrentPublisher";
 
 /**
  * Sample data for weekly performance chart
@@ -141,9 +142,11 @@ function StatCard({ icon, title, value, change }) {
  * @returns {JSX.Element} Dashboard page
  */
 export default function Dashboard() {
+  const { publisher, loading } = useCurrentPublisher("currentPublisherId");
+  
   return (
     <>
-      <Header />
+      <Header publisher={publisher} />
       <div className="h-screen bg-gray-50 flex overflow-hidden">
         <PublisherSidebar />
         <div className="flex-1 min-h-screen bg-gray-100 p-6">
