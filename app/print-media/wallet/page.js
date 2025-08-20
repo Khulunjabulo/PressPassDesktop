@@ -14,6 +14,7 @@ import { CreditCard,
 import BalanceStatement from './balance-statement/page'
 import WithdrawalHistory from './withdrawal-history/page'
 import PaymentMethod from './payment-method/page'
+import { useCurrentPublisher } from "@/hooks/useCurrentPublisher";
 
 export default function Wallet() {
   const pathname = usePathname()
@@ -22,6 +23,7 @@ export default function Wallet() {
   const [withdrawFrom, setWithdrawFrom] = useState('')
   const [withdrawalOption, setWithdrawalOption] = useState('')
   const [phoneNumber, setPhoneNumber] = useState('')
+  const { publisher, loading } = useCurrentPublisher("currentPublisherId");
 
   // Determine which content to show based on the current path
   const renderWalletContent = () => {
@@ -185,7 +187,7 @@ export default function Wallet() {
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
-      <Header />
+       <Header publisher={publisher} />
 
       <div className="max-w-6xl mx-auto px-4 py-6 w-full">
         {/* Sidebar + Content */}
