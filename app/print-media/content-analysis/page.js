@@ -3,6 +3,7 @@
 import Header from '@/components/UI/header'
 import PublisherSidebar from '@/components/UI/publisherSidebar'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { useCurrentPublisher } from "@/hooks/useCurrentPublisher";
 
 const contentData = [
   { category: 'News', articles: 45, views: 125000, engagement: 8.2 },
@@ -13,9 +14,11 @@ const contentData = [
 ]
 
 export default function ContentAnalysis() {
+  const { publisher, loading } = useCurrentPublisher("currentPublisherId");
+
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
-      <Header />
+      <Header publisher={publisher} />
            <div className="h-screen bg-gray-50 flex overflow-hidden">
         <PublisherSidebar />
         <main className="flex-1 p-4 md:p-8 overflow-y-auto">

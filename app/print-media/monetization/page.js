@@ -7,6 +7,8 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/UI/Button";
 import AdUploadOverlay from "@/components/AdUploadOverlay";
 import SubmitConfirmationOverlay from "@/components/SubmitConfirmationOverlay";
+import { useCurrentPublisher } from "@/hooks/useCurrentPublisher";
+
 
 export default function Monetization() {
   const router = useRouter();
@@ -15,6 +17,7 @@ export default function Monetization() {
   const [selectedTemplateId, setSelectedTemplateId] = useState(null);
 const [isSubmitOverlayOpen, setIsSubmitOverlayOpen] = useState(false);
   const [selectedTemplateForSubmit, setSelectedTemplateForSubmit] = useState(null);
+  const { publisher, loading } = useCurrentPublisher("currentPublisherId");
 
   const templates = [
     {
@@ -113,7 +116,7 @@ const handleConfirmSubmit = async (template) => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <Header />
+       <Header publisher={publisher} />
       <h1 className="text-center text-xl font bold">Click on any of the templates to see where to place your ad!</h1>
       {/* Body Layout: Sidebar under header */}
       <div className="flex">
