@@ -760,19 +760,7 @@ export default function ArticleViewPage() {
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
             {/* Main Article Content */}
             <div className="lg:col-span-3">
-              {/* Debug Article Information (only in development) */}
-              {process.env.NODE_ENV === 'development' && (
-                <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded text-xs">
-                  <h4 className="font-bold mb-2">🐛 Article Debug Info:</h4>
-                  <p><strong>Article ID:</strong> {article.id}</p>
-                  <p><strong>Title:</strong> {article.title}</p>
-                  <p><strong>Content Length:</strong> {article.content?.length || 0} characters</p>
-                  <p><strong>Created At:</strong> {JSON.stringify(article.createdAt)} (Type: {typeof article.createdAt})</p>
-                  <p><strong>Main Image Selected:</strong> {mainImage || 'None'}</p>
-                  <p><strong>Content Images Found:</strong> {contentImages.length}</p>
-                  <p><strong>Publisher:</strong> {publisher?.name || 'None'}</p>
-                </div>
-              )}
+              
 
               {/* Hero Image - Full width if important article */}
               {mainImage && article.priority === 'high' && (
