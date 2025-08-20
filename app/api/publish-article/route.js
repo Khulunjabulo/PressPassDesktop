@@ -67,16 +67,25 @@ export async function GET(req) {
           );
         }
 
+        const data = articleDoc.data();
         const articleData = {
           id: articleDoc.id,
-          ...articleDoc.data(),
-          createdAt: articleDoc.data().createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
-          updatedAt: articleDoc.data().updatedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
-          publishedAt: articleDoc.data().publishedAt?.toDate?.()?.toISOString() || null,
-          collection: collectionType
+          ...data,
+          createdAt: data.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+          updatedAt: data.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+          publishedAt: data.publishedAt?.toDate?.()?.toISOString() || null,
+          collection: collectionType,
+          // Ensure image URLs are properly included
+          imageUrl: data.featuredImageUrl || data.imageUrl || data.image || null,
+          featuredImageUrl: data.featuredImageUrl || null
         };
 
         console.log('✅ Single article retrieved:', articleData.title, 'from', collectionType);
+        console.log('🖼️ Article image URLs:', {
+          imageUrl: articleData.imageUrl,
+          featuredImageUrl: articleData.featuredImageUrl
+        });
+        
         return NextResponse.json({
           success: true,
           article: articleData
@@ -109,17 +118,21 @@ export async function GET(req) {
           return {
             id: doc.id,
             ...data,
-            status: 'published', // Ensure status is set correctly
+            status: 'published',
             createdAt: data.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
             updatedAt: data.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
             publishedAt: data.publishedAt?.toDate?.()?.toISOString() || null,
             views: data.views || 0,
             likes: data.likes || 0,
             comments: data.comments || 0,
+            // Ensure image URLs are properly mapped
+            imageUrl: data.featuredImageUrl || data.imageUrl || data.image || null,
+            featuredImageUrl: data.featuredImageUrl || null
           };
         });
 
         console.log('📰 Published articles found:', articles.length);
+        console.log('🖼️ Articles with images:', articles.filter(a => a.imageUrl || a.featuredImageUrl).length);
       }
 
       // Get drafts from 'drafts' collection
@@ -136,17 +149,21 @@ export async function GET(req) {
           return {
             id: doc.id,
             ...data,
-            status: 'draft', // Ensure status is set correctly
+            status: 'draft',
             createdAt: data.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
             updatedAt: data.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
-            publishedAt: null, // Drafts don't have publish date
-            views: 0, // Drafts don't have views
+            publishedAt: null,
+            views: 0,
             likes: 0,
             comments: 0,
+            // Ensure image URLs are properly mapped
+            imageUrl: data.featuredImageUrl || data.imageUrl || data.image || null,
+            featuredImageUrl: data.featuredImageUrl || null
           };
         });
 
         console.log('✏️ Drafts found:', drafts.length);
+        console.log('🖼️ Drafts with images:', drafts.filter(d => d.imageUrl || d.featuredImageUrl).length);
       }
 
     } catch (queryError) {
@@ -190,7 +207,7 @@ export async function GET(req) {
   }
 }
 
-// POST handler - Create/Update articles and drafts in correct collections
+// POST handler - Create/Update articles and drafts with proper image handling
 export async function POST(req) {
   try {
     const contentType = req.headers.get('content-type') || '';
@@ -224,11 +241,16 @@ export async function POST(req) {
     }
 
     console.log('📝 Saving article for publisherId:', publisherId);
+    console.log('🖼️ Image data received:', {
+      featuredImageUrl: data.featuredImageUrl ? 'Present' : 'Missing',
+      imageUrl: data.imageUrl ? 'Present' : 'Missing',
+      featuredImage: data.featuredImage ? 'File present' : 'No file'
+    });
 
     const isDraft = data.isDraft === 'true' || data.isDraft === true;
     const status = isDraft ? 'draft' : 'published';
 
-    // Prepare article document
+    // Prepare article document with proper image handling
     const articleData = {
       title: data.title || '',
       subtitle: data.subtitle || '',
@@ -249,10 +271,14 @@ export async function POST(req) {
       publisherName: data.publisherName || '',
       updatedAt: Timestamp.now(),
       status: status,
-      // Add engagement tracking fields (only for published articles)
       views: isDraft ? 0 : (data.views || 0),
       likes: isDraft ? 0 : (data.likes || 0),
       comments: isDraft ? 0 : (data.comments || 0),
+      
+      // FIXED: Properly handle all image URL fields
+      featuredImageUrl: data.featuredImageUrl || null,
+      imageUrl: data.featuredImageUrl || data.imageUrl || null, // Fallback mapping
+      image: data.featuredImageUrl || data.imageUrl || null, // Additional fallback
     };
 
     // Set createdAt for new articles/drafts
@@ -265,6 +291,12 @@ export async function POST(req) {
       articleData.publishedAt = data.articleId ? (data.publishedAt ? Timestamp.fromDate(new Date(data.publishedAt)) : Timestamp.now()) : Timestamp.now();
     }
 
+    console.log('💾 Final article data image fields:', {
+      featuredImageUrl: articleData.featuredImageUrl,
+      imageUrl: articleData.imageUrl,
+      image: articleData.image
+    });
+
     const db = getFirestoreDb();
     const publisherRef = db.collection('publishers').doc(publisherId);
     
@@ -276,7 +308,6 @@ export async function POST(req) {
 
     if (data.articleId) {
       // Update existing article/draft
-      // First, check if we need to move between collections (draft -> article or vice versa)
       const currentDraftDoc = await publisherRef.collection('drafts').doc(data.articleId).get();
       const currentArticleDoc = await publisherRef.collection('articles').doc(data.articleId).get();
       
@@ -285,13 +316,10 @@ export async function POST(req) {
       else if (currentArticleDoc.exists) currentCollection = 'articles';
       
       if (currentCollection && currentCollection !== collectionName) {
-        // Move between collections (e.g., draft being published or article being demoted to draft)
+        // Move between collections
         console.log(`🔄 Moving item from ${currentCollection} to ${collectionName}`);
         
-        // Delete from old collection
         await publisherRef.collection(currentCollection).doc(data.articleId).delete();
-        
-        // Create in new collection with same ID
         docRef = publisherRef.collection(collectionName).doc(data.articleId);
         await docRef.set(articleData);
         
@@ -314,13 +342,18 @@ export async function POST(req) {
     }
 
     console.log(`✅ ${message} in collection: ${collectionName}`);
+    console.log('🖼️ Saved with image URLs:', {
+      featuredImageUrl: articleData.featuredImageUrl,
+      imageUrl: articleData.imageUrl
+    });
 
     return NextResponse.json({
       success: true,
       message,
       articleId: typeof docRef === 'string' ? docRef : docRef.id,
       status: articleData.status,
-      collection: collectionName
+      collection: collectionName,
+      savedImageUrl: articleData.featuredImageUrl || articleData.imageUrl
     });
 
   } catch (error) {
@@ -338,7 +371,7 @@ export async function DELETE(req) {
     const { searchParams } = new URL(req.url);
     const publisherId = searchParams.get('publisherId');
     const articleId = searchParams.get('articleId');
-    const collection = searchParams.get('collection'); // 'articles' or 'drafts'
+    const collection = searchParams.get('collection');
 
     if (!publisherId || !articleId) {
       return NextResponse.json(
@@ -353,7 +386,6 @@ export async function DELETE(req) {
     const publisherRef = db.collection('publishers').doc(publisherId);
 
     if (collection && ['articles', 'drafts'].includes(collection)) {
-      // Delete from specified collection
       const docRef = publisherRef.collection(collection).doc(articleId);
       const doc = await docRef.get();
       
@@ -367,17 +399,14 @@ export async function DELETE(req) {
       await docRef.delete();
       console.log(`✅ ${collection.slice(0, -1)} deleted successfully from ${collection} collection`);
     } else {
-      // Try to find and delete from either collection
       let deleted = false;
       
-      // Try articles collection first
       const articleDoc = await publisherRef.collection('articles').doc(articleId).get();
       if (articleDoc.exists) {
         await publisherRef.collection('articles').doc(articleId).delete();
         deleted = true;
         console.log('✅ Article deleted successfully from articles collection');
       } else {
-        // Try drafts collection
         const draftDoc = await publisherRef.collection('drafts').doc(articleId).get();
         if (draftDoc.exists) {
           await publisherRef.collection('drafts').doc(articleId).delete();
