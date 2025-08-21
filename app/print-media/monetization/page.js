@@ -9,14 +9,14 @@ import AdUploadOverlay from "@/components/AdUploadOverlay";
 import SubmitConfirmationOverlay from "@/components/SubmitConfirmationOverlay";
 import { useCurrentPublisher } from "@/hooks/useCurrentPublisher";
 
-
 export default function Monetization() {
   const router = useRouter();
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [isUploadOverlayOpen, setIsUploadOverlayOpen] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState(null);
-const [isSubmitOverlayOpen, setIsSubmitOverlayOpen] = useState(false);
-  const [selectedTemplateForSubmit, setSelectedTemplateForSubmit] = useState(null);
+  const [isSubmitOverlayOpen, setIsSubmitOverlayOpen] = useState(false);
+  const [selectedTemplateForSubmit, setSelectedTemplateForSubmit] =
+    useState(null);
   const { publisher, loading } = useCurrentPublisher("currentPublisherId");
 
   const templates = [
@@ -81,7 +81,7 @@ const [isSubmitOverlayOpen, setIsSubmitOverlayOpen] = useState(false);
     // This is where you would implement the actual file upload logic
     // For now, we'll just log the file and show a success message
     console.log("Uploading file for template:", selectedTemplateId, file);
-    
+
     // Simulate upload process
     return new Promise((resolve) => {
       setTimeout(() => {
@@ -92,14 +92,14 @@ const [isSubmitOverlayOpen, setIsSubmitOverlayOpen] = useState(false);
   };
 
   const handleSubmit = (template) => {
-// Set the selected template for submission
+    // Set the selected template for submission
     setSelectedTemplateForSubmit(template);
     // Open the submit confirmation overlay
     setIsSubmitOverlayOpen(true);
     // This is where you would implement the submit logic
     console.log("Submitting template:", template);
   };
-const handleConfirmSubmit = async (template) => {
+  const handleConfirmSubmit = async (template) => {
     // This is where you would implement the actual submit logic
     console.log("Submitting template:", template);
     // For now, we'll just simulate a successful submission
@@ -116,8 +116,10 @@ const handleConfirmSubmit = async (template) => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-       <Header publisher={publisher} />
-      <h1 className="text-center text-xl font bold">Click on any of the templates to see where to place your ad!</h1>
+      <Header publisher={publisher} />
+      <h1 className="text-center text-xl font bold">
+        Click on any of the templates to see where to place your ad!
+      </h1>
       {/* Body Layout: Sidebar under header */}
       <div className="flex">
         {/* Sidebar */}
@@ -178,7 +180,11 @@ const handleConfirmSubmit = async (template) => {
                 className={`cursor-pointer rounded-lg border bg-white shadow-sm hover:shadow-lg transition-all ${
                   selectedTemplate === template.id ? "ring-2 ring-blue-500" : ""
                 }`}
-                onClick={() => router.push(`/print-media/monetization/advertise/ad-demo-article?templateId=${template.id}`)}
+                onClick={() =>
+                  router.push(
+                    `/print-media/monetization/advertise/ad-demo-article?templateId=${template.id}`
+                  )
+                }
               >
                 <div className="p-4">
                   <div className="text-center mb-3">
@@ -263,10 +269,10 @@ const handleConfirmSubmit = async (template) => {
                     Price
                   </th>
                   <th className="text-left p-4 font-medium text-gray-700">
-                     Upload 
+                    Upload
                   </th>
                   <th className="text-left p-4 font-medium text-gray-700">
-                   Submit 
+                    Submit
                   </th>
                   <th className="text-left p-4 font-medium text-gray-700">
                     Link
@@ -287,12 +293,16 @@ const handleConfirmSubmit = async (template) => {
                     <td className="p-4 text-sm text-gray-600">
                       {template.price}
                     </td>
+
+                    {/* Upload Link */}
                     <td
                       className="p-4 text-blue-600 underline cursor-pointer"
                       onClick={() => handleOpenUploadOverlay(template.id)}
                     >
                       {template.upload}
                     </td>
+
+                    {/* Submit Button */}
                     <td className="p-4">
                       <Button
                         variant="default"
@@ -301,9 +311,13 @@ const handleConfirmSubmit = async (template) => {
                         Submit
                       </Button>
                     </td>
-                    <td className="p-4  text-blue-600 underline cursor-pointer">
-                      {template.link}
-                    </td>
+
+                    {/* Payment Link → navigates to /payment/[id] */}
+                    <td className="p-4 text-blue-600 underline cursor-pointer">
+  <Link href={`/print-media/monetization/payment/${template.id}`}>
+    {template.link}
+  </Link>
+</td>
                   </tr>
                 ))}
               </tbody>
@@ -316,7 +330,7 @@ const handleConfirmSubmit = async (template) => {
         onClose={() => setIsUploadOverlayOpen(false)}
         onUpload={handleUpload}
       />
-<SubmitConfirmationOverlay
+      <SubmitConfirmationOverlay
         isOpen={isSubmitOverlayOpen}
         onClose={() => setIsSubmitOverlayOpen(false)}
         onSubmit={() => handleConfirmSubmit(selectedTemplateForSubmit)}
