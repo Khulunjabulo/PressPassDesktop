@@ -339,14 +339,21 @@ export default function PublisherArticlesPage() {
         </div>
       </div>
 
-      {/* Banner Ad */}
-      <div className="max-w-7xl mx-auto px-8 py-4">
-        <img 
-          src="/press-bannerAd.png" 
-          alt="Mobile preview" 
-          className="mb-6" 
-        />
+{/* Banner Ad */}
+ <div className="max-w-7xl mx-auto h-28 bg-[#3ba6e7] flex items-center justify-between px-8 rounded-md shadow-md mt-4">
+        <div className="flex flex-col items-center mt-5">
+            <img src="/Presspass.png" alt="PressPass Logo" height={200} width={180} className="object-contain" /> 
+        </div>
+      <div className="flex flex-col justify-center items-center space-y-2 text-center mx-auto">
+        <h3 className="text-yellow-400 font-bold text-lg">Advertise Here</h3>
+        <p className="text-white text-sm flex flex-col items-center space-y-1">
+          <span>Partners@presspass.africa</span>
+        </p>
+        <p className="text-white text-sm flex flex-col items-center space-y-1">
+          <span>Phone: +27 87 XXX XXX</span>
+        </p>
       </div>
+    </div>
 
       {/* Main Content Layout */}
       <div className="max-w-7xl mx-auto px-8 py-4">
@@ -756,13 +763,20 @@ export default function PublisherArticlesPage() {
         </div>
 
         {/* Bottom Banner Ad */}
-        <div className="max-w-7xl mx-auto px-8 py-6">
-          <img 
-            src="/press-bannerAd.png" 
-            alt="Mobile preview" 
-            className="mb-6" 
-          />
+        <div className="max-w-7xl mx-auto h-28 bg-[#3ba6e7] flex items-center justify-between px-8 rounded-md shadow-md mt-4">
+        <div className="flex flex-col items-center mt-5">
+            <img src="/Presspass.png" alt="PressPass Logo" height={200} width={180} className="object-contain" /> 
         </div>
+      <div className="flex flex-col justify-center items-center space-y-2 text-center mx-auto">
+        <h3 className="text-yellow-400 font-bold text-lg">Advertise Here</h3>
+        <p className="text-white text-sm flex flex-col items-center space-y-1">
+          <span>Partners@presspass.africa</span>
+        </p>
+        <p className="text-white text-sm flex flex-col items-center space-y-1">
+          <span>Phone: +27 87 XXX XXX</span>
+        </p>
+      </div>
+    </div>
 
         {/* Footer */}
         <div className="border-t-2 border-black mt-8">
