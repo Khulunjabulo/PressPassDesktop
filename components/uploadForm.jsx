@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react"
 import { 
+  Eye, ExternalLink, RotateCw,
   FileText, 
   Upload, 
   Save, 
@@ -28,10 +29,21 @@ import {
 
 // Mock Firebase storage functions for demo
 const mockUploadToFirebase = async (file) => {
-  // Simulate upload delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  // Return a mock URL - replace with actual Firebase upload
-  return `https://firebasestorage.googleapis.com/v0/b/your-project.appspot.com/o/images%2F${Date.now()}-${file.name}?alt=media`;
+  console.log('🔥 Starting Firebase upload simulation for:', file.name);
+  
+  // Simulate upload progress
+  for (let progress = 0; progress <= 100; progress += 20) {
+    await new Promise(resolve => setTimeout(resolve, 200));
+    console.log('📊 Upload progress:', progress + '%');
+  }
+  
+  // Create a more realistic Firebase Storage URL
+  const timestamp = Date.now();
+  const fileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+  const mockUrl = `https://firebasestorage.googleapis.com/v0/b/your-project.appspot.com/o/images%2F${timestamp}-${fileName}?alt=media&token=mock-token-${timestamp}`;
+  
+  console.log('✅ Mock Firebase upload completed:', mockUrl);
+  return mockUrl;
 };
 
 // Mock components for demo - replace with your actual imports
@@ -96,6 +108,7 @@ const PreviewToggle = ({ previewStyle, setPreviewStyle }) => (
 
 export default function FlipCardUploadForm({ onSubmit, onClose }) {
   const [isFlipped, setIsFlipped] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   
   // Upload Form States
   const [priority, setPriority] = useState(null);
@@ -391,10 +404,16 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
         console.log('✅ Image uploaded to Firebase:', imageUrl);
         
         setFormData(prev => ({ 
-          ...prev, 
-          featuredImage: file,
-          featuredImageUrl: imageUrl 
-        }));
+  ...prev, 
+  featuredImage: file,
+  featuredImageUrl: imageUrl,
+  imageUrl: imageUrl  // ADD THIS LINE - ensures preview compatibility
+}));
+
+console.log('✅ Image uploaded and URLs set:', {
+  featuredImageUrl: imageUrl,
+  imageUrl: imageUrl
+});
       } catch (uploadError) {
         console.error('❌ Error uploading image:', uploadError);
         setErrors(prev => ({ ...prev, featuredImage: 'Failed to upload image. Please try again.' }));
@@ -746,6 +765,303 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
     await handleManualSubmit(e, true);
   };
 
+  const ArticlePreview = ({ onClose }) => {
+  const previewData = {
+    id: 'preview-' + Date.now(),
+    title: formData.title || 'Article Title',
+    subtitle: formData.subtitle || '',
+    content: editorRef.current?.innerHTML || formData.content || '<p>Start writing your article content here...</p>',
+    author: formData.author || 'Author Name',
+    authorTitle: formData.authorTitle || '',
+    category: formData.category || 'General',
+    tags: formData.tags ? formData.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+    imageUrl: imagePreview || formData.featuredImageUrl || null,
+    featuredImageUrl: imagePreview || formData.featuredImageUrl || null,
+    createdAt: new Date().toISOString(),
+    readTime: readingTime || 5,
+    wordCount: wordCount || 0,
+    metaDescription: formData.metaDescription || '',
+    style: formData.style || 'modern',
+    status: 'preview'
+  };
+
+  const mockPublisher = {
+    name: currentUser?.companyName || 'Your Publication',
+    industry: 'Publishing',
+    logo: null
+  };
+
+  // Format date for preview
+  const formatPreviewDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  const getCurrentDate = () => {
+    const today = new Date();
+    return today.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-75 z-50 overflow-y-auto">
+      <div className="min-h-screen bg-white">
+        {/* Preview Header */}
+        <div className="bg-blue-600 text-white p-4 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <Eye className="w-6 h-6" />
+            <div>
+              <h2 className="text-lg font-bold">Article Preview</h2>
+              <p className="text-sm opacity-90">How your article will appear to readers</p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-3">
+            <span className="px-3 py-1 bg-blue-500 rounded-full text-xs font-medium">
+              PREVIEW MODE
+            </span>
+            <button
+              onClick={onClose}
+              className="text-white hover:text-gray-300 text-2xl font-bold"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+
+        {/* Newspaper-style Article Preview */}
+        <div className="newspaper-container">
+          <style jsx>{`
+            .newspaper-container {
+              font-family: 'Times New Roman', 'Times', serif;
+              line-height: 1.6;
+              color: #1a1a1a;
+            }
+            
+            .newspaper-header {
+              border-bottom: 4px solid #000;
+              margin-bottom: 2rem;
+            }
+            
+            .newspaper-title {
+              font-family: 'Times New Roman', 'Times', serif;
+              font-weight: bold;
+              letter-spacing: 0.1em;
+              text-transform: uppercase;
+            }
+            
+            .newspaper-date-line {
+              border-top: 2px solid #000;
+              border-bottom: 2px solid #000;
+              padding: 0.5rem 0;
+              margin: 1rem 0;
+              text-align: center;
+            }
+            
+            .preview-main-image-container {
+              float: left;
+              width: 350px;
+              margin: 0 2rem 1.5rem 0;
+              border: 3px solid #000;
+              background: #fff;
+              box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+              clear: left;
+            }
+            
+            .preview-main-image {
+              width: 100%;
+              height: 250px;
+              object-fit: cover;
+              display: block;
+              border-bottom: 2px solid #000;
+            }
+            
+            .preview-main-image-caption {
+              padding: 1rem;
+              font-size: 0.85em;
+              font-style: italic;
+              color: #333;
+              background: #f8f8f8;
+              line-height: 1.5;
+              font-family: 'Times New Roman', serif;
+              border-top: 1px solid #ccc;
+            }
+            
+            .preview-content {
+              text-align: justify;
+              hyphens: auto;
+              overflow-wrap: break-word;
+            }
+            
+            .preview-content p {
+              margin-bottom: 1.2rem;
+              text-indent: 1.5em;
+              line-height: 1.7;
+              overflow-wrap: break-word;
+            }
+            
+            .preview-content p:first-of-type {
+              text-indent: 0;
+              font-weight: 500;
+              font-size: 1.1em;
+              margin-bottom: 1.5rem;
+            }
+            
+            @media (max-width: 768px) {
+              .preview-main-image-container {
+                float: none;
+                width: 100%;
+                margin: 0 0 2rem 0;
+              }
+            }
+          `}</style>
+
+          {/* Newspaper Header */}
+          <div className="newspaper-header">
+            <div className="max-w-6xl mx-auto px-8 py-6">
+              <div className="text-center mb-6">
+                <h1 className="newspaper-title text-6xl mb-2">
+                  {mockPublisher.name.toUpperCase()}
+                </h1>
+                <div className="newspaper-date-line">
+                  <p className="text-sm font-medium">
+                    {getCurrentDate()} • {mockPublisher.industry} • PREVIEW EDITION
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Article Content */}
+          <div className="max-w-6xl mx-auto px-8 py-6">
+            {/* Article Header */}
+            <div className="mb-8">
+              {/* Category Badge */}
+              {previewData.category && (
+                <div className="mb-4">
+                  <span className="inline-block bg-black text-white px-4 py-2 text-xs font-bold uppercase tracking-widest">
+                    {previewData.category}
+                  </span>
+                </div>
+              )}
+
+              {/* Main Headline */}
+              <h1 className="newspaper-title text-5xl leading-tight mb-6 pb-4 border-b-4 border-black">
+                {previewData.title}
+              </h1>
+              
+              {/* Subtitle */}
+              {previewData.subtitle && (
+                <h2 className="text-xl italic text-gray-700 mb-4 font-medium">
+                  {previewData.subtitle}
+                </h2>
+              )}
+              
+              {/* Byline and Meta */}
+              <div className="flex items-center justify-between mb-6 text-sm border-b-2 border-gray-400 pb-4">
+                <div className="flex items-center space-x-6">
+                  <div className="flex items-center space-x-2">
+                    <span className="font-bold">
+                      By {previewData.author}
+                      {previewData.authorTitle && ` • ${previewData.authorTitle}`}
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <span>{formatPreviewDate(previewData.createdAt)}</span>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <span>{previewData.readTime} min read</span>
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-1 text-gray-600">
+                  <span>{previewData.wordCount} words</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Article Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+              {/* Main Article Content */}
+              <div className="lg:col-span-3">
+                {/* Article Body with Image */}
+                <div className="article-content-wrapper overflow-hidden">
+                  {/* Main Image */}
+                  {previewData.imageUrl && (
+                    <div className="preview-main-image-container">
+                      <img
+                        src={previewData.imageUrl}
+                        alt={previewData.title}
+                        className="preview-main-image"
+                        loading="eager"
+                      />
+                      <div className="preview-main-image-caption">
+                        <strong>{previewData.title}</strong>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Article Content */}
+                  <div className="preview-content">
+                    <div dangerouslySetInnerHTML={{ __html: previewData.content }} />
+                  </div>
+                  
+                  <div className="clear-both"></div>
+                </div>
+              </div>
+
+              {/* Sidebar */}
+              <div className="lg:col-span-1">
+                {/* Publication Info */}
+                <div className="border-2 border-black p-4 bg-gray-50 mb-4">
+                  <h3 className="border-bottom-2 border-black pb-2 mb-3 font-bold text-sm uppercase">
+                    About {mockPublisher.name}
+                  </h3>
+                  <div className="space-y-3 text-sm">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-12 h-12 bg-black text-white flex items-center justify-center text-xl font-bold border-2 border-black">
+                        {mockPublisher.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <span className="font-bold text-black block">{mockPublisher.name}</span>
+                        <span className="text-gray-600 text-xs uppercase">{mockPublisher.industry}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tags */}
+                {previewData.tags && previewData.tags.length > 0 && (
+                  <div className="border-2 border-black p-4 bg-gray-50">
+                    <h3 className="border-bottom-2 border-black pb-2 mb-3 font-bold text-sm uppercase">Tags</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {previewData.tags.map((tag, index) => (
+                        <span 
+                          key={index}
+                          className="inline-block bg-black text-white px-3 py-1 text-xs font-bold uppercase tracking-wider"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
   return (
     <div className="flip-card-container w-full max-w-4xl mx-auto">
       <style jsx>{`
@@ -1344,25 +1660,34 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
             </div>
 
             {/* Submit Buttons */}
-            <div className="flex gap-3 pt-4">
-              <button
-                type="button"
-                onClick={handleManualSaveDraft}
-                disabled={isSubmitting || !currentUser}
-                className="flex-1 px-6 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors flex items-center justify-center disabled:opacity-50"
-              >
-                <Save className="w-4 h-4 mr-2" />
-                {isSubmitting ? 'Saving...' : 'Save Draft'}
-              </button>
-              <button
-                type="submit"
-                disabled={isSubmitting || !currentUser}
-                className="flex-1 px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center disabled:opacity-50"
-              >
-                <Send className="w-4 h-4 mr-2" />
-                {isSubmitting ? 'Publishing...' : 'Publish Article'}
-              </button>
-            </div>
+           <div className="flex gap-3 pt-4">
+  <button
+    type="button"
+    onClick={() => setShowPreview(true)}
+    disabled={!formData.title && !formData.content}
+    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center justify-center disabled:opacity-50"
+  >
+    <Eye className="w-4 h-4 mr-1" />
+    Preview
+  </button>
+  <button
+    type="button"
+    onClick={handleManualSaveDraft}
+    disabled={isSubmitting || !currentUser}
+    className="flex-1 px-6 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors flex items-center justify-center disabled:opacity-50"
+  >
+    <Save className="w-4 h-4 mr-2" />
+    {isSubmitting ? 'Saving...' : 'Save Draft'}
+  </button>
+  <button
+    type="submit"
+    disabled={isSubmitting || !currentUser}
+    className="flex-1 px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center disabled:opacity-50"
+  >
+    <Send className="w-4 h-4 mr-2" />
+    {isSubmitting ? 'Publishing...' : 'Publish Article'}
+  </button>
+</div>
 
             {/* Debug Information (remove in production) */}
             {process.env.NODE_ENV === 'development' && currentUser && (
@@ -1378,6 +1703,9 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
           </form>
         </div>
       </div>
+      {showPreview && (
+  <ArticlePreview onClose={() => setShowPreview(false)} />
+)}
     </div>
   );
 }
