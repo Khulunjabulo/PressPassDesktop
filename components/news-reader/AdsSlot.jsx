@@ -23,7 +23,6 @@ export default function AdSlot({
         
         if (response.success && response.data) {
           setAd(response.data);
-          // Track impression
           await trackAdImpression(response.data.id);
         } else {
           setError('No ads available');
@@ -41,7 +40,6 @@ export default function AdSlot({
   const handleAdClick = async () => {
     if (ad) {
       await trackAdClick(ad.id);
-      // Open link in new tab
       if (ad.link && ad.link !== '#') {
         window.open(ad.link, '_blank', 'noopener,noreferrer');
       }
@@ -64,22 +62,34 @@ export default function AdSlot({
     );
   }
 
-  // Error state or no ad available
+  // Error or fallback state
   if (error || !ad) {
     if (!showFallback) return null;
     
     return (
       <div 
-        className={`w-full bg-gray-200 flex items-center justify-center rounded-md border border-dashed border-gray-300 text-gray-500 ${className}`}
-        style={{ height, width }}
+        className={`w-full flex flex-col items-center justify-center rounded-md border border-gray-200 ${className}`}
+        style={{ height, width, backgroundColor: '#3ba6e7' }}
         aria-label="Advertisement placeholder"
       >
-        <p className="text-sm">{label}</p>
+        {/* Image */}
+        <div className="w-48 h-48 mb-4">
+          <img
+            src="/Presspass.png"
+            alt="PressPass Logo"
+            className="w-full h-full object-contain"
+          />
+        </div>
+
+        {/* Text */}
+        <h3 className="text-yellow-400 font-bold text-lg mb-2">Advertise Here</h3>
+        <p className="text-white text-sm mb-1">Partners@presspass.africa</p>
+        <p className="text-white text-sm">Phone: +27 87 XXX XXX</p>
       </div>
     );
   }
 
-  // Render actual ad
+  // Render actual fetched ad
   return (
     <div 
       className={`w-full rounded-md overflow-hidden shadow-sm border border-gray-200 cursor-pointer transition-transform hover:scale-[1.02] ${className}`}
@@ -116,29 +126,19 @@ export default function AdSlot({
         {/* Ad Content */}
         <div className="flex-1 p-3 flex flex-col justify-between">
           <div>
-            {/* Company */}
             <div className="text-xs opacity-75 mb-1" style={{ color: ad.textColor }}>
               {ad.company}
             </div>
             
-            {/* Title */}
-            <h3 
-              className="font-bold text-sm mb-1 line-clamp-2" 
-              style={{ color: ad.textColor }}
-            >
+            <h3 className="font-bold text-sm mb-1 line-clamp-2" style={{ color: ad.textColor }}>
               {ad.title}
             </h3>
             
-            {/* Description */}
-            <p 
-              className="text-xs opacity-90 line-clamp-2 mb-2" 
-              style={{ color: ad.textColor }}
-            >
+            <p className="text-xs opacity-90 line-clamp-2 mb-2" style={{ color: ad.textColor }}>
               {ad.description}
             </p>
           </div>
           
-          {/* Call to Action Button */}
           <button 
             className="bg-white bg-opacity-20 hover:bg-opacity-30 px-3 py-1 rounded text-xs font-medium transition-colors self-start"
             style={{ color: ad.textColor }}
@@ -151,7 +151,6 @@ export default function AdSlot({
           </button>
         </div>
         
-        {/* Ad Label */}
         <div className="absolute top-1 right-1 bg-black bg-opacity-50 text-white text-xs px-1 rounded">
           Ad
         </div>
