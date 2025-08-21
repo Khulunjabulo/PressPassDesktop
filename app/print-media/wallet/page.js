@@ -44,7 +44,7 @@ export default function Wallet() {
             <div className="bg-white border rounded shadow-sm flex flex-col items-center justify-center py-4">
               <p className="text-sm font-medium text-gray-700">Available Balance</p>
               <p className="text-3xl font-extrabold text-gray-900">
-                R602,867<span className="text-lg">,00</span>
+                R302,867<span className="text-lg">,00</span>
               </p>
             </div>
 
@@ -57,7 +57,6 @@ export default function Wallet() {
                 className="w-full border border-gray-300 rounded p-2 text-xs"
               >
                 <option value="">Select source</option>
-                <option>Monetization</option>
                 <option>Ads</option>
                 <option>Sponsored articles</option>
               </select>
@@ -129,7 +128,6 @@ export default function Wallet() {
           {/* Earnings Breakdown */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {[
-              { label: 'Monetization', value: 'R300,000', icon: <Lightbulb className="w-5 h-5 text-yellow-500" /> },
               { label: 'Ads', value: 'R200,000', icon: <Megaphone className="w-5 h-5 text-purple-500" /> },
               { label: 'Sponsored articles', value: 'R102,867', icon: <Newspaper className="w-5 h-5 text-orange-500" /> }
             ].map((item) => (
@@ -149,9 +147,9 @@ export default function Wallet() {
           {/* Summary + Button */}
           <div className="bg-white border rounded shadow-sm p-4 flex justify-between items-center">
             <div className="space-y-1 text-xs text-gray-700">
-              <p>Total Earnings <span className="font-bold text-gray-900 ml-4">R 700,000</span></p>
+              <p>Total Earnings <span className="font-bold text-gray-900 ml-4">R 302,867</span></p>
               <p>Withdrawn <span className="font-bold text-gray-900 ml-8">R 97,133</span></p>
-              <p>Remaining Balance <span className="font-bold text-gray-900 ml-2">R 602,867</span></p>
+              <p>Remaining Balance <span className="font-bold text-gray-900 ml-2">R 205,734</span></p>
             </div>
             <button className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded text-sm font-semibold shadow">
               Withdraw
