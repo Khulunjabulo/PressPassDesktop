@@ -15,6 +15,7 @@ import BalanceStatement from './balance-statement/page'
 import WithdrawalHistory from './withdrawal-history/page'
 import PaymentMethod from './payment-method/page'
 import { useCurrentPublisher } from "@/hooks/useCurrentPublisher";
+import PrintMediaFooter from '@/components/UI/PrintMediaFooter';
 
 export default function Wallet() {
   const pathname = usePathname()
@@ -218,6 +219,8 @@ export default function Wallet() {
           </div>
         </div>
       </div>
+
+      <PrintMediaFooter/>
     </div>
   )
 }
