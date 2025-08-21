@@ -192,17 +192,6 @@ export default function Dashboard() {
             <RevenueLegend />
           </div>
 
-          {/* Footer */}
-          <footer className="mt-10 text-center text-sm text-gray-600">
-            <div className="flex justify-center items-center space-x-2 mb-2">
-              <img src="/Presspass.png" alt="Logo" className="h-8" />
-              <span className="text-xs">© 2025 Press-Pass. All Rights Reserved.</span>
-            </div>
-            <div className="space-x-4">
-              <a href="#" className="hover:underline">Terms of Use</a>
-              <a href="#" className="hover:underline">Privacy Policy</a>
-            </div>
-          </footer>
         </div>
       </div>
 
