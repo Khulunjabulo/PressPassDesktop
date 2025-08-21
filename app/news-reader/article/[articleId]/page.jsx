@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Calendar, Clock, Eye, Hash, User, Globe, Share2, Bookmark } from 'lucide-react';
 import FavoriteButton from '@/components/FavoriteButton';
+import NewsReaderHeader from '@/components/news-reader/NewsReaderHeader';
 
 export default function ArticleViewPage() {
   const params = useParams();
@@ -840,6 +841,7 @@ const testImageUrl = async (url) => {
 
       <div className="newspaper-container">
         {/* Newspaper Header */}
+        <NewsReaderHeader/>
         <div className="newspaper-header">
           <div className="max-w-6xl mx-auto px-8 py-6">
             <div className="flex items-center justify-between mb-4">
@@ -1206,7 +1208,21 @@ const testImageUrl = async (url) => {
           </div>
 
           {/* Banner Ad */}
-          <BannerAd />
+          <div className="max-w-7xl mx-auto h-28 bg-[#3ba6e7] flex items-center justify-between px-8 rounded-md shadow-md mt-4">
+              <div className="flex flex-col items-center mt-5">
+                  <img src="/Presspass.png" alt="PressPass Logo" height={200} width={180} className="object-contain" /> 
+              </div>
+            <div className="flex flex-col justify-center items-center space-y-2 text-center mx-auto">
+              <h3 className="text-yellow-400 font-bold text-lg">Advertise Here</h3>
+              <p className="text-white text-sm flex flex-col items-center space-y-1">
+                <span>Partners@presspass.africa</span>
+              </p>
+              <p className="text-white text-sm flex flex-col items-center space-y-1">
+                <span>Phone: +27 87 XXX XXX</span>
+              </p>
+            </div>
+          </div>
+
 
           {/* Article Footer */}
           <div className="mt-12 pt-6 border-t-4 border-black">

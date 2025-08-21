@@ -11,6 +11,7 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/UI/popover
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import Header from "@/components/UI/header";
+import PrintMediaFooter from '@/components/UI/PrintMediaFooter';
 
 
 export default function Publish() {
@@ -171,6 +172,7 @@ const [publisherInfo, setPublisherInfo] = useState({
         </Card>
       </div>
     </div>
+    <PrintMediaFooter/>
       </>
   );
 }
