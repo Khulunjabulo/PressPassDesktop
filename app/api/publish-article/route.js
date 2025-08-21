@@ -252,34 +252,46 @@ export async function POST(req) {
 
     // Prepare article document with proper image handling
     const articleData = {
-      title: data.title || '',
-      subtitle: data.subtitle || '',
-      author: data.author || '',
-      authorTitle: data.authorTitle || '',
-      category: data.category || '',
-      tags: data.tags ? (Array.isArray(data.tags) ? data.tags : data.tags.split(',').map(t => t.trim())) : [],
-      style: data.style || 'modern',
-      content: data.content || '',
-      metaDescription: data.metaDescription || '',
-      publishNow: !isDraft,
-      allowComments: data.allowComments === 'true' || data.allowComments === true,
-      sendNewsletter: data.sendNewsletter === 'true' || data.sendNewsletter === true,
-      isDraft: isDraft,
-      wordCount: parseInt(data.wordCount || '0', 10),
-      readingTime: parseInt(data.readingTime || '0', 10),
-      publisherId,
-      publisherName: data.publisherName || '',
-      updatedAt: Timestamp.now(),
-      status: status,
-      views: isDraft ? 0 : (data.views || 0),
-      likes: isDraft ? 0 : (data.likes || 0),
-      comments: isDraft ? 0 : (data.comments || 0),
-      
-      // FIXED: Properly handle all image URL fields
-      featuredImageUrl: data.featuredImageUrl || null,
-      imageUrl: data.featuredImageUrl || data.imageUrl || null, // Fallback mapping
-      image: data.featuredImageUrl || data.imageUrl || null, // Additional fallback
-    };
+  title: data.title || '',
+  subtitle: data.subtitle || '',
+  author: data.author || '',
+  authorTitle: data.authorTitle || '',
+  category: data.category || '',
+  tags: data.tags ? (Array.isArray(data.tags) ? data.tags : data.tags.split(',').map(t => t.trim())) : [],
+  style: data.style || 'modern',
+  content: data.content || '',
+  metaDescription: data.metaDescription || '',
+  publishNow: !isDraft,
+  allowComments: data.allowComments === 'true' || data.allowComments === true,
+  sendNewsletter: data.sendNewsletter === 'true' || data.sendNewsletter === true,
+  isDraft: isDraft,
+  wordCount: parseInt(data.wordCount || '0', 10),
+  readingTime: parseInt(data.readingTime || '0', 10),
+  publisherId,
+  publisherName: data.publisherName || '',
+  updatedAt: Timestamp.now(),
+  status: status,
+  views: isDraft ? 0 : (data.views || 0),
+  likes: isDraft ? 0 : (data.likes || 0),
+  comments: isDraft ? 0 : (data.comments || 0),
+  
+  // ENHANCED: Properly handle all image fields
+  featuredImageUrl: data.featuredImageUrl || null,
+  imageUrl: data.featuredImageUrl || data.imageUrl || null,
+  image: data.featuredImageUrl || data.imageUrl || null,
+  
+  // ADD THESE NEW FIELDS:
+  imageCredit: data.imageCredit || null,        // NEW: Who took the photo
+  imageCaption: data.imageCaption || null,      // NEW: Image description
+};
+
+console.log('💾 Final article data with image fields:', {
+  featuredImageUrl: articleData.featuredImageUrl,
+  imageUrl: articleData.imageUrl,
+  image: articleData.image,
+  imageCredit: articleData.imageCredit,         // NEW LOG
+  imageCaption: articleData.imageCaption        // NEW LOG
+});
 
     // Set createdAt for new articles/drafts
     if (!data.articleId) {

@@ -28,22 +28,114 @@ import {
 // import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 // Mock Firebase storage functions for demo
-const mockUploadToFirebase = async (file) => {
-  console.log('🔥 Starting Firebase upload simulation for:', file.name);
-  
-  // Simulate upload progress
-  for (let progress = 0; progress <= 100; progress += 20) {
-    await new Promise(resolve => setTimeout(resolve, 200));
-    console.log('📊 Upload progress:', progress + '%');
+const uploadImageToFirebase = async (file, publisherId) => {
+  try {
+    console.log('🔥 Starting real Firebase upload for:', file.name);
+    
+    // Import Firebase storage (you'll need to set this up in your lib/firebase.js)
+    const { storage } = await import('@/lib/firebase');
+    const { ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
+    
+    // Create a unique filename
+    const timestamp = Date.now();
+    const fileName = `articles/${publisherId}/${timestamp}_${file.name}`;
+    
+    // Create storage reference
+    const storageRef = ref(storage, fileName);
+    
+    // Upload file
+    console.log('📤 Uploading to Firebase Storage...');
+    const snapshot = await uploadBytes(storageRef, file);
+    
+    // Get download URL
+    const downloadURL = await getDownloadURL(snapshot.ref);
+    
+    console.log('✅ Firebase upload successful:', downloadURL);
+    return downloadURL;
+    
+  } catch (error) {
+    console.error('❌ Firebase upload failed:', error);
+    throw new Error('Failed to upload image: ' + error.message);
   }
-  
-  // Create a more realistic Firebase Storage URL
-  const timestamp = Date.now();
-  const fileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-  const mockUrl = `https://firebasestorage.googleapis.com/v0/b/your-project.appspot.com/o/images%2F${timestamp}-${fileName}?alt=media&token=mock-token-${timestamp}`;
-  
-  console.log('✅ Mock Firebase upload completed:', mockUrl);
-  return mockUrl;
+};
+
+const handleFileChange = async (e) => {
+  console.log('📁 File input changed - Function called successfully!');
+  try {
+    const file = e.target.files[0];
+    console.log('📁 Selected file:', file ? {
+      name: file.name,
+      size: file.size,
+      type: file.type
+    } : 'No file');
+
+    if (!file) {
+      setFileName('No file chosen');
+      setFormData(prev => ({ 
+        ...prev, 
+        featuredImage: null, 
+        featuredImageUrl: '',
+        imageCredit: prev.imageCredit || '',
+        imageCaption: prev.imageCaption || ''
+      }));
+      setImagePreview(null);
+      return;
+    }
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      console.error('❌ Invalid file type:', file.type);
+      setErrors(prev => ({ ...prev, featuredImage: 'Please select a valid image file' }));
+      return;
+    }
+
+    // Show local preview immediately
+    const localImageUrl = URL.createObjectURL(file);
+    console.log('🖼️ Created local preview URL:', localImageUrl.substring(0, 50) + '...');
+    setImagePreview(localImageUrl);
+    setFileName(file.name);
+    setIsUploadingImage(true);
+
+    try {
+      // Mock Firebase upload for testing
+      console.log('🔥 Simulating Firebase upload...');
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate upload delay
+      
+      const mockFirebaseUrl = `https://firebasestorage.googleapis.com/v0/b/mock-bucket/o/articles%2F${currentUser?.uid || 'demo'}%2F${Date.now()}_${file.name}?alt=media&token=mock-token`;
+      
+      setFormData(prev => ({ 
+        ...prev, 
+        featuredImage: file,
+        featuredImageUrl: mockFirebaseUrl,
+        imageUrl: mockFirebaseUrl
+      }));
+      
+      console.log('✅ Mock upload successful:', mockFirebaseUrl);
+      setImagePreview(mockFirebaseUrl);
+      
+    } catch (uploadError) {
+      console.error('❌ Upload failed:', uploadError);
+      setErrors(prev => ({ 
+        ...prev, 
+        featuredImage: 'Failed to upload image: ' + uploadError.message 
+      }));
+      
+      // Keep local preview as fallback
+      setFormData(prev => ({ 
+        ...prev, 
+        featuredImage: file,
+        featuredImageUrl: localImageUrl
+      }));
+    }
+
+    setErrors(prev => ({ ...prev, featuredImage: null }));
+    setIsUploadingImage(false);
+
+  } catch (error) {
+    console.error('❌ Error handling file change:', error);
+    setErrors(prev => ({ ...prev, featuredImage: 'Error processing file' }));
+    setIsUploadingImage(false);
+  }
 };
 
 // Mock components for demo - replace with your actual imports
@@ -124,22 +216,24 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Manual Article Form States
-  const [formData, setFormData] = useState({
-    title: '',
-    subtitle: '',
-    author: '',
-    authorTitle: '',
-    category: '',
-    tags: '',
-    featuredImage: null,
-    featuredImageUrl: '', // Add this to store the uploaded image URL
-    style: 'modern',
-    content: '',
-    metaDescription: '',
-    publishNow: true,
-    allowComments: true,
-    sendNewsletter: false
-  });
+ const [formData, setFormData] = useState({
+  title: '',
+  subtitle: '',
+  author: '',
+  authorTitle: '',
+  category: '',
+  tags: '',
+  featuredImage: null,
+  featuredImageUrl: '',
+  imageCredit: '', // ADD THIS LINE
+  imageCaption: '', // ADD THIS LINE TOO
+  style: 'modern',
+  content: '',
+  metaDescription: '',
+  publishNow: true,
+  allowComments: true,
+  sendNewsletter: false
+});
 
   const [wordCount, setWordCount] = useState(0);
   const [readingTime, setReadingTime] = useState(0);
@@ -355,79 +449,99 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
 
   // Fixed file change handler with proper image upload
   const handleFileChange = async (e) => {
-    console.log('📁 File input changed');
-    try {
-      const file = e.target.files[0];
-      console.log('📁 Selected file:', file ? {
-        name: file.name,
-        size: file.size,
-        type: file.type
-      } : 'No file');
+  console.log('📁 File input changed');
+  try {
+    const file = e.target.files[0];
+    console.log('📁 Selected file:', file ? {
+      name: file.name,
+      size: file.size,
+      type: file.type
+    } : 'No file');
 
-      if (!file) {
-        setFileName('No file chosen');
-        setFormData(prev => ({ ...prev, featuredImage: null, featuredImageUrl: '' }));
-        setImagePreview(null);
-        return;
-      }
-
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        console.error('❌ Invalid file type:', file.type);
-        setErrors(prev => ({ ...prev, featuredImage: 'Please select a valid image file' }));
-        return;
-      }
-
-      // Validate file size (5MB limit)
-      if (file.size > 5 * 1024 * 1024) {
-        console.error('❌ File too large:', file.size);
-        setErrors(prev => ({ ...prev, featuredImage: 'Image size must be less than 5MB' }));
-        return;
-      }
-
-      // Create local preview
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setImagePreview(e.target.result);
-      };
-      reader.readAsDataURL(file);
-
-      setFileName(file.name);
-      setFormData(prev => ({ ...prev, featuredImage: file }));
-      setErrors(prev => ({ ...prev, featuredImage: null }));
-
-      // Upload to Firebase immediately
-      setIsUploadingImage(true);
-      try {
-        // Replace this with actual Firebase upload
-        const imageUrl = await mockUploadToFirebase(file);
-        console.log('✅ Image uploaded to Firebase:', imageUrl);
-        
-        setFormData(prev => ({ 
-  ...prev, 
-  featuredImage: file,
-  featuredImageUrl: imageUrl,
-  imageUrl: imageUrl  // ADD THIS LINE - ensures preview compatibility
-}));
-
-console.log('✅ Image uploaded and URLs set:', {
-  featuredImageUrl: imageUrl,
-  imageUrl: imageUrl
-});
-      } catch (uploadError) {
-        console.error('❌ Error uploading image:', uploadError);
-        setErrors(prev => ({ ...prev, featuredImage: 'Failed to upload image. Please try again.' }));
-      } finally {
-        setIsUploadingImage(false);
-      }
-
-      console.log('✅ File validated and set');
-    } catch (error) {
-      console.error('❌ Error handling file change:', error);
-      setErrors(prev => ({ ...prev, featuredImage: 'Error processing file' }));
-      setIsUploadingImage(false);
+    if (!file) {
+      setFileName('No file chosen');
+      setFormData(prev => ({ 
+        ...prev, 
+        featuredImage: null, 
+        featuredImageUrl: '',
+        imageCredit: prev.imageCredit || '' // Keep existing image credit
+      }));
+      setImagePreview(null);
+      return;
     }
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      console.error('❌ Invalid file type:', file.type);
+      setErrors(prev => ({ ...prev, featuredImage: 'Please select a valid image file' }));
+      return;
+    }
+
+    // Validate file size (5MB limit)
+    if (file.size > 5 * 1024 * 1024) {
+      console.error('❌ File too large:', file.size);
+      setErrors(prev => ({ ...prev, featuredImage: 'Image size must be less than 5MB' }));
+      return;
+    }
+
+    // Show local preview immediately
+    const localImageUrl = URL.createObjectURL(file);
+    setImagePreview(localImageUrl);
+    setFileName(file.name);
+    setIsUploadingImage(true);
+
+    try {
+  // Convert image to base64 data URL (like logo system)
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const base64DataUrl = e.target.result;
+    console.log('✅ Image converted to base64:', base64DataUrl.substring(0, 50) + '...');
+    
+    // Update form data with base64 data URL
+    setFormData(prev => ({ 
+      ...prev, 
+      featuredImage: file,
+      featuredImageUrl: base64DataUrl, // Base64 data URL
+      imageUrl: base64DataUrl // Backup field
+    }));
+    
+    // Update preview to use base64 data URL
+    setImagePreview(base64DataUrl);
+    setIsUploadingImage(false);
   };
+  
+  reader.onerror = function(error) {
+    throw new Error('Failed to read file: ' + error.message);
+  };
+  
+  // Read file as data URL (base64)
+  reader.readAsDataURL(file);
+  
+} catch (uploadError) {
+  console.error('❌ Base64 conversion failed:', uploadError);
+  setErrors(prev => ({ 
+    ...prev, 
+    featuredImage: 'Failed to process image: ' + uploadError.message 
+  }));
+  
+  // Keep local preview as fallback
+  setFormData(prev => ({ 
+    ...prev, 
+    featuredImage: file,
+    featuredImageUrl: localImageUrl 
+  }));
+  setIsUploadingImage(false);
+}~
+
+    setErrors(prev => ({ ...prev, featuredImage: null }));
+    setIsUploadingImage(false);
+
+  } catch (error) {
+    console.error('❌ Error handling file change:', error);
+    setErrors(prev => ({ ...prev, featuredImage: 'Error processing file' }));
+    setIsUploadingImage(false);
+  }
+};
 
   const removeImage = () => {
     setImagePreview(null);
@@ -640,7 +754,16 @@ console.log('✅ Image uploaded and URLs set:', {
 
   // Handle form submission
   const handleManualSubmit = async (e, isDraft = false) => {
-    e.preventDefault();
+  e.preventDefault();
+  console.group('📡 SUBMIT DEBUG');
+  console.log('Form data image fields:', {
+    featuredImageUrl: formData.featuredImageUrl,
+    imageUrl: formData.imageUrl,
+    imageCredit: formData.imageCredit,
+    imageCaption: formData.imageCaption,
+    featuredImage: formData.featuredImage ? 'File present' : 'No file'
+  });
+  console.groupEnd();
     console.log('🚀 Form submission started', { 
       isDraft, 
       currentUser: !!currentUser,
@@ -676,6 +799,9 @@ console.log('✅ Image uploaded and URLs set:', {
         // Prepare data for custom handler
         const submitData = {
           ...formData,
+          imageCredit: formData.imageCredit || '',
+  imageCaption: formData.imageCaption || '',
+ 
           content: editorRef.current?.innerHTML?.trim() || '',
           isDraft,
           wordCount,
@@ -1473,34 +1599,79 @@ console.log('✅ Image uploaded and URLs set:', {
               </div>
             </div>
 
-            {/* Featured Image Upload */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Featured Image
-              </label>
-              <div className="flex items-center space-x-4">
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors flex items-center disabled:opacity-50"
-                  disabled={isUploadingImage}
-                >
-                  <Upload className="w-4 h-4 mr-2" />
-                  {isUploadingImage ? 'Uploading...' : 'Upload Image'}
-                </button>
-                {!imagePreview && (
-                  <span className="text-gray-500 text-sm">{fileName}</span>
-                )}
-              </div>
-              {errors.featuredImage && <p className="text-red-500 text-sm mt-1">{errors.featuredImage}</p>}
-            </div>
+            {/* Featured Image Upload - ENHANCED */}
+<div className="mb-4">
+  <label className="block text-sm font-medium text-gray-700 mb-2">
+    Featured Image
+  </label>
+  <div className="space-y-3">
+    {/* File Upload Button */}
+    <div className="flex items-center space-x-4">
+      <input
+  type="file"
+  ref={fileInputRef}
+  accept="image/*"
+  onChange={handleFileChange} // Make sure this matches your function name exactly
+  className="hidden"
+  key={imagePreview ? 'with-image' : 'no-image'} // Force re-render
+/>
+      <button
+        type="button"
+        onClick={() => fileInputRef.current?.click()}
+        className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors flex items-center disabled:opacity-50"
+        disabled={isUploadingImage}
+      >
+        <Upload className="w-4 h-4 mr-2" />
+        {isUploadingImage ? 'Uploading...' : 'Upload Image'}
+      </button>
+      {!imagePreview && (
+        <span className="text-gray-500 text-sm">{fileName}</span>
+      )}
+      {isUploadingImage && (
+        <div className="text-blue-600 text-sm flex items-center">
+          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+          Uploading to Firebase...
+        </div>
+      )}
+    </div>
+
+    {/* Image Credit Input - ONLY show when image is selected */}
+    {(imagePreview || formData.featuredImageUrl) && (
+      <div className="space-y-2">
+        <div>
+          <label htmlFor="imageCredit" className="block text-sm font-medium text-gray-600 mb-1">
+            Image Credit (Who took this photo?)
+          </label>
+          <input
+            type="text"
+            id="imageCredit"
+            name="imageCredit"
+            value={formData.imageCredit}
+            onChange={handleInputChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="e.g., John Smith, Reuters, Getty Images"
+          />
+        </div>
+        
+        <div>
+          <label htmlFor="imageCaption" className="block text-sm font-medium text-gray-600 mb-1">
+            Image Caption (Optional)
+          </label>
+          <input
+            type="text"
+            id="imageCaption"
+            name="imageCaption"
+            value={formData.imageCaption}
+            onChange={handleInputChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Describe what's shown in the image..."
+          />
+        </div>
+      </div>
+    )}
+  </div>
+  {errors.featuredImage && <p className="text-red-500 text-sm mt-1">{errors.featuredImage}</p>}
+</div>
 
             {/* Article Style */}
             <div className="mb-4">

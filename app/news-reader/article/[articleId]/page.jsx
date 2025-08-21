@@ -20,6 +20,32 @@ export default function ArticleViewPage() {
     fetchArticleAndPublisher();
   }, [params.articleId, publisherId]);
 
+  useEffect(() => {
+    if (article && article.imageUrl) {
+      console.log('🔍 Article image debugging:', {
+        imageUrl: article.imageUrl,
+        isFirebaseUrl: article.imageUrl.includes('firebasestorage'),
+        isBlobUrl: article.imageUrl.startsWith('blob:'),
+        isDataUrl: article.imageUrl.startsWith('data:'),
+        articleId: article.id,
+        articleTitle: article.title
+      });
+      
+      // Only test accessibility for non-blob URLs
+      if (!article.imageUrl.startsWith('blob:')) {
+        fetch(article.imageUrl)
+          .then(response => {
+            console.log('✅ Image URL is accessible:', response.status);
+          })
+          .catch(error => {
+            console.error('❌ Image URL is NOT accessible:', error.message);
+          });
+      } else {
+        console.log('⚠️ Skipping accessibility test for blob URL (temporary URL)');
+      }
+    }
+  }, [article]);
+
   const fetchArticleAndPublisher = async () => {
     if (!params.articleId || !publisherId) {
       setError('Missing article ID or publisher ID');
@@ -58,6 +84,32 @@ export default function ArticleViewPage() {
     }
   };
 
+  const debugImageData = () => {
+  console.group('🖼️ IMAGE DEBUG DATA');
+  console.log('Article ID:', article?.id);
+  console.log('Raw image fields:', {
+    imageUrl: article?.imageUrl,
+    featuredImageUrl: article?.featuredImageUrl,
+    image: article?.image,
+    featured_image: article?.featured_image,
+    featuredImage: article?.featuredImage
+  });
+  console.log('Image credit/caption:', {
+    imageCredit: article?.imageCredit,
+    imageCaption: article?.imageCaption
+  });
+  console.log('Determined main image:', mainImage);
+  console.log('Content images found:', contentImages.length);
+  console.groupEnd();
+};
+
+// Call this in useEffect
+useEffect(() => {
+  if (article) {
+    debugImageData();
+  }
+}, [article]);
+
   const handleBackClick = () => {
     if (publisherId) {
       router.push(`/news-reader/publisher/${publisherId}`);
@@ -66,7 +118,7 @@ export default function ArticleViewPage() {
     }
   };
 
-  // Improved date formatting with better error handling
+  // Fixed date formatting with better error handling
   const formatDate = (timestamp) => {
     if (!timestamp) {
       console.log('No timestamp provided');
@@ -133,6 +185,21 @@ export default function ArticleViewPage() {
     return `${readTime} min read`;
   };
 
+  // Fixed function to create safe base64 encoded SVG placeholder
+  const createSafePlaceholder = (width = 350, height = 250, text = 'Image Not Available') => {
+    try {
+      // Use only ASCII characters to avoid btoa() encoding issues
+      const svgContent = `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="#f3f4f6"/><text x="50%" y="45%" font-family="Arial" font-size="16" fill="#6b7280" text-anchor="middle">📷</text><text x="50%" y="60%" font-family="Arial" font-size="12" fill="#6b7280" text-anchor="middle">${text}</text></svg>`;
+      
+      // Use encodeURIComponent instead of btoa to handle any character safely
+      return `data:image/svg+xml,${encodeURIComponent(svgContent)}`;
+    } catch (error) {
+      console.error('Error creating placeholder:', error);
+      // Fallback to a simple colored div approach
+      return null;
+    }
+  };
+
   // Enhanced function to process article content with proper image handling
   const processArticleContent = (content) => {
     if (!content) {
@@ -163,7 +230,7 @@ export default function ArticleViewPage() {
               return `<div key="${index}" class="newspaper-image-container">
                         <img src="${item.src}" alt="${item.caption || 'Article image'}" class="newspaper-image" 
                              loading="lazy" 
-                             onerror="console.log('Image load error:', this.src); this.parentElement.style.display='none';" />
+                             onerror="this.parentElement.style.display='none';" />
                         ${item.caption ? `<div class="newspaper-image-caption">${item.caption}</div>` : ''}
                       </div>`;
             }
@@ -207,7 +274,7 @@ export default function ArticleViewPage() {
         console.log('🖼️ Found image URL in content:', src.substring(0, 50) + '...');
         return `<div class="newspaper-image-container">
                   <img${before}src="${src}"${after} class="newspaper-image" loading="lazy" 
-                       onerror="console.log('Image load error:', this.src); this.parentElement.style.display='none';" />
+                       onerror="this.parentElement.style.display='none';" />
                 </div>`;
       }
     );
@@ -219,7 +286,7 @@ export default function ArticleViewPage() {
         console.log('🖼️ Found standalone image URL:', url.substring(0, 50) + '...');
         return `<div class="newspaper-image-container">
                   <img src="${url.trim()}" alt="Article image" class="newspaper-image" loading="lazy" 
-                       onerror="console.log('Image load error:', this.src); this.parentElement.style.display='none';" />
+                       onerror="this.parentElement.style.display='none';" />
                 </div>`;
       }
     );
@@ -332,16 +399,108 @@ export default function ArticleViewPage() {
     return uniqueImages;
   };
 
+  // Enhanced function to validate and handle different image URL types
+  const validateImageUrl = (url) => {
+    if (!url) return null;
+    
+    // Handle blob URLs - they might be expired
+    if (url.startsWith('blob:')) {
+      console.log('⚠️ Warning: Blob URL detected, may be expired:', url.substring(0, 50) + '...');
+      return url; // Still try to load it, but expect it might fail
+    }
+    
+    // Handle data URLs
+    if (url.startsWith('data:image/')) {
+      console.log('✅ Data URL detected:', url.substring(0, 50) + '...');
+      return url;
+    }
+    
+    // Handle Firebase Storage URLs
+    if (url.includes('firebasestorage.googleapis.com')) {
+      console.log('🔥 Firebase Storage URL detected:', url.substring(0, 50) + '...');
+      return url;
+    }
+    
+    // Handle regular HTTP/HTTPS URLs
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      console.log('🌐 HTTP URL detected:', url.substring(0, 50) + '...');
+      return url;
+    }
+    
+    // Handle relative URLs
+    if (url.startsWith('/') || !url.includes('://')) {
+      console.log('📁 Relative URL detected:', url.substring(0, 50) + '...');
+      return url;
+    }
+    
+    console.log('❓ Unknown URL format:', url.substring(0, 50) + '...');
+    return url;
+  };
+
+  // Enhanced image error handler with blob URL specific handling
+  const handleImageError = (e, fallbackText = 'Image Not Available') => {
+  const failedUrl = e.target.src;
+  console.error('❌ Image failed to load:', failedUrl?.substring(0, 50) + '...');
+  
+  // Log the specific error
+  if (failedUrl && failedUrl.startsWith('blob:')) {
+    console.log('⚠️ Blob URL expired or invalid');
+  } else if (failedUrl && failedUrl.includes('firebasestorage')) {
+    console.log('🔥 Firebase Storage URL failed - check permissions/existence');
+  }
+  
+  // Create a simple placeholder
+  const canvas = document.createElement('canvas');
+  canvas.width = 350;
+  canvas.height = 250;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#f3f4f6';
+  ctx.fillRect(0, 0, 350, 250);
+  ctx.fillStyle = '#6b7280';
+  ctx.font = '16px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText('📷', 175, 120);
+  ctx.fillText(failbackText, 175, 140);
+  
+  e.target.src = canvas.toDataURL();
+  e.target.alt = fallbackText;
+  e.target.onerror = null; // Prevent infinite loops
+};
+
+// 5. DEBUG: Test your image URLs manually
+const testImageUrl = async (url) => {
+  if (!url) return console.log('❌ No URL provided');
+  
+  console.log('🧪 Testing image URL:', url.substring(0, 50) + '...');
+  
+  try {
+    const response = await fetch(url, { method: 'HEAD' });
+    console.log(response.ok ? '✅ URL is accessible' : '❌ URL returned error:', response.status);
+  } catch (error) {
+    console.error('❌ URL test failed:', error.message);
+  }
+  
+  // Test if it loads as an image
+  const img = new Image();
+  img.onload = () => console.log('✅ Image loads successfully');
+  img.onerror = () => console.log('❌ Image failed to load');
+  img.src = url;
+};
+
   // Banner Ad Component
- const BannerAd = () => (
-  <div className="max-w-7xl mx-auto px-8 py-6">
-    <img 
-      src="/press-bannerAd.png" 
-      alt="Mobile preview" 
-      className="mb-6" 
-    />
-  </div>
-);
+  const BannerAd = () => (
+    <div className="max-w-7xl mx-auto px-8 py-6">
+      <img 
+        src="/press-bannerAd.png" 
+        alt="Mobile preview" 
+        className="mb-6" 
+        onError={(e) => {
+          console.log('Banner ad failed to load');
+          e.target.style.display = 'none';
+        }}
+      />
+    </div>
+  );
 
   if (loading) {
     return (
@@ -413,21 +572,24 @@ export default function ArticleViewPage() {
     createdAtType: typeof article.createdAt
   });
 
-  // Determine the main image to show - check all possible image fields
-  const mainImage = article.imageUrl || 
-                   article.featuredImageUrl || 
-                   article.image || 
-                   article.featured_image ||
-                   article.featuredImage ||
-                   contentImages[0]?.src;
+  // Determine the main image to show - check all possible image fields and validate them
+  const rawMainImage = article.imageUrl || 
+                      article.featuredImageUrl || 
+                      article.image || 
+                      article.featured_image ||
+                      article.featuredImage ||
+                      contentImages[0]?.src;
+  
+  const mainImage = validateImageUrl(rawMainImage);
   
   console.log('🖼️ Main image determination:', {
-    imageUrl: article.imageUrl,
+    rawImageUrl: rawMainImage?.substring(0, 50) + '...',
+    validatedImageUrl: mainImage?.substring(0, 50) + '...',
     contentImages: contentImages.length,
-    selectedMainImage: mainImage?.substring(0, 50) + '...'
+    imageType: rawMainImage?.startsWith('blob:') ? 'BLOB' : 
+               rawMainImage?.startsWith('data:') ? 'DATA' :
+               rawMainImage?.includes('firebasestorage') ? 'FIREBASE' : 'OTHER'
   });
-
-  
 
   return (
     <div className="min-h-screen bg-white">
@@ -650,6 +812,30 @@ export default function ArticleViewPage() {
             margin: 0 0 1.5rem 0;
           }
         }
+
+        .hero-image-caption,
+.main-image-caption {
+  padding: 1rem;
+  font-size: 0.85em;
+  font-style: italic;
+  color: #333;
+  background: #f8f8f8;
+  line-height: 1.5;
+  font-family: 'Times New Roman', serif;
+  border-top: 1px solid #ccc;
+}
+
+.hero-image-caption {
+  text-align: center;
+}
+
+.main-image-caption strong,
+.hero-image-caption strong {
+  font-style: normal;
+  color: #1a1a1a;
+  display: block;
+  margin-bottom: 0.5em;
+}
       `}</style>
 
       <div className="newspaper-container">
@@ -666,7 +852,7 @@ export default function ArticleViewPage() {
               </button>
               
               <div className="flex items-center space-x-3">
-                               <button 
+                <button 
                   className="p-2 text-gray-600 hover:text-black transition-colors"
                   title="Share article"
                   onClick={() => {
@@ -675,10 +861,11 @@ export default function ArticleViewPage() {
                         navigator.share({
                           title: article.title,
                           url: window.location.href
-                        });
+                        }).catch(err => console.log('Share failed:', err));
                       } else {
-                        navigator.clipboard.writeText(window.location.href);
-                        alert('Link copied to clipboard!');
+                        navigator.clipboard.writeText(window.location.href)
+                          .then(() => alert('Link copied to clipboard!'))
+                          .catch(err => console.log('Copy failed:', err));
                       }
                     }
                   }}
@@ -760,8 +947,6 @@ export default function ArticleViewPage() {
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
             {/* Main Article Content */}
             <div className="lg:col-span-3">
-              
-
               {/* Hero Image - Full width if important article */}
               {mainImage && article.priority === 'high' && (
                 <div className="hero-image-container">
@@ -770,21 +955,73 @@ export default function ArticleViewPage() {
                     alt={article.title}
                     className="hero-image"
                     loading="eager"
-                    onLoad={() => console.log('✅ Hero image loaded successfully:', mainImage)}
+                    onLoad={() => {
+                      const imageType = mainImage.startsWith('blob:') ? 'BLOB' : 
+                                      mainImage.startsWith('data:') ? 'DATA' :
+                                      mainImage.includes('firebasestorage') ? 'FIREBASE' : 'HTTP';
+                      console.log(`✅ Hero image loaded successfully [${imageType}]:`, mainImage?.substring(0, 50) + '...');
+                    }}
                     onError={(e) => {
-                      console.error('❌ Hero image failed to load:', mainImage);
-                      console.error('Error details:', e);
-                      e.target.parentElement.style.display = 'none';
+                      const imageType = mainImage.startsWith('blob:') ? 'BLOB' : 
+                                      mainImage.startsWith('data:') ? 'DATA' :
+                                      mainImage.includes('firebasestorage') ? 'FIREBASE' : 'HTTP';
+                      console.error(`❌ Hero image failed to load [${imageType}]:`, mainImage?.substring(0, 50) + '...');
+                      
+                      if (mainImage.startsWith('blob:')) {
+                        handleImageError(e, 'Hero Image Expired (Blob URL)');
+                      } else {
+                        handleImageError(e, 'Hero Image Not Available');
+                      }
                     }}
                   />
-                  <div className="hero-image-caption">
-                    <strong>{article.imageCaption || article.subtitle || article.title}</strong>
-                    {article.imageCredit && (
-                      <span className="block text-sm mt-1 text-gray-600">
-                        Photo: {article.imageCredit}
-                      </span>
-                    )}
-                  </div>
+                  // For Hero Image Caption:
+// ACTUAL Implementation - Main Image Caption (the one being used in your code):
+<div className="main-image-caption">
+  {/* Only show caption if it exists and is different from title */}
+  {article.imageCaption && article.imageCaption !== article.title && (
+    <div className="mb-1">
+      <strong>{article.imageCaption}</strong>
+    </div>
+  )}
+  
+  {/* Photo credit */}
+  {article.imageCredit && (
+    <span className="block text-sm mt-1 text-gray-500">
+      📷 Photo by: {article.imageCredit}
+    </span>
+  )}
+  
+  {/* Temporary image warning */}
+  {mainImage && mainImage.startsWith('blob:') && (
+    <div className="text-xs text-orange-600 mt-1 italic">
+      ⚠️ Temporary image URL - may expire on page reload
+    </div>
+  )}
+</div>
+
+// Hero Image Caption (if you're using this elsewhere):
+<div className="hero-image-caption">
+  {/* Only show caption if it exists */}
+  {article.imageCaption && (
+    <div className="mb-1">
+      <strong>{article.imageCaption}</strong>
+    </div>
+  )}
+  
+  {/* Photo credit */}
+  {article.imageCredit && (
+    <div className="text-sm mt-1 text-gray-600 font-normal">
+      📷 Photo by: {article.imageCredit}
+    </div>
+  )}
+  
+  {/* Temporary image warning */}
+  {mainImage && mainImage.startsWith('blob:') && (
+    <div className="text-xs text-orange-600 mt-2 italic">
+      ⚠️ Temporary image URL - may expire on page reload
+    </div>
+  )}
+</div>
                 </div>
               )}
 
@@ -798,13 +1035,23 @@ export default function ArticleViewPage() {
                       alt={article.title}
                       className="main-image"
                       loading="eager"
-                      onLoad={() => console.log('✅ Main image loaded successfully:', mainImage)}
+                      onLoad={() => {
+                        const imageType = mainImage.startsWith('blob:') ? 'BLOB' : 
+                                        mainImage.startsWith('data:') ? 'DATA' :
+                                        mainImage.includes('firebasestorage') ? 'FIREBASE' : 'HTTP';
+                        console.log(`✅ Main image loaded successfully [${imageType}]:`, mainImage?.substring(0, 50) + '...');
+                      }}
                       onError={(e) => {
-                        console.error('❌ Main image failed to load:', mainImage);
-                        console.error('Error details:', e);
-                        // Try to show a placeholder or hide the container
-                        e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzUwIiBoZWlnaHQ9IjI1MCIgdmlld0JveD0iMCAwIDM1MCAyNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzNTAiIGhlaWdodD0iMjUwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xNzUgMTEwVjE0MEgxNDVWMTEwSDE3NVoiIGZpbGw9IiM2QjczODAiLz4KPHA+SW1hZ2UgTm90IEZvdW5kPC9wPgo8L3N2Zz4K';
-                        e.target.alt = 'Image not available';
+                        const imageType = mainImage.startsWith('blob:') ? 'BLOB' : 
+                                        mainImage.startsWith('data:') ? 'DATA' :
+                                        mainImage.includes('firebasestorage') ? 'FIREBASE' : 'HTTP';
+                        console.error(`❌ Main image failed to load [${imageType}]:`, mainImage?.substring(0, 50) + '...');
+                        
+                        if (mainImage.startsWith('blob:')) {
+                          handleImageError(e, 'Image Expired (Blob URL)');
+                        } else {
+                          handleImageError(e, 'Main Image Not Available');
+                        }
                       }}
                     />
                     <div className="main-image-caption">
@@ -813,6 +1060,11 @@ export default function ArticleViewPage() {
                         <span className="block text-sm mt-1 text-gray-500">
                           Photo: {article.imageCredit}
                         </span>
+                      )}
+                      {mainImage && mainImage.startsWith('blob:') && (
+                        <div className="text-xs text-orange-600 mt-1 italic">
+                          ⚠️ Temporary image URL - may expire on page reload
+                        </div>
                       )}
                     </div>
                   </div>
@@ -860,10 +1112,7 @@ export default function ArticleViewPage() {
                       alt={img.caption || `Article image ${index + 1}`}
                       className="newspaper-image"
                       loading="lazy"
-                      onError={(e) => {
-                        console.log('Content image failed to load:', img.src);
-                        e.target.parentElement.style.display = 'none';
-                      }}
+                      onError={(e) => handleImageError(e, `Image ${index + 1} Not Available`)}
                     />
                     {img.caption && (
                       <div className="newspaper-image-caption">
