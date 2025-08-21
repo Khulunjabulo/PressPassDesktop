@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/UI/select";
 import { Upload } from "lucide-react";
+import PrintMediaFooter from '@/components/UI/PrintMediaFooter';
 
 const Header = dynamic(() => import("@/components/UI/header"), { ssr: false });
 
@@ -352,6 +353,8 @@ export default function Advertise() {
           </CardContent>
         </Card>
       </div>
+
+      <PrintMediaFooter/>
     </>
   );
 }
