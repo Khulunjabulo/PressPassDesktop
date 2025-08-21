@@ -8,7 +8,7 @@ export default function NewsReaderHeader() {
   return (
     <header className="bg-[#329ae1] w-full flex justify-between items-center px-6 py-3 shadow-md">
       {/* Logo - always goes to news-reader */}
-      <Link href="/news-reader">
+      <Link href="/">
         <Image
           src="/Presspass.png"
           alt="Press Pass"

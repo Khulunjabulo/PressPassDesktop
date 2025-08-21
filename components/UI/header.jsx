@@ -28,7 +28,7 @@ export default function Header({ publisher }) {
   const logoSrc = getLogoSrc();
 
   return (
-    <header className="bg-blue-400 px-4 py-3 flex items-center justify-between shadow-md">
+    <header className="bg-[#329ae1] px-4 py-3 flex items-center justify-between shadow-md">
       {/* Logo + Company Name */}
       <Link href="/print-media" className="flex items-center space-x-3">
         <div className="w-[100px] h-[100px] flex items-center justify-center">

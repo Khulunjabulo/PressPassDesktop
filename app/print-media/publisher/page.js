@@ -8,6 +8,7 @@ import UploadForm from "@/components/uploadForm";
 import ManualArticleForm from "@/components/ManualArticleForm";
 import usePrintMediaLogic from "@/hooks/PrintMediaLogic";
 import { useCurrentPublisher } from "@/hooks/useCurrentPublisher";
+import PrintMediaFooter from '@/components/UI/PrintMediaFooter';
 
 export default function Publisher() {
   const { submissionStatus, handleFormSubmit } = usePrintMediaLogic();
@@ -117,6 +118,9 @@ export default function Publisher() {
           onClose={handleCloseManualUpload}
         />
       )}
+
+    <PrintMediaFooter/>
+
     </>
   );
 }

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/MonetizationCards"
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts"
 import NewsReaderHeader from "@/components/news-reader/NewsReaderHeader"
+import PrintMediaFooter from '@/components/UI/PrintMediaFooter';
 
 const demographicData = [
   { name: "18 - 34 Demographic", value: 20, color: "#1E40AF" },
@@ -114,6 +115,8 @@ export default function AnalyticsDashboard() {
         </div>
       </div>
     </div>
+
+    <PrintMediaFooter/>
     </>
   )
 }

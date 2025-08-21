@@ -8,6 +8,7 @@ import { Button } from "@/components/UI/Button";
 import AdUploadOverlay from "@/components/AdUploadOverlay";
 import SubmitConfirmationOverlay from "@/components/SubmitConfirmationOverlay";
 import { useCurrentPublisher } from "@/hooks/useCurrentPublisher";
+import PrintMediaFooter from '@/components/UI/PrintMediaFooter';
 
 export default function Monetization() {
   const router = useRouter();
@@ -335,6 +336,8 @@ export default function Monetization() {
         onClose={() => setIsSubmitOverlayOpen(false)}
         onSubmit={() => handleConfirmSubmit(selectedTemplateForSubmit)}
       />
+
+      <PrintMediaFooter/>
     </div>
   );
 }
