@@ -15,6 +15,7 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import { useCurrentPublisher } from "@/hooks/useCurrentPublisher";
+import PrintMediaFooter from '@/components/UI/PrintMediaFooter';
 
 /**
  * Sample data for weekly performance chart
@@ -204,6 +205,8 @@ export default function Dashboard() {
           </footer>
         </div>
       </div>
+
+      <PrintMediaFooter/>
     </>
   )
 }

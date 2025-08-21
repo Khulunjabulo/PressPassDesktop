@@ -16,6 +16,7 @@ import {
   Smartphone,
 } from "lucide-react";
 import Header from "@/components/UI/header";
+import PrintMediaFooter from '@/components/UI/PrintMediaFooter';
 
 export default function Partner() {
   const [formData, setFormData] = useState({
@@ -482,6 +483,8 @@ export default function Partner() {
           </Card>
         </div>
       </div>
+
+      <PrintMediaFooter/>
     </>
   );
 }
