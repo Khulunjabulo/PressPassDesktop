@@ -78,7 +78,7 @@ export default function ArticleWithAds() {
           {/* Feed Ad */}
           <div className="border-2 border-dashed border-blue-400 p-4 text-center">
             {isFeedTemplate ? (
-              <img src="/press-bannerAd.png" alt="Advertisement" className="max-w-full h-auto" />
+              <img src="/PressPass-WrapAd.png" alt="Advertisement" className="max-w-full h-auto" />
             ) : (
               <>
                 <h2 className="text-xl font-bold text-blue-600">FEED</h2>
@@ -95,7 +95,7 @@ export default function ArticleWithAds() {
           {/* Page Wrap 2 */}
           <div className="border-2 border-dashed border-blue-400 p-4 text-center">
             {isPageWrap2Template ? (
-              <img src="/press-bannerAd.png" alt="Advertisement" className="max-w-full h-auto" />
+              <img src="/PressPass-WrapAd.png" alt="Advertisement" className="max-w-300px h-900px" />
             ) : (
               <>
                 <h2 className="text-xl font-bold text-blue-600">PAGE WRAP 2</h2>
@@ -118,16 +118,7 @@ export default function ArticleWithAds() {
         </div>
       )}
 
-      {/* Footer Ad */}
-      <div className="w-full border-2 border-dashed border-blue-400 p-4 mt-8 text-center">
-        <h2 className="text-2xl font-bold text-blue-600">FOOTER AD</h2>
-        <p>200w x 200h(px)</p>
-        <p>100kb: JPEG, PNG, HTML</p>
-        <p>Publisher to Quote</p>
-        <button className="mt-2 bg-blue-500 text-white px-4 py-2 rounded">
-          Payment Link
-        </button>
-      </div>
+      
     </div>
   );
 }
