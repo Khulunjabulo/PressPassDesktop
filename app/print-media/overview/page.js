@@ -191,7 +191,6 @@ export default function Dashboard() {
             <RevenueDistributionChart />
             <RevenueLegend />
           </div>
-
         </div>
       </div>
 

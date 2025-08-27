@@ -1,19 +1,19 @@
 'use client'
 
 import React, { useState, useRef, useEffect } from "react"
-import { 
+import {
   Eye, ExternalLink, RotateCw,
-  FileText, 
-  Upload, 
-  Save, 
-  Send, 
-  Bold, 
-  Italic, 
-  Underline, 
-  List, 
-  AlignLeft, 
-  AlignCenter, 
-  AlignRight, 
+  FileText,
+  Upload,
+  Save,
+  Send,
+  Bold,
+  Italic,
+  Underline,
+  List,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
   Link,
   AlertCircle,
   CheckCircle,
@@ -22,6 +22,7 @@ import {
   Image as ImageIcon,
   X
 } from 'lucide-react';
+import FileUpload from "./fileUpload";
 
 // Firebase imports (you'll need to adjust these based on your Firebase setup)
 // import { storage } from '@/lib/firebase';
@@ -138,33 +139,6 @@ const handleFileChange = async (e) => {
   }
 };
 
-// Mock components for demo - replace with your actual imports
-const FileUpload = ({ setFile, uploadProgress, onPreview, onExtract }) => (
-  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-    <Upload className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-    <p className="text-sm text-gray-600">Drop your PDF here or click to upload</p>
-    <input 
-      type="file" 
-      accept=".pdf"
-      className="mt-2 text-xs"
-      onChange={(e) => {
-        const file = e.target.files[0];
-        setFile(file);
-        if (file && onExtract) {
-          onExtract({ headline: "Sample Headline", byline: "John Doe", location: "New York" });
-        }
-      }}
-    />
-    {uploadProgress && (
-      <div className="mt-2 bg-blue-200 rounded-full h-2">
-        <div 
-          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-          style={{ width: `${uploadProgress}%` }}
-        />
-      </div>
-    )}
-  </div>
-);
 
 const PrioritySelector = ({ priority, setPriority }) => (
   <div className="mb-3">
