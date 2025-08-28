@@ -176,7 +176,7 @@ export default function ClassifiedsPage() {
     },
     {
       name: <div className="flex justify-center items-center">
-  <img src="/The-Star.webp" alt="Isolezwe" className="h-40 w-60 " />
+  <img src="/The Mercury.png" alt="Isolezwe" className="h-40 w-60 " />
 </div>,
       sections: [
         {
