@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import { useSearchParams } from "next/navigation";
+import AdDemoMobile from "../ad-demo-article-mobile/page";
 
 export default function ArticleWithAds() {
   const searchParams = useSearchParams();
@@ -13,6 +14,7 @@ export default function ArticleWithAds() {
   const isPageWrap2Template = templateId === "5";
 
   return (
+    <>
     <div className="max-w-5xl mx-auto p-6">
       {/* Headline Ad */}
       <div className="w-full border-2 border-dashed border-blue-400 p-4 mb-6 text-center">
@@ -117,8 +119,10 @@ export default function ArticleWithAds() {
           <img src="/press-bannerAd.png" alt="Advertisement" className="max-w-full h-auto" />
         </div>
       )}
+      <AdDemoMobile />
 
       
     </div>
+    </>
   );
 }
