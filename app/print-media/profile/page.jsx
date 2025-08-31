@@ -39,11 +39,12 @@ const PublisherProfile = () => {
     monthlyReadership: '',
     companyDescription: '',
     address: '',
+    city: '',
     foundedYear: '',
     employeeCount: '',
     profilePicture: null,
     companyLogo: null,
-    staff: []
+    staff: [],
   });
   const [newStaffMember, setNewStaffMember] = useState({
     name: '',
@@ -695,6 +696,28 @@ const PublisherProfile = () => {
                   </div>
                 )}
               </div>
+              
+<div>
+  <label className="block text-sm font-medium text-gray-700 mb-1">
+    City <span className="text-red-500">*</span>
+  </label>
+  {isEditing ? (
+    <input
+      type="text"
+      name="city"
+      value={formData.city || ""}
+      onChange={handleInputChange}
+      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+      placeholder="Enter your city"
+      required
+    />
+  ) : (
+    <p className="px-3 py-2 bg-gray-50 rounded-lg">
+      {user?.city || "Not provided"}
+    </p>
+  )}
+</div>
+
 
               <div className="mt-6">
                 <label className="block text-sm font-semibold text-slate-700 mb-2">Company Description</label>
