@@ -64,8 +64,9 @@ export default function PublisherSidebar() {
             </nav>
 
             {/* Profile block */}
+            
             <div className="mt-auto px-6 pb-6">
-                <div className="bg-gray-100 p-4 rounded-lg flex items-center space-x-3">
+                    <Link href="/print-media/profile" className="bg-gray-100 p-4 rounded-lg flex items-center space-x-3">
                     {currentUser && currentUser.profilePicture ? (
                         <img
                             src={currentUser.profilePicture}
@@ -87,8 +88,10 @@ export default function PublisherSidebar() {
                             {currentUser ? currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1) : 'Editor-in-Chief'}
                         </p>
                     </div>
-                </div>
+                    </Link>
+                
             </div>
+            
         </aside>
     )
 }
