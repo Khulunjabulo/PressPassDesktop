@@ -37,53 +37,18 @@ const CitySelector = ({ onCityChange }) => {
   };
 
   return (
-    <div>
-      {/* Add Location Button */}
-      <button
-        onClick={() => setIsOpen(true)}
-        className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700"
-      >
-        <Plus className="w-5 h-5 mr-2" />
-      </button>
-
-      {/* Modal */}
-      {isOpen && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
-          <div className="bg-white rounded-lg shadow-lg p-6 w-80 relative">
-            <button
-              onClick={() => setIsOpen(false)}
-              className="absolute top-3 right-3 text-gray-500 hover:text-gray-800"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <h2 className="text-lg font-semibold mb-4 text-gray-800">
-              Select Your City
-            </h2>
-
-            <select
-              value={selectedCity}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">-- Choose City --</option>
-              {cities.map((city, idx) => (
-                <option key={idx} value={city}>
-                  {city}
-                </option>
-              ))}
-            </select>
-
-            {selectedCity && (
-              <p className="mt-4 text-sm text-gray-600">
-                ✅ You selected:{" "}
-                <span className="font-medium">{selectedCity}</span>
-              </p>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
+    <select
+      value={selectedCity}
+      onChange={handleChange}
+      className="px-3 py-2 border rounded-lg bg-white"
+    >
+      <option value="">+ Add Location</option>
+      {cities.map((city, index) => (
+        <option key={index} value={city}>
+          {city}
+        </option>
+      ))}
+    </select>
   );
 };
 
