@@ -18,7 +18,7 @@ export default function AnimatedSlogan() {
   return (
     <div className="text-xl text-gray-600 mb-6 min-h-[2rem] transition-opacity duration-500 ease-in-out">
       <span className="text-black">YOUR COMMUNITY NEWS IN ONE </span>
-      <span className="text-[#329ae1] font-bold">{slogans[index]}</span>
+      <span className="text-[#2795de] font-bold">{slogans[index]}</span>
     </div>
   )
 }
