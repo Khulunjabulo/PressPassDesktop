@@ -1,6 +1,6 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/UI/Button"
 import { Card, CardContent } from "@/components/MonetizationCards"
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts"
 import NewsReaderHeader from "@/components/news-reader/NewsReaderHeader"

@@ -34,7 +34,7 @@ const uploadImageToFirebase = async (file, publisherId) => {
     console.log('🔥 Starting real Firebase upload for:', file.name);
     
     // Import Firebase storage (you'll need to set this up in your lib/firebase.js)
-    const { storage } = await import('@/lib/firebase');
+    const { storage } = await import('@/Firebase/firebase');
     const { ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
     
     // Create a unique filename
