@@ -307,35 +307,96 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
     setIsSubmitting(true);
 
     try {
-      const form = e.target.form || e.target.closest("form");
-      const formData = Object.fromEntries(new FormData(form));
-      formData.priority = priority;
-      formData.previewStyle = previewStyle;
-      formData.action = action;
-
-      // Mock file upload process
+      // If we have a file, extract content from PDF
       if (file) {
-        // Simulate upload progress
-        for (let i = 0; i <= 100; i += 10) {
-          setUploadProgress(i);
-          await new Promise(resolve => setTimeout(resolve, 100));
+        try {
+          // Extract text from PDF
+          const { extractTextFromPDF } = await import('../lib/pdfExtractor');
+          const pdfText = await extractTextFromPDF(file);
+          
+          // Split text into lines and clean up
+          const lines = pdfText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+          
+          // Extract headline (first non-empty line)
+          const headline = lines[0] || 'Untitled Article';
+          
+          // Extract byline (look for "by" pattern)
+          let byline = '';
+          const bylineIndex = lines.findIndex(line => line.toLowerCase().startsWith('by '));
+          if (bylineIndex !== -1) {
+            byline = lines[bylineIndex].substring(3).trim();
+          }
+          
+          // Extract location (look for location pattern)
+          let location = '';
+          const locationMatch = pdfText.match(/\b[A-Z][a-z]+(?: [A-Z][a-z]+)*,\s*(?:[A-Z]{2}|[a-z]+)\b/);
+          if (locationMatch) {
+            location = locationMatch[0];
+          }
+          
+          // Extract content (everything after headline and byline)
+          let contentStartIndex = 1;
+          if (bylineIndex !== -1) {
+            contentStartIndex = Math.max(contentStartIndex, bylineIndex + 1);
+          }
+          
+          // Get content from remaining lines
+          const contentLines = lines.slice(contentStartIndex);
+          const content = contentLines.join('\n');
+          
+          // Auto-generate meta description (first 160 characters)
+          const metaDescription = content.substring(0, 160) + (content.length > 160 ? '...' : '');
+          
+          // Create article data
+          const articleData = {
+            title: headline,
+            subtitle: '',
+            author: byline || currentUser?.companyName || 'Unknown Author',
+            authorTitle: '',
+            category: 'general', // Default category
+            tags: [],
+            featuredImage: null,
+            featuredImageUrl: '',
+            style: 'modern',
+            content: content,
+            metaDescription: metaDescription,
+            publishNow: action === 'publish',
+            allowComments: true,
+            sendNewsletter: false,
+            isDraft: action !== 'publish',
+            wordCount: content.split(/\s+/).filter(word => word.length > 0).length,
+            readingTime: Math.ceil(content.split(/\s+/).filter(word => word.length > 0).length / 200) || 1,
+            publisherId: currentUser?.uid,
+            publisherName: currentUser?.companyName || 'Unknown Publisher'
+          };
+          
+          // Use the same publishing logic as the manual form
+          const result = await submitArticle(action !== 'publish');
+          
+          // Show success message
+          setSubmitStatus('success');
+          
+          // Reset form
+          setFile(null);
+          setUploadProgress(null);
+          setAutofill({ headline: "", byline: "", location: "" });
+          
+          // Auto-close after success
+          setTimeout(() => {
+            onClose?.();
+          }, 2000);
+          
+        } catch (extractionError) {
+          console.error('Error extracting PDF content:', extractionError);
+          setUploadError("Failed to extract content from PDF. Please try again or use manual entry.");
         }
-        
-        formData.pdfUrl = 'mock-pdf-url';
-        formData.fileName = file.name;
-        formData.fileSize = file.size;
-        setUploadProgress(null);
-      }
-
-      const result = await onSubmit(formData);
-      setIsSubmitting(false);
-      
-      // Mock navigation
-      if (action === "publish" && result?.storyId) {
-        console.log(`Navigating to /reader/${result.storyId}`);
+      } else {
+        setUploadError("Please select a PDF file to upload.");
       }
     } catch (error) {
+      console.error('Error in PDF upload submit:', error);
       setUploadError("An unexpected error occurred. Please try again.");
+    } finally {
       setIsSubmitting(false);
     }
   };
