@@ -9,6 +9,7 @@ import {
   Building, Users, Globe, FileText, Plus, Trash2, Briefcase, Award, AlertTriangle,
   CheckCircle, Clock, Shield
 } from 'lucide-react';
+import PressPassHeader from '@/components/UI/PressPassHeader';
 
 const PublisherProfile = () => {
   const [isProfileComplete, setIsProfileComplete] = useState(false);
@@ -364,6 +365,8 @@ const PublisherProfile = () => {
   }
 
   return (
+    <div>
+      <PressPassHeader/>
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       <div className="max-w-5xl mx-auto px-4 py-8">
 
@@ -1219,6 +1222,7 @@ const PublisherProfile = () => {
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 };
