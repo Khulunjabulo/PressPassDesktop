@@ -8,7 +8,8 @@ import { LayoutDashboard,
     User,
     Users,
     Newspaper,
-    Activity
+    Activity,
+    Grid
 } from "lucide-react"
 import { useEffect, useState } from "react"
 
@@ -24,7 +25,7 @@ export default function PublisherSidebar() {
     const menuItems = [
         { name: 'OVERVIEW', icon: <LayoutDashboard size={16} />, href: '/print-media/overview' },
         { name: 'CONTENT ANALYSIS', icon: <BarChart size={16} />, href: '/print-media/content-analysis' },
-        { name: 'DASHBOARD', icon: <BarChart size={16} />, href: '/print-media/dashboard' },
+        { name: 'DASHBOARD', icon: <Grid size={16} />, href: '/print-media/dashboard' },
         { name: 'JOURNALIST', icon: <User size={16} />, href: '/print-media/journalist' },
         { name: 'SUBSCRIBERS', icon: <Users size={16} />, href: '/print-media/subscribers' },
         { name: 'RSS FEED', icon: <Newspaper size={16} />, href: '/print-media/rss-feeds' },
