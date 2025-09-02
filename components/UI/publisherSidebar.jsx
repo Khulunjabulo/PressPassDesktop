@@ -8,7 +8,8 @@ import { LayoutDashboard,
     User,
     Users,
     Newspaper,
-    Activity
+    Activity,
+    Grid
 } from "lucide-react"
 import { useEffect, useState } from "react"
 
@@ -24,6 +25,7 @@ export default function PublisherSidebar() {
     const menuItems = [
         { name: 'OVERVIEW', icon: <LayoutDashboard size={16} />, href: '/print-media/overview' },
         { name: 'CONTENT ANALYSIS', icon: <BarChart size={16} />, href: '/print-media/content-analysis' },
+        { name: 'DASHBOARD', icon: <Grid size={16} />, href: '/print-media/dashboard' },
         { name: 'JOURNALIST', icon: <User size={16} />, href: '/print-media/journalist' },
         { name: 'SUBSCRIBERS', icon: <Users size={16} />, href: '/print-media/subscribers' },
         { name: 'RSS FEED', icon: <Newspaper size={16} />, href: '/print-media/rss-feeds' },
@@ -32,8 +34,16 @@ export default function PublisherSidebar() {
 
     return (
         <aside className="w-64 bg-white shadow-md h-full flex flex-col">
-            <div className="p-6"> </div>
-            {/* Navigation */}
+            <div className="mt-6 ml-12">
+                <img
+                    src="/press-pass.png"
+                    alt="PressPass Logo"
+                    width={100}
+                    height={50}
+                    className="object-contain"
+                />
+            </div>
+
             <nav className="px-6 mt-6 space-y-2">
                 {menuItems.map((item) => {
                     const isActive = pathname === item.href

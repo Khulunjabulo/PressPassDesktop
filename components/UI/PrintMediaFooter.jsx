@@ -7,11 +7,6 @@ export default function PrintMediaFooter() {
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 mt-4">
         {/* Corporate Info Section */}
         <div className="flex flex-col md:flex-row items-center md:items-center gap-4">
-          <img
-            src="/Presspass.png"
-            alt="PressPass Logo"
-            className="w-56 h-24 object-contain flex-shrink-0"
-          />
           <div className="flex flex-col items-center md:items-start mt-2 md:mt-0">
             <h3 className="text-sm font-medium mb-1">Corporate Info</h3>
             <a

@@ -24,6 +24,10 @@ import {
   X,
   ArrowLeft
 } from 'lucide-react';
+import PublisherSidebar from '@/components/UI/publisherSidebar';
+import Header from '@/components/UI/header';
+import { useCurrentPublisher } from "@/hooks/useCurrentPublisher"
+import PrintMediaFooter from '@/components/UI/PrintMediaFooter';
 
 // Fixed hook with proper status filtering
 const usePublisherContent = (publisherId) => {
@@ -31,6 +35,7 @@ const usePublisherContent = (publisherId) => {
   const [drafts, setDrafts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
 
   // Fetch all content for publisher with better error handling
   const fetchContent = async () => {
@@ -341,7 +346,10 @@ const ArticleEditor = ({ item, onSave, onCancel, isNew = false }) => {
   ];
 
   return (
+    <div>
+      
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      
       <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
         <div className="flex justify-between items-center p-4 border-b border-gray-200">
           <h2 className="text-xl font-bold text-gray-900">
@@ -588,6 +596,7 @@ const ArticleEditor = ({ item, onSave, onCancel, isNew = false }) => {
         </div>
       </div>
     </div>
+    </div>
   );
 };
 
@@ -602,6 +611,8 @@ export default function EnhancedPublisherDashboard() {
   const [showEditor, setShowEditor] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [notification, setNotification] = useState(null);
+  const { publisher } = useCurrentPublisher("currentPublisherId");
+
 
   // Get current user - try localStorage first, then use demo data
   useEffect(() => {
@@ -803,6 +814,8 @@ export default function EnhancedPublisherDashboard() {
       minute: '2-digit'
     }).format(new Date(date));
   };
+
+  
 
   const getCategoryColor = (category) => {
     const colors = {
@@ -1027,8 +1040,14 @@ export default function EnhancedPublisherDashboard() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-6">
+    
+    
+    <>
+    <Header publisher={publisher} />
+    <div className="flex h-screen bg-gray-50 overflow-clip scroll-auto">
+      <PublisherSidebar/>
       {/* Notification */}
+      <div className='flex-1 flex flex-col md:p-6 bg-gray-50 overflow-y-auto'>
       {notification && (
         <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg ${
           notification.type === 'success' 
@@ -1051,7 +1070,7 @@ export default function EnhancedPublisherDashboard() {
           </div>
         </div>
       )}
-
+      
       {/* Header */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8">
         <div>
@@ -1454,5 +1473,8 @@ export default function EnhancedPublisherDashboard() {
         </div>
       )}
     </div>
+    </div>
+    <PrintMediaFooter/>
+    </>
   );
 }
