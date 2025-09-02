@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import AdSlot from '@/components/news-reader/AdsSlot';
 import RecommendedOverlayBottom from '@/components/news-reader/Overlay';
-import { Card, CardContent } from '@/components/ui/newscard';
+import { Card, CardContent } from '@/components/UI/newscard';
 import { FileText, Clock, Globe, Building, Users, ArrowRight, Plus } from 'lucide-react';
 import PublisherFavoriteButton from '@/components/PublisherFavoriteButton'; // Add this import
 
