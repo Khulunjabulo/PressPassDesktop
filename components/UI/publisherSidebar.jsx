@@ -32,16 +32,8 @@ export default function PublisherSidebar() {
 
     return (
         <aside className="w-64 bg-white shadow-md h-full flex flex-col">
-            <div className="p-6">
-                <Image
-                    src="/Presspass.png"
-                    alt="PressPass Logo"
-                    width={120}
-                    height={40}
-                    className="object-contain"
-                />
-            </div>
-
+            <div className="p-6"> </div>
+            {/* Navigation */}
             <nav className="px-6 mt-6 space-y-2">
                 {menuItems.map((item) => {
                     const isActive = pathname === item.href
