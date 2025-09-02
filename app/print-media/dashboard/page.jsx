@@ -1044,10 +1044,10 @@ export default function EnhancedPublisherDashboard() {
     
     <>
     <Header publisher={publisher} />
-    <div className="flex">
+    <div className="flex h-screen bg-gray-50 overflow-clip scroll-auto">
       <PublisherSidebar/>
       {/* Notification */}
-      <div className='flex-1 min-h-screen md:p-6 bg-gray-50'>
+      <div className='flex-1 flex flex-col md:p-6 bg-gray-50 overflow-y-auto'>
       {notification && (
         <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg ${
           notification.type === 'success' 
