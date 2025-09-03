@@ -87,6 +87,7 @@ export async function GET() {
         publishers.push({
           id: doc.id,
           name: publisherData.companyName || 'Unnamed Publisher',
+          city: publisherData.city || "",
           logo: publisherData.companyLogo || null,
           industry: publisherData.industry || 'General',
           publicationType: publisherData.publicationType || 'News',

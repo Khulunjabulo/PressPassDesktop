@@ -1,7 +1,7 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { Button } from "@/components/UI/Button"
+import { Input } from "@/components/UI/Input"
 import Header from "@/components/news-reader/Header"
 
 // Classified Item Component

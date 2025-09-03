@@ -8,7 +8,8 @@ import { LayoutDashboard,
     User,
     Users,
     Newspaper,
-    Activity
+    Activity,
+    Grid
 } from "lucide-react"
 import { useEffect, useState } from "react"
 
@@ -24,6 +25,7 @@ export default function PublisherSidebar() {
     const menuItems = [
         { name: 'OVERVIEW', icon: <LayoutDashboard size={16} />, href: '/print-media/overview' },
         { name: 'CONTENT ANALYSIS', icon: <BarChart size={16} />, href: '/print-media/content-analysis' },
+        { name: 'DASHBOARD', icon: <Grid size={16} />, href: '/print-media/dashboard' },
         { name: 'JOURNALIST', icon: <User size={16} />, href: '/print-media/journalist' },
         { name: 'SUBSCRIBERS', icon: <Users size={16} />, href: '/print-media/subscribers' },
         { name: 'RSS FEED', icon: <Newspaper size={16} />, href: '/print-media/rss-feeds' },
@@ -32,12 +34,12 @@ export default function PublisherSidebar() {
 
     return (
         <aside className="w-64 bg-white shadow-md h-full flex flex-col">
-            <div className="p-6">
-                <Image
-                    src="/Presspass.png"
+            <div className="mt-6 ml-12">
+                <img
+                    src="/press-pass.png"
                     alt="PressPass Logo"
-                    width={120}
-                    height={40}
+                    width={100}
+                    height={50}
                     className="object-contain"
                 />
             </div>
@@ -64,8 +66,9 @@ export default function PublisherSidebar() {
             </nav>
 
             {/* Profile block */}
+            
             <div className="mt-auto px-6 pb-6">
-                <div className="bg-gray-100 p-4 rounded-lg flex items-center space-x-3">
+                    <Link href="/print-media/profile" className="bg-gray-100 p-4 rounded-lg flex items-center space-x-3">
                     {currentUser && currentUser.profilePicture ? (
                         <img
                             src={currentUser.profilePicture}
@@ -87,8 +90,10 @@ export default function PublisherSidebar() {
                             {currentUser ? currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1) : 'Editor-in-Chief'}
                         </p>
                     </div>
-                </div>
+                    </Link>
+                
             </div>
+            
         </aside>
     )
 }

@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useState, useMemo } from 'react';
-import { Card, CardContent } from '@/components/ui/newscard';
+import { Card, CardContent } from '@/components/UI/newscard';
 import { ArrowLeft, FileText, Clock, Globe, Building, Users, Calendar, Eye, Hash, Filter } from 'lucide-react';
 import { usePublisherArticles } from '@/hooks/useNewsSources';
 import BannerAd from '@/components/news-reader/BannerAd';

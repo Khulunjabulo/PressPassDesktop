@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import AdSlot from '@/components/news-reader/AdsSlot';
 import RecommendedOverlayBottom from '@/components/news-reader/Overlay';
-import { Card, CardContent } from '@/components/ui/newscard';
+import { Card, CardContent } from '@/components/UI/newscard';
 import { FileText, Clock, Globe, Building, Users, ArrowRight, Plus } from 'lucide-react';
 import PublisherFavoriteButton from '@/components/PublisherFavoriteButton'; // Add this import
 
@@ -233,99 +233,81 @@ export default function NewsGrid({ articles }) {
                     className="hover:shadow-lg hover:scale-[1.02] transition-all duration-200 cursor-pointer border-0 shadow-sm bg-white"
                     onClick={() => handleSourceClick(source)}
                   >
-                    <CardContent className="p-4">
-                      {/* Top section with content and arrow */}
-                      <div className="flex items-center justify-between mb-1">
-                        <h3 className="text-sm font-semibold text-gray-900 truncate">
-                          {stripHtml(source.name)}
-                        </h3>
-                        <ArrowRight className="w-3 h-3 text-gray-400 flex-shrink-0" />
-                      </div>
+<CardContent className="p-4">
+  {/* Publisher Name (centered header) */}
+  <div className="text-center mb-3">
+    <h1 className="text-base font-bold text-gray-900 truncate">
+      {stripHtml(source.name)}
+    </h1>
+    {/* <p className="text-xs text-gray-500">{source.industry}</p> */}
+  </div>
 
-                      {/* Industry Badge */}
-                      <div className="mb-3">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                          {source.industry}
-                        </span>
-                      </div>
+  {/* Logo + Story */}
+  <div className="flex items-start space-x-3 mb-3">
+    {/* Logo */}
+    <div className="flex-shrink-0 w-30 h-30">
+      {source.logo ? (
+        <img
+          src={source.logo}
+          alt={`${source.name} logo`}
+          className="w-full h-full rounded-lg object-cover border border-gray-200"
+        />
+      ) : (
+        <div className="w-full h-full bg-[#329ae1] rounded-lg flex items-center justify-center">
+          <span className="text-white font-semibold text-lg">
+            {stripHtml(source.name).charAt(0)}
+          </span>
+        </div>
+      )}
+    </div>
 
-                      {/* Recent Story Section - Horizontal Layout */}
-                      <div className="mt-3 pt-3 border-t border-gray-100">
-                        <div className="flex items-start space-x-3">
-                          {/* Logo */}
-                          <div className="flex-shrink-0 w-12 h-12">
-                            {source.logo ? (
-                              <img
-                                src={source.logo}
-                                alt={`${source.name} logo`}
-                                className="w-full h-full rounded-lg object-cover border border-gray-200"
-                              />
-                            ) : (
-                              <div className="w-full h-full bg-gradient-to-br bg-[#329ae1] rounded-lg flex items-center justify-center">
-                                <span className="text-white font-semibold text-lg">
-                                  {stripHtml(source.name).charAt(0)}
-                                </span>
-                              </div>
-                            )}
-                          </div>
+    {/* Story Content */}
+    <div className="flex-1 min-w-0">
+      <h4 className="text-sm font-semibold text-gray-900 mb-1 line-clamp-2">
+        {source.recentStory?.title ||
+          "Ramaphosa pledges to tackle youth unemployment in new economic plan"}
+      </h4>
+      <p className="text-xs text-gray-600 mb-2 line-clamp-3">
+        {source.recentStory?.excerpt ||
+          "President announces comprehensive strategy to address rising unemployment rates among South African youth, focusing on skills development and job creation initiatives."}
+      </p>
+      <button
+        onClick={(e) =>
+          handleReadMoreClick(e, source.recentStory?.url || "#")
+        }
+        className="text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors"
+      >
+        Read more
+      </button>
+    </div>
+  </div>
 
-                          {/* Story Content */}
-                          <div className="flex-1 min-w-0">
-                            <h4 className="text-xs font-semibold text-gray-900 mb-1 line-clamp-2">
-                              {source.recentStory?.title || "Ramaphosa pledges to tackle youth unemployment in new economic plan"}
-                            </h4>
-                            <p className="text-xs text-gray-600 mb-2 line-clamp-2">
-                              {source.recentStory?.excerpt || "President announces comprehensive strategy to address rising unemployment rates among South African youth, focusing on skills development and job creation initiatives."}
-                            </p>
-                            <button
-                              onClick={(e) => handleReadMoreClick(e, source.recentStory?.url || '#')}
-                              className="text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors"
-                            >
-                              Read more
-                            </button>
-                          </div>
-                        </div>
-                        
-                        {/* Favorite Button - Below text content */}
-                        <div className="mt-3 flex justify-end">
-                          <PublisherFavoriteButton
-                            type="button"
-                            publisher={source}
-                            size="default"
-                            showText={false}
-                            className="p-2 rounded-full bg-gray-100 hover:bg-red-100 transition-colors"
-                            disabled
-                          />
-                        </div>
-                      </div>
+  {/* Post Info + Favorites aligned in one row */}
+  <div className="flex items-center justify-between text-xs text-gray-500 pt-2">
+    <div className="flex items-center space-x-4">
+      {/* <span>{source.articleCount || 6} posts</span> */}
+      <span>Last Post: {source.lastPosted || "1d ago"}</span>
+       <a 
+  href={source.website || "https://www.dailysun.co.za"} 
+  target="_blank" 
+  rel="noopener noreferrer" 
+  className="text-gray-500 hover:underline"
+>
+  {source.website?.replace(/^https?:\/\//, "") || "www.dailysun.co.za"}
+</a>
 
-                      {/* Post Information and Status - Single Row Format */}
-                      <div className="mt-3 pt-2 border-t border-gray-100">
-                        <div className="flex items-center justify-between text-xs text-gray-500">
-                          <div className="flex items-center space-x-4">
-                            <span className="flex items-center space-x-1">
-                              📄 <span>{source.articleCount || 6} posts</span>
-                            </span>
-                            <span className="flex items-center space-x-1">
-                              ⏰ <span>Last: {source.lastPosted || '1d ago'}</span>
-                            </span>
-                            <span className="flex items-center space-x-1">
-                              📅 <span>{source.publicationFrequency || 'Quarterly'}</span>
-                            </span>
-                          </div>
-                          <span className="flex items-center space-x-1">
-                            <div className={`w-1.5 h-1.5 rounded-full ${source.hasArticles ? 'bg-green-400' : 'bg-yellow-400'}`}></div>
-                            <span>{source.hasArticles ? 'Active' : 'Ready'}</span>
-                          </span>
-                        </div>
-                        
-                        <div className="mt-1 text-xs text-gray-500">
-                          <span className="flex items-center space-x-1">
-                            🌐 <span>{source.website?.replace(/^https?:\/\//, '') || 'www.sowetanlive.co.za'}</span>
-                          </span>
-                        </div>
-                      </div>
-                    </CardContent>
+    </div>
+    <PublisherFavoriteButton
+      type="button"
+      publisher={source}
+      size="default"
+      showText={false}
+      className="p-2 rounded-full bg-gray-100 hover:bg-red-100 transition-colors"
+      disabled
+    />
+  </div>
+</CardContent>
+
                   </Card>
                 ))}
               </div>
