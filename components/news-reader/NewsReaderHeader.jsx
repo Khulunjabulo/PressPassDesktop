@@ -18,12 +18,17 @@ export default function NewsReaderHeader({
   const pathname = usePathname();
   const [logoError, setLogoError] = useState(false);
 
-  // Check if we're on a publisher page
+  // Check if we're on a publisher page or article page with publisher data
   const isPublisherPage = pathname?.includes('/publisher/');
+  const isArticlePage = pathname?.includes('/article/');
+  const hasPublisherData = publisherImage || publisherName || publisher;
 
   // Determine the logo source with fallback logic
   const getLogoSrc = () => {
-    if (!isPublisherPage || logoError) return '/Presspass.png';
+    // Show publisher logo if we're on publisher page OR article page with publisher data
+    const shouldShowPublisherLogo = (isPublisherPage || (isArticlePage && hasPublisherData)) && !logoError;
+
+    if (!shouldShowPublisherLogo) return '/Presspass.png';
 
     const logoSources = [
       publisherImage,
@@ -41,13 +46,14 @@ export default function NewsReaderHeader({
   };
 
   const logoSrc = getLogoSrc();
+  const isShowingPublisherLogo = (isPublisherPage || (isArticlePage && hasPublisherData)) && !logoError;
 
   const handleLogoError = () => {
     setLogoError(true);
   };
 
   const handleLogoClick = () => {
-    if (isPublisherPage && publisherId) {
+    if ((isPublisherPage || isArticlePage) && publisherId) {
       router.push(`/news-reader/publisher/${publisherId}`);
     } else {
       router.push('/news-reader');
@@ -60,7 +66,8 @@ export default function NewsReaderHeader({
       <Link href="/news-reader">
         <Image
           src={logoSrc}
-          alt={isPublisherPage && publisherName ? `${publisherName} logo` : "Press Pass"}
+          alt={isShowingPublisherLogo && publisherName ? `${publisherName} logo` : "Press Pass"}
+          title={isShowingPublisherLogo && publisherName ? `Go to ${publisherName}` : "Go to Press Pass"}
           width={100}
           height={50}
           priority
