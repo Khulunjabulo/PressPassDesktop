@@ -305,7 +305,7 @@ export default function Wallet() {
           {/* TEST BUTTONS - Only show in development */}
           {process.env.NODE_ENV === 'development' && (
             <div className="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-4">
-              <h4 className="font-semibold text-yellow-800 mb-3">🧪 Test Earnings (Dev Only)</h4>
+              <h4 className="font-semibold text-yellow-800 mb-3"> Test Earnings</h4>
               
               {/* Debug Info */}
               <div className="mb-4 p-3 bg-white rounded border text-xs">
@@ -414,9 +414,6 @@ export default function Wallet() {
                   Add Random Amount
                 </button>
               </div>
-              <p className="text-xs text-yellow-700 mt-2">
-                These buttons will only appear in development mode and will add test earnings to this publisher's wallet.
-              </p>
             </div>
           )}
         </div>
