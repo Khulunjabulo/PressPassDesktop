@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { ArrowLeft, Check, Clock, X, Download } from "lucide-react"
+import { ArrowLeft, Check, Clock, X, Download, Filter } from "lucide-react"
 import { useCurrentPublisher } from "@/hooks/useCurrentPublisher"
 import { useWallet } from "@/hooks/useWallet"
 import jsPDF from 'jspdf'
@@ -10,6 +10,40 @@ import jsPDF from 'jspdf'
 export default function BalanceStatement() {
   const { publisher, loading: publisherLoading } = useCurrentPublisher("currentPublisherId")
   const wallet = useWallet(publisher?.id)
+
+  // Filter states
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+  const [sourceFilter, setSourceFilter] = useState('')
+  const [showFilters, setShowFilters] = useState(false)
+
+  // Filter transactions based on selected criteria
+  const filteredTransactions = wallet.transactions.filter(transaction => {
+    // Date filtering
+    if (dateFrom || dateTo) {
+      const transactionDate = new Date(transaction.date?.split('/').reverse().join('-') || transaction.date)
+      const fromDate = dateFrom ? new Date(dateFrom) : null
+      const toDate = dateTo ? new Date(dateTo) : null
+
+      if (fromDate && transactionDate < fromDate) return false
+      if (toDate && transactionDate > toDate) return false
+    }
+
+    // Source filtering
+    if (sourceFilter && transaction.source !== sourceFilter) return false
+
+    return true
+  })
+
+  // Get unique sources for filter dropdown
+  const uniqueSources = [...new Set(wallet.transactions.map(t => t.source).filter(Boolean))]
+
+  // Clear all filters
+  const clearFilters = () => {
+    setDateFrom('')
+    setDateTo('')
+    setSourceFilter('')
+  }
 
   // Show loading state
   if (publisherLoading || wallet.loading) {
@@ -59,45 +93,96 @@ export default function BalanceStatement() {
   }
 
   // PDF Generation Function
-  const generatePDF = () => {
+  const generatePDF = async () => {
     const doc = new jsPDF()
 
-    // Add title
-    doc.setFontSize(20)
-    doc.text('Balance Statement', 20, 30)
+    try {
+      // Add logo
+      const logoUrl = '/press-pass.png'
+      const img = new Image()
+      img.crossOrigin = 'anonymous'
 
-    // Add generation date
-    doc.setFontSize(10)
-    doc.text(`Generated on: ${new Date().toLocaleDateString('en-GB')}`, 20, 40)
+      await new Promise((resolve, reject) => {
+        img.onload = resolve
+        img.onerror = reject
+        img.src = logoUrl
+      })
+
+      // Add logo to PDF (positioned at top-left)
+      doc.addImage(img, 'PNG', 20, 10, 30, 30)
+
+      // Add title next to logo
+      doc.setFontSize(20)
+      doc.text('Balance Statement', 60, 30)
+
+      // Add generation date
+      doc.setFontSize(10)
+      doc.text(`Generated on: ${new Date().toLocaleDateString('en-GB')}`, 60, 40)
+    } catch (error) {
+      console.warn('Could not load logo, generating PDF without logo:', error)
+      // Fallback without logo
+      doc.setFontSize(20)
+      doc.text('Balance Statement', 20, 30)
+
+      doc.setFontSize(10)
+      doc.text(`Generated on: ${new Date().toLocaleDateString('en-GB')}`, 20, 40)
+    }
+
+    // Add filter information if any filters are applied
+    let filterYPosition = 50
+    if (dateFrom || dateTo || sourceFilter) {
+      doc.setFontSize(12)
+      doc.text('Applied Filters:', 20, filterYPosition)
+      filterYPosition += 10
+
+      doc.setFontSize(10)
+      if (dateFrom) {
+        doc.text(`From Date: ${new Date(dateFrom).toLocaleDateString()}`, 20, filterYPosition)
+        filterYPosition += 8
+      }
+      if (dateTo) {
+        doc.text(`To Date: ${new Date(dateTo).toLocaleDateString()}`, 20, filterYPosition)
+        filterYPosition += 8
+      }
+      if (sourceFilter) {
+        doc.text(`Source: ${sourceFilter.charAt(0).toUpperCase() + sourceFilter.slice(1)}`, 20, filterYPosition)
+        filterYPosition += 8
+      }
+      filterYPosition += 10
+    } else {
+      filterYPosition = 60
+    }
 
     // Add summary section
     doc.setFontSize(14)
-    doc.text('Summary', 20, 60)
+    doc.text('Summary', 20, filterYPosition)
 
     doc.setFontSize(12)
-    doc.text(`Available Balance: R${wallet.availableBalance.toLocaleString()},00`, 20, 75)
-    doc.text(`Total Earnings: R${wallet.totalEarnings.toLocaleString()},00`, 20, 85)
-    doc.text(`Total Withdrawn: R${wallet.withdrawn.toLocaleString()},00`, 20, 95)
+    doc.text(`Available Balance: R${wallet.availableBalance.toLocaleString()},00`, 20, filterYPosition + 15)
+    doc.text(`Total Earnings: R${wallet.totalEarnings.toLocaleString()},00`, 20, filterYPosition + 25)
+    doc.text(`Total Withdrawn: R${wallet.withdrawn.toLocaleString()},00`, 20, filterYPosition + 35)
 
     // Add transactions section
     doc.setFontSize(14)
-    doc.text('Transaction History', 20, 115)
+    doc.text('Transaction History', 20, filterYPosition + 55)
+
+    const tableYPosition = filterYPosition + 70
 
     // Table headers
     doc.setFontSize(10)
-    doc.text('Date', 20, 130)
-    doc.text('Time', 50, 130)
-    doc.text('Source', 75, 130)
-    doc.text('Description', 105, 130)
-    doc.text('Amount', 155, 130)
-    doc.text('Status', 175, 130)
+    doc.text('Date', 20, tableYPosition)
+    doc.text('Time', 50, tableYPosition)
+    doc.text('Source', 75, tableYPosition)
+    doc.text('Description', 105, tableYPosition)
+    doc.text('Amount', 155, tableYPosition)
+    doc.text('Status', 175, tableYPosition)
 
     // Draw header line
-    doc.line(20, 132, 190, 132)
+    doc.line(20, tableYPosition + 2, 190, tableYPosition + 2)
 
     // Add transactions
-    let yPosition = 140
-    wallet.transactions.slice(0, 20).forEach((transaction, index) => {
+    let yPosition = tableYPosition + 10
+    filteredTransactions.slice(0, 20).forEach((transaction, index) => {
       if (yPosition > 270) { // If near bottom of page, add new page
         doc.addPage()
         yPosition = 30
@@ -134,19 +219,109 @@ export default function BalanceStatement() {
   return (
     <div className="bg-white border rounded-lg shadow-xl w-full max-w-4xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between p-6 border-b">
-        <div className="flex items-center">
-          <Link
-            href="/print-media/wallet"
-            className="flex items-center text-blue-600 hover:text-blue-800 mr-4"
+      <div className="p-6 border-b">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center">
+            <Link
+              href="/print-media/wallet"
+              className="flex items-center text-blue-600 hover:text-blue-800 mr-4"
+            >
+              <ArrowLeft size={20} />
+            </Link>
+            <h2 className="text-xl font-semibold text-gray-900">Balance Statement</h2>
+          </div>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="text-gray-600 hover:text-black flex items-center gap-1 text-sm px-3 py-1 border rounded"
           >
-            <ArrowLeft size={20} />
-          </Link>
-          <h2 className="text-xl font-semibold text-gray-900">Balance Statement</h2>
+            <Filter size={16} />
+            {showFilters ? 'Hide Filters' : 'Show Filters'}
+          </button>
         </div>
-        <button className="text-gray-600 hover:text-black flex items-center gap-1 text-sm">
-          Filter
-        </button>
+
+        {/* Filter Controls */}
+        {showFilters && (
+          <div className="bg-gray-50 p-4 rounded-lg border">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {/* Date From */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  From Date
+                </label>
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                />
+              </div>
+
+              {/* Date To */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  To Date
+                </label>
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                />
+              </div>
+
+              {/* Source Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Source
+                </label>
+                <select
+                  value={sourceFilter}
+                  onChange={(e) => setSourceFilter(e.target.value)}
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                >
+                  <option value="">All Sources</option>
+                  {uniqueSources.map(source => (
+                    <option key={source} value={source}>
+                      {source.charAt(0).toUpperCase() + source.slice(1)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Clear Filters */}
+              <div className="flex items-end">
+                <button
+                  onClick={clearFilters}
+                  className="w-full bg-gray-500 text-white rounded px-3 py-2 text-sm hover:bg-gray-600"
+                >
+                  Clear Filters
+                </button>
+              </div>
+            </div>
+
+            {/* Active Filters Display */}
+            {(dateFrom || dateTo || sourceFilter) && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                <span className="text-sm text-gray-600">Active filters:</span>
+                {dateFrom && (
+                  <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
+                    From: {new Date(dateFrom).toLocaleDateString()}
+                  </span>
+                )}
+                {dateTo && (
+                  <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
+                    To: {new Date(dateTo).toLocaleDateString()}
+                  </span>
+                )}
+                {sourceFilter && (
+                  <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">
+                    Source: {sourceFilter.charAt(0).toUpperCase() + sourceFilter.slice(1)}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Modal Content */}
@@ -175,8 +350,11 @@ export default function BalanceStatement() {
 
         {/* Transaction Table */}
         <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200">
+          <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
             <h3 className="text-lg font-medium text-gray-900">Transaction History</h3>
+            <span className="text-sm text-gray-600">
+              Showing {filteredTransactions.length} of {wallet.transactions.length} transactions
+            </span>
           </div>
 
           <div className="overflow-x-auto">
@@ -203,8 +381,8 @@ export default function BalanceStatement() {
                       <td className="px-6 py-4"><div className="h-4 bg-gray-200 rounded w-16"></div></td>
                     </tr>
                   ))
-                ) : wallet.transactions.length > 0 ? (
-                  wallet.transactions.map((transaction, idx) => (
+                ) : filteredTransactions.length > 0 ? (
+                  filteredTransactions.map((transaction, idx) => (
                     <tr key={idx} className="hover:bg-gray-50">
                       <td className="px-6 py-4 text-gray-900">{transaction.date}</td>
                       <td className="px-6 py-4 text-gray-900">{transaction.time}</td>
@@ -233,7 +411,10 @@ export default function BalanceStatement() {
                 ) : (
                   <tr>
                     <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
-                      No transactions found
+                      {wallet.transactions.length === 0
+                        ? "No transactions found"
+                        : "No transactions match the selected filters"
+                      }
                     </td>
                   </tr>
                 )}
