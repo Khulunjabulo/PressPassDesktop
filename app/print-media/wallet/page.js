@@ -591,9 +591,41 @@ export default function Wallet() {
                   Close
                 </button>
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     // PDF generation for modal
                     const doc = new jsPDF()
+
+                    try {
+                      // Add logo
+                      const logoUrl = '/press-pass.png'
+                      const img = new Image()
+                      img.crossOrigin = 'anonymous'
+
+                      await new Promise((resolve, reject) => {
+                        img.onload = resolve
+                        img.onerror = reject
+                        img.src = logoUrl
+                      })
+
+                      // Add logo to PDF (positioned at top-left)
+                      doc.addImage(img, 'PNG', 20, 10, 30, 30)
+
+                      // Add title next to logo
+                      doc.setFontSize(20)
+                      doc.text('Balance Statement', 60, 30)
+
+                      // Add generation date
+                      doc.setFontSize(10)
+                      doc.text(`Generated on: ${new Date().toLocaleDateString('en-GB')}`, 60, 40)
+                    } catch (error) {
+                      console.warn('Could not load logo, generating PDF without logo:', error)
+                      // Fallback without logo
+                      doc.setFontSize(20)
+                      doc.text('Balance Statement', 20, 30)
+
+                      doc.setFontSize(10)
+                      doc.text(`Generated on: ${new Date().toLocaleDateString('en-GB')}`, 20, 40)
+                    }
 
                     doc.setFontSize(20)
                     doc.text('Balance Statement', 20, 30)
@@ -601,28 +633,31 @@ export default function Wallet() {
                     doc.setFontSize(10)
                     doc.text(`Generated on: ${new Date().toLocaleDateString('en-GB')}`, 20, 40)
 
+                    let contentYPosition = 60
+
                     doc.setFontSize(14)
-                    doc.text('Summary', 20, 60)
+                    doc.text('Summary', 20, contentYPosition)
 
                     doc.setFontSize(12)
-                    doc.text(`Available Balance: R${wallet.availableBalance.toLocaleString()},00`, 20, 75)
-                    doc.text(`Total Earnings: R${wallet.totalEarnings.toLocaleString()},00`, 20, 85)
-                    doc.text(`Total Withdrawn: R${wallet.withdrawn.toLocaleString()},00`, 20, 95)
+                    doc.text(`Available Balance: R${wallet.availableBalance.toLocaleString()},00`, 20, contentYPosition + 15)
+                    doc.text(`Total Earnings: R${wallet.totalEarnings.toLocaleString()},00`, 20, contentYPosition + 25)
+                    doc.text(`Total Withdrawn: R${wallet.withdrawn.toLocaleString()},00`, 20, contentYPosition + 35)
 
                     doc.setFontSize(14)
-                    doc.text('Transaction History', 20, 115)
+                    doc.text('Transaction History', 20, contentYPosition + 55)
 
+                    const tableYPosition = contentYPosition + 70
                     doc.setFontSize(10)
-                    doc.text('Date', 20, 130)
-                    doc.text('Time', 50, 130)
-                    doc.text('Source', 75, 130)
-                    doc.text('Description', 105, 130)
-                    doc.text('Amount', 155, 130)
-                    doc.text('Status', 175, 130)
+                    doc.text('Date', 20, tableYPosition)
+                    doc.text('Time', 50, tableYPosition)
+                    doc.text('Source', 75, tableYPosition)
+                    doc.text('Description', 105, tableYPosition)
+                    doc.text('Amount', 155, tableYPosition)
+                    doc.text('Status', 175, tableYPosition)
 
-                    doc.line(20, 132, 190, 132)
+                    doc.line(20, tableYPosition + 2, 190, tableYPosition + 2)
 
-                    let yPosition = 140
+                    let yPosition = tableYPosition + 10
                     wallet.transactions.slice(0, 20).forEach((transaction, index) => {
                       if (yPosition > 270) {
                         doc.addPage()
