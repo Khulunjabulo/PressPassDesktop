@@ -29,7 +29,14 @@ export const useCurrentPublisher = () => {
 
       const data = await res.json();
       if (data.success) {
-        setPublisher(data);
+        // ADDED: Ensure the publisher has an 'id' field for wallet functionality
+        const publisherWithId = {
+          ...data,
+          id: data.uid || data.id || data.publisherId, // Use uid as id if id doesn't exist
+        };
+        
+        console.log('Publisher loaded with ID:', publisherWithId.id); // Debug log
+        setPublisher(publisherWithId);
       } else {
         throw new Error(data.error || 'Failed to fetch profile');
       }
