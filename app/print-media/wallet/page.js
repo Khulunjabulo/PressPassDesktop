@@ -28,10 +28,6 @@ export default function Wallet() {
   const [processing, setProcessing] = useState(false)
   const [showBalanceModal, setShowBalanceModal] = useState(false)
 
-  // Debug: Log publisher data
-  console.log('Publisher data:', publisher)
-  console.log('Publisher ID:', publisher?.id)
-  console.log('Wallet data:', wallet)
 
   // Calculate earnings breakdown (you can make this more sophisticated)
   const adsEarnings = wallet.transactions
