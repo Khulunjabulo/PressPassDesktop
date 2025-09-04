@@ -1,0 +1,40 @@
+{
+  "name": "PressPass - Your Media Hub",
+  "short_name": "PressPass",
+  "description": "Your ultimate media hub for news and print publications",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#329ae1",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/Presspass.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/Presspass.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/Presspass.png",
+      "sizes": "32x32",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/Presspass.png",
+      "sizes": "16x16",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["news", "productivity", "utilities"],
+  "lang": "en",
+  "dir": "ltr"
+}

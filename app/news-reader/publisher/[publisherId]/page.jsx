@@ -5,9 +5,20 @@ import { useState, useMemo } from 'react';
 import { Card, CardContent } from '@/components/UI/newscard';
 import { ArrowLeft, FileText, Clock, Globe, Building, Users, Calendar, Eye, Hash, Filter } from 'lucide-react';
 import { usePublisherArticles } from '@/hooks/useNewsSources';
-import BannerAd from '@/components/news-reader/BannerAd';
-import AdSlot from '@/components/news-reader/AdsSlot';
-import NewsReaderHeader from '@/components/news-reader/NewsReaderHeader'; 
+import dynamic from 'next/dynamic';
+
+// Lazy load components for better performance
+const BannerAd = dynamic(() => import('@/components/news-reader/BannerAd'), {
+  loading: () => <div className="h-28 bg-gray-100 animate-pulse rounded-md"></div>
+});
+
+const AdSlot = dynamic(() => import('@/components/news-reader/AdsSlot'), {
+  loading: () => <div className="h-64 bg-gray-100 animate-pulse rounded-md"></div>
+});
+
+const NewsReaderHeader = dynamic(() => import('@/components/news-reader/NewsReaderHeader'), {
+  loading: () => <div className="h-16 bg-gray-100 animate-pulse"></div>
+});
 
 // Helper function to strip HTML tags and clean text
 function stripHtml(html) {
