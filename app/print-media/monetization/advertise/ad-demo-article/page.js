@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import { useSearchParams } from "next/navigation";
-import AdDemoMobile from "../ad-demo-article-mobile/page";
+
 
 export default function ArticleWithAds() {
   const searchParams = useSearchParams();
@@ -112,14 +112,66 @@ export default function ArticleWithAds() {
           </div>
         </div>
       </article>
+{/* Mobile View of Adspace */}
+<div className="mt-8">
+  <h2 className="text-2xl font-bold mb-4 text-center">Mobile View of Adspace</h2>
+  <div className="max-w-sm mx-auto bg-gray-100 p-4 rounded">
+    {/* Mobile Article Header */}
+    <h1 className="text-xl font-bold mb-2">Dummy Article: How to Place Ads Around Content</h1>
+    <p className="text-gray-500 mb-4">By Jane Doe – August 14, 2025</p>
 
-      {/* Page Wrap 1 Ad */}
-      {isPageWrap1Template && (
-        <div className="w-full border-2 border-dashed border-blue-400 p-4 mt-8 text-center">
-          <img src="/press-bannerAd.png" alt="Advertisement" className="max-w-full h-auto" />
-        </div>
+    {/* Mobile Headline Ad */}
+    <div className="w-full border-2 border-dashed border-blue-400 p-4 mb-4 text-center bg-white">
+      {isHeadlineTemplate ? (
+        <img src="/press-bannerAd.png" alt="Advertisement" className="max-w-full h-auto" />
+      ) : (
+        <>
+          <h2 className="text-lg font-bold text-blue-600">MOBILE HEADLINE</h2>
+          <p>300w x 250h(px)</p>
+          <p>100kb: JPEG, PNG, HTML</p>
+          <button className="mt-2 bg-blue-500 text-white px-4 py-2 rounded">Payment Link</button>
+        </>
       )}
-      <AdDemoMobile />
+    </div>
+
+    <p className="mb-4">Placing advertising intelligently around editorial content improves visibility without disrupting the reading experience. In this demo, we illustrate several common placements.</p>
+
+    {/* Mobile Within Article Ad */}
+    <div className="w-full border-2 border-dashed border-blue-400 p-4 my-4 text-center bg-white">
+      {isWithinArticleTemplate ? (
+        <img src="/press-bannerAd.png" alt="Advertisement" className="max-w-full h-auto" />
+      ) : (
+        <>
+          <h2 className="text-lg font-bold text-blue-600">MOBILE WITHIN ARTICLE</h2>
+          <p>300w x 250h(px)</p>
+          <p>100kb: JPEG, PNG, HTML</p>
+          <button className="mt-2 bg-blue-500 text-white px-4 py-2 rounded">Payment Link</button>
+        </>
+      )}
+    </div>
+
+    <p className="mb-4">Inline units (within article) are inserted between paragraphs. These break up long reads and keep engagement consistent throughout the page.</p>
+
+    <p className="mb-4">Sidebar feed ads are ideal for performance formats and can remain sticky while the user scrolls, maintaining presence without obstructing content.</p>
+
+    <p className="mb-4">Balance is key: ensure ads don't crowd the content and that spacing, contrast, and loading performance are considered.</p>
+
+    {/* Mobile Feed Ad */}
+    <div className="w-full border-2 border-dashed border-blue-400 p-4 mt-4 text-center bg-white">
+      {(isFeedTemplate || isPageWrap1Template) ? (
+        <img src="/press-bannerAd.png" alt="Advertisement" className="max-w-full h-auto" />
+      ) : (
+        <>
+          <h2 className="text-lg font-bold text-blue-600">MOBILE FEED</h2>
+          <p>250w x 250h(px)</p>
+          <p>100kb JPEG, PNG, HTML</p>
+          <p>Publisher to Quote</p>
+          <button className="mt-2 bg-blue-500 text-white px-4 py-2 rounded">Payment Link</button>
+        </>
+      )}
+    </div>
+  </div>
+</div>
 
       
     </div>
