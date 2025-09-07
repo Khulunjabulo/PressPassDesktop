@@ -11,25 +11,23 @@ import { useCurrentPublisher } from "@/hooks/useCurrentPublisher"
 import { useWallet } from "@/hooks/useWallet" // New wallet hook
 import { processWithdrawal } from "@/utils/walletUtils" // Withdrawal function
 import PrintMediaFooter from '@/components/UI/PrintMediaFooter'
+import jsPDF from 'jspdf'
 
 export default function Wallet() {
   const pathname = usePathname()
   const { publisher, loading: publisherLoading } = useCurrentPublisher("currentPublisherId")
-  
+
   // Get real wallet data for this specific publisher
   const wallet = useWallet(publisher?.id)
-  
+
   const [selectedWithdrawMethod, setSelectedWithdrawMethod] = useState('mobile')
   const [withdrawAmount, setWithdrawAmount] = useState('')
   const [withdrawFrom, setWithdrawFrom] = useState('')
   const [withdrawalOption, setWithdrawalOption] = useState('')
   const [phoneNumber, setPhoneNumber] = useState('')
   const [processing, setProcessing] = useState(false)
+  const [showBalanceModal, setShowBalanceModal] = useState(false)
 
-  // Debug: Log publisher data
-  console.log('Publisher data:', publisher)
-  console.log('Publisher ID:', publisher?.id)
-  console.log('Wallet data:', wallet)
 
   // Calculate earnings breakdown (you can make this more sophisticated)
   const adsEarnings = wallet.transactions
@@ -146,12 +144,16 @@ export default function Wallet() {
         <div className="space-y-4">
           {/* Top Row */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Available Balance - REAL DATA */}
-            <div className="bg-white border rounded shadow-sm flex flex-col items-center justify-center py-4">
+            {/* Available Balance - REAL DATA - CLICKABLE */}
+            <div
+              className="bg-white border rounded shadow-sm flex flex-col items-center justify-center py-4 cursor-pointer hover:bg-gray-50 transition-colors"
+              onClick={() => setShowBalanceModal(true)}
+            >
               <p className="text-sm font-medium text-gray-700">Available Balance</p>
               <p className="text-3xl font-extrabold text-gray-900">
                 R{wallet.availableBalance.toLocaleString()}<span className="text-lg">,00</span>
               </p>
+              <p className="text-xs text-blue-600 mt-1">Click to view statement</p>
             </div>
 
             {/* Source of Funds */}
@@ -305,7 +307,7 @@ export default function Wallet() {
           {/* TEST BUTTONS - Only show in development */}
           {process.env.NODE_ENV === 'development' && (
             <div className="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-4">
-              <h4 className="font-semibold text-yellow-800 mb-3"> Test Earnings</h4>
+              <h4 className="font-semibold text-yellow-800 mb-3">Test Earnings</h4>
               
               {/* Debug Info */}
               <div className="mb-4 p-3 bg-white rounded border text-xs">
@@ -414,6 +416,9 @@ export default function Wallet() {
                   Add Random Amount
                 </button>
               </div>
+              <p className="text-xs text-yellow-700 mt-2">
+                These buttons will only appear in development mode and will add test earnings to this publisher's wallet.
+              </p>
             </div>
           )}
         </div>
@@ -464,6 +469,232 @@ export default function Wallet() {
           </div>
         </div>
       </div>
+
+      {/* Balance Statement Modal */}
+      {showBalanceModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b">
+              <h2 className="text-xl font-semibold text-gray-900">Balance Statement</h2>
+              <button
+                onClick={() => setShowBalanceModal(false)}
+                className="text-gray-400 hover:text-gray-600 text-2xl"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6">
+              {/* Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="text-sm font-medium text-blue-700">Available Balance</p>
+                  <p className="text-2xl font-bold text-blue-900">
+                    R{wallet.availableBalance.toLocaleString()},00
+                  </p>
+                </div>
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <p className="text-sm font-medium text-green-700">Total Earnings</p>
+                  <p className="text-2xl font-bold text-green-900">
+                    R{wallet.totalEarnings.toLocaleString()},00
+                  </p>
+                </div>
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <p className="text-sm font-medium text-red-700">Total Withdrawn</p>
+                  <p className="text-2xl font-bold text-red-900">
+                    R{wallet.withdrawn.toLocaleString()},00
+                  </p>
+                </div>
+              </div>
+
+              {/* Transaction Table */}
+              <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                <div className="px-6 py-4 border-b border-gray-200">
+                  <h3 className="text-lg font-medium text-gray-900">Transaction History</h3>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left font-medium text-gray-700">Date</th>
+                        <th className="px-6 py-3 text-left font-medium text-gray-700">Time</th>
+                        <th className="px-6 py-3 text-left font-medium text-gray-700">Source</th>
+                        <th className="px-6 py-3 text-left font-medium text-gray-700">Description</th>
+                        <th className="px-6 py-3 text-left font-medium text-gray-700">Amount</th>
+                        <th className="px-6 py-3 text-left font-medium text-gray-700">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {wallet.loading ? (
+                        [...Array(5)].map((_, idx) => (
+                          <tr key={idx} className="animate-pulse">
+                            <td className="px-6 py-4"><div className="h-4 bg-gray-200 rounded w-16"></div></td>
+                            <td className="px-6 py-4"><div className="h-4 bg-gray-200 rounded w-12"></div></td>
+                            <td className="px-6 py-4"><div className="h-4 bg-gray-200 rounded w-20"></div></td>
+                            <td className="px-6 py-4"><div className="h-4 bg-gray-200 rounded w-24"></div></td>
+                            <td className="px-6 py-4"><div className="h-4 bg-gray-200 rounded w-16"></div></td>
+                            <td className="px-6 py-4"><div className="h-4 bg-gray-200 rounded w-16"></div></td>
+                          </tr>
+                        ))
+                      ) : wallet.transactions.length > 0 ? (
+                        wallet.transactions.map((transaction, idx) => (
+                          <tr key={idx} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 text-gray-900">{transaction.date}</td>
+                            <td className="px-6 py-4 text-gray-900">{transaction.time}</td>
+                            <td className="px-6 py-4 text-gray-900">{transaction.source || 'N/A'}</td>
+                            <td className="px-6 py-4 text-gray-900">{transaction.description || 'N/A'}</td>
+                            <td className="px-6 py-4">
+                              <span className={`font-medium ${
+                                transaction.type === 'earning' ? 'text-green-600' : 'text-red-600'
+                              }`}>
+                                {transaction.type === 'earning' ? '+' : '-'}R{transaction.amount.toLocaleString()}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                                transaction.status === 'success'
+                                  ? 'bg-green-100 text-green-800'
+                                  : transaction.status === 'processing'
+                                  ? 'bg-yellow-100 text-yellow-800'
+                                  : 'bg-red-100 text-red-800'
+                              }`}>
+                                {transaction.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
+                            No transactions found
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  onClick={() => setShowBalanceModal(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={async () => {
+                    // PDF generation for modal
+                    const doc = new jsPDF()
+
+                    try {
+                      // Add logo
+                      const logoUrl = '/press-pass.png'
+                      const img = new Image()
+                      img.crossOrigin = 'anonymous'
+
+                      await new Promise((resolve, reject) => {
+                        img.onload = resolve
+                        img.onerror = reject
+                        img.src = logoUrl
+                      })
+
+                      // Add logo to PDF (positioned at top-left)
+                      doc.addImage(img, 'PNG', 20, 10, 30, 30)
+
+                      // Add title next to logo
+                      doc.setFontSize(20)
+                      doc.text('Balance Statement', 60, 30)
+
+                      // Add generation date
+                      doc.setFontSize(10)
+                      doc.text(`Generated on: ${new Date().toLocaleDateString('en-GB')}`, 60, 40)
+                    } catch (error) {
+                      console.warn('Could not load logo, generating PDF without logo:', error)
+                      // Fallback without logo
+                      doc.setFontSize(20)
+                      doc.text('Balance Statement', 20, 30)
+
+                      doc.setFontSize(10)
+                      doc.text(`Generated on: ${new Date().toLocaleDateString('en-GB')}`, 20, 40)
+                    }
+
+                    doc.setFontSize(20)
+                    doc.text('Balance Statement', 20, 30)
+
+                    doc.setFontSize(10)
+                    doc.text(`Generated on: ${new Date().toLocaleDateString('en-GB')}`, 20, 40)
+
+                    let contentYPosition = 60
+
+                    doc.setFontSize(14)
+                    doc.text('Summary', 20, contentYPosition)
+
+                    doc.setFontSize(12)
+                    doc.text(`Available Balance: R${wallet.availableBalance.toLocaleString()},00`, 20, contentYPosition + 15)
+                    doc.text(`Total Earnings: R${wallet.totalEarnings.toLocaleString()},00`, 20, contentYPosition + 25)
+                    doc.text(`Total Withdrawn: R${wallet.withdrawn.toLocaleString()},00`, 20, contentYPosition + 35)
+
+                    doc.setFontSize(14)
+                    doc.text('Transaction History', 20, contentYPosition + 55)
+
+                    const tableYPosition = contentYPosition + 70
+                    doc.setFontSize(10)
+                    doc.text('Date', 20, tableYPosition)
+                    doc.text('Time', 50, tableYPosition)
+                    doc.text('Source', 75, tableYPosition)
+                    doc.text('Description', 105, tableYPosition)
+                    doc.text('Amount', 155, tableYPosition)
+                    doc.text('Status', 175, tableYPosition)
+
+                    doc.line(20, tableYPosition + 2, 190, tableYPosition + 2)
+
+                    let yPosition = tableYPosition + 10
+                    wallet.transactions.slice(0, 20).forEach((transaction, index) => {
+                      if (yPosition > 270) {
+                        doc.addPage()
+                        yPosition = 30
+                      }
+
+                      const amount = transaction.type === 'earning'
+                        ? `+R${transaction.amount.toLocaleString()}`
+                        : `-R${transaction.amount.toLocaleString()}`
+
+                      doc.text(transaction.date || '', 20, yPosition)
+                      doc.text(transaction.time || '', 50, yPosition)
+                      doc.text((transaction.source || 'N/A').substring(0, 15), 75, yPosition)
+                      doc.text((transaction.description || 'N/A').substring(0, 25), 105, yPosition)
+                      doc.text(amount, 155, yPosition)
+                      doc.text(transaction.status || '', 175, yPosition)
+
+                      yPosition += 8
+                    })
+
+                    const pageCount = doc.internal.getNumberOfPages()
+                    for (let i = 1; i <= pageCount; i++) {
+                      doc.setPage(i)
+                      doc.setFontSize(8)
+                      doc.text(`Page ${i} of ${pageCount}`, 180, 285)
+                      doc.text('Generated by PressPass Wallet System', 20, 285)
+                    }
+
+                    const fileName = `balance-statement-${new Date().toISOString().split('T')[0]}.pdf`
+                    doc.save(fileName)
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Download Statement
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <PrintMediaFooter/>
     </div>
   )
