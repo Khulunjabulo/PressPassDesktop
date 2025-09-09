@@ -3,8 +3,16 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Calendar, Clock, Eye, Hash, User, Globe, Share2, Bookmark } from 'lucide-react';
-import FavoriteButton from '@/components/FavoriteButton';
-import NewsReaderHeader from '@/components/news-reader/NewsReaderHeader';
+import dynamic from 'next/dynamic';
+
+// Lazy load components for better performance
+const FavoriteButton = dynamic(() => import('@/components/FavoriteButton'), {
+  loading: () => <div className="w-8 h-8 bg-gray-200 rounded animate-pulse"></div>
+});
+
+const NewsReaderHeader = dynamic(() => import('@/components/news-reader/NewsReaderHeader'), {
+  loading: () => <div className="h-16 bg-gray-100 animate-pulse"></div>
+});
 
 export default function ArticleViewPage() {
   const params = useParams();
@@ -841,7 +849,12 @@ const testImageUrl = async (url) => {
 
       <div className="newspaper-container">
         {/* Newspaper Header */}
-        <NewsReaderHeader/>
+                <NewsReaderHeader
+          publisherImage={publisher?.logo || publisher?.companyLogo}
+          publisherName={publisher?.name || publisher?.companyName}
+          publisherId={publisherId}
+          publisher={publisher}
+        />
         <div className="newspaper-header">
           <div className="max-w-6xl mx-auto px-8 py-6">
             <div className="flex items-center justify-between mb-4">

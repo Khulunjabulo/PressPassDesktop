@@ -1,111 +1,459 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import Link from "next/link"
-import { ArrowLeft,Filter, Check } from "lucide-react"
+import { ArrowLeft, Check, Clock, X, Download, Filter } from "lucide-react"
+import { useCurrentPublisher } from "@/hooks/useCurrentPublisher"
+import { useWallet } from "@/hooks/useWallet"
+import jsPDF from 'jspdf'
 
 export default function BalanceStatement() {
-  const [loading, setLoading] = useState(true)
+  const { publisher, loading: publisherLoading } = useCurrentPublisher("currentPublisherId")
+  const wallet = useWallet(publisher?.id)
 
-  const rows = [
-    { date: "21 Jun, 2025", time: "16:00", source: "Monetization", description: "Payout", amount: 97133, status: "success" },
-    { date: "19 Jun, 2025", time: "09:15", source: "Referral", description: "Bonus", amount: 12000, status: "success" },
-    { date: "10 Jun, 2025", time: "14:05", source: "Ads", description: "Campaign Payment", amount: 55000, status: "success" }
-  ]
+  // Filter states
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+  const [sourceFilter, setSourceFilter] = useState('')
+  const [showFilters, setShowFilters] = useState(false)
 
-  useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 800)
-    return () => clearTimeout(timer)
-  }, [])
+  // Filter transactions based on selected criteria
+  const filteredTransactions = wallet.transactions.filter(transaction => {
+    // Date filtering
+    if (dateFrom || dateTo) {
+      const transactionDate = new Date(transaction.date?.split('/').reverse().join('-') || transaction.date)
+      const fromDate = dateFrom ? new Date(dateFrom) : null
+      const toDate = dateTo ? new Date(dateTo) : null
+
+      if (fromDate && transactionDate < fromDate) return false
+      if (toDate && transactionDate > toDate) return false
+    }
+
+    // Source filtering
+    if (sourceFilter && transaction.source !== sourceFilter) return false
+
+    return true
+  })
+
+  // Get unique sources for filter dropdown
+  const uniqueSources = [...new Set(wallet.transactions.map(t => t.source).filter(Boolean))]
+
+  // Clear all filters
+  const clearFilters = () => {
+    setDateFrom('')
+    setDateTo('')
+    setSourceFilter('')
+  }
+
+  // Show loading state
+  if (publisherLoading || wallet.loading) {
+    return (
+      <div className="bg-white border rounded-lg shadow-xl w-full max-w-4xl mx-auto p-6">
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-2 text-gray-600">Loading balance statement...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Show error state
+  if (wallet.error) {
+    return (
+      <div className="bg-white border rounded-lg shadow-xl w-full max-w-4xl mx-auto p-6">
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center text-red-600">
+            <p>Error loading balance statement: {wallet.error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-4 bg-blue-600 text-white px-4 py-2 rounded"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Check if publisher is loaded
+  if (!publisher || !publisher.id) {
+    return (
+      <div className="bg-white border rounded-lg shadow-xl w-full max-w-4xl mx-auto p-6">
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center text-orange-600">
+            <p>Publisher data not available</p>
+            <p className="text-sm text-gray-600 mt-2">Please make sure you're logged in</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // PDF Generation Function
+  const generatePDF = async () => {
+    const doc = new jsPDF()
+
+    try {
+      // Add logo
+      const logoUrl = '/press-pass.png'
+      const img = new Image()
+      img.crossOrigin = 'anonymous'
+
+      await new Promise((resolve, reject) => {
+        img.onload = resolve
+        img.onerror = reject
+        img.src = logoUrl
+      })
+
+      // Add logo to PDF (positioned at top-left)
+      doc.addImage(img, 'PNG', 20, 10, 30, 30)
+
+      // Add title next to logo
+      doc.setFontSize(20)
+      doc.text('Balance Statement', 60, 30)
+
+      // Add generation date
+      doc.setFontSize(10)
+      doc.text(`Generated on: ${new Date().toLocaleDateString('en-GB')}`, 60, 40)
+    } catch (error) {
+      console.warn('Could not load logo, generating PDF without logo:', error)
+      // Fallback without logo
+      doc.setFontSize(20)
+      doc.text('Balance Statement', 20, 30)
+
+      doc.setFontSize(10)
+      doc.text(`Generated on: ${new Date().toLocaleDateString('en-GB')}`, 20, 40)
+    }
+
+    // Add filter information if any filters are applied
+    let filterYPosition = 50
+    if (dateFrom || dateTo || sourceFilter) {
+      doc.setFontSize(12)
+      doc.text('Applied Filters:', 20, filterYPosition)
+      filterYPosition += 10
+
+      doc.setFontSize(10)
+      if (dateFrom) {
+        doc.text(`From Date: ${new Date(dateFrom).toLocaleDateString()}`, 20, filterYPosition)
+        filterYPosition += 8
+      }
+      if (dateTo) {
+        doc.text(`To Date: ${new Date(dateTo).toLocaleDateString()}`, 20, filterYPosition)
+        filterYPosition += 8
+      }
+      if (sourceFilter) {
+        doc.text(`Source: ${sourceFilter.charAt(0).toUpperCase() + sourceFilter.slice(1)}`, 20, filterYPosition)
+        filterYPosition += 8
+      }
+      filterYPosition += 10
+    } else {
+      filterYPosition = 60
+    }
+
+    // Add summary section
+    doc.setFontSize(14)
+    doc.text('Summary', 20, filterYPosition)
+
+    doc.setFontSize(12)
+    doc.text(`Available Balance: R${wallet.availableBalance.toLocaleString()},00`, 20, filterYPosition + 15)
+    doc.text(`Total Earnings: R${wallet.totalEarnings.toLocaleString()},00`, 20, filterYPosition + 25)
+    doc.text(`Total Withdrawn: R${wallet.withdrawn.toLocaleString()},00`, 20, filterYPosition + 35)
+
+    // Add transactions section
+    doc.setFontSize(14)
+    doc.text('Transaction History', 20, filterYPosition + 55)
+
+    const tableYPosition = filterYPosition + 70
+
+    // Table headers
+    doc.setFontSize(10)
+    doc.text('Date', 20, tableYPosition)
+    doc.text('Time', 50, tableYPosition)
+    doc.text('Source', 75, tableYPosition)
+    doc.text('Description', 105, tableYPosition)
+    doc.text('Amount', 155, tableYPosition)
+    doc.text('Status', 175, tableYPosition)
+
+    // Draw header line
+    doc.line(20, tableYPosition + 2, 190, tableYPosition + 2)
+
+    // Add transactions
+    let yPosition = tableYPosition + 10
+    filteredTransactions.slice(0, 20).forEach((transaction, index) => {
+      if (yPosition > 270) { // If near bottom of page, add new page
+        doc.addPage()
+        yPosition = 30
+      }
+
+      const amount = transaction.type === 'earning'
+        ? `+R${transaction.amount.toLocaleString()}`
+        : `-R${transaction.amount.toLocaleString()}`
+
+      doc.text(transaction.date || '', 20, yPosition)
+      doc.text(transaction.time || '', 50, yPosition)
+      doc.text((transaction.source || 'N/A').substring(0, 15), 75, yPosition)
+      doc.text((transaction.description || 'N/A').substring(0, 25), 105, yPosition)
+      doc.text(amount, 155, yPosition)
+      doc.text(transaction.status || '', 175, yPosition)
+
+      yPosition += 8
+    })
+
+    // Add footer
+    const pageCount = doc.internal.getNumberOfPages()
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i)
+      doc.setFontSize(8)
+      doc.text(`Page ${i} of ${pageCount}`, 180, 285)
+      doc.text('Generated by PressPass Wallet System', 20, 285)
+    }
+
+    // Save the PDF
+    const fileName = `balance-statement-${new Date().toISOString().split('T')[0]}.pdf`
+    doc.save(fileName)
+  }
 
   return (
-    <div className="bg-white border rounded-lg shadow-md w-full max-w-4xl mx-auto p-4">
+    <div className="bg-white border rounded-lg shadow-xl w-full max-w-4xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center">
-          <Link
-            href="/print-media/wallet"
-            className="flex items-center text-blue-600 hover:text-blue-800 mr-4"
+      <div className="p-6 border-b">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center">
+            <Link
+              href="/print-media/wallet"
+              className="flex items-center text-blue-600 hover:text-blue-800 mr-4"
+            >
+              <ArrowLeft size={20} />
+            </Link>
+            <h2 className="text-xl font-semibold text-gray-900">Balance Statement</h2>
+          </div>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="text-gray-600 hover:text-black flex items-center gap-1 text-sm px-3 py-1 border rounded"
           >
-            <ArrowLeft size={20} />
-          </Link>
-          <h2 className="text-base font-semibold">Balance Statement</h2>
+            <Filter size={16} />
+            {showFilters ? 'Hide Filters' : 'Show Filters'}
+          </button>
         </div>
-        <button className="text-gray-600 hover:text-black flex items-center gap-1 text-sm">
-          <Filter size={16} />
-          Filter
-        </button>
+
+        {/* Filter Controls */}
+        {showFilters && (
+          <div className="bg-gray-50 p-4 rounded-lg border">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {/* Date From */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  From Date
+                </label>
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                />
+              </div>
+
+              {/* Date To */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  To Date
+                </label>
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                />
+              </div>
+
+              {/* Source Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Source
+                </label>
+                <select
+                  value={sourceFilter}
+                  onChange={(e) => setSourceFilter(e.target.value)}
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                >
+                  <option value="">All Sources</option>
+                  {uniqueSources.map(source => (
+                    <option key={source} value={source}>
+                      {source.charAt(0).toUpperCase() + source.slice(1)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Clear Filters */}
+              <div className="flex items-end">
+                <button
+                  onClick={clearFilters}
+                  className="w-full bg-gray-500 text-white rounded px-3 py-2 text-sm hover:bg-gray-600"
+                >
+                  Clear Filters
+                </button>
+              </div>
+            </div>
+
+            {/* Active Filters Display */}
+            {(dateFrom || dateTo || sourceFilter) && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                <span className="text-sm text-gray-600">Active filters:</span>
+                {dateFrom && (
+                  <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
+                    From: {new Date(dateFrom).toLocaleDateString()}
+                  </span>
+                )}
+                {dateTo && (
+                  <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
+                    To: {new Date(dateTo).toLocaleDateString()}
+                  </span>
+                )}
+                {sourceFilter && (
+                  <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">
+                    Source: {sourceFilter.charAt(0).toUpperCase() + sourceFilter.slice(1)}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Table */}
-      <table className="w-full text-sm border border-gray-200 rounded-md overflow-hidden">
-        <thead className="bg-gray-100">
-          <tr>
-            <th className="px-4 py-2 text-left font-medium">Date</th>
-            <th className="px-4 py-2 text-left font-medium">Time</th>
-            <th className="px-4 py-2 text-left font-medium">Source</th>
-            <th className="px-4 py-2 text-left font-medium">Description</th>
-            <th className="px-4 py-2 text-left font-medium">Amount(R)</th>
-            <th className="px-4 py-2 text-left font-medium">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {loading
-            ? [...Array(3)].map((_, idx) => (
-                <tr key={idx} className="border-t animate-pulse">
-                  {Array(6)
-                    .fill("")
-                    .map((_, i) => (
-                      <td key={i} className="px-4 py-2">
-                        <div className="h-3 bg-gray-200 rounded"></div>
+      {/* Modal Content */}
+      <div className="p-6">
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p className="text-sm font-medium text-blue-700">Available Balance</p>
+            <p className="text-2xl font-bold text-blue-900">
+              R{wallet.availableBalance.toLocaleString()},00
+            </p>
+          </div>
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <p className="text-sm font-medium text-green-700">Total Earnings</p>
+            <p className="text-2xl font-bold text-green-900">
+              R{wallet.totalEarnings.toLocaleString()},00
+            </p>
+          </div>
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <p className="text-sm font-medium text-red-700">Total Withdrawn</p>
+            <p className="text-2xl font-bold text-red-900">
+              R{wallet.withdrawn.toLocaleString()},00
+            </p>
+          </div>
+        </div>
+
+        {/* Transaction Table */}
+        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+            <h3 className="text-lg font-medium text-gray-900">Transaction History</h3>
+            <span className="text-sm text-gray-600">
+              Showing {filteredTransactions.length} of {wallet.transactions.length} transactions
+            </span>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left font-medium text-gray-700">Date</th>
+                  <th className="px-6 py-3 text-left font-medium text-gray-700">Time</th>
+                  <th className="px-6 py-3 text-left font-medium text-gray-700">Source</th>
+                  <th className="px-6 py-3 text-left font-medium text-gray-700">Description</th>
+                  <th className="px-6 py-3 text-left font-medium text-gray-700">Amount</th>
+                  <th className="px-6 py-3 text-left font-medium text-gray-700">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {wallet.loading ? (
+                  [...Array(5)].map((_, idx) => (
+                    <tr key={idx} className="animate-pulse">
+                      <td className="px-6 py-4"><div className="h-4 bg-gray-200 rounded w-16"></div></td>
+                      <td className="px-6 py-4"><div className="h-4 bg-gray-200 rounded w-12"></div></td>
+                      <td className="px-6 py-4"><div className="h-4 bg-gray-200 rounded w-20"></div></td>
+                      <td className="px-6 py-4"><div className="h-4 bg-gray-200 rounded w-24"></div></td>
+                      <td className="px-6 py-4"><div className="h-4 bg-gray-200 rounded w-16"></div></td>
+                      <td className="px-6 py-4"><div className="h-4 bg-gray-200 rounded w-16"></div></td>
+                    </tr>
+                  ))
+                ) : filteredTransactions.length > 0 ? (
+                  filteredTransactions.map((transaction, idx) => (
+                    <tr key={idx} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 text-gray-900">{transaction.date}</td>
+                      <td className="px-6 py-4 text-gray-900">{transaction.time}</td>
+                      <td className="px-6 py-4 text-gray-900">{transaction.source || 'N/A'}</td>
+                      <td className="px-6 py-4 text-gray-900">{transaction.description || 'N/A'}</td>
+                      <td className="px-6 py-4">
+                        <span className={`font-medium ${
+                          transaction.type === 'earning' ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          {transaction.type === 'earning' ? '+' : '-'}R{transaction.amount.toLocaleString()}
+                        </span>
                       </td>
-                    ))}
-                </tr>
-              ))
-            : rows.map((row, idx) => (
-                <tr key={idx} className="border-t">
-                  <td className="px-4 py-2">{row.date}</td>
-                  <td className="px-4 py-2">{row.time}</td>
-                  <td className="px-4 py-2">{row.source}</td>
-                  <td className="px-4 py-2">{row.description}</td>
-                  <td className="px-4 py-2">R {row.amount.toLocaleString()}</td>
-                  <td className="px-4 py-2 text-green-600 flex items-center gap-1">
-                    <Check size={14} strokeWidth={3} />
-                    {row.status}
-                  </td>
-                </tr>
-              ))}
-        </tbody>
-      </table>
-
-      {/* Totals */}
-      <div className="flex justify-end mt-4 text-sm">
-        <div className="text-right">
-          <p>
-            Total Earnings <span className="ml-4 font-medium">R 700,000</span>
-          </p>
-          <p>
-            Total Withdrawn <span className="ml-4 font-medium">R 971,33</span>
-          </p>
-          <p>
-            Remaining Balance <span className="ml-4 font-medium">R 602,867</span>
-          </p>
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                          transaction.status === 'success'
+                            ? 'bg-green-100 text-green-800'
+                            : transaction.status === 'processing'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {transaction.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
+                      {wallet.transactions.length === 0
+                        ? "No transactions found"
+                        : "No transactions match the selected filters"
+                      }
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
 
-      {/* Footer Buttons */}
-      <div className="flex justify-between items-center mt-6">
-        <div className="space-x-2">
-          <button className="bg-blue-600 text-white rounded px-3 py-1 text-sm">
-            Balance Statement
-          </button>
-          <button className="border rounded px-3 py-1 text-sm">
-            Withdraw History
-          </button>
-        </div>
-        <div className="flex items-center gap-2">
-          <button className="border rounded px-3 py-1 text-sm">Close</button>
-          <button className="border rounded px-3 py-1 text-sm">Download</button>
+        {/* Footer */}
+        <div className="flex justify-between items-center mt-6">
+          <div className="flex items-center gap-3">
+            <Link
+              href="/print-media/wallet/balance-statement"
+              className="bg-blue-600 text-white rounded px-4 py-2 text-sm font-medium"
+            >
+              Balance Statement
+            </Link>
+            <Link
+              href="/print-media/wallet/withdrawal-history"
+              className="border rounded px-4 py-2 text-sm font-medium"
+            >
+              Withdrawal History
+            </Link>
+          </div>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/print-media/wallet"
+              className="border rounded px-4 py-2 text-sm font-medium"
+            >
+              Back to Wallet
+            </Link>
+            <button
+              onClick={generatePDF}
+              className="bg-blue-600 text-white rounded px-4 py-2 text-sm font-medium hover:bg-blue-700 flex items-center gap-2"
+            >
+              <Download size={16} />
+              Download Statement
+            </button>
+          </div>
         </div>
       </div>
     </div>
