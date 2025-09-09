@@ -1341,8 +1341,16 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
               />
               <select name="section" id="section" className="border p-1.5 rounded-md w-full text-xs">
                 <option>Select Section</option>
+                <option>World</option>
                 <option>Politics</option>
                 <option>Business</option>
+                <option>Sports</option>
+                <option>Education</option>
+                <option>Entertainment</option>
+                <option>Health</option>
+                <option>Goverment</option>
+                <option>Enviroment</option>
+                <option>Other</option>
               </select>
               <select name="edition" id="edition" className="border p-1.5 rounded-md w-full text-xs">
                 <option>Morning Edition</option>
