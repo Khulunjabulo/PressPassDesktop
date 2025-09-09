@@ -1,7 +1,7 @@
 'use client';
 
 import { Heart } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import { useRouter } from 'next/navigation';
 import AdSlot from '@/components/news-reader/AdsSlot';
 import RecommendedOverlayBottom from '@/components/news-reader/Overlay';
@@ -172,13 +172,13 @@ export default function NewsGrid({ articles }) {
       {/* Bottom-sheet overlay */}
       <RecommendedOverlayBottom articles={unique} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6 px-6 pb-10">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-4 px-4 sm:px-6 pb-10">
         {/* MAIN COLUMN */}
         <div className="space-y-6">
           {/* News Sources Section */}
           <section className="mt-10">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold">Top Headlines</h2>
+              <h2 className="text-lg sm:text-xl font-bold">Top Headlines</h2>
               {!loadingSources && !sourcesError && (
                 <span className="text-sm text-gray-500">
                   {newsources.length} publisher{newsources.length !== 1 ? 's' : ''}
@@ -226,11 +226,12 @@ export default function NewsGrid({ articles }) {
             
             {/* News Sources Grid */}
             {!loadingSources && !sourcesError && newsources.length > 0 && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {newsources.map((source) => (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                {newsources.map((source, idx) => (
+                  <Fragment key={`item-${source.id}`}>
                   <Card 
                     key={source.id} 
-                    className="hover:shadow-lg hover:scale-[1.02] transition-all duration-200 cursor-pointer border-0 shadow-sm bg-white"
+                    className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer"
                     onClick={() => handleSourceClick(source)}
                   >
 <CardContent className="p-4">
@@ -245,12 +246,12 @@ export default function NewsGrid({ articles }) {
   {/* Logo + Story */}
   <div className="flex items-start space-x-3 mb-3">
     {/* Logo */}
-    <div className="flex-shrink-0 w-30 h-30">
+    <div className="flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20">
       {source.logo ? (
         <img
           src={source.logo}
           alt={`${source.name} logo`}
-          className="w-full h-full rounded-lg object-cover border border-gray-200"
+          className="w-full h-full rounded-lg object-contain border border-gray-200 bg-white"
         />
       ) : (
         <div className="w-full h-full bg-[#329ae1] rounded-lg flex items-center justify-center">
@@ -263,11 +264,11 @@ export default function NewsGrid({ articles }) {
 
     {/* Story Content */}
     <div className="flex-1 min-w-0">
-      <h4 className="text-sm font-semibold text-gray-900 mb-1 line-clamp-2">
+      <h4 className="text-sm sm:text-base font-semibold text-gray-900 mb-1 line-clamp-2">
         {source.recentStory?.title ||
           "Ramaphosa pledges to tackle youth unemployment in new economic plan"}
       </h4>
-      <p className="text-xs text-gray-600 mb-2 line-clamp-3">
+      <p className="text-xs sm:text-sm text-gray-600 mb-2 line-clamp-3">
         {source.recentStory?.excerpt ||
           "President announces comprehensive strategy to address rising unemployment rates among South African youth, focusing on skills development and job creation initiatives."}
       </p>
@@ -291,7 +292,7 @@ export default function NewsGrid({ articles }) {
   href={source.website || "https://www.dailysun.co.za"} 
   target="_blank" 
   rel="noopener noreferrer" 
-  className="text-gray-500 hover:underline"
+  className="hidden sm:inline text-gray-500 hover:underline"
 >
   {source.website?.replace(/^https?:\/\//, "") || "www.dailysun.co.za"}
 </a>
@@ -302,13 +303,19 @@ export default function NewsGrid({ articles }) {
       publisher={source}
       size="default"
       showText={false}
-      className="p-2 rounded-full bg-gray-100 hover:bg-red-100 transition-colors"
+      className="hidden sm:inline-flex p-2 rounded-full bg-gray-100 hover:bg-red-100 transition-colors"
       disabled
     />
   </div>
 </CardContent>
 
                   </Card>
+                  {((idx + 1) % 5 === 0) && (
+                    <div className="w-full bg-gray-100 border border-gray-200 rounded-lg flex items-center justify-center h-12 sm:h-14 text-gray-500 text-xs sm:col-span-2">
+                      <span>Advertisement</span>
+                    </div>
+                  )}
+                  </Fragment>
                 ))}
               </div>
             )}
@@ -327,7 +334,7 @@ export default function NewsGrid({ articles }) {
         </div>
 
         {/* RIGHT SIDEBAR (ads) */}
-        <aside className="space-y-6 lg:sticky lg:top-20 h-fit">
+        <aside className="hidden lg:block space-y-6 lg:sticky lg:top-20 h-fit">
           {/* Rectangle Ad (300x250) */}
           <AdSlot 
             label="Rectangle Ad (300x250)" 
