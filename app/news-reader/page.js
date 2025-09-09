@@ -2,22 +2,41 @@
 
 import NewsGrid from '@/components/news-reader/NewsGrid';
 import BannerAd from '@/components/news-reader/BannerAd';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Header from '@/components/news-reader/Header';
+import MainHeader from '@/components/news-reader/NewsReaderMainHeader';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '@/Firebase/firebase';
 
 export default function NewsReaderHome() {
   const [selectedCategory, setSelectedCategory] = useState('top');
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [user, setUser] = useState(null);
 
   const handleCategoryChange = (category) => {
     setSelectedCategory(category);
   };
 
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsub();
+  }, []);
+
   return (
     <div>
-    <Header/>
-    <div>
+    {isMobile && user ? <MainHeader /> : <Header />}
+    <div className={(isMobile && user) ? 'pt-16 sm:pt-20' : ''}>
       {/* Top Banner Ad */}
       <div className="px-6 mt-4">
         <BannerAd />
@@ -31,6 +50,6 @@ export default function NewsReaderHome() {
         <NewsGrid articles={articles} />
       )}
     </div>
-    </div>
+        </div>
   );
 }

@@ -186,6 +186,7 @@ export default function NewsReaderHomePage() {
           </div>
         </section>
       </div>
-    </div>
+
+          </div>
   );
 }

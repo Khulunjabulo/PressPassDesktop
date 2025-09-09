@@ -3,6 +3,10 @@
 import { Button } from "@/components/UI/Button"
 import { Input } from "@/components/UI/Input"
 import Header from "@/components/news-reader/Header"
+import MainHeader from "@/components/news-reader/NewsReaderMainHeader";
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '@/Firebase/firebase';
+import { useEffect, useState } from 'react';
 
 // Classified Item Component
 function ClassifiedItem({ title, description, contact, price }) {
@@ -256,10 +260,25 @@ export default function ClassifiedsPage() {
     },
   ]
 
+  const [isMobile, setIsMobile] = useState(false);
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (currentUser) => setUser(currentUser));
+    return () => unsub();
+  }, []);
+
   return (
     <div>
-    <Header/>
-    <div className="min-h-screen bg-gray-50">
+    {isMobile && user ? <MainHeader /> : <Header />}
+    <div className={`min-h-screen bg-gray-50 ${isMobile && user ? 'pt-16 sm:pt-20' : ''}`}>
       <div className="bg-white border-b">
         <div className="max-w-4xl mx-auto px-4 py-6">
           <div className="text-center mb-6">

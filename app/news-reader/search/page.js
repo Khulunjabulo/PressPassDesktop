@@ -8,9 +8,14 @@ import { useNewsSources } from '@/hooks/useNewsSources';
 import { useFavorites } from '@/hooks/useFavorites';
 import CitySelector from '@/components/news-reader/CitySelector';
 import Header from '@/components/news-reader/Header';
+import MainHeader from '@/components/news-reader/NewsReaderMainHeader';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '@/Firebase/firebase';
 
 export default function SearchPage() {
   const { newsources, loading: sourcesLoading, error } = useNewsSources();
+  const [isMobile, setIsMobile] = useState(false);
+  const [user, setUser] = useState(null);
   const { 
     isPublisherFavorite, 
     togglePublisherFavorite, 
@@ -22,6 +27,18 @@ export default function SearchPage() {
   const [selectedCity, setSelectedCity] = useState('');
   const [filtered, setFiltered] = useState([]);
   const router = useRouter();
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (currentUser) => setUser(currentUser));
+    return () => unsub();
+  }, []);
 
   useEffect(() => {
     let matches = newsources;
@@ -67,8 +84,8 @@ export default function SearchPage() {
 
   return (
     <div>
-      <Header/>
-      <div className="py-8 text-center space-y-4">
+      {isMobile && user ? <MainHeader /> : <Header />}
+      <div className={`py-8 text-center space-y-4 ${isMobile && user ? 'pt-16 sm:pt-20' : ''}`}>
         {/* Heading */}
         <h2 className="text-4xl font-bold">Search</h2>
         <p className="text-gray-500">
@@ -168,6 +185,6 @@ export default function SearchPage() {
           </div>
         )}
       </div>
-    </div>
+        </div>
   );
 }
