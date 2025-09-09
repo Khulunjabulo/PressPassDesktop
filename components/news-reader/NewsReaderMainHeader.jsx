@@ -46,42 +46,55 @@ export default function MainHeader() {
   };
 
   return (
-    <header className="bg-[#329ae1] px-6 py-4">
-      <div className="max-w-7xl mx-auto flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Link href="/">
-            <Image  
+    <header className="fixed top-0 left-0 right-0 z-50 bg-[#329ae1] px-3 sm:px-6 py-2 sm:py-4 md:py-5 lg:py-6 shadow-md">
+      <div className="max-w-7xl mx-auto flex items-center justify-between h-12 sm:h-16 md:h-18 lg:h-20">
+        <div className="flex items-center">
+          <Link href="/" className="flex-shrink-0">
+            <Image
               src="/Presspass.png"
               alt="Press Pass logo"
-              width={200}
-              height={100}
+              width={80}
+              height={32}
+              className="sm:w-[140px] sm:h-[56px] md:w-[160px] md:h-[64px] lg:w-[180px] lg:h-[72px]"
               priority
             />
           </Link>
         </div>
 
-        <nav className="flex items-center gap-4 text-white">
-          {/* Always show Print Media */}
-          <button onClick={handlePrintMediaClick} className="hover:underline text-sm flex items-center gap-1">
-            <Newspaper size={20}/>
-            <span>Print Media</span>
+        <nav className="flex items-center gap-1 sm:gap-3 md:gap-4 text-white">
+          {/* Hide Print Media on mobile (425px and less), show on tablet (768px) and larger */}
+          <button
+            onClick={handlePrintMediaClick}
+            className="hidden md:flex hover:bg-white/10 px-2 py-1 rounded text-sm items-center gap-1 transition-colors"
+          >
+            <Newspaper size={18}/>
+            <span className="font-medium">Print Media</span>
           </button>
 
           {user ? (
-            <button onClick={handleLogout} className="hover:underline text-sm flex items-center gap-1">
-              <LogOut size={20}/>
-              <span>Logout</span>
+            <button
+              onClick={handleLogout}
+              className="hover:bg-white/10 px-2 py-1 rounded text-sm flex items-center gap-1 transition-colors"
+            >
+              <LogOut size={14} className="sm:w-4 sm:h-4"/>
+              <span className="text-xs sm:text-sm font-medium">Logout</span>
             </button>
           ) : (
             <>
-              <Link href="/signup" className="hover:underline flex items-center gap-1">
-                <UserPlus size={20} />
-                <span>Sign Up</span>
+              <Link
+                href="/signup"
+                className="hover:bg-white/10 px-2 py-1 rounded flex items-center gap-1 transition-colors"
+              >
+                <UserPlus size={14} className="sm:w-4 sm:h-4" />
+                <span className="text-xs sm:text-sm font-medium">Sign Up</span>
               </Link>
 
-              <Link href="/signin" className="hover:underline flex items-center gap-1">
-                <LogIn size={20} />
-                <span>Login</span>
+              <Link
+                href="/signin"
+                className="hover:bg-white/10 px-2 py-1 rounded flex items-center gap-1 transition-colors bg-white/10"
+              >
+                <LogIn size={14} className="sm:w-4 sm:h-4" />
+                <span className="text-xs sm:text-sm font-medium">Login</span>
               </Link>
             </>
           )}
