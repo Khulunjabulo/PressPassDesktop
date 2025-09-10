@@ -22,6 +22,18 @@ export default function SignIn() {
     initializeGoogleSignIn(handleGoogleSignInCallback);
   }, []);
 
+  // Enforce reader-only on mobile screens
+  useEffect(() => {
+    const enforceMobileRole = () => {
+      if (typeof window !== 'undefined' && window.innerWidth < 768) {
+        setRole('reader');
+      }
+    };
+    enforceMobileRole();
+    window.addEventListener('resize', enforceMobileRole);
+    return () => window.removeEventListener('resize', enforceMobileRole);
+  }, []);
+
   // Handle Google Sign-In callback
   const handleGoogleSignInCallback = async (response) => {
     console.log('🔐 Google sign-in callback triggered');
@@ -121,15 +133,15 @@ export default function SignIn() {
     <div className="bg-gray-50 min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-4xl bg-white rounded-2xl shadow-xl overflow-hidden">
         <div className="flex flex-col md:flex-row">
-          <div className="md:w-2/5 bg-gradient-to-br bg-[#329ae1] text-white p-8 flex flex-col justify-center">
+          <div className="md:w-2/5 bg-gradient-to-br bg-[#329ae1] text-white p-6 md:p-8 flex flex-col justify-center">
             <div className="text-center mb-8">
               <div className="bg-white/20 p-4 rounded-full inline-block mb-4">
                 <Image src="/Presspass.png" alt="News Icon" className="w-12 h-12" width={48} height={48} />
               </div>
-              <h1 className="text-3xl font-bold mb-2">MediaHub</h1>
+              <h1 className="text-2xl md:text-3xl font-bold mb-2">MediaHub</h1>
               <p className="text-blue-100">Publishing Platform</p>
             </div>
-            <div className="space-y-6">
+            <div className="space-y-4 md:space-y-6">
               <div className="flex items-start">
                 <div className="bg-white/20 p-2 rounded-lg mr-4">
                   <Check className="text-xl w-5 h-5" />
@@ -159,11 +171,11 @@ export default function SignIn() {
               </div>
             </div>
           </div>
-          <div className="md:w-3/5 p-8">
-            <div className="flex mb-8 bg-blue-100 rounded-lg p-1">
+          <div className="md:w-3/5 p-5 md:p-8">
+            <div className="flex mb-5 md:mb-8 bg-blue-100 rounded-lg p-1">
               <button
                 onClick={() => setRole("reader")}
-                className={`flex-1 py-2 px-4 rounded-md text-center font-medium transition ${
+                className={`flex-1 py-2 px-4 rounded-md text-center font-medium transition text-sm md:text-base ${
                   role === "reader" ? "bg-[#329ae1] text-white" : "text-black-600"
                 }`}
               >
@@ -171,7 +183,7 @@ export default function SignIn() {
               </button>
               <button
                 onClick={() => setRole("publisher")}
-                className={`flex-1 py-2 px-4 rounded-md text-center font-medium transition ${
+                className={`hidden md:block flex-1 py-2 px-4 rounded-md text-center font-medium transition text-sm md:text-base ${
                   role === "publisher" ? "bg-[#329ae1] text-white" : "text-black-600"
                 }`}
               >
@@ -179,8 +191,8 @@ export default function SignIn() {
               </button>
             </div>
 
-            <div className="space-y-6 bg-blue-50 p-6 rounded-xl">
-              <h2 className="text-2xl font-bold text-gray-800 text-center flex items-center justify-center gap-2">
+            <div className="space-y-4 md:space-y-6 bg-blue-50 p-4 md:p-6 rounded-xl">
+              <h2 className="text-xl md:text-2xl font-bold text-gray-800 text-center flex items-center justify-center gap-2">
                 Sign In <RoleIcon />
               </h2>
 
@@ -195,7 +207,7 @@ export default function SignIn() {
                 <button
                   onClick={handleGoogleSignInClick}
                   disabled={loading}
-                  className="w-full bg-white text-gray-700 font-semibold py-3 px-4 rounded-lg border border-gray-300 hover:bg-gray-50 transition duration-300 flex items-center justify-center shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-white text-gray-700 font-semibold py-2.5 md:py-3 px-4 rounded-lg border border-gray-300 hover:bg-gray-50 transition duration-300 flex items-center justify-center shadow-md disabled:opacity-50 disabled:cursor-not-allowed text-sm md:text-base"
                 >
                   <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                     <path
@@ -264,7 +276,7 @@ export default function SignIn() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-gradient-to-r bg-[#329ae1] text-white font-semibold py-3 px-4 rounded-lg hover:from-blue-700 hover:to-blue-800 transition duration-300 transform hover:-translate-y-0.5 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-gradient-to-r bg-[#329ae1] text-white font-semibold py-2.5 md:py-3 px-4 rounded-lg hover:from-blue-700 hover:to-blue-800 transition duration-300 transform hover:-translate-y-0.5 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed text-sm md:text-base"
                 >
                   {loading ? "Signing in..." : "Sign In"}
                 </button>

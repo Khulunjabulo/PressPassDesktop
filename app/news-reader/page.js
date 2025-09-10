@@ -39,7 +39,7 @@ export default function NewsReaderHome() {
     <div className={(isMobile && user) ? 'pt-16 sm:pt-20' : ''}>
       {/* Top Banner Ad */}
       <div className="px-6 mt-4">
-        <BannerAd />
+        <BannerAd className="h-16 md:h-[120px]" />
       </div>
       
       {loading ? (
