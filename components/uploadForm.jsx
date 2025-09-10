@@ -1224,7 +1224,7 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
   );
 };
   return (
-    <div className="flip-card-container w-full max-w-4xl mx-auto">
+    <div className="flip-card-container w-full max-w-4xl mx-auto px-2 sm:px-4 md:px-6">
       <style jsx>{`
         .flip-card-container {
           perspective: 1000px;
@@ -1290,10 +1290,10 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
 
       <div className={`flip-card ${isFlipped ? 'flipped' : ''}`}>
         {/* Front Side - Upload Form */}
-        <div className="flip-card-front bg-white p-6">
+        <div className="flip-card-front bg-white p-4 sm:p-6 w-full min-w-0">
           {/* Flip Button */}
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold text-gray-800">Document Upload</h2>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-800">Document Upload</h2>
             <button
               onClick={() => setIsFlipped(true)}
               className="flex items-center px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors text-sm"
@@ -1375,11 +1375,11 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
               rows="2"
             />
 
-            <div className="flex justify-between mb-3">
+            <div className="flex flex-col sm:flex-row justify-between mb-3 gap-2">
               <button
                 type="button"
                 onClick={handleSaveDraft}
-                className="bg-blue-900 text-white px-3 py-1.5 rounded-md hover:bg-blue-800 transition-colors text-xs"
+                className="bg-blue-900 text-white px-3 py-1.5 rounded-md hover:bg-blue-800 transition-colors text-xs w-full sm:w-auto"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? "Saving..." : "SAVE DRAFT"}
@@ -1387,7 +1387,7 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
               <button
                 type="button"
                 onClick={(e) => handleUploadSubmit(e, 'review')}
-                className="bg-yellow-400 text-black font-semibold px-3 py-1.5 rounded-md hover:bg-yellow-500 transition-colors text-xs"
+                className="bg-yellow-400 text-black font-semibold px-3 py-1.5 rounded-md hover:bg-yellow-500 transition-colors text-xsw-full sm:w-auto"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? "Submitting..." : "SUBMIT FOR REVIEW"}
@@ -1395,7 +1395,7 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
               <button
                 type="button"
                 onClick={(e) => handleUploadSubmit(e, 'publish')}
-                className="bg-red-600 text-white px-3 py-1.5 rounded-md hover:bg-red-700 transition-colors text-xs"
+                className="bg-red-600 text-white px-3 py-1.5 rounded-md hover:bg-red-700 transition-colors text-xs w-full sm:w-auto"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? "Publishing..." : "PUBLISH NOW"}
@@ -1434,7 +1434,7 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
         </div>
 
         {/* Back Side - Manual Article Form - FIXED */}
-        <div className="flip-card-back bg-white p-6 max-h-[90vh] overflow-y-auto">
+        <div className="flip-card-back bg-white p-6 max-h-[90vh] overflow-y-auto w-full min-w-0">
           {/* Flip Button */}
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold text-gray-800">Manual Article Entry</h2>
@@ -1874,21 +1874,21 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
             </div>
 
             {/* Submit Buttons */}
-           <div className="flex gap-3 pt-4">
+           <div className="flex flex-col sm:flex-row gap-3 pt-4">
   <button
     type="button"
     onClick={() => setShowPreview(true)}
     disabled={!formData.title && !formData.content}
-    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center justify-center disabled:opacity-50"
+    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center justify-center disabled:opacity-50  w-full sm:w-auto "
   >
-    <Eye className="w-4 h-4 mr-1" />
+    <Eye className="w-4 h-4 mr-2" />
     Preview
   </button>
   <button
     type="button"
     onClick={handleManualSaveDraft}
     disabled={isSubmitting || !currentUser}
-    className="flex-1 px-6 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors flex items-center justify-center disabled:opacity-50"
+    className="flex-1 px-6 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors flex items-center justify-center disabled:opacity-50  w-full sm:w-auto"
   >
     <Save className="w-4 h-4 mr-2" />
     {isSubmitting ? 'Saving...' : 'Save Draft'}
@@ -1896,7 +1896,7 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
   <button
     type="submit"
     disabled={isSubmitting || !currentUser}
-    className="flex-1 px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center disabled:opacity-50"
+    className="flex-1 px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center disabled:opacity-50  w-full sm:w-auto"
   >
     <Send className="w-4 h-4 mr-2" />
     {isSubmitting ? 'Publishing...' : 'Publish Article'}

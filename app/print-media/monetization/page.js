@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Header from "@/components/UI/header";
-import { FileText, Users, Megaphone, LayoutDashboard } from "lucide-react";
+import { FileText, Users, Megaphone, LayoutDashboard, Menu, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/UI/Button";
@@ -16,8 +16,8 @@ export default function Monetization() {
   const [isUploadOverlayOpen, setIsUploadOverlayOpen] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState(null);
   const [isSubmitOverlayOpen, setIsSubmitOverlayOpen] = useState(false);
-  const [selectedTemplateForSubmit, setSelectedTemplateForSubmit] =
-    useState(null);
+  const [selectedTemplateForSubmit, setSelectedTemplateForSubmit] = useState(null);
+  const [menuOpen, setMenuOpen] = useState(false);
   const { publisher, loading } = useCurrentPublisher("currentPublisherId");
 
   const templates = [
@@ -93,21 +93,15 @@ export default function Monetization() {
   };
 
   const handleSubmit = (template) => {
-    // Set the selected template for submission
     setSelectedTemplateForSubmit(template);
-    // Open the submit confirmation overlay
     setIsSubmitOverlayOpen(true);
-    // This is where you would implement the submit logic
     console.log("Submitting template:", template);
   };
   const handleConfirmSubmit = async (template) => {
-    // This is where you would implement the actual submit logic
     console.log("Submitting template:", template);
-    // For now, we'll just simulate a successful submission
     return new Promise((resolve) => {
       setTimeout(() => {
         console.log("Template submitted successfully!");
-        // Close the overlay
         setIsSubmitOverlayOpen(false);
         resolve();
       }, 1000);
@@ -115,19 +109,29 @@ export default function Monetization() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
       <Header publisher={publisher} />
-      <h1 className="text-center text-xl font bold">
+      <h1 className="text-center text-lg sm:text-xl font-bold my-4 px-2">
         Click on any of the templates to see where to place your ad!
       </h1>
-      {/* Body Layout: Sidebar under header */}
-      <div className="flex">
+      {/* Burger menu button for mobile */}
+      <div className="md:hidden flex items-center px-4 mb-2">
+        <button
+          className="p-2 rounded-md bg-white shadow"
+          onClick={() => setMenuOpen(true)}
+          aria-label="Open menu"
+        >
+          <Menu size={24} />
+        </button>
+      </div>
+      <div className="flex flex-col md:flex-row flex-1 w-full">
         {/* Sidebar */}
-        <aside className="w-64 bg-white shadow-md border-r flex flex-col">
-          <div className="p-6">
-            <h2 className="text-xl font-semibold mb-6">Menu</h2>
-            <ul className="space-y-4">
+        {/* Desktop sidebar */}
+        <aside className="hidden md:flex w-64 bg-white shadow-md border-r flex-col">
+          <div className="p-4 md:p-6">
+            <h2 className="text-lg md:text-xl font-semibold mb-4 md:mb-6">Menu</h2>
+            <ul className="space-y-2 md:space-y-4">
               <li>
                 <Link
                   href="/print-media/monetization/publish"
@@ -137,7 +141,6 @@ export default function Monetization() {
                   <span>Publish with us</span>
                 </Link>
               </li>
-
               <li>
                 <Link
                   href="/print-media/monetization/partner"
@@ -147,7 +150,6 @@ export default function Monetization() {
                   <span>Partner with us</span>
                 </Link>
               </li>
-
               <li>
                 <Link
                   href="/print-media/monetization/advertise"
@@ -157,7 +159,6 @@ export default function Monetization() {
                   <span>Advertise with us</span>
                 </Link>
               </li>
-
               <li>
                 <Link
                   href="/print-media/monetization/dashboard"
@@ -170,11 +171,76 @@ export default function Monetization() {
             </ul>
           </div>
         </aside>
+        {/* Mobile sidebar drawer */}
+        {menuOpen && (
+          <>
+            <div
+              className="fixed inset-0 bg-black bg-opacity-30 z-40"
+              onClick={() => setMenuOpen(false)}
+              aria-label="Close menu overlay"
+            />
+            <aside className="fixed top-0 left-0 w-64 h-full bg-white shadow-lg z-50 flex flex-col animate-slide-in">
+              <button
+                className="absolute top-4 right-4 bg-gray-100 rounded-full p-1"
+                onClick={() => setMenuOpen(false)}
+                aria-label="Close menu"
+                type="button"
+              >
+                <X size={24} />
+              </button>
+              <div className="p-4 md:p-6 mt-10">
+                <h2 className="text-lg md:text-xl font-semibold mb-4 md:mb-6">Menu</h2>
+                <ul className="space-y-2 md:space-y-4">
+                  <li>
+                    <Link
+                      href="/print-media/monetization/publish"
+                      className="flex items-center gap-3 cursor-pointer hover:text-blue-600"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      <FileText className="w-5 h-5 text-gray-500" />
+                      <span>Publish with us</span>
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="/print-media/monetization/partner"
+                      className="flex items-center gap-3 cursor-pointer hover:text-blue-600"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      <Users className="w-5 h-5 text-gray-500" />
+                      <span>Partner with us</span>
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="/print-media/monetization/advertise"
+                      className="flex items-center gap-3 cursor-pointer hover:text-blue-600"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      <Megaphone className="w-5 h-5 text-gray-500" />
+                      <span>Advertise with us</span>
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="/print-media/monetization/dashboard"
+                      className="flex items-center gap-3 cursor-pointer hover:text-blue-600"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      <LayoutDashboard className="w-5 h-5 text-gray-500" />
+                      <span>Dashboard</span>
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+            </aside>
+          </>
+        )}
 
         {/* Main Content */}
-        <main className="flex-1 p-6">
+        <main className="flex-1 p-2 sm:p-4 md:p-6">
           {/* Template Grid */}
-          <div className="grid grid-cols-5 gap-4 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
             {templates.map((template) => (
               <div
                 key={template.id}
@@ -252,8 +318,8 @@ export default function Monetization() {
           </div>
 
           {/* Data Table */}
-          <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-            <table className="w-full">
+          <div className="bg-white rounded-lg shadow-sm border overflow-x-auto">
+            <table className="w-full min-w-[700px]">
               <thead className="bg-gray-50 border-b">
                 <tr>
                   <th className="text-left p-4 font-medium text-gray-700">#</th>
@@ -294,7 +360,6 @@ export default function Monetization() {
                     <td className="p-4 text-sm text-gray-600">
                       {template.price}
                     </td>
-
                     {/* Upload Link */}
                     <td
                       className="p-4 text-blue-600 underline cursor-pointer"
@@ -302,7 +367,6 @@ export default function Monetization() {
                     >
                       {template.upload}
                     </td>
-
                     {/* Submit Button */}
                     <td className="p-4">
                       <Button
@@ -312,13 +376,12 @@ export default function Monetization() {
                         Submit
                       </Button>
                     </td>
-
-                    {/* Payment Link → navigates to /payment/[id] */}
+                    {/* Payment Link */}
                     <td className="p-4 text-blue-600 underline cursor-pointer">
-  <Link href={`/print-media/monetization/payment/${template.id}`}>
-    {template.link}
-  </Link>
-</td>
+                      <Link href={`/print-media/monetization/payment/${template.id}`}>
+                        {template.link}
+                      </Link>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -336,8 +399,17 @@ export default function Monetization() {
         onClose={() => setIsSubmitOverlayOpen(false)}
         onSubmit={() => handleConfirmSubmit(selectedTemplateForSubmit)}
       />
-
-      <PrintMediaFooter/>
+      <PrintMediaFooter />
+      {/* Slide-in animation for sidebar */}
+      <style jsx global>{`
+        @keyframes slide-in {
+          from { transform: translateX(-100%); }
+          to { transform: translateX(0); }
+        }
+        .animate-slide-in {
+          animation: slide-in 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+      `}</style>
     </div>
   );
 }
