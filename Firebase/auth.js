@@ -84,7 +84,7 @@ export const getUserRole = async (uid) => {
       const userData = userDocSnap.data();
       return userData.role || "guest";
     } else {
-      console.warn("No role found for user.");
+      console.info("No role found for user, defaulting to 'guest'.");
       return "guest";
     }
   } catch (error) {
@@ -102,7 +102,7 @@ export const getUserData = async (uid) => {
     if (userDocSnap.exists()) {
       return userDocSnap.data();
     } else {
-      console.warn("No user data found.");
+      console.info("No user data found.");
       return null;
     }
   } catch (error) {
@@ -121,7 +121,7 @@ export const getUserProfile = async (uid, role) => {
     if (profileDocSnap.exists()) {
       return profileDocSnap.data();
     } else {
-      console.warn(`No ${role} profile found.`);
+      console.info(`No ${role} profile found.`);
       return null;
     }
   } catch (error) {

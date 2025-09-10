@@ -18,9 +18,25 @@ export default function NewsReaderHomePage() {
   return (
 
     <div>
-      <MainHeader/>
+      {/* Mobile Landing Header */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-[#329ae1] px-3 sm:px-6 py-2 sm:py-3 shadow-md">
+        <div className="max-w-7xl mx-auto flex items-center justify-between h-12">
+          <Link href="/" className="flex-shrink-0">
+            <Image src="/Presspass.png" alt="Press Pass logo" width={80} height={32} className="w-[80px] h-auto" priority />
+          </Link>
+          <nav className="flex items-center gap-2 sm:gap-3 text-white">
+            <Link href="/signup" className="hover:bg-white/10 px-2 py-1 rounded text-xs sm:text-sm font-medium">Sign Up</Link>
+            <Link href="/signin" className="hover:bg-white/10 px-2 py-1 rounded text-xs sm:text-sm font-medium bg-white/10">Login</Link>
+          </nav>
+        </div>
+      </div>
 
-      <div className="w-full min-h-screen bg-gray-50 overflow-x-hidden pt-16 sm:pt-20 md:pt-24 lg:pt-28">
+      {/* Desktop Header */}
+      <div className="hidden md:block">
+        <MainHeader/>
+      </div>
+
+      <div className="w-full min-h-screen bg-gray-50 overflow-x-hidden pt-14 sm:pt-20 md:pt-24 lg:pt-28">
         {/* Hero Section */}
         <section className="w-full relative bg-gray-50 py-8 sm:py-12 lg:py-20 overflow-hidden">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
