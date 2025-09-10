@@ -22,6 +22,16 @@
   }
 }
 
+@layer utilities {
+  .animate-slide-in {
+    animation: slide-in 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  @keyframes slide-in {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(0); }
+  }
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
