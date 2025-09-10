@@ -65,6 +65,19 @@ const MediaHubRegistration = () => {
     initializeGoogleSignIn(handleGoogleCallback);
   }, []);
 
+  // Enforce reader-only registration on mobile screens
+  useEffect(() => {
+    const enforceMobileRole = () => {
+      if (typeof window !== 'undefined' && window.innerWidth < 768) {
+        setIsPublisher(false);
+        setFormData(prev => ({ ...prev, role: 'reader' }));
+      }
+    };
+    enforceMobileRole();
+    window.addEventListener('resize', enforceMobileRole);
+    return () => window.removeEventListener('resize', enforceMobileRole);
+  }, []);
+
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     console.log('🖼️ Image selected:', file ? file.name : 'No file');
@@ -176,7 +189,7 @@ const MediaHubRegistration = () => {
       <div className="bg-gray-50 min-h-screen flex items-center justify-center p-4">
         <div className="w-full max-w-4xl bg-white rounded-2xl shadow-xl overflow-hidden">
           <div className="flex flex-col md:flex-row">
-            <div className="md:w-2/5 bg-gradient-to-br bg-[#329ae1] text-white p-8 flex flex-col justify-center">
+            <div className="md:w-2/5 bg-gradient-to-br bg-[#329ae1] text-white p-6 md:p-8 flex flex-col justify-center">
               <div className="text-center mb-8">
                 <div className="bg-white/20 p-4 rounded-full inline-block mb-4">
                   <img 
@@ -185,10 +198,10 @@ const MediaHubRegistration = () => {
                     className="w-12 h-12"
                   />
                 </div>
-                <h1 className="text-3xl font-bold mb-2">MediaHub</h1>
+                <h1 className="text-2xl md:text-3xl font-bold mb-2">MediaHub</h1>
                 <p className="text-blue-100">Publishing Platform</p>
               </div>
-              <div className="space-y-6">
+              <div className="space-y-4 md:space-y-6">
                 <div className="flex items-start">
                   <div className="bg-white/20 p-2 rounded-lg mr-4">
                     <i className="fas fa-check text-xl"></i>
@@ -219,19 +232,19 @@ const MediaHubRegistration = () => {
               </div>
             </div>
 
-            <div className="md:w-3/5 p-8">
-              <div className="flex mb-8 bg-blue-100 rounded-lg p-1">
+            <div className="md:w-3/5 p-5 md:p-8">
+              <div className="flex mb-5 md:mb-8 bg-blue-100 rounded-lg p-1">
                 <button 
-                  onClick={handleToggleForm} 
-                  className={`flex-1 py-2 px-4 rounded-md text-center font-medium transition ${
+                  onClick={() => { setIsPublisher(false); setFormData(prev => ({ ...prev, role: 'reader' })); }} 
+                  className={`flex-1 py-2 px-4 rounded-md text-center font-medium transition text-sm md:text-base ${
                     !isPublisher ? 'bg-[#329ae1] text-white' : 'text-black-600'
                   }`}
                 >
                   News Reader Registration
                 </button>
                 <button 
-                  onClick={handleToggleForm} 
-                  className={`flex-1 py-2 px-4 rounded-md text-center font-medium transition ${
+                  onClick={() => { setIsPublisher(true); setFormData(prev => ({ ...prev, role: 'publisher' })); }} 
+                  className={`hidden md:block flex-1 py-2 px-4 rounded-md text-center font-medium transition text-sm md:text-base ${
                     isPublisher ? 'bg-[#329ae1] text-white' : 'text-black-600'
                   }`}
                 >
@@ -240,8 +253,8 @@ const MediaHubRegistration = () => {
               </div>
 
               {!isPublisher ? (
-                <div className="space-y-6 bg-blue-50 p-6 rounded-xl">
-                  <h2 className="text-2xl font-bold text-gray-800 text-center">News Reader Registration</h2>
+                <div className="space-y-4 md:space-y-6 bg-blue-50 p-4 md:p-6 rounded-xl">
+                  <h2 className="text-xl md:text-2xl font-bold text-gray-800 text-center">News Reader Registration</h2>
                   
                   {/* Terms Agreement - Moved to top */}
                   <label className="flex items-center bg-white p-4 rounded-lg border">
@@ -364,8 +377,8 @@ const MediaHubRegistration = () => {
                   </button>
                 </div>
               ) : (
-                <div className="space-y-6 bg-blue-50 p-6 rounded-xl">
-                  <h2 className="text-2xl font-bold text-gray-800 text-center">Print Media Registration</h2>
+                <div className="space-y-4 md:space-y-6 bg-blue-50 p-4 md:p-6 rounded-xl">
+                  <h2 className="text-xl md:text-2xl font-bold text-gray-800 text-center">Print Media Registration</h2>
                   
                   {/* Terms Agreement - Moved to top */}
                   <label className="flex items-center bg-white p-4 rounded-lg border">

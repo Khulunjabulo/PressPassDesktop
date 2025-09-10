@@ -35,8 +35,8 @@ export default function NewsReaderHome() {
 
   return (
     <div>
-    {isMobile && user ? <MainHeader /> : <Header />}
-    <div className={(isMobile && user) ? 'pt-16 sm:pt-20' : ''}>
+    {isMobile ? <MainHeader /> : <Header />}
+    <div className={isMobile ? 'pt-16 sm:pt-20' : ''}>
       {/* Top Banner Ad */}
       <div className="px-6 mt-4">
         <BannerAd />
@@ -50,6 +50,6 @@ export default function NewsReaderHome() {
         <NewsGrid articles={articles} />
       )}
     </div>
-        </div>
+    </div>
   );
 }

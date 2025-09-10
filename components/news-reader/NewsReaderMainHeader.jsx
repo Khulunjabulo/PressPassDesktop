@@ -55,7 +55,7 @@ export default function MainHeader() {
               alt="Press Pass logo"
               width={80}
               height={32}
-              className="sm:w-[140px] sm:h-[56px] md:w-[160px] md:h-[64px] lg:w-[180px] lg:h-[72px]"
+              className="w-[80px] h-auto sm:w-[140px] md:w-[160px] lg:w-[180px]"
               priority
             />
           </Link>
