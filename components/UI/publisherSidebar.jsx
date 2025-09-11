@@ -97,7 +97,7 @@ export default function PublisherSidebar() {
     <>
       {/* Burger menu button for mobile, fixed top left */}
       <button
-        className="md:hidden absolute top-1/2 left-3 transform -translate-y-1/2 bg-white rounded-full p-2 shadow z-50"
+        className="md:hidden absolute top-16 left-1 p-4 z-50"
         onClick={() => setOpen(true)}
         aria-label="Open sidebar"
         type="button"
