@@ -47,7 +47,7 @@ export default function BannerAd({
   // Loading state
   if (loading) {
     return (
-      <div className={`w-full h-[120px] bg-gray-100 animate-pulse flex items-center justify-center rounded-md border border-gray-200 ${className}`}>
+      <div className={`w-full h-16 md:h-[120px] bg-gray-100 animate-pulse flex items-center justify-center rounded-md border border-gray-200 ${className}`}>
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-gray-600"></div>
           <p className="text-sm text-gray-500 mt-2">Loading banner ad...</p>
@@ -61,7 +61,7 @@ export default function BannerAd({
     if (!showFallback) return null;
     
     return (
-      <div className={`w-full h-[120px] bg-gray-200 flex items-center justify-center rounded-md border border-dashed border-gray-300 text-gray-500 ${className}`}>
+      <div className={`w-full h-16 md:h-[120px] bg-gray-200 flex items-center justify-center rounded-md border border-dashed border-gray-300 text-gray-500 ${className}`}>
         <p className="text-sm">Banner Ad (728 x 90)</p>
       </div>
     );
@@ -70,7 +70,7 @@ export default function BannerAd({
   // Render banner ad
   return (
     <div 
-      className={`w-full h-[120px] rounded-md overflow-hidden shadow-sm border border-gray-200 cursor-pointer transition-transform hover:scale-[1.01] ${className}`}
+      className={`w-full h-16 md:h-[120px] rounded-md overflow-hidden shadow-sm border border-gray-200 cursor-pointer transition-transform hover:scale-[1.01] ${className}`}
       onClick={handleAdClick}
       role="button"
       tabIndex={0}
