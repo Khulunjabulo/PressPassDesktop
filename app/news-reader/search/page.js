@@ -128,11 +128,11 @@ export default function SearchPage() {
               filtered.map((source, idx) => (
                 <CardContent
                   key={idx}
-                  className="p-4 border rounded-lg hover:shadow-lg transition flex items-start justify-between cursor-pointer"
+                  className="p-3 sm:p-4 border rounded-lg hover:shadow-lg transition flex items-start justify-between cursor-pointer"
                   onClick={() => handleSourceClick(source)}
                 >
-                  <div className="flex items-center space-x-3">
-                    <div className="flex-shrink-0 w-20 h-20 my-2">
+                  <div className="flex items-center space-x-2 sm:space-x-3">
+                    <div className="flex-shrink-0 w-12 h-12 sm:w-20 sm:h-20 my-auto">
                       {source.logo ? (
                         <img
                           src={source.logo}
@@ -141,18 +141,18 @@ export default function SearchPage() {
                         />
                       ) : (
                         <div className="w-full h-full bg-gradient-to-br bg-[#329ae1] rounded-lg flex items-center justify-center">
-                          <span className="text-white font-semibold text-2xl">
+                          <span className="text-white font-semibold text-xl sm:text-2xl">
                             {source.name.charAt(0)}
                           </span>
                         </div>
                       )}
                     </div>
                     <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-gray-900 truncate">
+                      <h3 className="text-base sm:text-lg font-semibold text-gray-900 truncate">
                         {source.name}
                       </h3>
                       {source.city && (
-                        <p className="text-sm text-gray-500">{source.city}</p>
+                        <p className="text-xs sm:text-sm text-gray-500">{source.city}</p>
                       )}
                     </div>
                   </div>
@@ -161,7 +161,7 @@ export default function SearchPage() {
                   <div className="self-end" onClick={(e) => e.stopPropagation()}>
                     <button
                       type="button"
-                      className={`p-2 rounded-full transition-colors ${
+                      className={`p-1 sm:p-2 rounded-full transition-colors ${
                         isPublisherFavorite(source.id)
                           ? 'bg-red-100 hover:bg-red-200'
                           : 'bg-gray-100 hover:bg-gray-200'
@@ -170,7 +170,7 @@ export default function SearchPage() {
                       disabled={favoritesLoading || !currentUser}
                     >
                       <Heart
-                        className={`w-5 h-5 ${
+                        className={`w-4 h-4 sm:w-5 sm:h-5 ${
                           isPublisherFavorite(source.id) ? 'text-red-500' : 'text-gray-400'
                         }`}
                         fill={isPublisherFavorite(source.id) ? 'currentColor' : 'none'}
