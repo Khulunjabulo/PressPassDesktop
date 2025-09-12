@@ -6,7 +6,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/UI/Button";
 import AdUploadOverlay from "@/components/AdUploadOverlay";
-import SubmitConfirmationOverlay from "@/components/SubmitConfirmationOverlay";
 import { useCurrentPublisher } from "@/hooks/useCurrentPublisher";
 import PrintMediaFooter from '@/components/UI/PrintMediaFooter';
 
@@ -15,8 +14,6 @@ export default function Monetization() {
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [isUploadOverlayOpen, setIsUploadOverlayOpen] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState(null);
-  const [isSubmitOverlayOpen, setIsSubmitOverlayOpen] = useState(false);
-  const [selectedTemplateForSubmit, setSelectedTemplateForSubmit] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const { publisher, loading } = useCurrentPublisher("currentPublisherId");
 
@@ -29,7 +26,6 @@ export default function Monetization() {
       price: "Publisher to Quote",
       link: "Payment Link",
       upload: "Upload",
-      button: "Submit",
     },
     {
       id: 2,
@@ -39,7 +35,6 @@ export default function Monetization() {
       price: "Publisher to Quote",
       link: "Payment Link",
       upload: "Upload",
-      button: "Submit",
     },
     {
       id: 3,
@@ -49,7 +44,6 @@ export default function Monetization() {
       price: "Publisher to Quote",
       link: "Payment Link",
       upload: "Upload",
-      button: "Submit",
     },
     {
       id: 4,
@@ -59,7 +53,6 @@ export default function Monetization() {
       price: "Publisher to Quote",
       link: "Payment Link",
       upload: "Upload",
-      button: "Submit",
     },
     {
       id: 5,
@@ -69,7 +62,6 @@ export default function Monetization() {
       price: "Publisher to Quote",
       link: "Payment Link",
       upload: "Upload",
-      button: "Submit",
     },
   ];
 
@@ -79,34 +71,36 @@ export default function Monetization() {
   };
 
   const handleUpload = async (file) => {
-    // This is where you would implement the actual file upload logic
-    // For now, we'll just log the file and show a success message
-    console.log("Uploading file for template:", selectedTemplateId, file);
+    try {
+      if (!publisher || !publisher.id) {
+        throw new Error('Publisher not available');
+      }
 
-    // Simulate upload process
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        console.log("File uploaded successfully!");
-        resolve();
-      }, 1000);
-    });
+      // Create FormData for the API request
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('publisherId', publisher.id);
+      formData.append('templateId', selectedTemplateId.toString());
+
+      // Call the API endpoint
+      const response = await fetch('/api/upload-ad-media', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Upload failed');
+      }
+
+      console.log("Document uploaded successfully:", result);
+    } catch (error) {
+      console.error("Upload failed:", error);
+      throw error; // To be caught by the overlay
+    }
   };
 
-  const handleSubmit = (template) => {
-    setSelectedTemplateForSubmit(template);
-    setIsSubmitOverlayOpen(true);
-    console.log("Submitting template:", template);
-  };
-  const handleConfirmSubmit = async (template) => {
-    console.log("Submitting template:", template);
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        console.log("Template submitted successfully!");
-        setIsSubmitOverlayOpen(false);
-        resolve();
-      }, 1000);
-    });
-  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -339,9 +333,6 @@ export default function Monetization() {
                     Upload
                   </th>
                   <th className="text-left p-4 font-medium text-gray-700">
-                    Submit
-                  </th>
-                  <th className="text-left p-4 font-medium text-gray-700">
                     Link
                   </th>
                 </tr>
@@ -367,15 +358,6 @@ export default function Monetization() {
                     >
                       {template.upload}
                     </td>
-                    {/* Submit Button */}
-                    <td className="p-4">
-                      <Button
-                        variant="default"
-                        onClick={() => handleSubmit(template)}
-                      >
-                        Submit
-                      </Button>
-                    </td>
                     {/* Payment Link */}
                     <td className="p-4 text-blue-600 underline cursor-pointer">
                       <Link href={`/print-media/monetization/payment/${template.id}`}>
@@ -393,11 +375,6 @@ export default function Monetization() {
         isOpen={isUploadOverlayOpen}
         onClose={() => setIsUploadOverlayOpen(false)}
         onUpload={handleUpload}
-      />
-      <SubmitConfirmationOverlay
-        isOpen={isSubmitOverlayOpen}
-        onClose={() => setIsSubmitOverlayOpen(false)}
-        onSubmit={() => handleConfirmSubmit(selectedTemplateForSubmit)}
       />
       <PrintMediaFooter />
       {/* Slide-in animation for sidebar */}
