@@ -213,7 +213,7 @@ export default function FavoritesPage() {
                     <Building className="w-5 h-5 mr-2" />
                     Favorite Publishers ({favoritePublishers.length})
                   </h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6 mb-8">
+                  <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6 mb-8">
                     {favoritePublishers.slice(0, 12).map((publisher) => (
                       <div 
                         key={publisher.id}
@@ -221,7 +221,7 @@ export default function FavoritesPage() {
                         onClick={() => handlePublisherClick(publisher)}
                       >
                         {/* Publisher Cover/Logo */}
-                        <div className="relative w-full aspect-[4/5] mb-3 rounded-lg overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 border border-gray-200 shadow-sm group-hover:shadow-md transition-all duration-200 group-hover:scale-105">
+                        <div className="relative w-full aspect-[4/5] mb-2 sm:mb-3 rounded-lg overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 border border-gray-200 shadow-sm group-hover:shadow-md transition-all duration-200 group-hover:scale-105">
                           {publisher.logo ? (
                             <img
                               src={publisher.logo}
@@ -230,7 +230,7 @@ export default function FavoritesPage() {
                             />
                           ) : (
                             <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-                              <span className="text-white font-bold text-2xl">
+                              <span className="text-white font-bold text-xl sm:text-2xl">
                                 {publisher.name.charAt(0)}
                               </span>
                             </div>
@@ -246,10 +246,10 @@ export default function FavoritesPage() {
 
                         {/* Publisher Name */}
                         <div className="text-center">
-                          <h4 className="text-sm font-medium text-gray-900 group-hover:text-blue-600 transition-colors leading-tight">
+                          <h4 className="text-xs sm:text-sm font-medium text-gray-900 group-hover:text-blue-600 transition-colors leading-tight">
                             {publisher.name}
                           </h4>
-                          <p className="text-xs text-gray-500 mt-1 capitalize">
+                          <p className="hidden sm:block text-xs text-gray-500 mt-1 capitalize">
                             {publisher.publicationType}
                           </p>
                         </div>
@@ -270,7 +270,7 @@ export default function FavoritesPage() {
             </div>
           ) : activeTab === 'publishers' ? (
             // Publishers Tab - Magazine Rack Style
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+            <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6">
               {favoritePublishers.length === 0 ? (
                 <div className="col-span-full text-center py-12">
                   <Building className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -291,7 +291,7 @@ export default function FavoritesPage() {
                     onClick={() => handlePublisherClick(publisher)}
                   >
                     {/* Publisher Cover/Logo */}
-                    <div className="relative w-full aspect-[4/5] mb-3 rounded-lg overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 border border-gray-200 shadow-sm group-hover:shadow-lg transition-all duration-200 group-hover:scale-105">
+                    <div className="relative w-full aspect-[4/5] mb-2 sm:mb-3 rounded-lg overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 border border-gray-200 shadow-sm group-hover:shadow-lg transition-all duration-200 group-hover:scale-105">
                       {publisher.logo ? (
                         <img
                           src={publisher.logo}
@@ -300,7 +300,7 @@ export default function FavoritesPage() {
                         />
                       ) : (
                         <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-                          <span className="text-white font-bold text-3xl">
+                          <span className="text-white font-bold text-xl sm:text-3xl">
                             {publisher.name.charAt(0)}
                           </span>
                         </div>
@@ -324,10 +324,10 @@ export default function FavoritesPage() {
 
                     {/* Publisher Info */}
                     <div className="text-center">
-                      <h3 className="text-sm font-semibold text-gray-900 group-hover:text-blue-600 transition-colors leading-tight mb-1">
+                      <h3 className="text-xs sm:text-sm font-semibold text-gray-900 group-hover:text-blue-600 transition-colors leading-tight mb-1">
                         {publisher.name}
                       </h3>
-                      <div className="flex items-center justify-center space-x-2 text-xs text-gray-500">
+                      <div className="hidden sm:flex items-center justify-center space-x-2 text-xs text-gray-500">
                         <div className="flex items-center space-x-1">
                           <FileText className="w-3 h-3" />
                           <span>{publisher.articleCount}</span>
@@ -335,7 +335,7 @@ export default function FavoritesPage() {
                         <span>•</span>
                         <span className="capitalize">{publisher.audienceType}</span>
                       </div>
-                      <p className="text-xs text-gray-400 mt-1">
+                      <p className="hidden sm:block text-xs text-gray-400 mt-1">
                         Added {formatDate(publisher.favoritedAt)}
                       </p>
                     </div>
@@ -345,7 +345,7 @@ export default function FavoritesPage() {
             </div>
           ) : (
             // Grouped by Publication - Folders (magazines, newspapers, stories)
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {getGroupedFavorites(activeTab).length === 0 ? (
                 <div className="col-span-full text-center py-12">
                   <Heart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -371,29 +371,29 @@ export default function FavoritesPage() {
                   >
                     <CardContent className="p-0">
                       {/* Publication Header */}
-                      <div className="p-4 bg-gradient-to-r from-blue-50 to-blue-100 border-b">
-                        <div className="flex items-center space-x-3">
+                      <div className="p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-blue-100 border-b">
+                        <div className="flex items-center space-x-2 sm:space-x-3">
                           {publication.logo ? (
                             <img
                               src={publication.logo}
                               alt={`${publication.name} logo`}
-                              className="w-10 h-10 rounded-lg object-cover border border-blue-200"
+                              className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg object-cover border border-blue-200"
                             />
                           ) : (
-                            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
-                              <span className="text-white font-bold text-sm">
+                            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                              <span className="text-white font-bold text-xs sm:text-sm">
                                 {publication.name.charAt(0)}
                               </span>
                             </div>
                           )}
                           <div className="flex-1">
-                            <h3 className="font-semibold text-gray-900 text-sm">{publication.name}</h3>
-                            <div className="flex items-center space-x-2 text-xs text-gray-600">
+                            <h3 className="font-semibold text-gray-900 text-xs sm:text-sm">{publication.name}</h3>
+                            <div className="flex items-center space-x-2 text-xs text-gray-500 sm:text-gray-600">
                               <FileText className="w-3 h-3" />
                               <span>{publication.stories.length} saved {publication.stories.length === 1 ? 'story' : 'stories'}</span>
                             </div>
                           </div>
-                          <ArrowRight className="w-4 h-4 text-gray-400" />
+                          <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
                         </div>
                       </div>
 
@@ -406,14 +406,14 @@ export default function FavoritesPage() {
                                 <img
                                   src={story.image}
                                   alt={story.title}
-                                  className="w-12 h-12 rounded object-cover border border-gray-200 flex-shrink-0"
+                                className="w-10 h-10 sm:w-12 sm:h-12 rounded object-cover border border-gray-200 flex-shrink-0"
                                 />
                               )}
                               <div className="flex-1 min-w-0">
-                                <h4 className="text-sm font-medium text-gray-900 line-clamp-2 group-hover:text-blue-600 transition-colors">
+                                <h4 className="text-xs sm:text-sm font-medium text-gray-900 line-clamp-2 group-hover:text-blue-600 transition-colors">
                                   {story.title}
                                 </h4>
-                                <div className="flex items-center space-x-2 mt-1">
+                                <div className="hidden sm:flex items-center space-x-2 mt-1">
                                   <Clock className="w-3 h-3 text-gray-400" />
                                   <span className="text-xs text-gray-500">
                                     {formatDate(story.addedAt)}
