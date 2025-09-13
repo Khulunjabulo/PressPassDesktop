@@ -452,7 +452,8 @@ function FixedAdSlot({
 
 // Ad Component
 // Fixed AdSlot component with better image rendering
-// Diagnostic AdSlot component to debug the black image issue
+// Fixed AdSlot component based on working diagnostic approach
+// Ultra-simple AdSlot - bare minimum approach
 function AdSlot({ 
   adType, 
   width, 
@@ -461,240 +462,129 @@ function AdSlot({
   onAdvertiseClick 
 }) {
   const [ads, setAds] = useState([]);
-  const [currentAdIndex, setCurrentAdIndex] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [imageError, setImageError] = useState(false);
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const [imageData, setImageData] = useState(null);
+
+  // Device visibility
+  const getResponsiveClasses = () => {
+    if (adType.includes('sidebar') || adType.includes('rectangle') || adType.includes('skyscraper')) {
+      return 'hidden lg:block';
+    }
+    if (adType === 'mobile') {
+      return 'block lg:hidden';
+    }
+    return '';
+  };
 
   useEffect(() => {
     fetchAds();
-  }, [adType]);
+  }, []);
+
+  // Simple rotation every 8 seconds
+  useEffect(() => {
+    if (ads.length > 0) {
+      const interval = setInterval(() => {
+        setCurrentIndex(prev => (prev + 1) % (ads.length + 1));
+      }, 8000);
+      return () => clearInterval(interval);
+    }
+  }, [ads.length]);
 
   const fetchAds = async () => {
     try {
-      setLoading(true);
-      setError(null);
-      
-      const response = await fetch(`/api/ads?type=${adType}&status=active&debug=true`);
+      const response = await fetch(`/api/ads?type=${adType}&status=active`);
       const data = await response.json();
       
-      console.log('Diagnostic API Response:', data);
-      
       if (data.success) {
-        const activeAds = data.ads.filter(ad => {
-          const isActive = ad.status === 'active';
-          const isApproved = ad.approved === true || ad.approved === 'true';
-          const hasImage = ad.desktopImage && typeof ad.desktopImage === 'string';
-          const isValidBase64 = hasImage && ad.desktopImage.startsWith('data:image/');
-          
-          return isActive && isApproved && hasImage && isValidBase64;
-        });
-        
-        setAds(activeAds);
-      } else {
-        setError(data.error);
+        const validAds = data.ads.filter(ad => 
+          ad.desktopImage && 
+          ad.desktopImage.startsWith('data:image/') &&
+          ad.status === 'active'
+        );
+        setAds(validAds);
       }
     } catch (error) {
-      setError(error.message);
-    } finally {
-      setLoading(false);
+      console.error('Error:', error);
     }
+    setLoading(false);
   };
 
-  const handleImageLoad = (ad, e) => {
-    console.log('Diagnostic Image Load:', {
-      title: ad.title,
-      naturalWidth: e.target.naturalWidth,
-      naturalHeight: e.target.naturalHeight,
-      displayWidth: e.target.width,
-      displayHeight: e.target.height,
-      complete: e.target.complete,
-      src: e.target.src.substring(0, 50) + '...'
-    });
-    
-    setImageError(false);
-    setImageLoaded(true);
-    
-    // Store image data for debugging
-    setImageData({
-      naturalWidth: e.target.naturalWidth,
-      naturalHeight: e.target.naturalHeight,
-      displayWidth: e.target.width,
-      displayHeight: e.target.height
-    });
-  };
-
-  const handleImageError = (e, ad) => {
-    console.error('Diagnostic Image Error:', {
-      adId: ad.id,
-      title: ad.title,
-      error: e.type,
-      src: e.target.src.substring(0, 100)
-    });
-    setImageError(true);
-    setImageLoaded(false);
-  };
+  const responsiveClasses = getResponsiveClasses();
 
   if (loading) {
     return (
-      <div className={`bg-gray-200 animate-pulse rounded-lg flex items-center justify-center ${className}`}
-           style={{ width: `${width}px`, height: `${height}px` }}>
-        <span className="text-gray-400 text-sm">Loading diagnostic...</span>
+      <div className={`bg-gray-300 rounded ${className} ${responsiveClasses}`}
+           style={{ width, height }}>
+        Loading...
       </div>
     );
   }
 
-  if (ads.length === 0) {
+  // Show advertise here if no ads OR on last rotation cycle
+  if (ads.length === 0 || currentIndex >= ads.length) {
     return (
-      <div className={`bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center text-center p-4 ${className}`}
-           style={{ width: `${width}px`, height: `${height}px` }}>
-        <span className="text-gray-600">No ads available</span>
+      <div 
+        className={`bg-blue-100 border-2 border-dashed border-blue-400 rounded cursor-pointer ${className} ${responsiveClasses}`}
+        style={{ width, height }}
+        onClick={onAdvertiseClick}
+      >
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          height: '100%',
+          textAlign: 'center',
+          padding: '8px'
+        }}>
+          <div style={{ fontSize: '24px', marginBottom: '8px' }}>📢</div>
+          <div style={{ fontWeight: 'bold', color: '#1e40af' }}>Advertise Here</div>
+          <div style={{ fontSize: '12px', color: '#3b82f6' }}>{width}x{height}</div>
+        </div>
       </div>
     );
   }
 
-  const currentAd = ads[currentAdIndex];
+  const ad = ads[currentIndex];
+  if (!ad) return null;
 
   return (
-    <div className="space-y-4">
-      {/* Diagnostic Info Panel */}
-      <div className="bg-yellow-50 border border-yellow-200 rounded p-3 text-xs">
-        <h4 className="font-bold mb-2">Diagnostic Info:</h4>
-        <div>Ad ID: {currentAd.id}</div>
-        <div>Title: {currentAd.title}</div>
-        <div>Container: {width}x{height}px</div>
-        <div>Image Loaded: {imageLoaded ? 'Yes' : 'No'}</div>
-        <div>Image Error: {imageError ? 'Yes' : 'No'}</div>
-        {imageData && (
-          <div>
-            <div>Natural: {imageData.naturalWidth}x{imageData.naturalHeight}px</div>
-            <div>Display: {imageData.displayWidth}x{imageData.displayHeight}px</div>
-          </div>
-        )}
-        <div>Base64 start: {currentAd.desktopImage.substring(0, 30)}...</div>
-      </div>
-
-      {/* Test 1: Raw img tag with minimal styling */}
-      <div className="space-y-2">
-        <h4 className="text-sm font-bold">Test 1: Minimal Image (should show if data is valid)</h4>
-        <div style={{ border: '2px solid red', padding: '4px' }}>
-          <img
-            src={currentAd.desktopImage}
-            alt="Test 1"
-            style={{ maxWidth: '200px', maxHeight: '150px', border: '1px solid blue' }}
-            onLoad={(e) => console.log('Test 1 loaded:', e.target.naturalWidth, e.target.naturalHeight)}
-            onError={(e) => console.log('Test 1 error:', e)}
-          />
-        </div>
-      </div>
-
-      {/* Test 2: Canvas to inspect the image data */}
-      <div className="space-y-2">
-        <h4 className="text-sm font-bold">Test 2: Canvas Rendering</h4>
-        <canvas
-          ref={(canvas) => {
-            if (canvas && imageLoaded) {
-              const ctx = canvas.getContext('2d');
-              const img = new Image();
-              img.onload = () => {
-                canvas.width = 200;
-                canvas.height = 150;
-                ctx.fillStyle = '#ff0000'; // Red background
-                ctx.fillRect(0, 0, 200, 150);
-                try {
-                  ctx.drawImage(img, 0, 0, 200, 150);
-                  console.log('Canvas draw successful');
-                } catch (err) {
-                  console.error('Canvas draw error:', err);
-                }
-              };
-              img.src = currentAd.desktopImage;
-            }
+    <div className={`${className} ${responsiveClasses}`}>
+      <div 
+        style={{ 
+          width, 
+          height, 
+          position: 'relative',
+          border: '1px solid #ccc',
+          borderRadius: '8px',
+          overflow: 'hidden',
+          cursor: 'pointer'
+        }}
+        onClick={() => ad.url && window.open(ad.url, '_blank')}
+      >
+        {/* Just the image - nothing else */}
+        <img
+          src={ad.desktopImage}
+          alt={ad.title}
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover'
           }}
-          style={{ border: '2px solid green' }}
         />
-      </div>
-
-      {/* Test 3: Your original styling */}
-      <div className="space-y-2">
-        <h4 className="text-sm font-bold">Test 3: Original Ad Container</h4>
-        <div 
-          className="relative rounded-lg overflow-hidden border border-gray-200 bg-white"
-          style={{ width: `${width}px`, height: `${height}px` }}
-        >
-          {/* White background div */}
-          <div className="absolute inset-0 bg-white">
-            <img
-              src={currentAd.desktopImage}
-              alt={`Advertisement - ${currentAd.title}`}
-              className="w-full h-full object-contain bg-red-100"
-              style={{ backgroundColor: 'red' }}
-              onError={(e) => handleImageError(e, currentAd)}
-              onLoad={(e) => handleImageLoad(currentAd, e)}
-            />
-          </div>
-          
-          {/* Debug overlay */}
-          <div className="absolute top-0 left-0 bg-black bg-opacity-50 text-white text-xs p-1">
-            {imageLoaded ? 'LOADED' : 'LOADING'}
-          </div>
-        </div>
-      </div>
-
-      {/* Test 4: Different object-fit values */}
-      <div className="space-y-2">
-        <h4 className="text-sm font-bold">Test 4: Object-fit Variations</h4>
-        <div className="grid grid-cols-2 gap-2">
-          {['contain', 'cover', 'fill', 'none'].map((fit) => (
-            <div key={fit} className="text-center">
-              <div className="text-xs mb-1">object-fit: {fit}</div>
-              <div 
-                style={{ 
-                  width: '100px', 
-                  height: '80px', 
-                  border: '1px solid black',
-                  backgroundColor: '#f0f0f0'
-                }}
-              >
-                <img
-                  src={currentAd.desktopImage}
-                  alt={fit}
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: fit,
-                    backgroundColor: 'yellow'
-                  }}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Direct base64 display */}
-      <div className="space-y-2">
-        <h4 className="text-sm font-bold">Test 5: Base64 Validation</h4>
-        <div className="text-xs">
-          <div>Data URL valid: {currentAd.desktopImage.startsWith('data:image/') ? 'Yes' : 'No'}</div>
-          <div>Has comma separator: {currentAd.desktopImage.includes(',') ? 'Yes' : 'No'}</div>
-          <div>Base64 length: {currentAd.desktopImage.split(',')[1]?.length || 'N/A'}</div>
-          
-          {/* Try to validate base64 */}
-          <div>Base64 valid: {(() => {
-            try {
-              const base64Part = currentAd.desktopImage.split(',')[1];
-              if (base64Part) {
-                atob(base64Part);
-                return 'Yes';
-              }
-              return 'No comma found';
-            } catch (e) {
-              return 'Invalid: ' + e.message;
-            }
-          })()}</div>
+        
+        {/* Simple ad label */}
+        <div style={{
+          position: 'absolute',
+          top: '4px',
+          left: '4px',
+          background: 'rgba(0,0,0,0.7)',
+          color: 'white',
+          padding: '2px 6px',
+          borderRadius: '4px',
+          fontSize: '10px'
+        }}>
+          Ad
         </div>
       </div>
     </div>
