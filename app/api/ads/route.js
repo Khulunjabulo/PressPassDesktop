@@ -1,4 +1,4 @@
-// /api/ads/route.js - COMPLETE FIX
+// /api/ads/route.js - IMPROVED VERSION WITH BETTER IMAGE HANDLING
 import { NextResponse } from 'next/server';
 import { db } from '@/Firebase/firebase'; 
 import { 
@@ -17,7 +17,54 @@ import {
 
 const COLLECTION_NAME = 'advertisements';
 
-// GET /api/ads - Fetch ads by type with fallback handling
+// Helper function to validate base64 image
+function validateBase64Image(base64String) {
+  if (!base64String) return false;
+  
+  // Check if it's a valid data URL format
+  const dataUrlRegex = /^data:image\/(jpeg|jpg|png|gif|webp);base64,/;
+  if (!dataUrlRegex.test(base64String)) {
+    return false;
+  }
+  
+  // Extract the base64 part
+  const base64Part = base64String.split(',')[1];
+  if (!base64Part) return false;
+  
+  try {
+    // Validate base64 format
+    atob(base64Part);
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+// Helper function to get image info
+function getImageInfo(base64String) {
+  if (!base64String) return null;
+  
+  const match = base64String.match(/^data:image\/(\w+);base64,/);
+  if (!match) return null;
+  
+  const mimeType = match[0];
+  const format = match[1];
+  const base64Data = base64String.split(',')[1];
+  
+  // Estimate size (base64 is ~33% larger than binary)
+  const sizeInBytes = (base64Data.length * 3) / 4;
+  const sizeInMB = (sizeInBytes / (1024 * 1024)).toFixed(2);
+  
+  return {
+    format,
+    mimeType,
+    sizeInMB,
+    sizeInBytes,
+    isValid: true
+  };
+}
+
+// GET /api/ads - Fetch ads with improved error handling
 export async function GET(request) {
   console.log('🚀 GET /api/ads - Starting request...');
   
@@ -32,95 +79,105 @@ export async function GET(request) {
 
     const adsRef = collection(db, COLLECTION_NAME);
     
-    // First, let's get all documents to see what we have
-    console.log('🔍 Fetching all documents to inspect structure...');
+    // Get all documents
     const allDocsSnapshot = await getDocs(adsRef);
-    
-    console.log(`📊 Found ${allDocsSnapshot.size} total documents`);
+    console.log(`📊 Found ${allDocsSnapshot.size} total documents in database`);
     
     const allAds = [];
-    const adsWithoutAdType = [];
+    const adsWithIssues = [];
     
     allDocsSnapshot.forEach((docSnapshot) => {
       const data = docSnapshot.data();
+      
+      // Convert Firestore timestamps to ISO strings for JSON serialization
       const ad = {
         id: docSnapshot.id,
         ...data,
-        // Convert timestamps for JSON serialization
-        createdAt: data.createdAt?.toDate?.()?.toISOString() || null,
-        updatedAt: data.updatedAt?.toDate?.()?.toISOString() || null
+        createdAt: data.createdAt?.toDate?.()?.toISOString() || data.createdAt || null,
+        updatedAt: data.updatedAt?.toDate?.()?.toISOString() || data.updatedAt || null
       };
       
-      // Check if adType is missing and infer it from dimensions or other fields
+      // Validate and fix common issues
+      const issues = [];
+      
+      // Check adType
       if (!ad.adType) {
-        console.log(`⚠️ Document ${docSnapshot.id} missing adType field:`, {
-          title: ad.title,
-          dimensions: ad.dimensions,
-          status: ad.status
-        });
-        
-        // Try to infer adType from dimensions
+        // Infer adType from dimensions or other clues
         if (ad.dimensions) {
-          const dims = ad.dimensions.toLowerCase();
-          if (dims.includes('320') || dims.includes('mobile')) {
+          const { width, height } = ad.dimensions;
+          if (width <= 320 || ad.dimensions.includes('mobile')) {
             ad.adType = 'mobile';
-          } else if (dims.includes('728') || dims.includes('banner')) {
+          } else if (width >= 728 && height <= 90) {
             ad.adType = 'banner';
-          } else if (dims.includes('300') && dims.includes('250')) {
-            ad.adType = 'sidebar';
+          } else if (width === 300) {
+            ad.adType = 'sidebar_rectangle';
           } else {
-            ad.adType = 'banner'; // default fallback
+            ad.adType = 'sidebar_rectangle'; // default
           }
-          console.log(`🔧 Inferred adType: ${ad.adType} for document ${docSnapshot.id}`);
         } else {
-          ad.adType = 'mobile'; // default fallback
-          console.log(`🔧 Using default adType: mobile for document ${docSnapshot.id}`);
+          ad.adType = 'mobile'; // fallback
         }
-        
-        adsWithoutAdType.push({
-          id: docSnapshot.id,
-          adType: ad.adType
+        issues.push(`Missing adType, inferred: ${ad.adType}`);
+      }
+      
+      // Validate images
+      if (ad.desktopImage && !validateBase64Image(ad.desktopImage)) {
+        issues.push('Invalid desktopImage format');
+      }
+      
+      if (ad.mobileImage && !validateBase64Image(ad.mobileImage)) {
+        issues.push('Invalid mobileImage format');
+      }
+      
+      // Log issues for debugging
+      if (issues.length > 0 && debugMode) {
+        adsWithIssues.push({
+          id: ad.id,
+          title: ad.title,
+          issues
         });
       }
       
       allAds.push(ad);
     });
 
-    // If we found ads without adType, update them in Firestore
-    if (adsWithoutAdType.length > 0) {
-      console.log(`🔧 Updating ${adsWithoutAdType.length} documents with missing adType...`);
-      try {
-        const batch = writeBatch(db);
-        
-        adsWithoutAdType.forEach(({ id, adType }) => {
-          const docRef = doc(db, COLLECTION_NAME, id);
-          batch.update(docRef, { 
-            adType,
-            updatedAt: serverTimestamp()
-          });
-        });
-        
-        await batch.commit();
-        console.log('✅ Successfully updated documents with adType');
-      } catch (updateError) {
-        console.error('⚠️ Failed to update documents with adType:', updateError);
-        // Continue anyway - we can still return the data with inferred adType
-      }
-    }
-
-    // Filter ads based on request
+    // Filter ads
     let filteredAds = allAds;
 
-    // Apply status filter
+    // Filter by status
     if (!includeInactive) {
-      filteredAds = filteredAds.filter(ad => ad.status === status);
-      console.log(`🔍 Filtered by status '${status}': ${filteredAds.length} ads`);
+      const beforeCount = filteredAds.length;
+      filteredAds = filteredAds.filter(ad => {
+        const isActive = ad.status === status;
+        const isApproved = ad.approved === true || ad.approved === 'true';
+        const hasValidImage = ad.desktopImage && validateBase64Image(ad.desktopImage);
+        
+        if (debugMode && !isActive) {
+          console.log(`❌ Ad ${ad.id} filtered out - status: ${ad.status} (needed: ${status})`);
+        }
+        if (debugMode && !isApproved) {
+          console.log(`❌ Ad ${ad.id} filtered out - approved: ${ad.approved} (needed: true)`);
+        }
+        if (debugMode && !hasValidImage) {
+          console.log(`❌ Ad ${ad.id} filtered out - invalid image`);
+        }
+        
+        return isActive && isApproved && hasValidImage;
+      });
+      console.log(`🔍 Status filter: ${beforeCount} → ${filteredAds.length} ads`);
     }
 
-    // Apply type filter
-    if (requestedType) {
-      filteredAds = filteredAds.filter(ad => ad.adType === requestedType);
-      console.log(`🔍 Filtered by type '${requestedType}': ${filteredAds.length} ads`);
+    // Filter by type
+    if (requestedType && requestedType !== 'all') {
+      const beforeCount = filteredAds.length;
+      filteredAds = filteredAds.filter(ad => {
+        const matches = ad.adType === requestedType;
+        if (debugMode && !matches) {
+          console.log(`❌ Ad ${ad.id} filtered out - type: ${ad.adType} (needed: ${requestedType})`);
+        }
+        return matches;
+      });
+      console.log(`🔍 Type filter: ${beforeCount} → ${filteredAds.length} ads`);
     }
 
     // Sort by creation date (newest first)
@@ -130,64 +187,70 @@ export async function GET(request) {
       return dateB - dateA;
     });
 
-    console.log(`🎉 Returning ${filteredAds.length} ads`);
+    console.log(`🎉 Returning ${filteredAds.length} ads for type: ${requestedType || 'any'}`);
 
-    // If debug mode, include additional information
+    // Enhanced debug info
     if (debugMode) {
+      const imageStats = filteredAds.map(ad => ({
+        id: ad.id,
+        title: ad.title,
+        adType: ad.adType,
+        hasDesktopImage: !!ad.desktopImage,
+        hasMobileImage: !!ad.mobileImage,
+        desktopImageInfo: getImageInfo(ad.desktopImage),
+        status: ad.status,
+        approved: ad.approved
+      }));
+
       return NextResponse.json({
         success: true,
         debug: true,
         ads: filteredAds,
         count: filteredAds.length,
         totalInDatabase: allAds.length,
-        updatedDocuments: adsWithoutAdType.length,
         query: { requestedType, status, includeInactive },
         allAdTypes: [...new Set(allAds.map(ad => ad.adType))],
-        message: 'Debug information included'
+        adsWithIssues,
+        imageStats,
+        message: 'Debug mode - detailed information included'
       });
     }
 
     return NextResponse.json({
       success: true,
       ads: filteredAds,
-      count: filteredAds.length
+      count: filteredAds.length,
+      message: `Found ${filteredAds.length} ads${requestedType ? ` for type: ${requestedType}` : ''}`
     });
 
   } catch (error) {
     console.error('🚨 Error in GET /api/ads:', error);
-    console.error('Error details:', {
-      name: error.name,
-      message: error.message,
-      code: error.code,
-      stack: error.stack
-    });
     
     return NextResponse.json({
       success: false,
       error: error.message || 'Failed to fetch ads',
-      code: error.code || 'UNKNOWN_ERROR',
+      code: error.code || 'FETCH_ERROR',
       details: process.env.NODE_ENV === 'development' ? {
-        message: error.message,
-        stack: error.stack
-      } : 'Error details hidden in production'
+        stack: error.stack,
+        name: error.name
+      } : null
     }, { status: 500 });
   }
 }
 
-// POST /api/ads - Create new ad with proper adType
+// POST /api/ads - Create new ad with enhanced validation
 export async function POST(request) {
-  console.log('📝 POST /api/ads - Starting request...');
+  console.log('📝 POST /api/ads - Creating new ad...');
   
   try {
     const body = await request.json();
-    console.log('📦 Request body received:', {
+    console.log('📦 Received ad data:', {
       title: body.title,
       url: body.url,
       adType: body.adType,
       dimensions: body.dimensions,
-      status: body.status,
-      approved: body.approved,
       hasDesktopImage: !!body.desktopImage,
+      desktopImageSize: body.desktopImage ? `${(body.desktopImage.length / 1024 / 1024).toFixed(2)}MB` : 'none',
       hasMobileImage: !!body.mobileImage,
       company: body.company,
       contactEmail: body.contactEmail
@@ -207,76 +270,86 @@ export async function POST(request) {
     } = body;
 
     // Enhanced validation
-    const requiredFields = { title, url, desktopImage, dimensions };
-    const missingFields = Object.entries(requiredFields)
-      .filter(([key, value]) => !value)
-      .map(([key]) => key);
-
-    if (missingFields.length > 0) {
-      console.error('❌ Validation failed - missing required fields:', missingFields);
-      return NextResponse.json({
-        success: false,
-        error: `Missing required fields: ${missingFields.join(', ')}`,
-        missingFields
-      }, { status: 400 });
+    const errors = [];
+    
+    if (!title?.trim()) errors.push('Title is required');
+    if (!url?.trim()) errors.push('URL is required');
+    if (!desktopImage) errors.push('Desktop image is required');
+    if (!dimensions) errors.push('Dimensions are required');
+    
+    if (url && !url.startsWith('http')) {
+      errors.push('URL must start with http:// or https://');
     }
-
+    
     // Validate URL format
-    try {
-      new URL(url);
-      console.log('✅ URL validation passed');
-    } catch {
-      console.error('❌ Invalid URL format:', url);
+    if (url) {
+      try {
+        new URL(url);
+      } catch {
+        errors.push('Invalid URL format');
+      }
+    }
+    
+    // Validate images
+    if (desktopImage && !validateBase64Image(desktopImage)) {
+      errors.push('Invalid desktop image format - must be a valid base64 data URL');
+    }
+    
+    if (mobileImage && !validateBase64Image(mobileImage)) {
+      errors.push('Invalid mobile image format - must be a valid base64 data URL');
+    }
+
+    if (errors.length > 0) {
+      console.error('❌ Validation errors:', errors);
       return NextResponse.json({
         success: false,
-        error: 'Invalid URL format'
+        error: 'Validation failed',
+        errors
       }, { status: 400 });
     }
 
-    // Validate image format
-    if (!desktopImage.startsWith('data:image/')) {
-      console.error('❌ Invalid desktop image format');
-      return NextResponse.json({
-        success: false,
-        error: 'Invalid desktop image format. Images should be base64 encoded.'
-      }, { status: 400 });
-    }
-
-    // Determine adType if not provided, based on dimensions
+    // Determine final adType
     let finalAdType = adType;
     if (!finalAdType && dimensions) {
-      const dims = dimensions.toLowerCase();
-      if (dims.includes('320') || dims.includes('mobile')) {
+      const { width, height } = dimensions;
+      if (width <= 320 || width === 320) {
         finalAdType = 'mobile';
-      } else if (dims.includes('728')) {
+      } else if (width >= 728) {
         finalAdType = 'banner';
-      } else if (dims.includes('300') && dims.includes('250')) {
-        finalAdType = 'sidebar';
+      } else if (width === 300 && height === 250) {
+        finalAdType = 'sidebar_rectangle';
+      } else if (width === 300 && height === 600) {
+        finalAdType = 'sidebar_skyscraper';
       } else {
-        finalAdType = 'banner'; // default
+        finalAdType = 'sidebar_rectangle';
       }
-      console.log(`🔧 Inferred adType: ${finalAdType} from dimensions: ${dimensions}`);
-    } else if (!finalAdType) {
-      finalAdType = 'mobile'; // ultimate fallback
-      console.log('🔧 Using default adType: mobile');
+      console.log(`🔧 Inferred adType: ${finalAdType} from dimensions: ${width}x${height}`);
     }
 
-    // Validate final adType
-    const validAdTypes = ['banner', 'sidebar', 'mobile', 'footer', 'header'];
+    // Validate adType
+    const validAdTypes = ['mobile', 'banner', 'sidebar_rectangle', 'sidebar_skyscraper', 'sidebar_rectangle2'];
     if (!validAdTypes.includes(finalAdType)) {
-      console.error('❌ Invalid adType:', finalAdType);
       return NextResponse.json({
         success: false,
-        error: `Invalid adType. Must be one of: ${validAdTypes.join(', ')}`
+        error: `Invalid adType: ${finalAdType}. Valid types: ${validAdTypes.join(', ')}`
       }, { status: 400 });
     }
+
+    // Log image info
+    const desktopImageInfo = getImageInfo(desktopImage);
+    const mobileImageInfo = mobileImage ? getImageInfo(mobileImage) : null;
+    
+    console.log('🖼️ Image info:', {
+      desktop: desktopImageInfo,
+      mobile: mobileImageInfo
+    });
 
     const adData = {
       title: title.trim(),
       url: url.trim(),
       desktopImage,
-      mobileImage: mobileImage || desktopImage,
-      adType: finalAdType, // Make sure adType is always set
+      mobileImage: mobileImage || desktopImage, // Use desktop as fallback
+      adType: finalAdType,
       dimensions,
       contactEmail: contactEmail?.trim() || '',
       company: company?.trim() || '',
@@ -285,17 +358,15 @@ export async function POST(request) {
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
       clicks: 0,
-      impressions: 0
+      impressions: 0,
+      // Store image metadata for debugging
+      imageInfo: {
+        desktop: desktopImageInfo,
+        mobile: mobileImageInfo
+      }
     };
 
-    console.log('💾 Saving ad to Firestore with data:', {
-      title: adData.title,
-      adType: adData.adType,
-      dimensions: adData.dimensions,
-      status: adData.status,
-      approved: adData.approved
-    });
-
+    console.log('💾 Saving ad to Firestore...');
     const adsRef = collection(db, COLLECTION_NAME);
     const docRef = await addDoc(adsRef, adData);
     
@@ -309,37 +380,28 @@ export async function POST(request) {
         id: docRef.id,
         title: adData.title,
         adType: adData.adType,
-        status: adData.status
+        status: adData.status,
+        imageInfo: adData.imageInfo
       }
     });
 
   } catch (error) {
     console.error('🚨 Error in POST /api/ads:', error);
-    console.error('Error details:', {
-      name: error.name,
-      message: error.message,
-      code: error.code,
-      stack: error.stack
-    });
     
     return NextResponse.json({
       success: false,
       error: error.message || 'Failed to create ad',
-      code: error.code || 'UNKNOWN_ERROR',
-      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      code: error.code || 'CREATE_ERROR',
+      details: process.env.NODE_ENV === 'development' ? error.stack : null
     }, { status: 500 });
   }
 }
 
-// PUT /api/ads - Update ad
+// PUT and DELETE methods remain the same...
 export async function PUT(request) {
-  console.log('✏️ PUT /api/ads - Starting request...');
-  
   try {
     const body = await request.json();
     const { id, ...updates } = body;
-
-    console.log('📝 Update request:', { id, updateFields: Object.keys(updates) });
 
     if (!id) {
       return NextResponse.json({
@@ -354,14 +416,13 @@ export async function PUT(request) {
       updatedAt: serverTimestamp()
     });
 
-    console.log('✅ Ad updated successfully');
     return NextResponse.json({
       success: true,
       message: 'Ad updated successfully'
     });
 
   } catch (error) {
-    console.error('🚨 Error updating ad:', error);
+    console.error('Error updating ad:', error);
     
     if (error.code === 'not-found') {
       return NextResponse.json({
@@ -372,21 +433,15 @@ export async function PUT(request) {
     
     return NextResponse.json({
       success: false,
-      error: error.message || 'Failed to update ad',
-      code: error.code
+      error: error.message || 'Failed to update ad'
     }, { status: 500 });
   }
 }
 
-// DELETE /api/ads - Delete ad
 export async function DELETE(request) {
-  console.log('🗑️ DELETE /api/ads - Starting request...');
-  
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
-
-    console.log('🗑️ Delete request for ID:', id);
 
     if (!id) {
       return NextResponse.json({
@@ -398,14 +453,13 @@ export async function DELETE(request) {
     const adRef = doc(db, COLLECTION_NAME, id);
     await deleteDoc(adRef);
 
-    console.log('✅ Ad deleted successfully');
     return NextResponse.json({
       success: true,
       message: 'Ad deleted successfully'
     });
 
   } catch (error) {
-    console.error('🚨 Error deleting ad:', error);
+    console.error('Error deleting ad:', error);
     
     if (error.code === 'not-found') {
       return NextResponse.json({
@@ -416,8 +470,7 @@ export async function DELETE(request) {
     
     return NextResponse.json({
       success: false,
-      error: error.message || 'Failed to delete ad',
-      code: error.code
+      error: error.message || 'Failed to delete ad'
     }, { status: 500 });
   }
 }

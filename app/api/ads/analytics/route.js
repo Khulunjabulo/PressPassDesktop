@@ -1,6 +1,6 @@
 // /api/ads/analytics/route.js
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/firebase';
+import { db } from '@/Firebase/firebase';
 import { doc, updateDoc, increment } from 'firebase/firestore';
 
 const COLLECTION_NAME = 'advertisements';

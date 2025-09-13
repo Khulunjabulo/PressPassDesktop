@@ -49,7 +49,410 @@ function truncateText(text, maxLength = 150) {
   return cleaned.substring(0, maxLength).trim() + '...';
 }
 
+// First, let's add debugging to see what's actually stored in your database
+// Add this temporary debug component to check your ad data
+
+function AdImageDebugger() {
+  const [ads, setAds] = useState([]);
+  const [selectedAd, setSelectedAd] = useState(null);
+
+  useEffect(() => {
+    fetchAdsForDebugging();
+  }, []);
+
+  const fetchAdsForDebugging = async () => {
+    try {
+      const response = await fetch('/api/ads?debug=true&includeInactive=true');
+      const data = await response.json();
+      if (data.success) {
+        setAds(data.ads);
+        console.log('Debug: All ads data:', data.ads);
+      }
+    } catch (error) {
+      console.error('Debug fetch error:', error);
+    }
+  };
+
+  const analyzeImage = (imageData) => {
+    if (!imageData) return 'No image data';
+    
+    console.log('Image analysis:', {
+      type: typeof imageData,
+      length: imageData.length,
+      startsWithData: imageData.startsWith('data:'),
+      firstChars: imageData.substring(0, 50),
+      hasComma: imageData.includes(','),
+      extension: imageData.substring(5, imageData.indexOf(';')) || 'unknown'
+    });
+
+    // Check if it's valid base64
+    if (imageData.startsWith('data:image/')) {
+      const base64Part = imageData.split(',')[1];
+      if (base64Part) {
+        try {
+          atob(base64Part);
+          return 'Valid base64 data URL';
+        } catch (e) {
+          return 'Invalid base64 encoding';
+        }
+      } else {
+        return 'Missing base64 data after comma';
+      }
+    } else {
+      return 'Not a data URL format';
+    }
+  };
+
+  return (
+    <div className="p-6 bg-white border rounded-lg">
+      <h3 className="text-lg font-bold mb-4">Ad Image Debugger</h3>
+      
+      {ads.length === 0 ? (
+        <p>No ads found or loading...</p>
+      ) : (
+        <div>
+          <div className="mb-4">
+            <label className="block text-sm font-medium mb-2">Select Ad to Debug:</label>
+            <select 
+              value={selectedAd?.id || ''}
+              onChange={(e) => setSelectedAd(ads.find(ad => ad.id === e.target.value))}
+              className="border border-gray-300 rounded px-3 py-2"
+            >
+              <option value="">Choose an ad...</option>
+              {ads.map(ad => (
+                <option key={ad.id} value={ad.id}>
+                  {ad.title} (ID: {ad.id})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {selectedAd && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Desktop Image Analysis */}
+                <div className="border p-4 rounded">
+                  <h4 className="font-semibold mb-2">Desktop Image</h4>
+                  <p className="text-sm text-gray-600 mb-2">
+                    Status: {analyzeImage(selectedAd.desktopImage)}
+                  </p>
+                  
+                  {selectedAd.desktopImage && (
+                    <>
+                      <div className="text-xs text-gray-500 mb-2">
+                        Length: {selectedAd.desktopImage.length} chars<br/>
+                        Type: {selectedAd.desktopImage.substring(5, selectedAd.desktopImage.indexOf(';')) || 'unknown'}<br/>
+                        First 100 chars: {selectedAd.desktopImage.substring(0, 100)}...
+                      </div>
+                      
+                      {/* Try to display the image */}
+                      <div className="mb-2">
+                        <p className="text-xs mb-1">Rendering attempt:</p>
+                        <img
+                          src={selectedAd.desktopImage}
+                          alt="Debug test"
+                          className="w-32 h-24 border border-gray-300 object-cover"
+                          onLoad={() => console.log('✅ Image loaded successfully!')}
+                          onError={(e) => {
+                            console.log('❌ Image failed to load');
+                            console.log('Error details:', e);
+                            e.target.style.display = 'none';
+                            e.target.nextSibling.style.display = 'block';
+                          }}
+                        />
+                        <div 
+                          className="w-32 h-24 bg-red-100 border border-red-300 flex items-center justify-center text-xs text-red-600"
+                          style={{ display: 'none' }}
+                        >
+                          Failed to load
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Mobile Image Analysis */}
+                <div className="border p-4 rounded">
+                  <h4 className="font-semibold mb-2">Mobile Image</h4>
+                  <p className="text-sm text-gray-600 mb-2">
+                    Status: {analyzeImage(selectedAd.mobileImage)}
+                  </p>
+                  
+                  {selectedAd.mobileImage && selectedAd.mobileImage !== selectedAd.desktopImage && (
+                    <>
+                      <div className="text-xs text-gray-500 mb-2">
+                        Length: {selectedAd.mobileImage.length} chars<br/>
+                        Type: {selectedAd.mobileImage.substring(5, selectedAd.mobileImage.indexOf(';')) || 'unknown'}
+                      </div>
+                      
+                      <div className="mb-2">
+                        <p className="text-xs mb-1">Rendering attempt:</p>
+                        <img
+                          src={selectedAd.mobileImage}
+                          alt="Debug test mobile"
+                          className="w-32 h-24 border border-gray-300 object-cover"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextSibling.style.display = 'block';
+                          }}
+                        />
+                        <div 
+                          className="w-32 h-24 bg-red-100 border border-red-300 flex items-center justify-center text-xs text-red-600"
+                          style={{ display: 'none' }}
+                        >
+                          Failed to load
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Full Ad Data */}
+              <div className="border p-4 rounded">
+                <h4 className="font-semibold mb-2">Full Ad Data</h4>
+                <pre className="text-xs bg-gray-100 p-2 rounded overflow-x-auto">
+                  {JSON.stringify({
+                    id: selectedAd.id,
+                    title: selectedAd.title,
+                    url: selectedAd.url,
+                    adType: selectedAd.adType,
+                    status: selectedAd.status,
+                    approved: selectedAd.approved,
+                    dimensions: selectedAd.dimensions,
+                    hasDesktopImage: !!selectedAd.desktopImage,
+                    hasMobileImage: !!selectedAd.mobileImage,
+                    desktopImageStart: selectedAd.desktopImage?.substring(0, 50),
+                    createdAt: selectedAd.createdAt
+                  }, null, 2)}
+                </pre>
+              </div>
+
+              {/* Fix Button */}
+              <div className="border p-4 rounded bg-blue-50">
+                <h4 className="font-semibold mb-2">Quick Fix</h4>
+                <p className="text-sm text-gray-600 mb-2">
+                  If the image data looks corrupted, you can try to re-upload:
+                </p>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleImageFix(e.target.files[0], selectedAd)}
+                  className="text-sm"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+
+  async function handleImageFix(file, ad) {
+    if (!file || !ad) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const newBase64 = e.target.result;
+      console.log('New image data:', newBase64.substring(0, 100));
+
+      // Update the ad with the new image
+      try {
+        const response = await fetch('/api/ads', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: ad.id,
+            desktopImage: newBase64
+          })
+        });
+
+        if (response.ok) {
+          alert('Image updated! Refresh to see changes.');
+          fetchAdsForDebugging();
+        }
+      } catch (error) {
+        console.error('Fix error:', error);
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
+// Fixed AdSlot component with better error handling
+function FixedAdSlot({ 
+  adType, 
+  width, 
+  height, 
+  className = "", 
+  onAdvertiseClick 
+}) {
+  const [ads, setAds] = useState([]);
+  const [currentAdIndex, setCurrentAdIndex] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [imageLoadErrors, setImageLoadErrors] = useState({});
+
+  useEffect(() => {
+    fetchAds();
+  }, [adType]);
+
+  const fetchAds = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      console.log(`Fetching ads for type: ${adType}`);
+      
+      // Add debug parameter to get more info
+      const response = await fetch(`/api/ads?type=${adType}&status=active&debug=true`);
+      const data = await response.json();
+      
+      console.log('API Response:', data);
+      
+      if (data.success) {
+        // Filter for truly valid ads
+        const validAds = data.ads.filter(ad => {
+          const hasValidImage = ad.desktopImage && 
+            typeof ad.desktopImage === 'string' && 
+            ad.desktopImage.length > 100; // Must be substantial data
+          
+          console.log(`Ad ${ad.id} validation:`, {
+            hasDesktopImage: !!ad.desktopImage,
+            imageType: typeof ad.desktopImage,
+            imageLength: ad.desktopImage?.length,
+            startsWithData: ad.desktopImage?.startsWith('data:'),
+            isValid: hasValidImage
+          });
+          
+          return ad.status === 'active' && 
+                 (ad.approved === true || ad.approved === 'true') && 
+                 hasValidImage;
+        });
+        
+        console.log(`Found ${validAds.length} valid ads out of ${data.ads.length} total`);
+        setAds(validAds);
+      } else {
+        setError(data.error);
+      }
+    } catch (error) {
+      console.error('Fetch error:', error);
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleImageError = (e, ad) => {
+    console.error(`Image load failed for ad ${ad.id}:`, {
+      title: ad.title,
+      imageStart: ad.desktopImage?.substring(0, 100),
+      imageLength: ad.desktopImage?.length,
+      error: e
+    });
+    
+    setImageLoadErrors(prev => ({
+      ...prev,
+      [ad.id]: true
+    }));
+  };
+
+  const handleImageLoad = (ad) => {
+    console.log(`Image loaded successfully for ad: ${ad.title}`);
+    setImageLoadErrors(prev => ({
+      ...prev,
+      [ad.id]: false
+    }));
+  };
+
+  if (loading) {
+    return (
+      <div 
+        className={`bg-gray-200 animate-pulse rounded-lg flex items-center justify-center ${className}`}
+        style={{ width: `${width}px`, height: `${height}px` }}
+      >
+        <span className="text-gray-400 text-sm">Loading ads...</span>
+      </div>
+    );
+  }
+
+  if (error || ads.length === 0) {
+    return (
+      <div 
+        className={`bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center text-center p-4 cursor-pointer hover:bg-gray-50 transition-colors ${className}`}
+        style={{ width: `${width}px`, height: `${height}px` }}
+        onClick={onAdvertiseClick}
+      >
+        <div className="text-2xl mb-2">📢</div>
+        <p className="text-sm font-medium text-gray-600">Advertise Here</p>
+        <p className="text-xs text-gray-500 mt-1">{width}×{height}px</p>
+        {error && (
+          <p className="text-xs text-red-500 mt-2">Error: {error}</p>
+        )}
+      </div>
+    );
+  }
+
+  const currentAd = ads[currentAdIndex];
+  const hasImageError = imageLoadErrors[currentAd.id];
+
+  return (
+    <div 
+      className={`relative rounded-lg overflow-hidden border border-gray-200 cursor-pointer group bg-gray-100 ${className}`}
+      style={{ width: `${width}px`, height: `${height}px` }}
+      onClick={() => currentAd.url && window.open(currentAd.url, '_blank')}
+    >
+      {/* Try to show the image */}
+      {!hasImageError && currentAd.desktopImage && (
+        <img
+          src={currentAd.desktopImage}
+          alt={`Advertisement - ${currentAd.title}`}
+          className="w-full h-full object-cover"
+          onError={(e) => handleImageError(e, currentAd)}
+          onLoad={() => handleImageLoad(currentAd)}
+          style={{ 
+            backgroundColor: '#f3f4f6',
+            minHeight: '100%',
+            minWidth: '100%'
+          }}
+        />
+      )}
+      
+      {/* Fallback content */}
+      {(hasImageError || !currentAd.desktopImage) && (
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-600 text-white flex flex-col items-center justify-center p-4 text-center">
+          <div className="text-2xl mb-2">🎯</div>
+          <h3 className="font-bold text-lg mb-1">{currentAd.title}</h3>
+          <p className="text-sm opacity-90 mb-2">Click to visit</p>
+          <p className="text-xs opacity-75 truncate max-w-full">
+            {currentAd.url}
+          </p>
+        </div>
+      )}
+      
+      {/* Hover overlay */}
+      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-opacity" />
+      
+      {/* Ad label */}
+      <div className="absolute top-2 left-2 text-xs text-white bg-black bg-opacity-70 px-2 py-1 rounded">
+        Ad
+      </div>
+      
+      {/* Debug info */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="absolute bottom-0 right-0 text-xs text-white bg-black bg-opacity-75 p-1 max-w-full">
+          ID: {currentAd.id}<br/>
+          Img: {currentAd.desktopImage ? 'Yes' : 'No'}<br/>
+          Err: {hasImageError ? 'Yes' : 'No'}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Ad Component
+// Fixed AdSlot component with better image rendering
+// Diagnostic AdSlot component to debug the black image issue
 function AdSlot({ 
   adType, 
   width, 
@@ -60,62 +463,94 @@ function AdSlot({
   const [ads, setAds] = useState([]);
   const [currentAdIndex, setCurrentAdIndex] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [imageError, setImageError] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageData, setImageData] = useState(null);
 
   useEffect(() => {
     fetchAds();
   }, [adType]);
 
-  useEffect(() => {
-    if (ads.length > 1) {
-      const interval = setInterval(() => {
-        setCurrentAdIndex((prev) => (prev + 1) % ads.length);
-      }, 10000); // Rotate every 10 seconds
-      return () => clearInterval(interval);
-    }
-  }, [ads.length]);
-
   const fetchAds = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/ads?type=${adType}`);
+      setError(null);
+      
+      const response = await fetch(`/api/ads?type=${adType}&status=active&debug=true`);
       const data = await response.json();
       
+      console.log('Diagnostic API Response:', data);
+      
       if (data.success) {
-        const activeAds = data.ads.filter(ad => ad.status === 'active');
+        const activeAds = data.ads.filter(ad => {
+          const isActive = ad.status === 'active';
+          const isApproved = ad.approved === true || ad.approved === 'true';
+          const hasImage = ad.desktopImage && typeof ad.desktopImage === 'string';
+          const isValidBase64 = hasImage && ad.desktopImage.startsWith('data:image/');
+          
+          return isActive && isApproved && hasImage && isValidBase64;
+        });
+        
         setAds(activeAds);
+      } else {
+        setError(data.error);
       }
     } catch (error) {
-      console.error('Error fetching ads:', error);
+      setError(error.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAdClick = (url) => {
-    if (url) {
-      window.open(url, '_blank', 'noopener,noreferrer');
-    }
+  const handleImageLoad = (ad, e) => {
+    console.log('Diagnostic Image Load:', {
+      title: ad.title,
+      naturalWidth: e.target.naturalWidth,
+      naturalHeight: e.target.naturalHeight,
+      displayWidth: e.target.width,
+      displayHeight: e.target.height,
+      complete: e.target.complete,
+      src: e.target.src.substring(0, 50) + '...'
+    });
+    
+    setImageError(false);
+    setImageLoaded(true);
+    
+    // Store image data for debugging
+    setImageData({
+      naturalWidth: e.target.naturalWidth,
+      naturalHeight: e.target.naturalHeight,
+      displayWidth: e.target.width,
+      displayHeight: e.target.height
+    });
+  };
+
+  const handleImageError = (e, ad) => {
+    console.error('Diagnostic Image Error:', {
+      adId: ad.id,
+      title: ad.title,
+      error: e.type,
+      src: e.target.src.substring(0, 100)
+    });
+    setImageError(true);
+    setImageLoaded(false);
   };
 
   if (loading) {
     return (
-      <div 
-        className={`bg-gray-200 animate-pulse rounded-lg ${className}`}
-        style={{ width: `${width}px`, height: `${height}px` }}
-      />
+      <div className={`bg-gray-200 animate-pulse rounded-lg flex items-center justify-center ${className}`}
+           style={{ width: `${width}px`, height: `${height}px` }}>
+        <span className="text-gray-400 text-sm">Loading diagnostic...</span>
+      </div>
     );
   }
 
   if (ads.length === 0) {
     return (
-      <div 
-        className={`bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center text-center p-4 cursor-pointer hover:bg-gray-50 transition-colors ${className}`}
-        style={{ width: `${width}px`, height: `${height}px` }}
-        onClick={onAdvertiseClick}
-      >
-        <Plus className="w-8 h-8 text-gray-400 mb-2" />
-        <p className="text-sm font-medium text-gray-600">Advertise Here</p>
-        <p className="text-xs text-gray-500 mt-1">{width}×{height}</p>
+      <div className={`bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center text-center p-4 ${className}`}
+           style={{ width: `${width}px`, height: `${height}px` }}>
+        <span className="text-gray-600">No ads available</span>
       </div>
     );
   }
@@ -123,30 +558,151 @@ function AdSlot({
   const currentAd = ads[currentAdIndex];
 
   return (
-    <div 
-      className={`relative rounded-lg overflow-hidden border border-gray-200 cursor-pointer group ${className}`}
-      style={{ width: `${width}px`, height: `${height}px` }}
-      onClick={() => handleAdClick(currentAd.url)}
-    >
-      <img
-        src={currentAd.desktopImage || currentAd.mobileImage}
-        alt="Advertisement"
-        className="w-full h-full object-cover"
-      />
-      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-opacity" />
-      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-        <ExternalLink className="w-4 h-4 text-white drop-shadow" />
+    <div className="space-y-4">
+      {/* Diagnostic Info Panel */}
+      <div className="bg-yellow-50 border border-yellow-200 rounded p-3 text-xs">
+        <h4 className="font-bold mb-2">Diagnostic Info:</h4>
+        <div>Ad ID: {currentAd.id}</div>
+        <div>Title: {currentAd.title}</div>
+        <div>Container: {width}x{height}px</div>
+        <div>Image Loaded: {imageLoaded ? 'Yes' : 'No'}</div>
+        <div>Image Error: {imageError ? 'Yes' : 'No'}</div>
+        {imageData && (
+          <div>
+            <div>Natural: {imageData.naturalWidth}x{imageData.naturalHeight}px</div>
+            <div>Display: {imageData.displayWidth}x{imageData.displayHeight}px</div>
+          </div>
+        )}
+        <div>Base64 start: {currentAd.desktopImage.substring(0, 30)}...</div>
       </div>
-      {ads.length > 1 && (
-        <div className="absolute bottom-2 left-2 text-xs text-white bg-black bg-opacity-50 px-2 py-1 rounded">
-          {currentAdIndex + 1} of {ads.length}
+
+      {/* Test 1: Raw img tag with minimal styling */}
+      <div className="space-y-2">
+        <h4 className="text-sm font-bold">Test 1: Minimal Image (should show if data is valid)</h4>
+        <div style={{ border: '2px solid red', padding: '4px' }}>
+          <img
+            src={currentAd.desktopImage}
+            alt="Test 1"
+            style={{ maxWidth: '200px', maxHeight: '150px', border: '1px solid blue' }}
+            onLoad={(e) => console.log('Test 1 loaded:', e.target.naturalWidth, e.target.naturalHeight)}
+            onError={(e) => console.log('Test 1 error:', e)}
+          />
         </div>
-      )}
+      </div>
+
+      {/* Test 2: Canvas to inspect the image data */}
+      <div className="space-y-2">
+        <h4 className="text-sm font-bold">Test 2: Canvas Rendering</h4>
+        <canvas
+          ref={(canvas) => {
+            if (canvas && imageLoaded) {
+              const ctx = canvas.getContext('2d');
+              const img = new Image();
+              img.onload = () => {
+                canvas.width = 200;
+                canvas.height = 150;
+                ctx.fillStyle = '#ff0000'; // Red background
+                ctx.fillRect(0, 0, 200, 150);
+                try {
+                  ctx.drawImage(img, 0, 0, 200, 150);
+                  console.log('Canvas draw successful');
+                } catch (err) {
+                  console.error('Canvas draw error:', err);
+                }
+              };
+              img.src = currentAd.desktopImage;
+            }
+          }}
+          style={{ border: '2px solid green' }}
+        />
+      </div>
+
+      {/* Test 3: Your original styling */}
+      <div className="space-y-2">
+        <h4 className="text-sm font-bold">Test 3: Original Ad Container</h4>
+        <div 
+          className="relative rounded-lg overflow-hidden border border-gray-200 bg-white"
+          style={{ width: `${width}px`, height: `${height}px` }}
+        >
+          {/* White background div */}
+          <div className="absolute inset-0 bg-white">
+            <img
+              src={currentAd.desktopImage}
+              alt={`Advertisement - ${currentAd.title}`}
+              className="w-full h-full object-contain bg-red-100"
+              style={{ backgroundColor: 'red' }}
+              onError={(e) => handleImageError(e, currentAd)}
+              onLoad={(e) => handleImageLoad(currentAd, e)}
+            />
+          </div>
+          
+          {/* Debug overlay */}
+          <div className="absolute top-0 left-0 bg-black bg-opacity-50 text-white text-xs p-1">
+            {imageLoaded ? 'LOADED' : 'LOADING'}
+          </div>
+        </div>
+      </div>
+
+      {/* Test 4: Different object-fit values */}
+      <div className="space-y-2">
+        <h4 className="text-sm font-bold">Test 4: Object-fit Variations</h4>
+        <div className="grid grid-cols-2 gap-2">
+          {['contain', 'cover', 'fill', 'none'].map((fit) => (
+            <div key={fit} className="text-center">
+              <div className="text-xs mb-1">object-fit: {fit}</div>
+              <div 
+                style={{ 
+                  width: '100px', 
+                  height: '80px', 
+                  border: '1px solid black',
+                  backgroundColor: '#f0f0f0'
+                }}
+              >
+                <img
+                  src={currentAd.desktopImage}
+                  alt={fit}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: fit,
+                    backgroundColor: 'yellow'
+                  }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Direct base64 display */}
+      <div className="space-y-2">
+        <h4 className="text-sm font-bold">Test 5: Base64 Validation</h4>
+        <div className="text-xs">
+          <div>Data URL valid: {currentAd.desktopImage.startsWith('data:image/') ? 'Yes' : 'No'}</div>
+          <div>Has comma separator: {currentAd.desktopImage.includes(',') ? 'Yes' : 'No'}</div>
+          <div>Base64 length: {currentAd.desktopImage.split(',')[1]?.length || 'N/A'}</div>
+          
+          {/* Try to validate base64 */}
+          <div>Base64 valid: {(() => {
+            try {
+              const base64Part = currentAd.desktopImage.split(',')[1];
+              if (base64Part) {
+                atob(base64Part);
+                return 'Yes';
+              }
+              return 'No comma found';
+            } catch (e) {
+              return 'Invalid: ' + e.message;
+            }
+          })()}</div>
+        </div>
+      </div>
     </div>
   );
 }
 
 // Ad Creation Modal
+// Improved Ad Creation Modal with better image handling
 function AdCreationModal({ isOpen, onClose, adType, dimensions }) {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
@@ -161,21 +717,108 @@ function AdCreationModal({ isOpen, onClose, adType, dimensions }) {
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  const [uploadProgress, setUploadProgress] = useState({});
 
   if (!isOpen) return null;
 
+  // Improved file upload handler (similar to profile picture logic)
   const handleFileUpload = async (file, type) => {
     if (!file) return;
 
+    console.log(`📤 Processing ${type} image:`, {
+      name: file.name,
+      size: `${(file.size / 1024 / 1024).toFixed(2)}MB`,
+      type: file.type
+    });
+
+    // Validate file size (5MB limit)
+    if (file.size > 5 * 1024 * 1024) {
+      setErrors(prev => ({
+        ...prev,
+        [`${type}Image`]: 'File size must be less than 5MB'
+      }));
+      return;
+    }
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setErrors(prev => ({
+        ...prev,
+        [`${type}Image`]: 'File must be an image'
+      }));
+      return;
+    }
+
+    setUploadProgress(prev => ({ ...prev, [type]: 0 }));
+
     const reader = new FileReader();
+    
+    reader.onloadstart = () => {
+      setUploadProgress(prev => ({ ...prev, [type]: 10 }));
+    };
+
+    reader.onprogress = (e) => {
+      if (e.lengthComputable) {
+        const progress = Math.round((e.loaded / e.total) * 80) + 10; // 10-90%
+        setUploadProgress(prev => ({ ...prev, [type]: progress }));
+      }
+    };
+
     reader.onload = (e) => {
       const base64 = e.target.result;
+      
+      // Validate the base64 result
+      if (!base64 || !base64.startsWith('data:image/')) {
+        console.error('❌ Invalid base64 result:', base64?.substring(0, 50));
+        setErrors(prev => ({
+          ...prev,
+          [`${type}Image`]: 'Failed to process image'
+        }));
+        setUploadProgress(prev => ({ ...prev, [type]: 0 }));
+        return;
+      }
+
+      console.log(`✅ ${type} image processed successfully:`, {
+        size: `${(base64.length / 1024 / 1024).toFixed(2)}MB`,
+        format: base64.substring(5, base64.indexOf(';')),
+        isValid: base64.startsWith('data:image/')
+      });
+
+      // Clear any previous errors
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[`${type}Image`];
+        return newErrors;
+      });
+
+      // Update form data with the base64 string (like profile picture)
       setFormData(prev => ({
         ...prev,
-        [`${type}Image`]: base64,
-        [`${type}ImagePreview`]: base64
+        [`${type}Image`]: base64, // Store the full base64 data URL
+        [`${type}ImagePreview`]: base64 // Also use for preview
       }));
+
+      setUploadProgress(prev => ({ ...prev, [type]: 100 }));
+
+      // Clear progress after 2 seconds
+      setTimeout(() => {
+        setUploadProgress(prev => {
+          const newProgress = { ...prev };
+          delete newProgress[type];
+          return newProgress;
+        });
+      }, 2000);
     };
+
+    reader.onerror = (error) => {
+      console.error('❌ FileReader error:', error);
+      setErrors(prev => ({
+        ...prev,
+        [`${type}Image`]: 'Failed to read file'
+      }));
+      setUploadProgress(prev => ({ ...prev, [type]: 0 }));
+    };
+
     reader.readAsDataURL(file);
   };
 
@@ -183,8 +826,15 @@ function AdCreationModal({ isOpen, onClose, adType, dimensions }) {
     const newErrors = {};
     if (!formData.title.trim()) newErrors.title = 'Title is required';
     if (!formData.url.trim()) newErrors.url = 'URL is required';
-    if (!formData.url.startsWith('http')) newErrors.url = 'URL must start with http:// or https://';
+    if (formData.url && !formData.url.match(/^https?:\/\/.+/)) {
+      newErrors.url = 'URL must start with http:// or https://';
+    }
     if (!formData.desktopImage) newErrors.desktopImage = 'Desktop image is required';
+    
+    // Validate base64 format
+    if (formData.desktopImage && !formData.desktopImage.startsWith('data:image/')) {
+      newErrors.desktopImage = 'Invalid image format';
+    }
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -201,23 +851,34 @@ function AdCreationModal({ isOpen, onClose, adType, dimensions }) {
   const handleSubmit = async () => {
     try {
       setLoading(true);
-      console.log('📤 Submitting ad data:', {
-        ...formData,
-        adType,
-        dimensions,
-        imageSize: formData.desktopImage ? `${(formData.desktopImage.length / 1024 / 1024).toFixed(2)}MB` : 'No image'
-      });
       
+      // Prepare the ad data (similar to profile picture submission)
       const adData = {
-        ...formData,
+        title: formData.title.trim(),
+        url: formData.url.trim(),
+        desktopImage: formData.desktopImage, // Full base64 data URL
+        mobileImage: formData.mobileImage || formData.desktopImage, // Use desktop as fallback
         adType,
         dimensions,
-        status: 'active', // Will be changed to 'pending' when approval system is implemented
-        createdAt: new Date().toISOString(),
-        approved: true // Will be false when approval system is implemented
+        contactEmail: formData.contactEmail?.trim() || '',
+        company: formData.company?.trim() || '',
+        status: 'active',
+        approved: true,
+        createdAt: new Date().toISOString()
       };
 
-      console.log('🚀 Sending ad data to API...');
+      console.log('📤 Submitting ad data:', {
+        title: adData.title,
+        url: adData.url,
+        adType: adData.adType,
+        dimensions: adData.dimensions,
+        hasDesktopImage: !!adData.desktopImage,
+        desktopImageSize: adData.desktopImage ? `${(adData.desktopImage.length / 1024 / 1024).toFixed(2)}MB` : 'none',
+        hasMobileImage: !!adData.mobileImage,
+        company: adData.company,
+        contactEmail: adData.contactEmail
+      });
+
       const response = await fetch('/api/ads', {
         method: 'POST',
         headers: {
@@ -234,12 +895,15 @@ function AdCreationModal({ isOpen, onClose, adType, dimensions }) {
         console.log('✅ Ad created successfully with ID:', result.id);
         alert('Ad created successfully! It will appear on the site shortly.');
         onClose();
-        // Refresh the page to show new ad
-        console.log('🔄 Reloading page to show new ad...');
+        // Refresh to show new ad
         window.location.reload();
       } else {
-        console.error('❌ API returned error:', result.error);
-        throw new Error(result.error || 'Failed to create ad');
+        console.error('❌ API returned error:', result);
+        if (result.errors && Array.isArray(result.errors)) {
+          alert('Error creating ad:\n' + result.errors.join('\n'));
+        } else {
+          alert('Error creating ad: ' + (result.error || 'Unknown error'));
+        }
       }
     } catch (error) {
       console.error('🚨 Error creating ad:', error);
@@ -303,8 +967,19 @@ function AdCreationModal({ isOpen, onClose, adType, dimensions }) {
                 type="file"
                 accept="image/*"
                 onChange={(e) => handleFileUpload(e.target.files[0], 'desktop')}
-                className="w-full p-2 border border-gray-300 rounded-md"
+                className="w-full p-2 border border-gray-300 rounded-md file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
               />
+              {uploadProgress.desktop > 0 && uploadProgress.desktop < 100 && (
+                <div className="mt-2">
+                  <div className="bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                      style={{ width: `${uploadProgress.desktop}%` }}
+                    ></div>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Uploading... {uploadProgress.desktop}%</p>
+                </div>
+              )}
               {errors.desktopImage && <p className="text-red-500 text-xs mt-1">{errors.desktopImage}</p>}
               {formData.desktopImagePreview && (
                 <div className="mt-2">
@@ -313,6 +988,8 @@ function AdCreationModal({ isOpen, onClose, adType, dimensions }) {
                     alt="Desktop preview"
                     className="max-w-full h-auto border border-gray-300 rounded"
                     style={{ maxHeight: '200px' }}
+                    onLoad={() => console.log('✅ Preview image loaded')}
+                    onError={() => console.error('❌ Preview image failed to load')}
                   />
                 </div>
               )}
@@ -320,21 +997,33 @@ function AdCreationModal({ isOpen, onClose, adType, dimensions }) {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Mobile Image (Optional - 320×50px or 300×250px)
+                Mobile Image (Optional - will use desktop if not provided)
               </label>
               <input
                 type="file"
                 accept="image/*"
                 onChange={(e) => handleFileUpload(e.target.files[0], 'mobile')}
-                className="w-full p-2 border border-gray-300 rounded-md"
+                className="w-full p-2 border border-gray-300 rounded-md file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
               />
+              {uploadProgress.mobile > 0 && uploadProgress.mobile < 100 && (
+                <div className="mt-2">
+                  <div className="bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                      style={{ width: `${uploadProgress.mobile}%` }}
+                    ></div>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Uploading... {uploadProgress.mobile}%</p>
+                </div>
+              )}
+              {errors.mobileImage && <p className="text-red-500 text-xs mt-1">{errors.mobileImage}</p>}
               {formData.mobileImagePreview && (
                 <div className="mt-2">
                   <img
                     src={formData.mobileImagePreview}
                     alt="Mobile preview"
                     className="max-w-full h-auto border border-gray-300 rounded"
-                    style={{ maxHeight: '200px' }}
+                    style={{ maxHeight: '100px' }}
                   />
                 </div>
               )}
@@ -343,7 +1032,8 @@ function AdCreationModal({ isOpen, onClose, adType, dimensions }) {
             <div className="flex justify-end pt-4">
               <button
                 onClick={handleNext}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                disabled={!formData.desktopImage || Object.keys(errors).length > 0}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Next
               </button>
@@ -363,15 +1053,20 @@ function AdCreationModal({ isOpen, onClose, adType, dimensions }) {
               
               <div className="flex justify-center">
                 <div 
-                  className="border border-gray-300 rounded cursor-pointer hover:shadow-md transition-shadow"
-                  style={{ width: `${dimensions.width}px`, height: `${dimensions.height}px` }}
+                  className="border border-gray-300 rounded cursor-pointer hover:shadow-md transition-shadow relative overflow-hidden"
+                  style={{ width: `${Math.min(dimensions.width, 300)}px`, height: `${Math.min(dimensions.height, 200)}px` }}
                   onClick={() => window.open(formData.url, '_blank')}
                 >
                   <img
                     src={formData.desktopImagePreview}
                     alt="Ad preview"
-                    className="w-full h-full object-cover rounded"
+                    className="w-full h-full object-cover"
+                    onLoad={() => console.log('✅ Preview loaded in step 2')}
+                    onError={() => console.error('❌ Preview failed in step 2')}
                   />
+                  <div className="absolute top-1 left-1 text-xs text-white bg-black bg-opacity-50 px-1 rounded">
+                    Ad
+                  </div>
                 </div>
               </div>
 
@@ -380,18 +1075,9 @@ function AdCreationModal({ isOpen, onClose, adType, dimensions }) {
                 <span className="text-blue-600 break-all">{formData.url}</span>
               </p>
 
-              {formData.mobileImagePreview && (
-                <div className="mt-4">
-                  <h4 className="text-sm font-medium mb-2">Mobile Version:</h4>
-                  <div className="flex justify-center">
-                    <img
-                      src={formData.mobileImagePreview}
-                      alt="Mobile ad preview"
-                      className="border border-gray-300 rounded max-h-24"
-                    />
-                  </div>
-                </div>
-              )}
+              <div className="text-xs text-gray-500">
+                Actual size: {dimensions.width}×{dimensions.height}px
+              </div>
             </div>
 
             <div className="flex justify-between pt-4">
@@ -405,17 +1091,17 @@ function AdCreationModal({ isOpen, onClose, adType, dimensions }) {
                 onClick={handleNext}
                 className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
               >
-                Continue to Payment
+                Continue to Details
               </button>
             </div>
           </div>
         )}
 
-        {/* Step 3: Payment (Placeholder) */}
+        {/* Step 3: Final Details */}
         {step === 3 && (
           <div className="p-6 space-y-4">
             <div className="text-sm text-gray-600 mb-4">
-              Step 3 of 3: Payment Details
+              Step 3 of 3: Final Details
             </div>
 
             <div className="space-y-4">
@@ -445,11 +1131,11 @@ function AdCreationModal({ isOpen, onClose, adType, dimensions }) {
                 />
               </div>
 
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <div className="flex items-center">
-                  <CreditCard className="w-5 h-5 text-yellow-600 mr-2" />
-                  <p className="text-sm text-yellow-800">
-                    Payment integration will be implemented soon. For now, your ad will be published immediately.
+                  <CreditCard className="w-5 h-5 text-blue-600 mr-2" />
+                  <p className="text-sm text-blue-800">
+                    Your ad will be published immediately and will appear on the site within a few minutes.
                   </p>
                 </div>
               </div>
@@ -465,9 +1151,16 @@ function AdCreationModal({ isOpen, onClose, adType, dimensions }) {
               <button
                 onClick={handleSubmit}
                 disabled={loading}
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50"
+                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center"
               >
-                {loading ? 'Creating...' : 'Publish Ad'}
+                {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
+                    Creating...
+                  </>
+                ) : (
+                  'Publish Ad'
+                )}
               </button>
             </div>
           </div>
