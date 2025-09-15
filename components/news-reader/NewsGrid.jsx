@@ -928,7 +928,7 @@ export default function NewsGrid({ articles }) {
             )}
             
             {/* News Sources Grid */}
-            {!loadingSources && !sourcesError && newsources.length > 0 && (
+            {!loadingSources && !sourcesError && newsources.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 {newsources.map((source, idx) => (
                   <Fragment key={`item-${source.id}`}>
@@ -1025,7 +1025,7 @@ export default function NewsGrid({ articles }) {
                   </Fragment>
                 ))}
               </div>
-            )}
+            ) : null}
             
             {/* Empty State */}
             {!loadingSources && !sourcesError && newsources.length === 0 && (

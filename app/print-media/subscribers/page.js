@@ -17,44 +17,57 @@ import { useCurrentPublisher } from "@/hooks/useCurrentPublisher";
 export default function Subscribers() {
   const { publisher, loading } = useCurrentPublisher("currentPublisherId");
 
-
   return (
     <>
       <Header publisher={publisher} />
-      <div className="h-screen bg-gray-50 flex overflow-hidden">
+      <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row overflow-hidden">
         <PublisherSidebar />
-        <div className="flex-1 p-4 md:p-6 bg-gray-50 min-h-screen">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-xl md:text-2xl font-bold text-gray-800">Subscribers</h1>
-            <button className="bg-violet-600 text-white px-4 py-2 rounded-md hover:bg-violet-700 text-sm">
+        <main className="flex-1 p-2 sm:p-4 md:p-6 bg-gray-50 min-h-screen">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3">
+            <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-800">
+              Subscribers
+            </h1>
+            <button className="bg-violet-600 text-white px-4 py-2 rounded-md hover:bg-violet-700 text-sm w-full sm:w-auto">
               Export Data
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <div className="bg-white rounded-xl shadow p-6">
-              <h2 className="text-sm font-medium text-gray-500">Total Subscribers</h2>
-              <p className="text-3xl font-bold mt-2">44,170</p>
-              <p className="text-sm text-green-600 mt-1">+12.5% from last month</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-6">
+            <div className="bg-white rounded-xl shadow p-4 sm:p-6 w-full min-w-0">
+              <h2 className="text-sm font-medium text-gray-500">
+                Total Subscribers
+              </h2>
+              <p className="text-2xl sm:text-3xl font-bold mt-2">44,170</p>
+              <p className="text-sm text-green-600 mt-1">
+                +12.5% from last month
+              </p>
             </div>
 
-            <div className="bg-white rounded-xl shadow p-6">
-              <h2 className="text-sm font-medium text-gray-500">New Subscribers (This Month)</h2>
-              <p className="text-3xl font-bold mt-2">1,870</p>
-              <p className="text-sm text-green-600 mt-1">+4.4% from last month</p>
+            <div className="bg-white rounded-xl shadow p-4 sm:p-6 w-full min-w-0">
+              <h2 className="text-sm font-medium text-gray-500">
+                New Subscribers (This Month)
+              </h2>
+              <p className="text-2xl sm:text-3xl font-bold mt-2">1,870</p>
+              <p className="text-sm text-green-600 mt-1">
+                +4.4% from last month
+              </p>
             </div>
 
-            <div className="bg-white rounded-xl shadow p-6">
+            <div className="bg-white rounded-xl shadow p-4 sm:p-6 w-full min-w-0">
               <h2 className="text-sm font-medium text-gray-500">Churn Rate</h2>
-              <p className="text-3xl font-bold mt-2">2.3%</p>
-              <p className="text-sm text-green-600 mt-1">-0.5% from last month</p>
+              <p className="text-2xl sm:text-3xl font-bold mt-2">2.3%</p>
+              <p className="text-sm text-green-600 mt-1">
+                -0.5% from last month
+              </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white rounded-xl shadow p-6">
-              <h2 className="text-lg font-semibold mb-4">Subscriber Growth</h2>
-              <div className="h-64">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+            <div className="bg-white rounded-xl shadow p-4 sm:p-6 w-full min-w-0">
+              <h2 className="text-base sm:text-lg font-semibold mb-4">
+                Subscriber Growth
+              </h2>
+              <div className="h-56 sm:h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={subscriberData}>
                     <CartesianGrid strokeDasharray="3 3" />
@@ -73,34 +86,44 @@ export default function Subscribers() {
               </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow p-6">
-              <h2 className="text-lg font-semibold mb-4">Subscriber Types</h2>
+            <div className="bg-white rounded-xl shadow p-4 sm:p-6 w-full min-w-0">
+              <h2 className="text-base sm:text-lg font-semibold mb-4">
+                Subscriber Types
+              </h2>
               <ul className="space-y-4">
                 {subscriberTypes.map((item, index) => (
                   <li key={index} className="border-b pb-3">
-                    <div className="flex justify-between items-center">
+                    <div className="flex flex-col xs:flex-row xs:items-center xs:justify-between gap-2">
                       <div>
                         <h3 className="font-medium">{item.type}</h3>
-                        <p className="text-sm text-gray-500">{item.count.toLocaleString()} subscribers</p>
+                        <p className="text-sm text-gray-500">
+                          {item.count.toLocaleString()} subscribers
+                        </p>
                       </div>
-                      <div className="w-24 bg-gray-200 rounded-full h-2.5">
-                        <div
-                          className="h-2.5 rounded-full"
-                          style={{
-                            width: `${item.percentage}%`,
-                            backgroundColor: item.color,
-                          }}
-                        ></div>
+                      <div className="flex items-center gap-2 w-full xs:w-auto">
+                        <div className="w-full xs:w-24 bg-gray-200 rounded-full h-2.5">
+                          <div
+                            className="h-2.5 rounded-full"
+                            style={{
+                              width: `${item.percentage}%`,
+                              backgroundColor: item.color,
+                            }}
+                          ></div>
+                        </div>
+                        <span className="text-sm font-medium">
+                          {item.percentage}%
+                        </span>
                       </div>
-                      <span className="text-sm font-medium">{item.percentage}%</span>
                     </div>
                   </li>
                 ))}
               </ul>
 
               <div className="mt-6">
-                <h3 className="text-sm font-medium mb-2">Subscriber Acquisition</h3>
-                <div className="grid grid-cols-2 gap-4 text-sm">
+                <h3 className="text-sm font-medium mb-2">
+                  Subscriber Acquisition
+                </h3>
+                <div className="grid grid-cols-2 gap-2 sm:gap-4 text-sm">
                   <div className="bg-gray-50 p-3 rounded">
                     <p className="text-gray-500">Direct</p>
                     <p className="font-medium">62%</p>
@@ -121,7 +144,7 @@ export default function Subscribers() {
               </div>
             </div>
           </div>
-        </div>
+        </main>
       </div>
     </>
   );

@@ -1,26 +1,61 @@
 "use client";
-import { Users, Megaphone, MessageSquare, User, BarChart3, Smartphone } from "lucide-react";
+import { Users, Megaphone, MessageSquare, User, BarChart3, Smartphone, Menu, UserPlus, LogIn } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import AnimatedSlogan from "@/components/news-reader/AnimatedSlogan";
 import MainHeader from "@/components/news-reader/NewsReaderMainHeader";
 import UserReviewsSection from "@/components/user review/UserReviewSection";
 import "../app/globals.css"
-
-import React from "react";
+import React, { useState } from "react";
 import useLandingPageLogic from "@/hooks/LandingPageLogic";
 
 
   
 export default function NewsReaderHomePage() {
   const { handleStartReading } = useLandingPageLogic()
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
 
     <div>
-      <MainHeader/>
+      {/* Mobile Landing Header */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-[#329ae1] px-3 sm:px-6 py-2 sm:py-3 shadow-md">
+        <div className="max-w-7xl mx-auto flex items-center justify-between h-12">
+          <Link href="/" className="flex-shrink-0">
+            <Image src="/Presspass.png" alt="Press Pass logo" width={80} height={32} className="w-[80px] h-auto" priority />
+          </Link>
+          <div className="relative">
+            <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-white p-2">
+              <Menu size={24} />
+            </button>
+            {isMobileMenuOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50">
+                <div className="py-1">
+                  <Link href="/signup">
+                    <div className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
+                      <UserPlus className="w-4 h-4 mr-2" />
+                      Sign Up
+                    </div>
+                  </Link>
+                  <Link href="/signin">
+                    <div className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
+                      <LogIn className="w-4 h-4 mr-2" />
+                      Login
+                    </div>
+                  </Link>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
-      <div className="w-full min-h-screen bg-gray-50 overflow-x-hidden pt-16 sm:pt-20 md:pt-24 lg:pt-28">
+      {/* Desktop Header */}
+      <div className="hidden md:block">
+        <MainHeader/>
+      </div>
+
+      <div className="w-full min-h-screen bg-gray-50 overflow-x-hidden pt-14 sm:pt-20 md:pt-24 lg:pt-28">
         {/* Hero Section */}
         <section className="w-full relative bg-gray-50 py-8 sm:py-12 lg:py-20 overflow-hidden">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
