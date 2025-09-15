@@ -602,657 +602,667 @@ const testImageUrl = async (url) => {
 
   return (
     <div className="min-h-screen bg-white">
-      <style jsx global>{`
-        .newspaper-container {
-          font-family: 'Times New Roman', 'Times', serif;
-          line-height: 1.6;
-          color: #1a1a1a;
-        }
-        
-        .newspaper-header {
-          border-bottom: 4px solid #000;
-          margin-bottom: 2rem;
-        }
-        
-        .newspaper-title {
-          font-family: 'Times New Roman', 'Times', serif;
-          font-weight: bold;
-          letter-spacing: 0.1em;
-          text-transform: uppercase;
-        }
-        
-        .newspaper-date-line {
-          border-top: 2px solid #000;
-          border-bottom: 2px solid #000;
-          padding: 0.5rem 0;
-          margin: 1rem 0;
-          text-align: center;
-        }
-        
-        .main-image-container {
-          float: left;
-          width: 350px;
-          margin: 0 2rem 1.5rem 0;
-          border: 3px solid #000;
-          background: #fff;
-          box-shadow: 0 6px 12px rgba(0,0,0,0.2);
-          clear: left;
-        }
-        
-        .main-image {
-          width: 100%;
-          height: 250px;
-          object-fit: cover;
-          display: block;
-          border-bottom: 2px solid #000;
-        }
-        
-        .main-image-caption {
-          padding: 1rem;
-          font-size: 0.85em;
-          font-style: italic;
-          color: #333;
-          background: #f8f8f8;
-          line-height: 1.5;
-          font-family: 'Times New Roman', serif;
-          border-top: 1px solid #ccc;
-        }
-        
-        .hero-image-container {
-          width: 100%;
-          margin-bottom: 2rem;
-          border: 3px solid #000;
-          background: #fff;
-          box-shadow: 0 6px 12px rgba(0,0,0,0.2);
-        }
-        
-        .hero-image {
-          width: 100%;
-          height: 400px;
-          object-fit: cover;
-          display: block;
-          border-bottom: 2px solid #000;
-        }
-        
-        .hero-image-caption {
-          padding: 1rem;
-          font-size: 0.9em;
-          font-style: italic;
-          color: #333;
-          background: #f8f8f8;
-          line-height: 1.5;
-          font-family: 'Times New Roman', serif;
-          border-top: 1px solid #ccc;
-          text-align: center;
-        }
-        
-        .newspaper-content {
-          text-align: justify;
-          hyphens: auto;
-          overflow-wrap: break-word;
-          word-wrap: break-word;
-          word-break: break-word;
-        }
-        
-        .newspaper-paragraph {
-          margin-bottom: 1.2rem;
-          text-indent: 1.5em;
-          line-height: 1.7;
-          overflow-wrap: break-word;
-          word-wrap: break-word;
-          word-break: break-word;
-          hyphens: auto;
-          max-width: 100%;
-        }
-        
-        .newspaper-paragraph:first-of-type {
-          text-indent: 0;
-          font-weight: 500;
-          font-size: 1.1em;
-          margin-bottom: 1.5rem;
-        }
-        
-        .drop-cap {
-          float: left;
-          font-size: 4em;
-          line-height: 0.8;
-          padding-right: 0.1em;
-          margin-top: 0.1em;
-          margin-bottom: -0.1em;
-          font-weight: bold;
-          color: #000;
-        }
-        
-        .newspaper-image-container {
-          margin: 1.5rem auto;
-          max-width: 100%;
-          text-align: center;
-          clear: both;
-        }
-        
-        .newspaper-image {
-          max-width: 100%;
-          height: auto;
-          border: 1px solid #333;
-          display: block;
-          margin: 0 auto;
-        }
-        
-        .newspaper-image-caption {
-          font-size: 0.85em;
-          font-style: italic;
-          color: #666;
-          margin-top: 0.5rem;
-          padding: 0.5rem;
-          border-left: 3px solid #333;
-          background: #f9f9f9;
-          text-align: left;
-          max-width: 100%;
-        }
-        
-        .newspaper-sidebar {
-          border: 2px solid #000;
-          padding: 1rem;
-          background: #fafafa;
-          margin-bottom: 1.5rem;
-        }
-        
-        .newspaper-sidebar h3 {
-          border-bottom: 2px solid #000;
-          padding-bottom: 0.5rem;
-          margin-bottom: 1rem;
-          font-weight: bold;
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-        }
-        
-        .article-content-wrapper {
-          overflow: hidden;
-        }
-        
-        .article-content-wrapper p,
-        .article-content-wrapper div {
-          overflow-wrap: break-word;
-          word-wrap: break-word;
-          word-break: break-word;
-          hyphens: auto;
-        }
-        
-        @media (max-width: 768px) {
-          .main-image-container,
-          .hero-image-container {
-            float: none;
-            width: 100%;
-            margin: 0 0 2rem 0;
-          }
-          
-          .main-image,
-          .hero-image {
-            height: 250px;
-          }
-          
-          .newspaper-paragraph {
-            text-indent: 0;
-          }
-          
-          .drop-cap {
-            font-size: 3em;
-          }
-        }
-        
-        @media (max-width: 480px) {
-          .main-image,
-          .hero-image {
-            height: 200px;
-          }
-          
-          .newspaper-title {
-            font-size: 2.5rem !important;
-          }
-          
-          .newspaper-paragraph {
-            font-size: 0.95em;
-            line-height: 1.6;
-          }
-          
-          .main-image-container,
-          .hero-image-container {
-            width: 100%;
-            margin: 0 0 1.5rem 0;
-          }
-        }
-
-        .hero-image-caption,
-.main-image-caption {
-  padding: 1rem;
-  font-size: 0.85em;
-  font-style: italic;
-  color: #333;
-  background: #f8f8f8;
-  line-height: 1.5;
-  font-family: 'Times New Roman', serif;
-  border-top: 1px solid #ccc;
-}
-
-.hero-image-caption {
-  text-align: center;
-}
-
-.main-image-caption strong,
-.hero-image-caption strong {
-  font-style: normal;
-  color: #1a1a1a;
-  display: block;
-  margin-bottom: 0.5em;
-}
-      `}</style>
-
-      <div className="newspaper-container">
-        {/* Newspaper Header */}
-                <NewsReaderHeader
+      <div className="fixed top-0 left-0 right-0 z-40">
+        <NewsReaderHeader
           publisherImage={publisher?.logo || publisher?.companyLogo}
           publisherName={publisher?.name || publisher?.companyName}
           publisherId={publisherId}
           publisher={publisher}
         />
-        <div className="newspaper-header">
-          <div className="max-w-6xl mx-auto px-8 py-6">
-            <div className="flex items-center justify-between mb-4">
-              <button
-                onClick={handleBackClick}
-                className="text-sm text-gray-600 hover:text-black flex items-center"
-              >
-                <ArrowLeft className="w-4 h-4 mr-1" />
-                Back to {publisher?.name || 'Articles'}
-              </button>
-              
-              <div className="flex items-center space-x-3">
-                <button 
-                  className="p-2 text-gray-600 hover:text-black transition-colors"
-                  title="Share article"
-                  onClick={() => {
-                    if (typeof window !== 'undefined') {
-                      if (navigator.share) {
-                        navigator.share({
-                          title: article.title,
-                          url: window.location.href
-                        }).catch(err => console.log('Share failed:', err));
-                      } else {
-                        navigator.clipboard.writeText(window.location.href)
-                          .then(() => alert('Link copied to clipboard!'))
-                          .catch(err => console.log('Copy failed:', err));
-                      }
-                    }
-                  }}
-                >
-                  <Share2 className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
+      </div>
+      <div className="pt-16">
+        <style jsx global>{`
+          .newspaper-container {
+            font-family: 'Times New Roman', 'Times', serif;
+            line-height: 1.6;
+            color: #1a1a1a;
+          }
+          
+          .newspaper-header {
+            border-bottom: 4px solid #000;
+            margin-bottom: 2rem;
+          }
+          
+          .newspaper-title {
+            font-family: 'Times New Roman', 'Times', serif;
+            font-weight: bold;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+          }
+          
+          .newspaper-date-line {
+            border-top: 2px solid #000;
+            border-bottom: 2px solid #000;
+            padding: 0.5rem 0;
+            margin: 1rem 0;
+            text-align: center;
+          }
+          
+          .main-image-container {
+            float: left;
+            width: 350px;
+            margin: 0 2rem 1.5rem 0;
+            border: 3px solid #000;
+            background: #fff;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+            clear: left;
+          }
+          
+          .main-image {
+            width: 100%;
+            height: 250px;
+            object-fit: cover;
+            display: block;
+            border-bottom: 2px solid #000;
+          }
+          
+          .main-image-caption {
+            padding: 1rem;
+            font-size: 0.85em;
+            font-style: italic;
+            color: #333;
+            background: #f8f8f8;
+            line-height: 1.5;
+            font-family: 'Times New Roman', serif;
+            border-top: 1px solid #ccc;
+          }
+          
+          .hero-image-container {
+            width: 100%;
+            margin-bottom: 2rem;
+            border: 3px solid #000;
+            background: #fff;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+          }
+          
+          .hero-image {
+            width: 100%;
+            height: 400px;
+            object-fit: cover;
+            display: block;
+            border-bottom: 2px solid #000;
+          }
+          
+          .hero-image-caption {
+            padding: 1rem;
+            font-size: 0.9em;
+            font-style: italic;
+            color: #333;
+            background: #f8f8f8;
+            line-height: 1.5;
+            font-family: 'Times New Roman', serif;
+            border-top: 1px solid #ccc;
+            text-align: center;
+          }
+          
+          .newspaper-content {
+            text-align: justify;
+            hyphens: auto;
+            overflow-wrap: break-word;
+            word-wrap: break-word;
+            word-break: break-word;
+          }
+          
+          .newspaper-paragraph {
+            margin-bottom: 1.2rem;
+            text-indent: 1.5em;
+            line-height: 1.7;
+            overflow-wrap: break-word;
+            word-wrap: break-word;
+            word-break: break-word;
+            hyphens: auto;
+            max-width: 100%;
+          }
+          
+          .newspaper-paragraph:first-of-type {
+            text-indent: 0;
+            font-weight: 500;
+            font-size: 1.1em;
+            margin-bottom: 1.5rem;
+          }
+          
+          .drop-cap {
+            float: left;
+            font-size: 4em;
+            line-height: 0.8;
+            padding-right: 0.1em;
+            margin-top: 0.1em;
+            margin-bottom: -0.1em;
+            font-weight: bold;
+            color: #000;
+          }
+          
+          .newspaper-image-container {
+            margin: 1.5rem auto;
+            max-width: 100%;
+            text-align: center;
+            clear: both;
+          }
+          
+          .newspaper-image {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #333;
+            display: block;
+            margin: 0 auto;
+          }
+          
+          .newspaper-image-caption {
+            font-size: 0.85em;
+            font-style: italic;
+            color: #666;
+            margin-top: 0.5rem;
+            padding: 0.5rem;
+            border-left: 3px solid #333;
+            background: #f9f9f9;
+            text-align: left;
+            max-width: 100%;
+          }
+          
+          .newspaper-sidebar {
+            border: 2px solid #000;
+            padding: 1rem;
+            background: #fafafa;
+            margin-bottom: 1.5rem;
+          }
+          
+          .newspaper-sidebar h3 {
+            border-bottom: 2px solid #000;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+          }
+          
+          .article-content-wrapper {
+            overflow: hidden;
+          }
+          
+          .article-content-wrapper p,
+          .article-content-wrapper div {
+            overflow-wrap: break-word;
+            word-wrap: break-word;
+            word-break: break-word;
+            hyphens: auto;
+          }
+          
+          @media (max-width: 768px) {
+            .main-image-container,
+            .hero-image-container {
+              float: none;
+              width: 100%;
+              margin: 0 0 2rem 0;
+            }
             
-            {/* Publication Header */}
-            <div className="text-center mb-6">
-              <h1 className="newspaper-title text-6xl mb-2">
-                {publisher?.name?.toUpperCase() || 'DAILY NEWS'}
-              </h1>
-              <div className="newspaper-date-line">
-                <p className="text-sm font-medium">
-                  {getCurrentDate()} • {publisher?.industry || 'News'} • TODAY'S EDITION
-                </p>
+            .main-image,
+            .hero-image {
+              height: 250px;
+            }
+            
+            .newspaper-paragraph {
+              text-indent: 0;
+            }
+            
+            .drop-cap {
+              font-size: 3em;
+            }
+          }
+          
+          @media (max-width: 480px) {
+            .main-image,
+            .hero-image,
+            .main-image-container .main-image {
+              height: 200px;
+            }
+            
+            .newspaper-title {
+              font-size: 1.75rem !important; /* Reduced from 2.5rem */
+              letter-spacing: 0.05em;
+            }
+
+            .article-headline {
+              font-size: 2rem !important; /* Reduced from 3xl/4xl */
+            }
+            
+            .newspaper-paragraph {
+              font-size: 1rem; /* Standardized font size */
+              line-height: 1.65;
+            }
+            
+            .main-image-container,
+            .hero-image-container {
+              width: 100%;
+              margin: 0 0 1.5rem 0;
+            }
+          }
+
+          .hero-image-caption,
+  .main-image-caption {
+    padding: 1rem;
+    font-size: 0.85em;
+    font-style: italic;
+    color: #333;
+    background: #f8f8f8;
+    line-height: 1.5;
+    font-family: 'Times New Roman', serif;
+    border-top: 1px solid #ccc;
+  }
+
+  .hero-image-caption {
+    text-align: center;
+  }
+
+  .main-image-caption strong,
+  .hero-image-caption strong {
+    font-style: normal;
+    color: #1a1a1a;
+    display: block;
+    margin-bottom: 0.5em;
+  }
+        `}</style>
+
+        <div className="newspaper-container">
+          {/* Newspaper Header */}
+          <div className="newspaper-header">
+            <div className="max-w-6xl mx-auto px-8 py-6">
+              <div className="flex items-center justify-between mb-4">
+                <button
+                  onClick={handleBackClick}
+                  className="text-sm text-gray-600 hover:text-black flex items-center"
+                >
+                  <ArrowLeft className="w-4 h-4 mr-1" />
+                  Back to {publisher?.name || 'Articles'}
+                </button>
+                
+                <div className="flex items-center space-x-3">
+                  <button 
+                    className="p-2 text-gray-600 hover:text-black transition-colors"
+                    title="Share article"
+                    onClick={() => {
+                      if (typeof window !== 'undefined') {
+                        if (navigator.share) {
+                          navigator.share({
+                            title: article.title,
+                            url: window.location.href
+                          }).catch(err => console.log('Share failed:', err));
+                        } else {
+                          navigator.clipboard.writeText(window.location.href)
+                            .then(() => alert('Link copied to clipboard!'))
+                            .catch(err => console.log('Copy failed:', err));
+                        }
+                      }
+                    }}
+                  >
+                    <Share2 className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+              
+              {/* Publication Header */}
+              <div className="text-center mb-6">
+                <h1 className="newspaper-title text-3xl sm:text-5xl md:text-6xl mb-2">
+                  {publisher?.name?.toUpperCase() || 'DAILY NEWS'}
+                </h1>
+                <div className="newspaper-date-line">
+                  <p className="text-sm font-medium">
+                    {getCurrentDate()} • {publisher?.industry || 'News'} • TODAY'S EDITION
+                  </p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Article Content */}
-        <div className="max-w-6xl mx-auto px-8 py-6">
-          {/* Article Header */}
-          <div className="mb-8">
-            {/* Category Badge */}
-            {article.category && (
-              <div className="mb-4">
-                <span className="inline-block bg-black text-white px-4 py-2 text-xs font-bold uppercase tracking-widest">
-                  {article.category}
-                </span>
-              </div>
-            )}
-
-            {/* Main Headline */}
-            <h1 className="newspaper-title text-5xl leading-tight mb-6 pb-4 border-b-4 border-black">
-              {article.title}
-            </h1>
-            
-            {/* Subtitle */}
-            {article.subtitle && (
-              <h2 className="text-xl italic text-gray-700 mb-4 font-medium">
-                {article.subtitle}
-              </h2>
-            )}
-            
-            {/* Byline and Meta */}
-            <div className="flex items-center justify-between mb-6 text-sm border-b-2 border-gray-400 pb-4">
-              <div className="flex items-center space-x-6">
-                <div className="flex items-center space-x-2">
-                  <User className="w-4 h-4" />
-                  <span className="font-bold">
-                    By {article.author || publisher?.name || 'Staff Writer'}
-                    {article.authorTitle && ` • ${article.authorTitle}`}
+          {/* Article Content */}
+          <div className="max-w-6xl mx-auto px-8 py-6">
+            {/* Article Header */}
+            <div className="mb-8">
+              {/* Category Badge */}
+              {article.category && (
+                <div className="mb-4">
+                  <span className="inline-block bg-black text-white px-4 py-2 text-xs font-bold uppercase tracking-widest">
+                    {article.category}
                   </span>
                 </div>
-                <div className="flex items-center space-x-1">
-                  <Calendar className="w-4 h-4" />
-                  <span>{formatDate(article.createdAt)}</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <Clock className="w-4 h-4" />
-                  <span>{formatReadTime(article.readTime)}</span>
-                </div>
-              </div>
+              )}
+
+              {/* Main Headline */}
+              <h1 className="article-headline text-3xl sm:text-4xl md:text-5xl leading-tight mb-6 pb-4 border-b-4 border-black" style={{fontFamily: 'Times, "Times New Roman", serif', fontWeight: 'bold'}}>
+                {article.title}
+              </h1>
               
-              {article.views && article.views > 0 && (
-                <div className="flex items-center space-x-1 text-gray-600">
-                  <Eye className="w-4 h-4" />
-                  <span>{article.views.toLocaleString()} views</span>
-                </div>
+              {/* Subtitle */}
+              {article.subtitle && (
+                <h2 className="text-md sm:text-xl italic text-gray-700 mb-4 font-medium">
+                  {article.subtitle}
+                </h2>
               )}
+              
+              {/* Byline and Meta */}
+              <div className="flex items-center justify-between mb-6 text-sm border-b-2 border-gray-400 pb-4">
+                <div className="flex items-center space-x-6">
+                  <div className="flex items-center space-x-2">
+                    <User className="w-4 h-4" />
+                    <span className="font-bold">
+                      By {article.author || publisher?.name || 'Staff Writer'}
+                      {article.authorTitle && ` • ${article.authorTitle}`}
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <Calendar className="w-4 h-4" />
+                    <span>{formatDate(article.createdAt)}</span>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <Clock className="w-4 h-4" />
+                    <span>{formatReadTime(article.readTime)}</span>
+                  </div>
+                </div>
+                
+                {article.views && article.views > 0 && (
+                  <div className="flex items-center space-x-1 text-gray-600">
+                    <Eye className="w-4 h-4" />
+                    <span>{article.views.toLocaleString()} views</span>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
 
-          {/* Article Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-            {/* Main Article Content */}
-            <div className="lg:col-span-3">
-              {/* Hero Image - Full width if important article */}
-              {mainImage && article.priority === 'high' && (
-                <div className="hero-image-container">
-                  <img
-                    src={mainImage}
-                    alt={article.title}
-                    className="hero-image"
-                    loading="eager"
-                    onLoad={() => {
-                      const imageType = mainImage.startsWith('blob:') ? 'BLOB' : 
-                                      mainImage.startsWith('data:') ? 'DATA' :
-                                      mainImage.includes('firebasestorage') ? 'FIREBASE' : 'HTTP';
-                      console.log(`✅ Hero image loaded successfully [${imageType}]:`, mainImage?.substring(0, 50) + '...');
-                    }}
-                    onError={(e) => {
-                      const imageType = mainImage.startsWith('blob:') ? 'BLOB' : 
-                                      mainImage.startsWith('data:') ? 'DATA' :
-                                      mainImage.includes('firebasestorage') ? 'FIREBASE' : 'HTTP';
-                      console.error(`❌ Hero image failed to load [${imageType}]:`, mainImage?.substring(0, 50) + '...');
-                      
-                      if (mainImage.startsWith('blob:')) {
-                        handleImageError(e, 'Hero Image Expired (Blob URL)');
-                      } else {
-                        handleImageError(e, 'Hero Image Not Available');
-                      }
-                    }}
-                  />
-                  // For Hero Image Caption:
-// ACTUAL Implementation - Main Image Caption (the one being used in your code):
-<div className="main-image-caption">
-  {/* Only show caption if it exists and is different from title */}
-  {article.imageCaption && article.imageCaption !== article.title && (
-    <div className="mb-1">
-      <strong>{article.imageCaption}</strong>
-    </div>
-  )}
-  
-  {/* Photo credit */}
-  {article.imageCredit && (
-    <span className="block text-sm mt-1 text-gray-500">
-      📷 Photo by: {article.imageCredit}
-    </span>
-  )}
-  
-  {/* Temporary image warning */}
-  {mainImage && mainImage.startsWith('blob:') && (
-    <div className="text-xs text-orange-600 mt-1 italic">
-      ⚠️ Temporary image URL - may expire on page reload
-    </div>
-  )}
-</div>
-
-// Hero Image Caption (if you're using this elsewhere):
-<div className="hero-image-caption">
-  {/* Only show caption if it exists */}
-  {article.imageCaption && (
-    <div className="mb-1">
-      <strong>{article.imageCaption}</strong>
-    </div>
-  )}
-  
-  {/* Photo credit */}
-  {article.imageCredit && (
-    <div className="text-sm mt-1 text-gray-600 font-normal">
-      📷 Photo by: {article.imageCredit}
-    </div>
-  )}
-  
-  {/* Temporary image warning */}
-  {mainImage && mainImage.startsWith('blob:') && (
-    <div className="text-xs text-orange-600 mt-2 italic">
-      ⚠️ Temporary image URL - may expire on page reload
-    </div>
-  )}
-</div>
-                </div>
-              )}
-
-              {/* Article Body with Image Float */}
-              <div className="article-content-wrapper">
-                {/* Main Image - Positioned at top left for regular articles */}
-                {mainImage && article.priority !== 'high' && (
-                  <div className="main-image-container">
+            {/* Article Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+              {/* Main Article Content */}
+              <div className="lg:col-span-3">
+                {/* Hero Image - Full width if important article */}
+                {mainImage && article.priority === 'high' && (
+                  <div className="hero-image-container">
                     <img
                       src={mainImage}
                       alt={article.title}
-                      className="main-image"
+                      className="hero-image"
                       loading="eager"
                       onLoad={() => {
                         const imageType = mainImage.startsWith('blob:') ? 'BLOB' : 
                                         mainImage.startsWith('data:') ? 'DATA' :
                                         mainImage.includes('firebasestorage') ? 'FIREBASE' : 'HTTP';
-                        console.log(`✅ Main image loaded successfully [${imageType}]:`, mainImage?.substring(0, 50) + '...');
+                        console.log(`✅ Hero image loaded successfully [${imageType}]:`, mainImage?.substring(0, 50) + '...');
                       }}
                       onError={(e) => {
                         const imageType = mainImage.startsWith('blob:') ? 'BLOB' : 
                                         mainImage.startsWith('data:') ? 'DATA' :
                                         mainImage.includes('firebasestorage') ? 'FIREBASE' : 'HTTP';
-                        console.error(`❌ Main image failed to load [${imageType}]:`, mainImage?.substring(0, 50) + '...');
+                        console.error(`❌ Hero image failed to load [${imageType}]:`, mainImage?.substring(0, 50) + '...');
                         
                         if (mainImage.startsWith('blob:')) {
-                          handleImageError(e, 'Image Expired (Blob URL)');
+                          handleImageError(e, 'Hero Image Expired (Blob URL)');
                         } else {
-                          handleImageError(e, 'Main Image Not Available');
+                          handleImageError(e, 'Hero Image Not Available');
                         }
                       }}
                     />
-                    <div className="main-image-caption">
-                      <strong>{article.imageCaption || article.title}</strong>
-                      {article.imageCredit && (
-                        <span className="block text-sm mt-1 text-gray-500">
-                          Photo: {article.imageCredit}
-                        </span>
+                    // For Hero Image Caption:
+  // ACTUAL Implementation - Main Image Caption (the one being used in your code):
+  <div className="main-image-caption">
+    {/* Only show caption if it exists and is different from title */}
+    {article.imageCaption && article.imageCaption !== article.title && (
+      <div className="mb-1">
+        <strong>{article.imageCaption}</strong>
+      </div>
+    )}
+    
+    {/* Photo credit */}
+    {article.imageCredit && (
+      <span className="block text-sm mt-1 text-gray-500">
+        📷 Photo by: {article.imageCredit}
+      </span>
+    )}
+    
+    {/* Temporary image warning */}
+    {mainImage && mainImage.startsWith('blob:') && (
+      <div className="text-xs text-orange-600 mt-1 italic">
+        ⚠️ Temporary image URL - may expire on page reload
+      </div>
+    )}
+  </div>
+
+  // Hero Image Caption (if you're using this elsewhere):
+  <div className="hero-image-caption">
+    {/* Only show caption if it exists */}
+    {article.imageCaption && (
+      <div className="mb-1">
+        <strong>{article.imageCaption}</strong>
+      </div>
+    )}
+    
+    {/* Photo credit */}
+    {article.imageCredit && (
+      <div className="text-sm mt-1 text-gray-600 font-normal">
+        📷 Photo by: {article.imageCredit}
+      </div>
+    )}
+    
+    {/* Temporary image warning */}
+    {mainImage && mainImage.startsWith('blob:') && (
+      <div className="text-xs text-orange-600 mt-2 italic">
+        ⚠️ Temporary image URL - may expire on page reload
+      </div>
+    )}
+  </div>
+                  </div>
+                )}
+
+                {/* Article Body with Image Float */}
+                <div className="article-content-wrapper">
+                  {/* Main Image - Positioned at top left for regular articles */}
+                  {mainImage && article.priority !== 'high' && (
+                    <div className="main-image-container">
+                      <img
+                        src={mainImage}
+                        alt={article.title}
+                        className="main-image"
+                        loading="eager"
+                        onLoad={() => {
+                          const imageType = mainImage.startsWith('blob:') ? 'BLOB' : 
+                                          mainImage.startsWith('data:') ? 'DATA' :
+                                          mainImage.includes('firebasestorage') ? 'FIREBASE' : 'HTTP';
+                          console.log(`✅ Main image loaded successfully [${imageType}]:`, mainImage?.substring(0, 50) + '...');
+                        }}
+                        onError={(e) => {
+                          const imageType = mainImage.startsWith('blob:') ? 'BLOB' : 
+                                          mainImage.startsWith('data:') ? 'DATA' :
+                                          mainImage.includes('firebasestorage') ? 'FIREBASE' : 'HTTP';
+                          console.error(`❌ Main image failed to load [${imageType}]:`, mainImage?.substring(0, 50) + '...');
+                          
+                          if (mainImage.startsWith('blob:')) {
+                            handleImageError(e, 'Image Expired (Blob URL)');
+                          } else {
+                            handleImageError(e, 'Main Image Not Available');
+                          }
+                        }}
+                      />
+                      <div className="main-image-caption">
+                        <strong>{article.imageCaption || article.title}</strong>
+                        {article.imageCredit && (
+                          <span className="block text-sm mt-1 text-gray-500">
+                            Photo: {article.imageCredit}
+                          </span>
+                        )}
+                        {mainImage && mainImage.startsWith('blob:') && (
+                          <div className="text-xs text-orange-600 mt-1 italic">
+                            ⚠️ Temporary image URL - may expire on page reload
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* No Image Placeholder for Debug */}
+                  {!mainImage && process.env.NODE_ENV === 'development' && (
+                    <div className="main-image-container">
+                      <div className="main-image bg-gray-200 flex items-center justify-center text-gray-500">
+                        <div className="text-center">
+                          <div className="text-2xl mb-2">📷</div>
+                          <div className="text-sm">No Image Available</div>
+                        </div>
+                      </div>
+                      <div className="main-image-caption">
+                        <em>No featured image found for this article</em>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Summary/Lead with drop cap */}
+                  {article.summary && (
+                    <div className="mb-6 p-4 border-l-4 border-black bg-gray-50 clear-both">
+                      <p className="text-lg font-medium leading-relaxed italic">
+                        <span className="drop-cap">{article.summary.charAt(0)}</span>
+                        {article.summary.substring(1)}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Article Body - Fixed overflow and paragraph handling */}
+                  <div className="newspaper-content">
+                    <div 
+                      dangerouslySetInnerHTML={{ 
+                        __html: processedContent
+                      }}
+                    />
+                  </div>
+                  
+                  {/* Additional content images (excluding the main one) */}
+                  {contentImages.slice(mainImage ? 1 : 0).map((img, index) => (
+                    <div key={`content-image-${index}`} className="newspaper-image-container">
+                      <img
+                        src={img.src}
+                        alt={img.caption || `Article image ${index + 1}`}
+                        className="newspaper-image"
+                        loading="lazy"
+                        onError={(e) => handleImageError(e, `Image ${index + 1} Not Available`)}
+                      />
+                      {img.caption && (
+                        <div className="newspaper-image-caption">
+                          {img.caption}
+                        </div>
                       )}
-                      {mainImage && mainImage.startsWith('blob:') && (
-                        <div className="text-xs text-orange-600 mt-1 italic">
-                          ⚠️ Temporary image URL - may expire on page reload
+                    </div>
+                  ))}
+                  
+                  <div className="clear-both"></div>
+                </div>
+              </div>
+
+              {/* Sidebar */}
+              <div className="lg:col-span-1">
+                {/* Related Stories */}
+                {article.relatedStories && article.relatedStories.length > 0 && (
+                  <div className="newspaper-sidebar">
+                    <h3>Related Stories</h3>
+                    <div className="space-y-4 text-sm">
+                      {article.relatedStories.slice(0, 3).map((story, index) => (
+                        <div key={index}>
+                          <h4 className="font-bold mb-1 text-black">{story.title}</h4>
+                          <p className="text-gray-700 leading-relaxed">{story.description || story.summary}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Publication Info */}
+                {publisher && (
+                  <div className="newspaper-sidebar">
+                    <h3>About {publisher.name}</h3>
+                    <div className="space-y-3 text-sm">
+                      <div className="flex items-center space-x-3">
+                        {publisher.logo ? (
+                          <img
+                            src={publisher.logo}
+                            alt={`${publisher.name} logo`}
+                            className="w-12 h-12 object-cover border-2 border-black"
+                            onError={(e) => {
+                              console.log('Publisher logo failed to load:', publisher.logo);
+                              e.target.style.display = 'none';
+                              e.target.nextSibling.style.display = 'flex';
+                            }}
+                          />
+                        ) : null}
+                        <div className="w-12 h-12 bg-black text-white flex items-center justify-center text-xl font-bold border-2 border-black" 
+                             style={{display: publisher.logo ? 'none' : 'flex'}}>
+                          {publisher.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <span className="font-bold text-black block">{publisher.name}</span>
+                          <span className="text-gray-600 text-xs uppercase">{publisher.industry || 'Publishing'}</span>
+                        </div>
+                      </div>
+                      {publisher.description && (
+                        <p className="text-gray-700 text-xs leading-relaxed">{publisher.description}</p>
+                      )}
+                      {publisher.website && (
+                        <div className="flex items-center space-x-2 text-gray-600">
+                          <Globe className="w-4 h-4" />
+                          <a href={publisher.website} target="_blank" rel="noopener noreferrer" 
+                             className="text-xs hover:text-black transition-colors break-all">
+                            {publisher.website.replace(/^https?:\/\//, '')}
+                          </a>
                         </div>
                       )}
                     </div>
                   </div>
                 )}
 
-                {/* No Image Placeholder for Debug */}
-                {!mainImage && process.env.NODE_ENV === 'development' && (
-                  <div className="main-image-container">
-                    <div className="main-image bg-gray-200 flex items-center justify-center text-gray-500">
-                      <div className="text-center">
-                        <div className="text-2xl mb-2">📷</div>
-                        <div className="text-sm">No Image Available</div>
-                      </div>
-                    </div>
-                    <div className="main-image-caption">
-                      <em>No featured image found for this article</em>
+                {/* Tags */}
+                {article.tags && article.tags.length > 0 && (
+                  <div className="newspaper-sidebar">
+                    <h3>Tags</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {article.tags.map((tag, index) => (
+                        <span 
+                          key={index}
+                          className="inline-block bg-black text-white px-3 py-1 text-xs font-bold uppercase tracking-wider"
+                        >
+                          {tag}
+                        </span>
+                      ))}
                     </div>
                   </div>
                 )}
+              </div>
+            </div>
 
-                {/* Summary/Lead with drop cap */}
-                {article.summary && (
-                  <div className="mb-6 p-4 border-l-4 border-black bg-gray-50 clear-both">
-                    <p className="text-lg font-medium leading-relaxed italic">
-                      <span className="drop-cap">{article.summary.charAt(0)}</span>
-                      {article.summary.substring(1)}
-                    </p>
-                  </div>
-                )}
+            {/* Banner Ad */}
+            <div className="max-w-7xl mx-auto h-28 bg-[#3ba6e7] flex items-center justify-between px-4 sm:px-8 rounded-md shadow-md mt-4">
+                <div className="flex flex-col items-center mt-5">
+                    <img src="/Presspass.png" alt="PressPass Logo" height={150} width={150} className="object-contain" /> 
+                </div>
+              <div className="flex flex-col justify-center items-center space-y-2 text-center mx-auto">
+                <h3 className="text-yellow-400 font-bold text-base sm:text-lg">Advertise Here</h3>
+                <p className="text-white text-xs sm:text-sm flex flex-col items-center space-y-1">
+                  <span>Partners@presspass.africa</span>
+                </p>
+                <p className="text-white text-sm flex flex-col items-center space-y-1">
+                  <span>Phone: +27 87 XXX XXX</span>
+                </p>
+              </div>
+            </div>
 
-                {/* Article Body - Fixed overflow and paragraph handling */}
-                <div className="newspaper-content">
-                  <div 
-                    dangerouslySetInnerHTML={{ 
-                      __html: processedContent
-                    }}
-                  />
+
+            {/* Article Footer */}
+            <div className="mt-12 pt-6 border-t-4 border-black">
+              <div className="flex items-center justify-between text-sm">
+                <div>
+                  <p className="font-bold">Published: {formatDate(article.createdAt)}</p>
+                  {article.updatedAt && article.updatedAt !== article.createdAt && (
+                    <p className="text-gray-600 mt-1">Last updated: {formatDate(article.updatedAt)}</p>
+                  )}
                 </div>
                 
-                {/* Additional content images (excluding the main one) */}
-                {contentImages.slice(mainImage ? 1 : 0).map((img, index) => (
-                  <div key={`content-image-${index}`} className="newspaper-image-container">
-                    <img
-                      src={img.src}
-                      alt={img.caption || `Article image ${index + 1}`}
-                      className="newspaper-image"
-                      loading="lazy"
-                      onError={(e) => handleImageError(e, `Image ${index + 1} Not Available`)}
-                    />
-                    {img.caption && (
-                      <div className="newspaper-image-caption">
-                        {img.caption}
-                      </div>
-                    )}
-                  </div>
-                ))}
-                
-                <div className="clear-both"></div>
+                <button
+                  onClick={handleBackClick}
+                  className="bg-black text-white px-8 py-3 text-sm font-bold uppercase tracking-widest hover:bg-gray-800 transition-colors"
+                >
+                  Back to {publisher?.name || 'Articles'}
+                </button>
               </div>
-            </div>
-
-            {/* Sidebar */}
-            <div className="lg:col-span-1">
-              {/* Related Stories */}
-              {article.relatedStories && article.relatedStories.length > 0 && (
-                <div className="newspaper-sidebar">
-                  <h3>Related Stories</h3>
-                  <div className="space-y-4 text-sm">
-                    {article.relatedStories.slice(0, 3).map((story, index) => (
-                      <div key={index}>
-                        <h4 className="font-bold mb-1 text-black">{story.title}</h4>
-                        <p className="text-gray-700 leading-relaxed">{story.description || story.summary}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Publication Info */}
-              {publisher && (
-                <div className="newspaper-sidebar">
-                  <h3>About {publisher.name}</h3>
-                  <div className="space-y-3 text-sm">
-                    <div className="flex items-center space-x-3">
-                      {publisher.logo ? (
-                        <img
-                          src={publisher.logo}
-                          alt={`${publisher.name} logo`}
-                          className="w-12 h-12 object-cover border-2 border-black"
-                          onError={(e) => {
-                            console.log('Publisher logo failed to load:', publisher.logo);
-                            e.target.style.display = 'none';
-                            e.target.nextSibling.style.display = 'flex';
-                          }}
-                        />
-                      ) : null}
-                      <div className="w-12 h-12 bg-black text-white flex items-center justify-center text-xl font-bold border-2 border-black" 
-                           style={{display: publisher.logo ? 'none' : 'flex'}}>
-                        {publisher.name.charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <span className="font-bold text-black block">{publisher.name}</span>
-                        <span className="text-gray-600 text-xs uppercase">{publisher.industry || 'Publishing'}</span>
-                      </div>
-                    </div>
-                    {publisher.description && (
-                      <p className="text-gray-700 text-xs leading-relaxed">{publisher.description}</p>
-                    )}
-                    {publisher.website && (
-                      <div className="flex items-center space-x-2 text-gray-600">
-                        <Globe className="w-4 h-4" />
-                        <a href={publisher.website} target="_blank" rel="noopener noreferrer" 
-                           className="text-xs hover:text-black transition-colors break-all">
-                          {publisher.website.replace(/^https?:\/\//, '')}
-                        </a>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Tags */}
-              {article.tags && article.tags.length > 0 && (
-                <div className="newspaper-sidebar">
-                  <h3>Tags</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {article.tags.map((tag, index) => (
-                      <span 
-                        key={index}
-                        className="inline-block bg-black text-white px-3 py-1 text-xs font-bold uppercase tracking-wider"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Banner Ad */}
-          <div className="max-w-7xl mx-auto h-28 bg-[#3ba6e7] flex items-center justify-between px-8 rounded-md shadow-md mt-4">
-              <div className="flex flex-col items-center mt-5">
-                  <img src="/Presspass.png" alt="PressPass Logo" height={200} width={180} className="object-contain" /> 
-              </div>
-            <div className="flex flex-col justify-center items-center space-y-2 text-center mx-auto">
-              <h3 className="text-yellow-400 font-bold text-lg">Advertise Here</h3>
-              <p className="text-white text-sm flex flex-col items-center space-y-1">
-                <span>Partners@presspass.africa</span>
-              </p>
-              <p className="text-white text-sm flex flex-col items-center space-y-1">
-                <span>Phone: +27 87 XXX XXX</span>
-              </p>
-            </div>
-          </div>
-
-
-          {/* Article Footer */}
-          <div className="mt-12 pt-6 border-t-4 border-black">
-            <div className="flex items-center justify-between text-sm">
-              <div>
-                <p className="font-bold">Published: {formatDate(article.createdAt)}</p>
-                {article.updatedAt && article.updatedAt !== article.createdAt && (
-                  <p className="text-gray-600 mt-1">Last updated: {formatDate(article.updatedAt)}</p>
-                )}
-              </div>
-              
-              <button
-                onClick={handleBackClick}
-                className="bg-black text-white px-8 py-3 text-sm font-bold uppercase tracking-widest hover:bg-gray-800 transition-colors"
-              >
-                Back to {publisher?.name || 'Articles'}
-              </button>
             </div>
           </div>
         </div>
