@@ -370,11 +370,14 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
             publisherName: currentUser?.companyName || 'Unknown Publisher'
           };
           
-          // Use the same publishing logic as the manual form
-          const result = await submitArticle(action !== 'publish');
-          
-          // Show success message
-          setSubmitStatus('success');
+                if (onSubmit && typeof onSubmit === 'function') {
+        await onSubmit(articleData);  // delegate to parent (page.js)
+        setSubmitStatus('success');
+      } else {
+        await submitArticle(action !== 'publish');
+        setSubmitStatus('success');
+      }
+
           
           // Reset form
           setFile(null);
