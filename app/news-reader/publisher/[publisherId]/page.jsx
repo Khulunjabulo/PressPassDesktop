@@ -1,7 +1,7 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent } from '@/components/UI/newscard';
 import { ArrowLeft, FileText, Clock, Globe, Building, Users, Calendar, Eye, Hash, Filter } from 'lucide-react';
 import { usePublisherArticles } from '@/hooks/useNewsSources';
@@ -67,6 +67,33 @@ export default function PublisherArticlesPage() {
   const router = useRouter();
   const { publisher, articles: rawArticles, loading, error, refreshArticles } = usePublisherArticles(params.publisherId);
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [adUpload, setAdUpload] = useState(null);
+  const [adUploadLoading, setAdUploadLoading] = useState(true);
+  const [adUploadError, setAdUploadError] = useState(null);
+
+  // Fetch the first ad upload
+  useEffect(() => {
+    const fetchAdUpload = async () => {
+      try {
+        setAdUploadLoading(true);
+        const response = await fetch('/api/get-first-ad-upload');
+        const result = await response.json();
+
+        if (result.success) {
+          setAdUpload(result.adUpload);
+        } else {
+          setAdUploadError(result.error || 'Failed to load ad');
+        }
+      } catch (err) {
+        console.error('Error fetching ad upload:', err);
+        setAdUploadError('Failed to load ad');
+      } finally {
+        setAdUploadLoading(false);
+      }
+    };
+
+    fetchAdUpload();
+  }, []);
 
   // Clean articles data to remove HTML
   const articles = useMemo(() => {
@@ -353,17 +380,22 @@ export default function PublisherArticlesPage() {
       {/* Banner Ad */}
       <div className="max-w-7xl mx-auto h-28 bg-[#3ba6e7] flex items-center justify-between px-8 rounded-md shadow-md mt-4">
               <div className="flex flex-col items-center mt-5">
-                  <img src="/Presspass.png" alt="PressPass Logo" height={200} width={180} className="object-contain" /> 
+                  {adUploadLoading ? (
+                    <div className="w-32 h-20 bg-gray-200 animate-pulse rounded"></div>
+                  ) : adUpload?.imageSrc ? (
+                    <img
+                      src={adUpload.imageSrc}
+                      alt="Uploaded Ad"
+                      className="w-1000 h-30 object-cover rounded"
+                      style={{ maxWidth: '1300px', maxHeight: '200px' }}
+                    />
+                  ) : (
+                    <div className="w-32 h-20 bg-white bg-opacity-20 rounded flex items-center justify-center">
+                      <span className="text-white text-xs opacity-70">Ad Space</span>
+                    </div>
+                  )}
               </div>
-            <div className="flex flex-col justify-center items-center space-y-2 text-center mx-auto">
-              <h3 className="text-yellow-400 font-bold text-lg">Advertise Here</h3>
-              <p className="text-white text-sm flex flex-col items-center space-y-1">
-                <span>Partners@presspass.africa</span>
-              </p>
-              <p className="text-white text-sm flex flex-col items-center space-y-1">
-                <span>Phone: +27 87 XXX XXX</span>
-              </p>
-            </div>
+           
           </div>
 
       {/* Main Content Layout */}
@@ -777,7 +809,20 @@ export default function PublisherArticlesPage() {
         {/* Bottom Banner Ad */}
         <div className="max-w-7xl mx-auto h-28 bg-[#3ba6e7] flex items-center justify-between px-8 rounded-md shadow-md mt-4">
         <div className="flex flex-col items-center mt-5">
-            <img src="/Presspass.png" alt="PressPass Logo" height={200} width={180} className="object-contain" /> 
+            {adUploadLoading ? (
+              <div className="w-32 h-20 bg-gray-200 animate-pulse rounded"></div>
+            ) : adUpload?.imageSrc ? (
+              <img
+                src={adUpload.imageSrc}
+                alt="Uploaded Ad"
+                className="w-32 h-20 object-cover rounded"
+                style={{ maxWidth: '180px', maxHeight: '200px' }}
+              />
+            ) : (
+              <div className="w-32 h-20 bg-white bg-opacity-20 rounded flex items-center justify-center">
+                <span className="text-white text-xs opacity-70">Ad Space</span>
+              </div>
+            )}
         </div>
       <div className="flex flex-col justify-center items-center space-y-2 text-center mx-auto">
         <h3 className="text-yellow-400 font-bold text-lg">Advertise Here</h3>

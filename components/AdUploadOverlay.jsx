@@ -6,13 +6,15 @@ import { X } from 'lucide-react';
 export default function AdUploadOverlay({ isOpen, onClose, onUpload }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [isDragOver, setIsDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
 
   const handleFileChange = (file) => {
     setError('');
-    
+    setSuccess('');
+
     if (!file) return;
 
     // Validate file type (images, videos, GIFs)
@@ -74,6 +76,7 @@ export default function AdUploadOverlay({ isOpen, onClose, onUpload }) {
   const removeFile = () => {
     setSelectedFile(null);
     setError('');
+    setSuccess('');
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -86,11 +89,17 @@ export default function AdUploadOverlay({ isOpen, onClose, onUpload }) {
     }
 
     setUploading(true);
+    setError('');
+    setSuccess('');
     try {
       // Call the parent's upload function
       await onUpload(selectedFile);
-      // Close the overlay on successful upload
-      onClose();
+      // Show success message
+      setSuccess('Ad uploaded successfully!');
+      // Close the overlay after a short delay to show the success message
+      setTimeout(() => {
+        onClose();
+      }, 2000);
     } catch (err) {
       setError('Upload failed. Please try again.');
       console.error('Upload error:', err);
@@ -194,6 +203,12 @@ export default function AdUploadOverlay({ isOpen, onClose, onUpload }) {
           {error && (
             <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
               <p className="text-sm text-red-600">{error}</p>
+            </div>
+          )}
+
+          {success && (
+            <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-md">
+              <p className="text-sm text-green-600">{success}</p>
             </div>
           )}
 
