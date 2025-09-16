@@ -50,6 +50,7 @@ function truncateText(text, maxLength = 150) {
 }
 
 // Updated AdSlot component with proper mobile image support
+
 function AdSlot({ 
   adType, 
   width, 
@@ -131,11 +132,25 @@ function AdSlot({
 
   const responsiveClasses = getResponsiveClasses();
 
+  // Get container dimensions based on ad type
+  const getContainerStyle = () => {
+    if (isBanner) {
+      return { width: '100%', height: '90px' };
+    }
+    
+    // For mobile vertical ad
+    if (adType === 'mobile') {
+      return { width: '100%', height: '250px', maxWidth: '320px', margin: '0 auto' };
+    }
+    
+    return { width, height };
+  };
+
   if (loading) {
     return (
       <div 
         className={`bg-gray-300 rounded animate-pulse flex items-center justify-center ${className} ${responsiveClasses}`}
-        style={isBanner ? { width: '100%', height: '90px' } : { width, height }}
+        style={getContainerStyle()}
       >
         <span className="text-gray-500 text-sm">Loading...</span>
       </div>
@@ -146,27 +161,101 @@ function AdSlot({
   if (ads.length === 0 || currentIndex >= ads.length) {
     return (
       <div 
-        className={`bg-blue-100 border-2 border-dashed border-blue-400 rounded cursor-pointer hover:bg-blue-50 transition-colors ${className} ${responsiveClasses}`}
-        style={isBanner ? { width: '100%', height: '90px' } : { width, height }}
+        className={`bg-[#3ba6e7] rounded-md shadow-md cursor-pointer hover:shadow-lg transition-shadow ${className} ${responsiveClasses}`}
+        style={getContainerStyle()}
         onClick={onAdvertiseClick}
       >
-        <div style={{ 
-          display: 'flex', 
-          flexDirection: 'column', 
-          alignItems: 'center', 
-          justifyContent: 'center',
-          height: '100%',
-          textAlign: 'center',
-          padding: '8px'
-        }}>
-          <div style={{ fontSize: '24px', marginBottom: '8px' }}>📢</div>
-          <div style={{ fontWeight: 'bold', color: '#1e40af', fontSize: isBanner && isMobile ? '14px' : '16px' }}>
-            Advertise Here
+        {/* Banner Ad Styling */}
+        {isBanner && (
+          <div className="h-full flex items-center justify-between px-4 sm:px-8">
+            <div className="flex flex-col items-center mt-5">
+              <img 
+                src="/Presspass.png" 
+                alt="PressPass Logo" 
+                height={150} 
+                width={150} 
+                className="object-contain" 
+              /> 
+            </div>
+            <div className="flex flex-col justify-center items-center space-y-2 text-center mx-auto">
+              <h3 className="text-yellow-400 font-bold text-base sm:text-lg">Advertise Here</h3>
+              <p className="text-white text-xs sm:text-sm flex flex-col items-center space-y-1">
+                <span>Partners@presspass.africa</span>
+              </p>
+              <p className="text-white text-xs sm:text-sm flex flex-col items-center space-y-1">
+                <span>Phone: +27 87 XXX XXX</span>
+              </p>
+            </div>
           </div>
-          <div style={{ fontSize: '12px', color: '#3b82f6' }}>
-            {isBanner ? '728x90 (Responsive)' : `${width}x${height}`}
+        )}
+
+        {/* Sidebar Square Ad Styling */}
+        {(adType.includes('sidebar') || adType.includes('rectangle')) && (
+          <div className="h-full flex flex-col items-center justify-center p-4 text-center">
+            <div className="mb-3">
+              <img 
+                src="/Presspass.png" 
+                alt="PressPass Logo" 
+                height={80} 
+                width={80} 
+                className="object-contain mx-auto" 
+              /> 
+            </div>
+            <h3 className="text-yellow-400 font-bold text-lg mb-2">Advertise Here</h3>
+            <p className="text-white text-xs mb-1">Partners@presspass.africa</p>
+            <p className="text-white text-xs">Phone: +27 87 XXX XXX</p>
+            <div className="mt-2 text-white text-xs opacity-75">
+              {width}×{height}
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* Skyscraper Ad Styling */}
+        {adType.includes('skyscraper') && (
+          <div className="h-full flex flex-col items-center justify-center p-4 text-center">
+            <div className="mb-4">
+              <img 
+                src="/Presspass.png" 
+                alt="PressPass Logo" 
+                height={100} 
+                width={100} 
+                className="object-contain mx-auto" 
+              /> 
+            </div>
+            <h3 className="text-yellow-400 font-bold text-xl mb-3">Advertise Here</h3>
+            <div className="space-y-2">
+              <p className="text-white text-sm">Partners@presspass.africa</p>
+              <p className="text-white text-sm">Phone: +27 87 XXX XXX</p>
+            </div>
+            <div className="mt-4 text-white text-xs opacity-75">
+              {width}×{height}
+            </div>
+            <div className="mt-auto mb-4 text-white text-xs">
+              Click to advertise
+            </div>
+          </div>
+        )}
+
+        {/* Mobile Vertical Ad Styling */}
+        {adType === 'mobile' && (
+          <div className="h-full flex flex-col items-center justify-center p-4 text-center">
+            <div className="mb-3">
+              <img 
+                src="/Presspass.png" 
+                alt="PressPass Logo" 
+                height={60} 
+                width={60} 
+                className="object-contain mx-auto" 
+              /> 
+            </div>
+            <h3 className="text-yellow-400 font-bold text-base mb-2">Advertise Here</h3>
+            <p className="text-white text-xs mb-1">Partners@presspass.africa</p>
+            <p className="text-white text-xs mb-2">Phone: +27 87 XXX XXX</p>
+            <div className="text-white text-xs opacity-75">
+              Mobile Ad Space
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -186,10 +275,7 @@ function AdSlot({
     <div className={`${className} ${responsiveClasses}`}>
       <div 
         style={{ 
-          width: isBanner ? '100%' : width,
-          height: isBanner ? '90px' : height,
-          maxWidth: isBanner ? '728px' : 'none',
-          margin: isBanner ? '0 auto' : 'none',
+          ...getContainerStyle(),
           position: 'relative',
           border: '1px solid #ccc',
           borderRadius: '8px',
