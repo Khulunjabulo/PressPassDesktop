@@ -1,7 +1,7 @@
 'use client';
 
 import NewsGrid from '@/components/news-reader/NewsGrid';
-import BannerAd from '@/components/news-reader/BannerAd';
+// import BannerAd from '@/components/news-reader/BannerAd';
 import { useState, useEffect } from 'react';
 import Header from '@/components/news-reader/Header';
 import MainHeader from '@/components/news-reader/NewsReaderMainHeader';
@@ -38,8 +38,8 @@ export default function NewsReaderHome() {
     {isMobile ? <MainHeader /> : <Header />}
     <div className={isMobile ? 'pt-16 sm:pt-20' : ''}>
       {/* Top Banner Ad */}
-      <div className="px-4 sm:px-6 mt-4">
-        <BannerAd />
+      <div className="px-6 mt-4">
+        {/* <BannerAd /> */}
       </div>
       
       {loading ? (
