@@ -51,6 +51,7 @@ function truncateText(text, maxLength = 150) {
 
 // Updated AdSlot component with proper mobile image support
 
+// Updated AdSlot component with proper mobile image support and publisher page styling
 function AdSlot({ 
   adType, 
   width, 
@@ -190,7 +191,7 @@ function AdSlot({
         )}
 
         {/* Sidebar Square Ad Styling */}
-        {(adType.includes('sidebar') || adType.includes('rectangle')) && (
+        {(adType.includes('sidebar') || adType.includes('rectangle')) && !adType.includes('skyscraper') && (
           <div className="h-full flex flex-col items-center justify-center p-4 text-center">
             <div className="mb-3">
               <img 
