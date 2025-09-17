@@ -1,6 +1,6 @@
 // app/api/user-profile/route.js
 import { NextResponse } from 'next/server';
-import { getFirestoreDb, getAuth } from '../../../lib/firebase-admin';
+import { getFirestoreDb, getAuth } from '../../lib/firebase-admin';
 
 export async function GET(request) {
   console.log('📖 Getting user profile...');
