@@ -277,8 +277,8 @@ export default function ClassifiedsPage() {
 
   return (
     <div>
-    {isMobile && user ? <MainHeader /> : <Header />}
-    <div className={`min-h-screen bg-gray-50 ${isMobile && user ? 'pt-16 sm:pt-20' : ''}`}>
+    {isMobile ? <MainHeader /> : <Header />}
+    <div className={`min-h-screen bg-gray-50 ${isMobile ? 'pt-16 sm:pt-20' : ''}`}>
       <div className="bg-white border-b">
         <div className="max-w-4xl mx-auto px-4 py-6">
           <div className="text-center mb-6">
