@@ -293,7 +293,7 @@ export default function PublisherArticlesPage() {
           isError={true}
         />
         
-        <div className="max-w-7xl mx-auto px-8 py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 py-12">
           <button
             onClick={handleBackClick}
             className="text-sm text-gray-600 hover:text-black mb-8 flex items-center"
@@ -324,58 +324,61 @@ export default function PublisherArticlesPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Pass publisher data to header component */}
-      <NewsReaderHeader 
-        publisherImage={cleanPublisher?.logo || cleanPublisher?.companyLogo}
-        publisherName={cleanPublisher?.name || cleanPublisher?.companyName}
-        publisherId={params.publisherId}
-        publisher={cleanPublisher} // Pass full publisher object if needed
-      />
+      <div className="fixed top-0 left-0 right-0 z-40">
+        {/* Pass publisher data to header component */}
+        <NewsReaderHeader 
+          publisherImage={cleanPublisher?.logo || cleanPublisher?.companyLogo}
+          publisherName={cleanPublisher?.name || cleanPublisher?.companyName}
+          publisherId={params.publisherId}
+          publisher={cleanPublisher} // Pass full publisher object if needed
+        />
+      </div>
 
-      {/* Newspaper Header */}
-      <div className="border-b-4 border-black">
-        <div className="max-w-7xl mx-auto px-8 py-6">
-          <button
-            onClick={handleBackClick}
-            className="text-sm text-gray-600 hover:text-black mb-6 flex items-center"
-          >
-            <ArrowLeft className="w-4 h-4 mr-1" />
-            Back to News Sources
-          </button>
-          
-          {/* Publication Header */}
-          <div className="text-center">
-            <h1 className="text-6xl font-bold tracking-wider mb-2" style={{fontFamily: 'Times, "Times New Roman", serif'}}>
-              {cleanPublisher?.name?.toUpperCase() || 'NEWS'}
-            </h1>
-            <div className="border-t border-b border-black py-2 mb-4">
-              <p className="text-sm tracking-widest" style={{fontFamily: 'Times, "Times New Roman", serif'}}>
-                {getCurrentDate()} • {cleanPublisher?.industry || 'News'} • {articles?.length || 0} {(articles?.length || 0) === 1 ? 'Article' : 'Articles'}
-              </p>
-            </div>
+      <div className="pt-16"> {/* Add padding to push content below the fixed header */}
+        {/* Newspaper Header */}
+        <div className="border-b-4 border-black">
+          <div className="max-w-7xl mx-auto px-4 sm:px-8 py-6">
+            <button
+              onClick={handleBackClick}
+              className="text-sm text-gray-600 hover:text-black mb-6 flex items-center"
+            >
+              <ArrowLeft className="w-4 h-4 mr-1" />
+              Back to News Sources
+            </button>
             
-            {/* Publisher Details */}
-            {cleanPublisher && (
-              <div className="flex items-center justify-center space-x-8 text-sm">
-                <div className="flex items-center space-x-2">
-                  <Building className="w-4 h-4" />
-                  <span>{cleanPublisher.publicationType || 'Publication'}</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Users className="w-4 h-4" />
-                  <span>{cleanPublisher.audienceType || 'General'}</span>
-                </div>
-                {cleanPublisher.website && (
-                  <div className="flex items-center space-x-2">
-                    <Globe className="w-4 h-4" />
-                    <span>{cleanPublisher.website.replace(/^https?:\/\//, '')}</span>
-                  </div>
-                )}
+            {/* Publication Header */}
+            <div className="text-center">
+              <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-wider mb-2" style={{fontFamily: 'Times, "Times New Roman", serif'}}>
+                {cleanPublisher?.name?.toUpperCase() || 'NEWS'}
+              </h1>
+              <div className="border-t border-b border-black py-2 mb-4">
+                <p className="text-sm tracking-widest" style={{fontFamily: 'Times, "Times New Roman", serif'}}>
+                  {getCurrentDate()} • {cleanPublisher?.industry || 'News'} • {articles?.length || 0} {(articles?.length || 0) === 1 ? 'Article' : 'Articles'}
+                </p>
               </div>
-            )}
+              
+              {/* Publisher Details */}
+              {cleanPublisher && (
+                <div className="flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-8 text-sm">
+                  <div className="flex items-center space-x-2">
+                    <Building className="w-4 h-4" />
+                    <span>{cleanPublisher.publicationType || 'Publication'}</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Users className="w-4 h-4" />
+                    <span>{cleanPublisher.audienceType || 'General'}</span>
+                  </div>
+                  {cleanPublisher.website && (
+                    <div className="flex items-center space-x-2">
+                      <Globe className="w-4 h-4" />
+                      <span>{cleanPublisher.website.replace(/^https?:\/\//, '')}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </div>
 
       {/* Banner Ad */}
       <div className="max-w-7xl mx-auto h-28 bg-[#3ba6e7] flex items-center justify-between px-8 rounded-md shadow-md mt-4">
@@ -398,134 +401,134 @@ export default function PublisherArticlesPage() {
            
           </div>
 
-      {/* Main Content Layout */}
-      <div className="max-w-7xl mx-auto px-8 py-4">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Main Articles Column */}
-          <div className="lg:col-span-3">
-            {/* Section Header */}
-            <div className="border-b-2 border-black mb-6 pb-2">
-              <h2 className="text-3xl font-bold" style={{fontFamily: 'Times, "Times New Roman", serif'}}>
-                {(!articles || articles.length === 0) ? 'No Articles Yet' : 'Latest Articles'}
-              </h2>
-            </div>
+        {/* Main Content Layout */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            {/* Main Articles Column */}
+            <div className="lg:col-span-3">
+              {/* Section Header */}
+              <div className="border-b-2 border-black mb-6 pb-2">
+                <h2 className="text-3xl font-bold" style={{fontFamily: 'Times, "Times New Roman", serif'}}>
+                  {(!articles || articles.length === 0) ? 'No Articles Yet' : 'Latest Articles'}
+                </h2>
+              </div>
 
-            {/* Category Filter */}
-            {articles && articles.length > 0 && (
-              <div className="mb-8 border-t border-b border-gray-300 py-4">
-                <div className="flex items-center space-x-2 mb-3">
-                  <Filter className="w-4 h-4" />
-                  <span className="text-sm font-bold uppercase tracking-wider">Filter by Category:</span>
-                </div>
-                
-                <div className="flex flex-wrap gap-2">
-                  {/* All Articles Filter */}
-                  <button
-                    onClick={() => handleCategoryFilter('all')}
-                    className={`px-3 py-2 text-xs font-bold uppercase tracking-wider border transition-colors ${
-                      selectedCategory === 'all'
-                        ? 'bg-black text-white border-black'
-                        : 'bg-white text-black border-gray-400 hover:bg-gray-100'
-                    }`}
-                  >
-                    All Articles ({articles.length})
-                  </button>
-
-                  {/* Dynamic Category Filters */}
-                  {categories.map((category) => {
-                    const categoryCount = articles.filter(article => 
-                      article.category && article.category.toLowerCase() === category.toLowerCase()
-                    ).length;
-                    
-                    return (
-                      <button
-                        key={category}
-                        onClick={() => handleCategoryFilter(category)}
-                        className={`px-3 py-2 text-xs font-bold uppercase tracking-wider border transition-colors ${
-                          selectedCategory.toLowerCase() === category.toLowerCase()
-                            ? 'bg-black text-white border-black'
-                            : 'bg-white text-black border-gray-400 hover:bg-gray-100'
-                        }`}
-                      >
-                        {category} ({categoryCount})
-                      </button>
-                    );
-                  })}
-
-                  {/* Uncategorized Filter (if there are articles without categories) */}
-                  {articles.some(article => !article.category) && (
+              {/* Category Filter */}
+              {articles && articles.length > 0 && (
+                <div className="mb-8 border-t border-b border-gray-300 py-4">
+                  <div className="flex items-center space-x-2 mb-3 text-sm">
+                    <Filter className="w-4 h-4" />
+                    <span className="text-sm font-bold uppercase tracking-wider">Filter by Category:</span>
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-2">
+                    {/* All Articles Filter */}
                     <button
-                      onClick={() => handleCategoryFilter('uncategorized')}
+                      onClick={() => handleCategoryFilter('all')} // This will be full width on mobile
                       className={`px-3 py-2 text-xs font-bold uppercase tracking-wider border transition-colors ${
-                        selectedCategory === 'uncategorized'
+                        selectedCategory === 'all'
                           ? 'bg-black text-white border-black'
                           : 'bg-white text-black border-gray-400 hover:bg-gray-100'
                       }`}
                     >
-                      Uncategorized ({articles.filter(article => !article.category).length})
+                      All Articles ({articles.length})
+                    </button>
+
+                    {/* Dynamic Category Filters */}
+                    {categories.map((category) => {
+                      const categoryCount = articles.filter(article => 
+                        article.category && article.category.toLowerCase() === category.toLowerCase()
+                      ).length;
+                      
+                      return (
+                        <button
+                          key={category}
+                          onClick={() => handleCategoryFilter(category)} // This will be full width on mobile
+                          className={`px-3 py-2 text-xs font-bold uppercase tracking-wider border transition-colors ${
+                            selectedCategory.toLowerCase() === category.toLowerCase()
+                              ? 'bg-black text-white border-black'
+                              : 'bg-white text-black border-gray-400 hover:bg-gray-100'
+                          }`}
+                        >
+                          {category} ({categoryCount})
+                        </button>
+                      );
+                    })}
+
+                    {/* Uncategorized Filter (if there are articles without categories) */}
+                    {articles.some(article => !article.category) && (
+                      <button
+                        onClick={() => handleCategoryFilter('uncategorized')} // This will be full width on mobile
+                        className={`px-3 py-2 text-xs font-bold uppercase tracking-wider border transition-colors ${
+                          selectedCategory === 'uncategorized'
+                            ? 'bg-black text-white border-black'
+                            : 'bg-white text-black border-gray-400 hover:bg-gray-100'
+                        }`}
+                      >
+                        Uncategorized ({articles.filter(article => !article.category).length})
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Active Filter Indicator */}
+                  {selectedCategory !== 'all' && (
+                    <div className="mt-3 text-sm text-gray-600">
+                      <span>Showing </span>
+                      <span className="font-bold">
+                        {selectedCategory === 'uncategorized' ? 'Uncategorized' : selectedCategory}
+                      </span>
+                      <span> articles ({filteredArticles.length} of {articles.length})</span>
+                      <button
+                        onClick={() => setSelectedCategory('all')}
+                        className="ml-2 text-blue-600 hover:underline"
+                      >
+                        Clear filter
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {(!filteredArticles || filteredArticles.length === 0) ? (
+                <div className="text-center py-16 border border-gray-400">
+                  <FileText className="mx-auto h-16 w-16 text-gray-400 mb-4" />
+                  <h3 className="text-2xl font-bold mb-4" style={{fontFamily: 'Times, "Times New Roman", serif'}}>
+                    {selectedCategory === 'all' ? 'No Articles Published' : `No ${selectedCategory} Articles`}
+                  </h3>
+                  <p className="text-gray-600 max-w-md mx-auto mb-4">
+                    {selectedCategory === 'all' 
+                      ? "This publisher's newsroom is ready for content. Check back later for breaking news and updates."
+                      : `No articles found in the ${selectedCategory} category. Try selecting a different category or view all articles.`
+                    }
+                  </p>
+                  {selectedCategory !== 'all' ? (
+                    <button 
+                      onClick={() => setSelectedCategory('all')}
+                      className="bg-black text-white px-6 py-2 text-sm font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors mr-4"
+                    >
+                      View All Articles
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={refreshArticles}
+                      className="bg-black text-white px-6 py-2 text-sm font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors"
+                    >
+                      Refresh Articles
                     </button>
                   )}
                 </div>
-
-                {/* Active Filter Indicator */}
-                {selectedCategory !== 'all' && (
-                  <div className="mt-3 text-sm text-gray-600">
-                    <span>Showing </span>
-                    <span className="font-bold">
-                      {selectedCategory === 'uncategorized' ? 'Uncategorized' : selectedCategory}
-                    </span>
-                    <span> articles ({filteredArticles.length} of {articles.length})</span>
-                    <button
-                      onClick={() => setSelectedCategory('all')}
-                      className="ml-2 text-blue-600 hover:underline"
-                    >
-                      Clear filter
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {(!filteredArticles || filteredArticles.length === 0) ? (
-              <div className="text-center py-16 border border-gray-400">
-                <FileText className="mx-auto h-16 w-16 text-gray-400 mb-4" />
-                <h3 className="text-2xl font-bold mb-4" style={{fontFamily: 'Times, "Times New Roman", serif'}}>
-                  {selectedCategory === 'all' ? 'No Articles Published' : `No ${selectedCategory} Articles`}
-                </h3>
-                <p className="text-gray-600 max-w-md mx-auto mb-4">
-                  {selectedCategory === 'all' 
-                    ? "This publisher's newsroom is ready for content. Check back later for breaking news and updates."
-                    : `No articles found in the ${selectedCategory} category. Try selecting a different category or view all articles.`
-                  }
-                </p>
-                {selectedCategory !== 'all' ? (
-                  <button 
-                    onClick={() => setSelectedCategory('all')}
-                    className="bg-black text-white px-6 py-2 text-sm font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors mr-4"
-                  >
-                    View All Articles
-                  </button>
-                ) : (
-                  <button 
-                    onClick={refreshArticles}
-                    className="bg-black text-white px-6 py-2 text-sm font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors"
-                  >
-                    Refresh Articles
-                  </button>
-                )}
-              </div>
-            ) : (
-              <div className="space-y-8">
-                {filteredArticles.map((article, index) => {
-                  // Debug log for each article
-                  console.log(`Article ${index + 1}:`, {
-                    id: article.id,
-                    title: article.title,
-                    category: article.category,
-                    hasContent: !!article.content,
-                    createdAt: article.createdAt,
-                    createdAtType: typeof article.createdAt
-                  });
+              ) : (
+                <div className="space-y-8">
+                  {filteredArticles.map((article, index) => {
+                    // Debug log for each article
+                    console.log(`Article ${index + 1}:`, {
+                      id: article.id,
+                      title: article.title,
+                      category: article.category,
+                      hasContent: !!article.content,
+                      createdAt: article.createdAt,
+                      createdAtType: typeof article.createdAt
+                    });
 
                   return (
                     <article 
@@ -549,262 +552,262 @@ export default function PublisherArticlesPage() {
                           </div>
                         )}
 
-                        {/* Article Content */}
-                        <div className="flex-1">
-                          {/* Category */}
-                          {article.category && (
-                            <div className="mb-2">
-                              <span className="inline-block bg-black text-white px-2 py-1 text-xs font-bold uppercase tracking-wider">
-                                {article.category}
-                              </span>
-                            </div>
-                          )}
-
-                          {/* Headline */}
-                          <h3 className="text-2xl font-bold leading-tight mb-3 hover:underline" 
-                              style={{fontFamily: 'Times, "Times New Roman", serif'}}>
-                            {article.title}
-                          </h3>
-                          
-                          {/* Summary or Content Preview */}
-                          {(article.summary || article.content) && (
-                            <p className="text-gray-700 mb-3 leading-relaxed">
-                              {article.summary || article.content || 'No preview available'}
-                            </p>
-                          )}
-
-                          {/* Article Meta */}
-                          <div className="flex items-center space-x-4 text-sm text-gray-600 mb-3">
-                            <div className="flex items-center space-x-1">
-                              <Calendar className="w-4 h-4" />
-                              <span>{formatDate(article.createdAt)}</span>
-                            </div>
-                            
-                            <div className="flex items-center space-x-1">
-                              <Clock className="w-4 h-4" />
-                              <span>{formatReadTime(article.readTime)}</span>
-                            </div>
-                            
-                            {article.views && article.views > 0 && (
-                              <div className="flex items-center space-x-1">
-                                <Eye className="w-4 h-4" />
-                                <span>{article.views} views</span>
+                          {/* Article Content */}
+                          <div className="flex-1">
+                            {/* Category */}
+                            {article.category && (
+                              <div className="mb-2">
+                                <span className="inline-block bg-black text-white px-2 py-1 text-xs font-bold uppercase tracking-wider">
+                                  {article.category}
+                                </span>
                               </div>
                             )}
 
-                            {article.author && (
+                            {/* Headline - smaller on mobile */}
+                            <h3 className="text-xl sm:text-2xl font-bold leading-tight mb-3 hover:underline" 
+                                style={{fontFamily: 'Times, "Times New Roman", serif'}}>
+                              {article.title}
+                            </h3>
+                            
+                            {/* Summary or Content Preview */}
+                            {(article.summary || article.content) && (
+                              <p className="text-sm sm:text-base text-gray-700 mb-3 leading-relaxed">
+                                {article.summary || article.content || 'No preview available'}
+                              </p>
+                            )}
+
+                            {/* Article Meta */}
+                            <div className="flex items-center space-x-4 text-sm text-gray-600 mb-3">
                               <div className="flex items-center space-x-1">
-                                <span>By {article.author}</span>
+                                <Calendar className="w-4 h-4" />
+                                <span>{formatDate(article.createdAt)}</span>
+                              </div>
+                              
+                              <div className="flex items-center space-x-1">
+                                <Clock className="w-4 h-4" />
+                                <span>{formatReadTime(article.readTime)}</span>
+                              </div>
+                              
+                              {article.views && article.views > 0 && (
+                                <div className="flex items-center space-x-1">
+                                  <Eye className="w-4 h-4" />
+                                  <span>{article.views} views</span>
+                                </div>
+                              )}
+
+                              {article.author && (
+                                <div className="flex items-center space-x-1">
+                                  <span>By {article.author}</span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Tags */}
+                            {article.tags && article.tags.length > 0 && (
+                              <div className="flex items-center space-x-2">
+                                <Hash className="w-3 h-3 text-gray-400" />
+                                <div className="flex flex-wrap gap-2">
+                                  {article.tags.slice(0, 4).map((tag, tagIndex) => (
+                                    <span 
+                                      key={tagIndex}
+                                      className="inline-block bg-gray-200 px-2 py-1 text-xs font-medium uppercase tracking-wider border text-gray-700"
+                                    >
+                                      {stripHtml(tag)}
+                                    </span>
+                                  ))}
+                                  {article.tags.length > 4 && (
+                                    <span className="text-xs text-gray-500 self-center">
+                                      +{article.tags.length - 4} more
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                             )}
                           </div>
-
-                          {/* Tags */}
-                          {article.tags && article.tags.length > 0 && (
-                            <div className="flex items-center space-x-2">
-                              <Hash className="w-3 h-3 text-gray-400" />
-                              <div className="flex flex-wrap gap-2">
-                                {article.tags.slice(0, 4).map((tag, tagIndex) => (
-                                  <span 
-                                    key={tagIndex}
-                                    className="inline-block bg-gray-200 px-2 py-1 text-xs font-medium uppercase tracking-wider border text-gray-700"
-                                  >
-                                    {stripHtml(tag)}
-                                  </span>
-                                ))}
-                                {article.tags.length > 4 && (
-                                  <span className="text-xs text-gray-500 self-center">
-                                    +{article.tags.length - 4} more
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          )}
                         </div>
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Right Sidebar */}
-          <div className="lg:col-span-1 space-y-6">
-            {/* Publication Info Box */}
-            {cleanPublisher && (
-              <div className="border-2 border-black p-4">
-                <h3 className="text-lg font-bold mb-4 border-b border-black pb-2" style={{fontFamily: 'Times, "Times New Roman", serif'}}>
-                  About {cleanPublisher.name}
-                </h3>
-                
-                <div className="space-y-3 text-sm">
-                  {cleanPublisher.logo && (
-                    <div className="text-center mb-4">
-                      <img
-                        src={cleanPublisher.logo}
-                        alt={`${cleanPublisher.name} logo`}
-                        className="w-16 h-16 mx-auto rounded border border-gray-400"
-                        onError={(e) => {
-                          console.log('Publisher logo failed to load:', cleanPublisher.logo);
-                          e.target.style.display = 'none';
-                        }}
-                      />
-                    </div>
-                  )}
-                  
-                  {cleanPublisher.description && (
-                    <p className="text-gray-700 italic leading-relaxed">
-                      "{cleanPublisher.description}"
-                    </p>
-                  )}
-                  
-                  <div className="space-y-2 pt-3 border-t border-gray-300">
-                    <div><strong>Industry:</strong> {cleanPublisher.industry || 'Publishing'}</div>
-                    <div><strong>Type:</strong> {cleanPublisher.publicationType || 'Publication'}</div>
-                    <div><strong>Audience:</strong> {cleanPublisher.audienceType || 'General'}</div>
-                    {cleanPublisher.website && (
-                      <div className="flex items-center space-x-1">
-                        <strong>Web:</strong>
-                        <Globe className="w-3 h-3" />
-                        <a 
-                          href={cleanPublisher.website} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-xs hover:underline break-all"
-                        >
-                          {cleanPublisher.website.replace(/^https?:\/\//, '')}
-                        </a>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Category Overview Box */}
-            {categories.length > 0 && (
-              <div className="border-2 border-black p-4">
-                <h3 className="text-lg font-bold mb-4 border-b border-black pb-2" style={{fontFamily: 'Times, "Times New Roman", serif'}}>
-                  Categories
-                </h3>
-                <div className="space-y-2 text-sm">
-                  {categories.map((category) => {
-                    const categoryCount = articles.filter(article => 
-                      article.category && article.category.toLowerCase() === category.toLowerCase()
-                    ).length;
-                    
-                    return (
-                      <div 
-                        key={category}
-                        className={`flex justify-between items-center py-2 px-3 border cursor-pointer transition-colors ${
-                          selectedCategory.toLowerCase() === category.toLowerCase()
-                            ? 'bg-black text-white border-black'
-                            : 'bg-gray-50 hover:bg-gray-100 border-gray-300'
-                        }`}
-                        onClick={() => handleCategoryFilter(category)}
-                      >
-                        <span className="font-medium">{category}</span>
-                        <span className="text-xs">{categoryCount}</span>
-                      </div>
+                      </article>
                     );
                   })}
                 </div>
-              </div>
-            )}
-
-            {/* Square Ad Slot */}
-            <AdSlot 
-              label="Advertisement here by press"
-              height={300}
-              width="100%"
-              preferredType="square"
-              className="border-2 border-black-400"
-            />
-            
-
-            {/* Today's Headlines Box */}
-            <div className="border-2 border-black p-4">
-              <h3 className="text-lg font-bold mb-4 border-b border-black pb-2" style={{fontFamily: 'Times, "Times New Roman", serif'}}>
-                Today's Headlines
-              </h3>
-              <div className="space-y-3 text-sm">
-                <div className="border-b border-gray-300 pb-2">
-                  <h4 className="font-bold mb-1">Breaking News Update</h4>
-                  <p className="text-gray-600 text-xs">Latest developments in local government proceedings...</p>
-                </div>
-                <div className="border-b border-gray-300 pb-2">
-                  <h4 className="font-bold mb-1">Weather Alert</h4>
-                  <p className="text-gray-600 text-xs">Heavy rainfall expected this weekend across the region...</p>
-                </div>
-                <div className="border-b border-gray-300 pb-2">
-                  <h4 className="font-bold mb-1">Sports Results</h4>
-                  <p className="text-gray-600 text-xs">Local teams advance to regional championships...</p>
-                </div>
-                <div>
-                  <h4 className="font-bold mb-1">Community Events</h4>
-                  <p className="text-gray-600 text-xs">Annual festival preparations underway downtown...</p>
-                </div>
-              </div>
+              )}
             </div>
 
-            {/* Vertical Ad Slot */}
-            <AdSlot 
-              label="Advertisement"
-              height={400}
-              width="100%"
-              preferredType="skyscraper"
-              className="border-2 border-black-400"
-            />
+            {/* Right Sidebar */}
+            <div className="lg:col-span-1 space-y-6">
+              {/* Publication Info Box */}
+              {cleanPublisher && (
+                <div className="border-2 border-black p-4">
+                  <h3 className="text-lg font-bold mb-4 border-b border-black pb-2" style={{fontFamily: 'Times, "Times New Roman", serif'}}>
+                    About {cleanPublisher.name}
+                  </h3>
+                  
+                  <div className="space-y-3 text-sm">
+                    {cleanPublisher.logo && (
+                      <div className="text-center mb-4">
+                        <img
+                          src={cleanPublisher.logo}
+                          alt={`${cleanPublisher.name} logo`}
+                          className="w-16 h-16 mx-auto rounded border border-gray-400"
+                          onError={(e) => {
+                            console.log('Publisher logo failed to load:', cleanPublisher.logo);
+                            e.target.style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    )}
+                    
+                    {cleanPublisher.description && (
+                      <p className="text-gray-700 italic leading-relaxed">
+                        "{cleanPublisher.description}"
+                      </p>
+                    )}
+                    
+                    <div className="space-y-2 pt-3 border-t border-gray-300">
+                      <div><strong>Industry:</strong> {cleanPublisher.industry || 'Publishing'}</div>
+                      <div><strong>Type:</strong> {cleanPublisher.publicationType || 'Publication'}</div>
+                      <div><strong>Audience:</strong> {cleanPublisher.audienceType || 'General'}</div>
+                      {cleanPublisher.website && (
+                        <div className="flex items-center space-x-1">
+                          <strong>Web:</strong>
+                          <Globe className="w-3 h-3" />
+                          <a 
+                            href={cleanPublisher.website} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-xs hover:underline break-all"
+                          >
+                            {cleanPublisher.website.replace(/^https?:\/\//, '')}
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
 
-            {/* Recent Articles from this Publisher */}
-            {articles && articles.length > 3 && (
+              {/* Category Overview Box */}
+              {categories.length > 0 && (
+                <div className="border-2 border-black p-4">
+                  <h3 className="text-lg font-bold mb-4 border-b border-black pb-2" style={{fontFamily: 'Times, "Times New Roman", serif'}}>
+                    Categories
+                  </h3>
+                  <div className="space-y-2 text-sm">
+                    {categories.map((category) => {
+                      const categoryCount = articles.filter(article => 
+                        article.category && article.category.toLowerCase() === category.toLowerCase()
+                      ).length;
+                      
+                      return (
+                        <div 
+                          key={category}
+                          className={`flex justify-between items-center py-2 px-3 border cursor-pointer transition-colors ${
+                            selectedCategory.toLowerCase() === category.toLowerCase()
+                              ? 'bg-black text-white border-black'
+                              : 'bg-gray-50 hover:bg-gray-100 border-gray-300'
+                          }`}
+                          onClick={() => handleCategoryFilter(category)}
+                        >
+                          <span className="font-medium">{category}</span>
+                          <span className="text-xs">{categoryCount}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Square Ad Slot */}
+              <AdSlot 
+                label="Advertisement here by press"
+                height={300}
+                width="100%"
+                preferredType="square"
+                className="border-2 border-black-400"
+              />
+              
+
+              {/* Today's Headlines Box */}
               <div className="border-2 border-black p-4">
                 <h3 className="text-lg font-bold mb-4 border-b border-black pb-2" style={{fontFamily: 'Times, "Times New Roman", serif'}}>
-                  More from {cleanPublisher?.name || 'This Publisher'}
+                  Today's Headlines
                 </h3>
                 <div className="space-y-3 text-sm">
-                  {articles.slice(3, 7).map((article, index) => (
-                    <div 
-                      key={article.id}
-                      className="border-b border-gray-300 pb-2 cursor-pointer hover:bg-gray-50 p-2 -m-2 rounded"
-                      onClick={() => handleArticleClick(article)}
-                    >
-                      <h4 className="font-bold mb-1 hover:underline">{article.title}</h4>
-                      <p className="text-gray-600 text-xs">
-                        {formatDate(article.createdAt)} • {formatReadTime(article.readTime)}
-                      </p>
-                    </div>
-                  ))}
+                  <div className="border-b border-gray-300 pb-2">
+                    <h4 className="font-bold mb-1">Breaking News Update</h4>
+                    <p className="text-gray-600 text-xs">Latest developments in local government proceedings...</p>
+                  </div>
+                  <div className="border-b border-gray-300 pb-2">
+                    <h4 className="font-bold mb-1">Weather Alert</h4>
+                    <p className="text-gray-600 text-xs">Heavy rainfall expected this weekend across the region...</p>
+                  </div>
+                  <div className="border-b border-gray-300 pb-2">
+                    <h4 className="font-bold mb-1">Sports Results</h4>
+                    <p className="text-gray-600 text-xs">Local teams advance to regional championships...</p>
+                  </div>
+                  <div>
+                    <h4 className="font-bold mb-1">Community Events</h4>
+                    <p className="text-gray-600 text-xs">Annual festival preparations underway downtown...</p>
+                  </div>
                 </div>
               </div>
-            )}
 
-            {/* Classified Ads Box */}
-            <div className="border-2 border-black p-4">
-              <h3 className="text-lg font-bold mb-4 border-b border-black pb-2" style={{fontFamily: 'Times, "Times New Roman", serif'}}>
-                Classified Ads
-              </h3>
-              <div className="space-y-3 text-xs">
-                <div className="border border-gray-300 p-2">
-                  <div className="font-bold uppercase">For Sale</div>
-                  <div>Vintage furniture collection. Call 555-0123</div>
+              {/* Vertical Ad Slot */}
+              <AdSlot 
+                label="Advertisement"
+                height={400}
+                width="100%"
+                preferredType="skyscraper"
+                className="border-2 border-black-400"
+              />
+
+              {/* Recent Articles from this Publisher */}
+              {articles && articles.length > 3 && (
+                <div className="border-2 border-black p-4">
+                  <h3 className="text-lg font-bold mb-4 border-b border-black pb-2" style={{fontFamily: 'Times, "Times New Roman", serif'}}>
+                    More from {cleanPublisher?.name || 'This Publisher'}
+                  </h3>
+                  <div className="space-y-3 text-sm">
+                    {articles.slice(3, 7).map((article, index) => (
+                      <div 
+                        key={article.id}
+                        className="border-b border-gray-300 pb-2 cursor-pointer hover:bg-gray-50 p-2 -m-2 rounded"
+                        onClick={() => handleArticleClick(article)}
+                      >
+                        <h4 className="font-bold mb-1 hover:underline">{article.title}</h4>
+                        <p className="text-gray-600 text-xs">
+                          {formatDate(article.createdAt)} • {formatReadTime(article.readTime)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className="border border-gray-300 p-2">
-                  <div className="font-bold uppercase">Employment</div>
-                  <div>Seeking experienced reporters. Apply today!</div>
-                </div>
-                <div className="border border-gray-300 p-2">
-                  <div className="font-bold uppercase">Services</div>
-                  <div>Professional printing services. Quality guaranteed.</div>
-                </div>
-                <div className="text-center pt-2 border-t border-gray-300">
-                  <span className="font-bold text-xs">Place your ad: 555-NEWS</span>
+              )}
+
+              {/* Classified Ads Box */}
+              <div className="border-2 border-black p-4">
+                <h3 className="text-lg font-bold mb-4 border-b border-black pb-2" style={{fontFamily: 'Times, "Times New Roman", serif'}}>
+                  Classified Ads
+                </h3>
+                <div className="space-y-3 text-xs">
+                  <div className="border border-gray-300 p-2">
+                    <div className="font-bold uppercase">For Sale</div>
+                    <div>Vintage furniture collection. Call 555-0123</div>
+                  </div>
+                  <div className="border border-gray-300 p-2">
+                    <div className="font-bold uppercase">Employment</div>
+                    <div>Seeking experienced reporters. Apply today!</div>
+                  </div>
+                  <div className="border border-gray-300 p-2">
+                    <div className="font-bold uppercase">Services</div>
+                    <div>Professional printing services. Quality guaranteed.</div>
+                  </div>
+                  <div className="text-center pt-2 border-t border-gray-300">
+                    <span className="font-bold text-xs">Place your ad: 555-NEWS</span>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
         {/* Bottom Banner Ad */}
         <div className="max-w-7xl mx-auto h-28 bg-[#3ba6e7] flex items-center justify-between px-8 rounded-md shadow-md mt-4">
@@ -827,25 +830,26 @@ export default function PublisherArticlesPage() {
      
     </div>
 
-        {/* Footer */}
-        <div className="border-t-2 border-black mt-8">
-          <div className="max-w-7xl mx-auto px-8 py-6">
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center space-x-6">
-                <span className="font-bold" style={{fontFamily: 'Times, "Times New Roman", serif'}}>
-                  © {new Date().getFullYear()} {cleanPublisher?.name || 'News Publisher'}
-                </span>
-                <span className="text-gray-600">All rights reserved</span>
-              </div>
-              
-              <div className="flex items-center space-x-4">
-                <span className="text-gray-600">Edition: Digital</span>
-                <button
-                  onClick={handleBackClick}
-                  className="bg-black text-white px-4 py-2 text-xs font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors"
-                >
-                  Back to Sources
-                </button>
+          {/* Footer */}
+          <div className="border-t-2 border-black mt-8">
+            <div className="max-w-7xl mx-auto px-4 sm:px-8 py-6">
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center space-x-6">
+                  <span className="font-bold" style={{fontFamily: 'Times, "Times New Roman", serif'}}>
+                    © {new Date().getFullYear()} {cleanPublisher?.name || 'News Publisher'}
+                  </span>
+                  <span className="text-gray-600">All rights reserved</span>
+                </div>
+                
+                <div className="flex items-center space-x-4">
+                  <span className="text-gray-600">Edition: Digital</span>
+                  <button
+                    onClick={handleBackClick}
+                    className="bg-black text-white px-4 py-2 text-xs font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors"
+                  >
+                    Back to Sources
+                  </button>
+                </div>
               </div>
             </div>
           </div>

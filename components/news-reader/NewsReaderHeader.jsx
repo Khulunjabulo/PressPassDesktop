@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { Home, Search, Star, FileText } from "lucide-react";
+import { Home, Search, Star, FileText, Menu, LogOut } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { signOut } from 'firebase/auth';
+import { auth } from '@/Firebase/firebase';
 
 export default function NewsReaderHeader({ 
   publisherImage, 
@@ -17,6 +19,7 @@ export default function NewsReaderHeader({
   const router = useRouter();
   const pathname = usePathname();
   const [logoError, setLogoError] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Check if we're on a publisher page or article page with publisher data
   const isPublisherPage = pathname?.includes('/publisher/');
@@ -60,25 +63,55 @@ export default function NewsReaderHeader({
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      router.push('/page.js'); // Redirect to the main landing page
+    } catch (error) {
+      console.error("Error signing out: ", error);
+    }
+  };
+
   return (
-    <header className="bg-[#329ae1] w-full flex justify-between items-center px-6 py-3 shadow-md">
+    <header className="bg-[#329ae1] w-full flex justify-between items-center px-3 sm:px-6 py-2 sm:py-3 shadow-md h-16">
       {/* Logo Section */}
       <Link href="/news-reader">
         <Image
           src={logoSrc}
           alt={isShowingPublisherLogo && publisherName ? `${publisherName} logo` : "Press Pass"}
           title={isShowingPublisherLogo && publisherName ? `Go to ${publisherName}` : "Go to Press Pass"}
-          width={100}
-          height={50}
+          width={80}
+          height={32}
           priority
           onError={() => setLogoError(true)}
           onLoad={() => setLogoError(false)}
-          className="cursor-pointer hover:opacity-80 transition-opacity"
+          className="cursor-pointer hover:opacity-80 transition-opacity w-[80px] h-auto"
         />
       </Link>
 
-      {/* Navigation Icons */}
-      <nav className="flex gap-8 text-white text-sm font-medium items-center">
+      {/* Mobile Menu Icon & Dropdown */}
+      <div className="md:hidden relative">
+        <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-white p-2">
+          <Menu size={24} />
+        </button>
+        {isMobileMenuOpen && (
+          <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50">
+            <div className="py-1">
+              <button
+                onClick={handleLogout}
+                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout
+              </button>
+              {/* You can add other mobile menu items here */}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Desktop Navigation Icons */}
+      <nav className="hidden md:flex gap-8 text-white text-sm font-medium items-center">
         <Link href="/news-reader">
           <div className="flex flex-col items-center hover:text-gray-200 transition">
             <Home size={24} />

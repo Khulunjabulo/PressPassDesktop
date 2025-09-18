@@ -1,19 +1,19 @@
 "use client";
-import { Users, Megaphone, MessageSquare, User, BarChart3, Smartphone } from "lucide-react";
+import { Users, Megaphone, MessageSquare, User, BarChart3, Smartphone, Menu, UserPlus, LogIn } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import AnimatedSlogan from "@/components/news-reader/AnimatedSlogan";
 import MainHeader from "@/components/news-reader/NewsReaderMainHeader";
 import UserReviewsSection from "@/components/user review/UserReviewSection";
 import "../app/globals.css"
-
-import React from "react";
+import React, { useState } from "react";
 import useLandingPageLogic from "@/hooks/LandingPageLogic";
 
 
   
 export default function NewsReaderHomePage() {
   const { handleStartReading } = useLandingPageLogic()
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
 
@@ -24,10 +24,29 @@ export default function NewsReaderHomePage() {
           <Link href="/" className="flex-shrink-0">
             <Image src="/Presspass.png" alt="Press Pass logo" width={80} height={32} className="w-[80px] h-auto" priority />
           </Link>
-          <nav className="flex items-center gap-2 sm:gap-3 text-white">
-            <Link href="/signup" className="hover:bg-white/10 px-2 py-1 rounded text-xs sm:text-sm font-medium">Sign Up</Link>
-            <Link href="/signin" className="hover:bg-white/10 px-2 py-1 rounded text-xs sm:text-sm font-medium bg-white/10">Login</Link>
-          </nav>
+          <div className="relative">
+            <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-white p-2">
+              <Menu size={24} />
+            </button>
+            {isMobileMenuOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50">
+                <div className="py-1">
+                  <Link href="/signup">
+                    <div className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
+                      <UserPlus className="w-4 h-4 mr-2" />
+                      Sign Up
+                    </div>
+                  </Link>
+                  <Link href="/signin">
+                    <div className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
+                      <LogIn className="w-4 h-4 mr-2" />
+                      Login
+                    </div>
+                  </Link>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

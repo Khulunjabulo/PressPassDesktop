@@ -6,12 +6,13 @@ import Image from 'next/image';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from '@/Firebase/firebase';
 import { getUserRole } from '@/Firebase/auth';
-import { useRouter } from 'next/navigation';
-import { Newspaper, LogOut, UserPlus, LogIn } from 'lucide-react';
+import { useRouter } from 'next/navigation'
+import { Newspaper, LogOut, UserPlus, LogIn, Menu } from 'lucide-react';
 
 export default function MainHeader() {
   const [user, setUser] = useState(null);
   const [role, setRole] = useState(null);
+  const [menuOpen, setMenuOpen] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -46,7 +47,7 @@ export default function MainHeader() {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-[#329ae1] px-3 sm:px-6 py-2 sm:py-4 md:py-5 lg:py-6 shadow-md">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-[#329ae1] px-3 sm:px-6 py-2 shadow-md h-16">
       <div className="max-w-7xl mx-auto flex items-center justify-between h-12 sm:h-16 md:h-18 lg:h-20">
         <div className="flex items-center">
           <Link href="/" className="flex-shrink-0">
@@ -61,7 +62,7 @@ export default function MainHeader() {
           </Link>
         </div>
 
-        <nav className="flex items-center gap-1 sm:gap-3 md:gap-4 text-white">
+        <nav className="hidden md:flex items-center gap-1 sm:gap-3 md:gap-4 text-white">
           {/* Hide Print Media on mobile (425px and less), show on tablet (768px) and larger */}
           <button
             onClick={handlePrintMediaClick}
@@ -99,6 +100,27 @@ export default function MainHeader() {
             </>
           )}
         </nav>
+
+        {/* Mobile Menu */}
+        <div className="md:hidden relative">
+          {user && (
+            <>
+              <button onClick={() => setMenuOpen(!menuOpen)} className="text-white p-2">
+                <Menu size={24} />
+              </button>
+              {menuOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50">
+                  <div className="py-1">
+                    <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Logout
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </header>
   );

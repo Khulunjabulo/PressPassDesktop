@@ -10,19 +10,19 @@ import { useCurrentPublisher } from "@/hooks/useCurrentPublisher";
 import PrintMediaFooter from '@/components/UI/PrintMediaFooter';
 
 export default function Publisher() {
-  const { submissionStatus, handleFormSubmit } = usePrintMediaLogic();
+  const { submissionStatus } = usePrintMediaLogic();
   const [showManualUpload, setShowManualUpload] = useState(false);
   const [articleSubmissionStatus, setArticleSubmissionStatus] = useState(null);
   const { publisher, loading } = useCurrentPublisher("currentPublisherId");
 
-  // Handle manual article submission
+  // Unified Article Submit (manual & PDF)
   const handleManualArticleSubmit = async (formData) => {
     try {
       setArticleSubmissionStatus({ type: 'loading', message: 'Publishing article...' });
       const response = await fetch('/api/publish-article', {
         method: 'POST',
-        body: formData,
-        headers: {},
+        body: formData instanceof FormData ? formData : JSON.stringify(formData),
+        headers: formData instanceof FormData ? {} : { "Content-Type": "application/json" }
       });
       const result = await response.json();
       if (result.success) {
@@ -48,23 +48,11 @@ export default function Publisher() {
     }
   };
 
-  // Handle opening manual upload form
-  const handleOpenManualUpload = () => {
-    setShowManualUpload(true);
-    setArticleSubmissionStatus(null);
-  };
-
-  // Handle closing manual upload form
-  const handleCloseManualUpload = () => {
-    setShowManualUpload(false);
-    setArticleSubmissionStatus(null);
-  };
-
   return (
     <>
       <Header publisher={publisher} />
       <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row overflow-hidden">
-        <PublisherSidebar onManualUploadClick={handleOpenManualUpload} />
+        <PublisherSidebar onManualUploadClick={() => setShowManualUpload(true)} />
 
         {/* Main Content */}
         <main className="flex-1 p-2 sm:p-4 md:p-6 bg-gray-50 overflow-y-auto">
@@ -97,8 +85,8 @@ export default function Publisher() {
               </div>
             )}
 
-            {/* Upload Form */}
-            <UploadForm onSubmit={handleFormSubmit} />
+            {/* Upload Form (PDF Upload) */}
+            <UploadForm onSubmit={handleManualArticleSubmit} />
           </div>
         </main>
       </div>
@@ -107,7 +95,7 @@ export default function Publisher() {
       {showManualUpload && (
         <ManualArticleForm
           onSubmit={handleManualArticleSubmit}
-          onClose={handleCloseManualUpload}
+          onClose={() => setShowManualUpload(false)}
         />
       )}
 
