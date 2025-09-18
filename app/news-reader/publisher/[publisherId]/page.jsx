@@ -1,7 +1,7 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent } from '@/components/UI/newscard';
 import { ArrowLeft, FileText, Clock, Globe, Building, Users, Calendar, Eye, Hash, Filter } from 'lucide-react';
 import { usePublisherArticles } from '@/hooks/useNewsSources';
@@ -67,6 +67,33 @@ export default function PublisherArticlesPage() {
   const router = useRouter();
   const { publisher, articles: rawArticles, loading, error, refreshArticles } = usePublisherArticles(params.publisherId);
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [adUpload, setAdUpload] = useState(null);
+  const [adUploadLoading, setAdUploadLoading] = useState(true);
+  const [adUploadError, setAdUploadError] = useState(null);
+
+  // Fetch the first ad upload
+  useEffect(() => {
+    const fetchAdUpload = async () => {
+      try {
+        setAdUploadLoading(true);
+        const response = await fetch('/api/get-first-ad-upload');
+        const result = await response.json();
+
+        if (result.success) {
+          setAdUpload(result.adUpload);
+        } else {
+          setAdUploadError(result.error || 'Failed to load ad');
+        }
+      } catch (err) {
+        console.error('Error fetching ad upload:', err);
+        setAdUploadError('Failed to load ad');
+      } finally {
+        setAdUploadLoading(false);
+      }
+    };
+
+    fetchAdUpload();
+  }, []);
 
   // Clean articles data to remove HTML
   const articles = useMemo(() => {
@@ -353,21 +380,26 @@ export default function PublisherArticlesPage() {
           </div>
         </div>
 
-        {/* Banner Ad */}
-        <div className="max-w-7xl mx-auto h-28 bg-[#3ba6e7] flex items-center justify-between px-4 sm:px-8 rounded-md shadow-md mt-4">
-                <div className="flex flex-col items-center mt-5">
-                    <img src="/Presspass.png" alt="PressPass Logo" height={150} width={150} className="object-contain" /> 
-                </div>
-              <div className="flex flex-col justify-center items-center space-y-2 text-center mx-auto">
-                <h3 className="text-yellow-400 font-bold text-base sm:text-lg">Advertise Here</h3>
-                <p className="text-white text-xs sm:text-sm flex flex-col items-center space-y-1">
-                  <span>Partners@presspass.africa</span>
-                </p>
-                <p className="text-white text-xs sm:text-sm flex flex-col items-center space-y-1">
-                  <span>Phone: +27 87 XXX XXX</span>
-                </p>
+      {/* Banner Ad */}
+      <div className="max-w-7xl mx-auto h-28 bg-[#3ba6e7] flex items-center justify-between px-8 rounded-md shadow-md mt-4">
+              <div className="flex flex-col items-center mt-5">
+                  {adUploadLoading ? (
+                    <div className="w-32 h-20 bg-gray-200 animate-pulse rounded"></div>
+                  ) : adUpload?.imageSrc ? (
+                    <img
+                      src={adUpload.imageSrc}
+                      alt="Uploaded Ad"
+                      className="w-1000 h-30 object-cover rounded"
+                      style={{ maxWidth: '1300px', maxHeight: '200px' }}
+                    />
+                  ) : (
+                    <div className="w-32 h-20 bg-white bg-opacity-20 rounded flex items-center justify-center">
+                      <span className="text-white text-xs opacity-70">Ad Space</span>
+                    </div>
+                  )}
               </div>
-            </div>
+           
+          </div>
 
         {/* Main Content Layout */}
         <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4">
@@ -498,27 +530,27 @@ export default function PublisherArticlesPage() {
                       createdAtType: typeof article.createdAt
                     });
 
-                    return (
-                      <article 
-                        key={article.id}
-                        className="border-b border-gray-300 pb-6 last:border-b-0 cursor-pointer hover:bg-gray-50 transition-colors p-4 -m-4 rounded"
-                        onClick={() => handleArticleClick(article)}
-                      >
-                        <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
-                          {/* Article Image */}
-                          {article.imageUrl && (
-                            <div className="flex-shrink-0 w-full sm:w-auto">
-                              <img
-                                src={article.imageUrl}
-                                alt={article.title}
-                                className="w-full h-40 sm:w-32 sm:h-24 object-cover border border-gray-400"
-                                onError={(e) => {
-                                  console.log('Article image failed to load:', article.imageUrl);
-                                  e.target.style.display = 'none';
-                                }}
-                              />
-                            </div>
-                          )}
+                  return (
+                    <article 
+                      key={article.id}
+                      className="border-b border-gray-300 pb-6 last:border-b-0 cursor-pointer hover:bg-gray-50 transition-colors p-4 -m-4 rounded"
+                      onClick={() => handleArticleClick(article)}
+                    >
+                      <div className="flex gap-6">
+                        {/* Article Image */}
+                        {article.imageUrl && (
+                          <div className="flex-shrink-0">
+                            <img
+                              src={article.imageUrl}
+                              alt={article.title}
+                              className="w-28 h-30 object-cover border border-gray-400"
+                              onError={(e) => {
+                                console.log('Article image failed to load:', article.imageUrl);
+                                e.target.style.display = 'none';
+                              }}
+                            />
+                          </div>
+                        )}
 
                           {/* Article Content */}
                           <div className="flex-1">
@@ -777,21 +809,26 @@ export default function PublisherArticlesPage() {
             </div>
           </div>
 
-          {/* Bottom Banner Ad */}
-          <div className="max-w-7xl mx-auto h-28 bg-[#3ba6e7] flex items-center justify-between px-4 sm:px-8 rounded-md shadow-md mt-4">
-          <div className="flex flex-col items-center mt-5">
-              <img src="/Presspass.png" alt="PressPass Logo" height={150} width={150} className="object-contain" /> 
-          </div>
-        <div className="flex flex-col justify-center items-center space-y-2 text-center mx-auto">
-          <h3 className="text-yellow-400 font-bold text-base sm:text-lg">Advertise Here</h3>
-          <p className="text-white text-xs sm:text-sm flex flex-col items-center space-y-1">
-            <span>Partners@presspass.africa</span>
-          </p>
-          <p className="text-white text-xs sm:text-sm flex flex-col items-center space-y-1">
-            <span>Phone: +27 87 XXX XXX</span>
-          </p>
+        {/* Bottom Banner Ad */}
+        <div className="max-w-7xl mx-auto h-28 bg-[#3ba6e7] flex items-center justify-between px-8 rounded-md shadow-md mt-4">
+        <div className="flex flex-col items-center mt-5">
+            {adUploadLoading ? (
+              <div className="w-32 h-20 bg-gray-200 animate-pulse rounded"></div>
+            ) : adUpload?.imageSrc ? (
+              <img
+                src={adUpload.imageSrc}
+                alt="Uploaded Ad"
+                className="w-1000 h-30 object-cover rounded"
+                style={{ maxWidth: '1200px', maxHeight: '200px' }}
+              />
+            ) : (
+              <div className="w-32 h-20 bg-white bg-opacity-20 rounded flex items-center justify-center">
+                <span className="text-white text-xs opacity-70">Ad Space</span>
+              </div>
+            )}s
         </div>
-      </div>
+     
+    </div>
 
           {/* Footer */}
           <div className="border-t-2 border-black mt-8">
