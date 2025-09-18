@@ -540,7 +540,7 @@ export default function PublisherArticlesPage() {
                             <img
                               src={article.imageUrl}
                               alt={article.title}
-                              className="w-32 h-24 object-cover border border-gray-400"
+                              className="w-28 h-30 object-cover border border-gray-400"
                               onError={(e) => {
                                 console.log('Article image failed to load:', article.imageUrl);
                                 e.target.style.display = 'none';
@@ -815,24 +815,16 @@ export default function PublisherArticlesPage() {
               <img
                 src={adUpload.imageSrc}
                 alt="Uploaded Ad"
-                className="w-32 h-20 object-cover rounded"
-                style={{ maxWidth: '180px', maxHeight: '200px' }}
+                className="w-1000 h-30 object-cover rounded"
+                style={{ maxWidth: '1200px', maxHeight: '200px' }}
               />
             ) : (
               <div className="w-32 h-20 bg-white bg-opacity-20 rounded flex items-center justify-center">
                 <span className="text-white text-xs opacity-70">Ad Space</span>
               </div>
-            )}
+            )}s
         </div>
-      <div className="flex flex-col justify-center items-center space-y-2 text-center mx-auto">
-        <h3 className="text-yellow-400 font-bold text-lg">Advertise Here</h3>
-        <p className="text-white text-sm flex flex-col items-center space-y-1">
-          <span>Partners@presspass.africa</span>
-        </p>
-        <p className="text-white text-sm flex flex-col items-center space-y-1">
-          <span>Phone: +27 87 XXX XXX</span>
-        </p>
-      </div>
+     
     </div>
 
         {/* Footer */}
