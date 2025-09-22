@@ -4,7 +4,7 @@ import Link from "next/link"
 import { Newspaper, FilePen, Check, BarChart3, Smartphone } from "lucide-react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
-import { handleSignIn, initializeGoogleSignIn } from "../../lib/authLogic"
+import { handleSignIn, handleGoogleSignIn, initializeGoogleSignIn } from "../../lib/authLogic"
 
 export default function SignIn() {
   const [email, setEmail] = useState("")
@@ -19,7 +19,7 @@ export default function SignIn() {
   // Initialize Google Sign-In when component mounts
   useEffect(() => {
     console.log('🔧 Initializing Google Sign-In in SignIn component...');
-    initializeGoogleSignIn(handleGoogleSignInCallback);
+    initializeGoogleSignIn((response) => handleGoogleSignInCallback(response, role, keepSignedIn, router, setError, setLoading));
   }, []);
 
   // Enforce reader-only on mobile screens
@@ -35,66 +35,11 @@ export default function SignIn() {
   }, []);
 
   // Handle Google Sign-In callback
-  const handleGoogleSignInCallback = async (response) => {
-    console.log('🔐 Google sign-in callback triggered');
-    setLoading(true);
-    setError('');
-
-    try {
-      console.log('📤 Sending Google sign-in request to API');
-      const res = await fetch('/api/google-signin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          credential: response.credential,
-          role,
-          keepSignedIn
-        }),
-      });
-
-      console.log('📡 API response status:', res.status);
-      const result = await res.json();
-
-      if (!result.success) {
-        console.error('❌ Google sign-in failed:', result.error);
-        setError(result.error || 'Google sign-in failed');
-        return;
-      }
-
-      console.log('✅ Google sign-in successful');
-
-      // Sign in with Firebase using custom token if provided
-      if (result.customToken) {
-        console.log('🔐 Signing in with custom token...');
-        const { signInWithCustomToken, getAuth } = await import('firebase/auth');
-        const { app } = await import('../../Firebase/firebase');
-        const auth = getAuth(app);
-        await signInWithCustomToken(auth, result.customToken);
-        console.log('✅ Firebase Auth session established');
-      }
-
-      // Store user data in localStorage
-      console.log('💾 Storing user data in localStorage...');
-      localStorage.setItem('currentUser', JSON.stringify(result.user));
-      console.log('✅ User data stored:', result.user);
-
-      // Redirect based on role
-      console.log('🔄 Redirecting user based on role:', role);
-      if (role === 'reader') {
-        console.log('📰 Navigating to /news-reader');
-        router.push('/news-reader');
-      } else {
-        console.log('🏢 Navigating to /print-media/overview');
-        router.push('/print-media/overview');
-      }
-
-    } catch (error) {
-      console.error('❌ Google sign-in error:', error);
-      setError('Google sign-in failed. Please try again.');
-    } finally {
-      setLoading(false);
-      console.log('✅ Google sign-in process ended');
-    }
+  const handleGoogleSignInCallback = (response) => {
+    // This function is now just a wrapper. The logic is handled by initializeGoogleSignIn's callback.
+    // The actual logic is now inside the useEffect hook where initializeGoogleSignIn is called.
+    // This keeps the sign-in page cleaner.
+    console.log('Google Sign-In credential received by page, authLogic will handle it.');
   };
 
   const handleFormSubmit = async (e) => {
@@ -104,21 +49,7 @@ export default function SignIn() {
 
   const handleGoogleSignInClick = async () => {
     console.log('🔘 Google Sign-In button clicked');
-    setError('');
-    
-    if (!window.google) {
-      setError('Google Sign-In is not available. Please refresh the page.');
-      return;
-    }
-
-    // Trigger Google Sign-In prompt
-    console.log('🚀 Launching Google Sign-In prompt...');
-    try {
-      window.google.accounts.id.prompt();
-    } catch (error) {
-      console.error('❌ Error launching Google prompt:', error);
-      setError('Failed to launch Google Sign-In. Please try again.');
-    }
+    await handleGoogleSignIn(role, keepSignedIn, router, setError, setLoading);
   }
 
   const RoleIcon = () => {

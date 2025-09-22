@@ -165,7 +165,7 @@ const MediaHubRegistration = () => {
       alert(errors.join('\n'));
       return;
     }
-    await handleReaderRegistration(formData, profilePicPreview, router, setIsLoading);
+    await handleReaderRegistration(formData, router, setIsLoading);
   };
 
   const handlePublisherSubmit = async () => {
