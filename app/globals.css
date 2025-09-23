@@ -22,7 +22,7 @@
   }
 }
 
-@layer utilities {
+/**@layer utilities {
   .animate-slide-in {
     animation: slide-in 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   }
@@ -30,7 +30,28 @@
     from { transform: translateX(-100%); }
     to { transform: translateX(0); }
   }
+}**/
+
+@layer utilities {
+  @keyframes page-flip {
+    0% {
+      transform: rotateY(0deg);
+    }
+    40% {
+      transform: rotateY(-180deg);
+    }
+    100% {
+      transform: rotateY(-180deg);
+    }
+  }
+
+  .animate-page-flip {
+    animation: page-flip 1.5s infinite;
+    backface-visibility: hidden;
+  }
 }
+
+
 
 body {
   background: var(--background);
