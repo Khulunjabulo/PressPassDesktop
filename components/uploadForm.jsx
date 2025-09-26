@@ -23,122 +23,8 @@ import {
   X
 } from 'lucide-react';
 import FileUpload from "./fileUpload";
-
-// Firebase imports (you'll need to adjust these based on your Firebase setup)
-// import { storage } from '@/lib/firebase';
-// import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-
-// Mock Firebase storage functions for demo
-const uploadImageToFirebase = async (file, publisherId) => {
-  try {
-    console.log('🔥 Starting real Firebase upload for:', file.name);
-    
-    // Import Firebase storage (you'll need to set this up in your lib/firebase.js)
-    const { storage } = await import('@/Firebase/firebase');
-    const { ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
-    
-    // Create a unique filename
-    const timestamp = Date.now();
-    const fileName = `articles/${publisherId}/${timestamp}_${file.name}`;
-    
-    // Create storage reference
-    const storageRef = ref(storage, fileName);
-    
-    // Upload file
-    console.log('📤 Uploading to Firebase Storage...');
-    const snapshot = await uploadBytes(storageRef, file);
-    
-    // Get download URL
-    const downloadURL = await getDownloadURL(snapshot.ref);
-    
-    console.log('✅ Firebase upload successful:', downloadURL);
-    return downloadURL;
-    
-  } catch (error) {
-    console.error('❌ Firebase upload failed:', error);
-    throw new Error('Failed to upload image: ' + error.message);
-  }
-};
-
-const handleFileChange = async (e) => {
-  console.log('📁 File input changed - Function called successfully!');
-  try {
-    const file = e.target.files[0];
-    console.log('📁 Selected file:', file ? {
-      name: file.name,
-      size: file.size,
-      type: file.type
-    } : 'No file');
-
-    if (!file) {
-      setFileName('No file chosen');
-      setFormData(prev => ({ 
-        ...prev, 
-        featuredImage: null, 
-        featuredImageUrl: '',
-        imageCredit: prev.imageCredit || '',
-        imageCaption: prev.imageCaption || ''
-      }));
-      setImagePreview(null);
-      return;
-    }
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      console.error('❌ Invalid file type:', file.type);
-      setErrors(prev => ({ ...prev, featuredImage: 'Please select a valid image file' }));
-      return;
-    }
-
-    // Show local preview immediately
-    const localImageUrl = URL.createObjectURL(file);
-    console.log('🖼️ Created local preview URL:', localImageUrl.substring(0, 50) + '...');
-    setImagePreview(localImageUrl);
-    setFileName(file.name);
-    setIsUploadingImage(true);
-
-    try {
-      // Mock Firebase upload for testing
-      console.log('🔥 Simulating Firebase upload...');
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate upload delay
-      
-      const mockFirebaseUrl = `https://firebasestorage.googleapis.com/v0/b/mock-bucket/o/articles%2F${currentUser?.uid || 'demo'}%2F${Date.now()}_${file.name}?alt=media&token=mock-token`;
-      
-      setFormData(prev => ({ 
-        ...prev, 
-        featuredImage: file,
-        featuredImageUrl: mockFirebaseUrl,
-        imageUrl: mockFirebaseUrl
-      }));
-      
-      console.log('✅ Mock upload successful:', mockFirebaseUrl);
-      setImagePreview(mockFirebaseUrl);
-      
-    } catch (uploadError) {
-      console.error('❌ Upload failed:', uploadError);
-      setErrors(prev => ({ 
-        ...prev, 
-        featuredImage: 'Failed to upload image: ' + uploadError.message 
-      }));
-      
-      // Keep local preview as fallback
-      setFormData(prev => ({ 
-        ...prev, 
-        featuredImage: file,
-        featuredImageUrl: localImageUrl
-      }));
-    }
-
-    setErrors(prev => ({ ...prev, featuredImage: null }));
-    setIsUploadingImage(false);
-
-  } catch (error) {
-    console.error('❌ Error handling file change:', error);
-    setErrors(prev => ({ ...prev, featuredImage: 'Error processing file' }));
-    setIsUploadingImage(false);
-  }
-};
-
+import { checkPublisherApproval } from '@/lib/publisherAuth';
+import { useRouter } from 'next/navigation';
 
 const PrioritySelector = ({ priority, setPriority }) => (
   <div className="mb-3">
@@ -190,24 +76,24 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Manual Article Form States
- const [formData, setFormData] = useState({
-  title: '',
-  subtitle: '',
-  author: '',
-  authorTitle: '',
-  category: '',
-  tags: '',
-  featuredImage: null,
-  featuredImageUrl: '',
-  imageCredit: '', // ADD THIS LINE
-  imageCaption: '', // ADD THIS LINE TOO
-  style: 'modern',
-  content: '',
-  metaDescription: '',
-  publishNow: true,
-  allowComments: true,
-  sendNewsletter: false
-});
+  const [formData, setFormData] = useState({
+    title: '',
+    subtitle: '',
+    author: '',
+    authorTitle: '',
+    category: '',
+    tags: '',
+    featuredImage: null,
+    featuredImageUrl: '',
+    imageCredit: '', 
+    imageCaption: '',
+    style: 'modern',
+    content: '',
+    metaDescription: '',
+    publishNow: true,
+    allowComments: true,
+    sendNewsletter: false
+  });
 
   const [wordCount, setWordCount] = useState(0);
   const [readingTime, setReadingTime] = useState(0);
@@ -218,6 +104,10 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+
+  // Publisher approval states
+  const router = useRouter();
+  const [publisherApproval, setPublisherApproval] = useState({ canPublish: false });
 
   const editorRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -242,6 +132,15 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
     { value: 'minimal', label: 'Minimal', color: 'bg-gray-300', description: 'Simple, distraction-free' },
     { value: 'academic', label: 'Academic', color: 'bg-green-600', description: 'Formal, research-oriented' }
   ];
+
+  // Check publisher approval status
+  useEffect(() => {
+    if (currentUser) {
+      const approval = checkPublisherApproval(currentUser);
+      setPublisherApproval(approval);
+      console.log('Publisher approval status:', approval);
+    }
+  }, [currentUser]);
 
   // Get current user from localStorage
   useEffect(() => {
@@ -301,8 +200,56 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
     setImmediatePreviewUrl(previewUrl);
   };
 
+  const ApprovalStatusBanner = () => {
+    if (publisherApproval.canPublish) return null;
+
+    return (
+      <div className="mb-6 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded-md">
+        <div className="flex items-start">
+          <div className="flex-shrink-0">
+            <AlertCircle className="h-5 w-5 text-yellow-400" />
+          </div>
+          <div className="ml-3">
+            <h3 className="text-sm font-medium text-yellow-800">
+              Publishing Restricted
+            </h3>
+            <div className="mt-2 text-sm text-yellow-700">
+              {publisherApproval.reason === 'Profile incomplete' && (
+                <div>
+                  <p>Please complete your publisher profile to proceed with approval.</p>
+                  <button
+                    onClick={() => router.push('/print-media/profile')}
+                    className="mt-2 bg-yellow-600 text-white px-4 py-2 rounded-md text-sm hover:bg-yellow-700"
+                  >
+                    Complete Profile
+                  </button>
+                </div>
+              )}
+              {publisherApproval.reason === 'Waiting for admin approval' && (
+                <div>
+                  <p>Your publisher account is under review. You can create drafts but cannot publish until approved.</p>
+                  <p className="text-xs mt-1">Status: {publisherApproval.status}</p>
+                </div>
+              )}
+              {publisherApproval.reason === 'Not a publisher account' && (
+                <p>Only approved publishers can create articles.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const handleUploadSubmit = async (e, action = 'publish') => {
     e.preventDefault();
+    
+    // Check approval status before allowing publish
+    if (action === 'publish' && !publisherApproval.canPublish) {
+      setUploadError(`Cannot publish: ${publisherApproval.reason}`);
+      return;
+    }
+
     setUploadError("");
     setIsSubmitting(true);
 
@@ -370,14 +317,13 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
             publisherName: currentUser?.companyName || 'Unknown Publisher'
           };
           
-                if (onSubmit && typeof onSubmit === 'function') {
-        await onSubmit(articleData);  // delegate to parent (page.js)
-        setSubmitStatus('success');
-      } else {
-        await submitArticle(action !== 'publish');
-        setSubmitStatus('success');
-      }
-
+          if (onSubmit && typeof onSubmit === 'function') {
+            await onSubmit(articleData);  // delegate to parent (page.js)
+            setSubmitStatus('success');
+          } else {
+            await submitArticle(action !== 'publish');
+            setSubmitStatus('success');
+          }
           
           // Reset form
           setFile(null);
@@ -487,99 +433,98 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
 
   // Fixed file change handler with proper image upload
   const handleFileChange = async (e) => {
-  console.log('📁 File input changed');
-  try {
-    const file = e.target.files[0];
-    console.log('📁 Selected file:', file ? {
-      name: file.name,
-      size: file.size,
-      type: file.type
-    } : 'No file');
-
-    if (!file) {
-      setFileName('No file chosen');
-      setFormData(prev => ({ 
-        ...prev, 
-        featuredImage: null, 
-        featuredImageUrl: '',
-        imageCredit: prev.imageCredit || '' // Keep existing image credit
-      }));
-      setImagePreview(null);
-      return;
-    }
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      console.error('❌ Invalid file type:', file.type);
-      setErrors(prev => ({ ...prev, featuredImage: 'Please select a valid image file' }));
-      return;
-    }
-
-    // Validate file size (5MB limit)
-    if (file.size > 5 * 1024 * 1024) {
-      console.error('❌ File too large:', file.size);
-      setErrors(prev => ({ ...prev, featuredImage: 'Image size must be less than 5MB' }));
-      return;
-    }
-
-    // Show local preview immediately
-    const localImageUrl = URL.createObjectURL(file);
-    setImagePreview(localImageUrl);
-    setFileName(file.name);
-    setIsUploadingImage(true);
-
+    console.log('📁 File input changed');
     try {
-  // Convert image to base64 data URL (like logo system)
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    const base64DataUrl = e.target.result;
-    console.log('✅ Image converted to base64:', base64DataUrl.substring(0, 50) + '...');
-    
-    // Update form data with base64 data URL
-    setFormData(prev => ({ 
-      ...prev, 
-      featuredImage: file,
-      featuredImageUrl: base64DataUrl, // Base64 data URL
-      imageUrl: base64DataUrl // Backup field
-    }));
-    
-    // Update preview to use base64 data URL
-    setImagePreview(base64DataUrl);
-    setIsUploadingImage(false);
-  };
-  
-  reader.onerror = function(error) {
-    throw new Error('Failed to read file: ' + error.message);
-  };
-  
-  // Read file as data URL (base64)
-  reader.readAsDataURL(file);
-  
-} catch (uploadError) {
-  console.error('❌ Base64 conversion failed:', uploadError);
-  setErrors(prev => ({ 
-    ...prev, 
-    featuredImage: 'Failed to process image: ' + uploadError.message 
-  }));
-  
-  // Keep local preview as fallback
-  setFormData(prev => ({ 
-    ...prev, 
-    featuredImage: file,
-    featuredImageUrl: localImageUrl 
-  }));
-  setIsUploadingImage(false);
-}~
+      const file = e.target.files[0];
+      console.log('📁 Selected file:', file ? {
+        name: file.name,
+        size: file.size,
+        type: file.type
+      } : 'No file');
 
-    setErrors(prev => ({ ...prev, featuredImage: null }));
-    setIsUploadingImage(false);
+      if (!file) {
+        setFileName('No file chosen');
+        setFormData(prev => ({ 
+          ...prev, 
+          featuredImage: null, 
+          featuredImageUrl: '',
+          imageCredit: prev.imageCredit || '' // Keep existing image credit
+        }));
+        setImagePreview(null);
+        return;
+      }
 
-  } catch (error) {
-    console.error('❌ Error handling file change:', error);
-    setErrors(prev => ({ ...prev, featuredImage: 'Error processing file' }));
-    setIsUploadingImage(false);
-  }
-};
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        console.error('❌ Invalid file type:', file.type);
+        setErrors(prev => ({ ...prev, featuredImage: 'Please select a valid image file' }));
+        return;
+      }
+
+      // Validate file size (5MB limit)
+      if (file.size > 5 * 1024 * 1024) {
+        console.error('❌ File too large:', file.size);
+        setErrors(prev => ({ ...prev, featuredImage: 'Image size must be less than 5MB' }));
+        return;
+      }
+
+      // Show local preview immediately
+      const localImageUrl = URL.createObjectURL(file);
+      setImagePreview(localImageUrl);
+      setFileName(file.name);
+      setIsUploadingImage(true);
+
+      try {
+        // Convert image to base64 data URL (like logo system)
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const base64DataUrl = e.target.result;
+          console.log('✅ Image converted to base64:', base64DataUrl.substring(0, 50) + '...');
+          
+          // Update form data with base64 data URL
+          setFormData(prev => ({ 
+            ...prev, 
+            featuredImage: file,
+            featuredImageUrl: base64DataUrl, // Base64 data URL
+            imageUrl: base64DataUrl // Backup field
+          }));
+          
+          // Update preview to use base64 data URL
+          setImagePreview(base64DataUrl);
+          setIsUploadingImage(false);
+        };
+        
+        reader.onerror = function(error) {
+          throw new Error('Failed to read file: ' + error.message);
+        };
+        
+        // Read file as data URL (base64)
+        reader.readAsDataURL(file);
+        
+      } catch (uploadError) {
+        console.error('❌ Base64 conversion failed:', uploadError);
+        setErrors(prev => ({ 
+          ...prev, 
+          featuredImage: 'Failed to process image: ' + uploadError.message 
+        }));
+        
+        // Keep local preview as fallback
+        setFormData(prev => ({ 
+          ...prev, 
+          featuredImage: file,
+          featuredImageUrl: localImageUrl 
+        }));
+        setIsUploadingImage(false);
+      }
+
+      setErrors(prev => ({ ...prev, featuredImage: null }));
+
+    } catch (error) {
+      console.error('❌ Error handling file change:', error);
+      setErrors(prev => ({ ...prev, featuredImage: 'Error processing file' }));
+      setIsUploadingImage(false);
+    }
+  };
 
   const removeImage = () => {
     setImagePreview(null);
@@ -792,16 +737,17 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
 
   // Handle form submission
   const handleManualSubmit = async (e, isDraft = false) => {
-  e.preventDefault();
-  console.group('📡 SUBMIT DEBUG');
-  console.log('Form data image fields:', {
-    featuredImageUrl: formData.featuredImageUrl,
-    imageUrl: formData.imageUrl,
-    imageCredit: formData.imageCredit,
-    imageCaption: formData.imageCaption,
-    featuredImage: formData.featuredImage ? 'File present' : 'No file'
-  });
-  console.groupEnd();
+    e.preventDefault();
+    
+    // Check approval status before allowing publish
+    if (!isDraft && !publisherApproval.canPublish) {
+      setErrors(prev => ({
+        ...prev,
+        submit: `Cannot publish: ${publisherApproval.reason}`
+      }));
+      return;
+    }
+
     console.log('🚀 Form submission started', { 
       isDraft, 
       currentUser: !!currentUser,
@@ -838,8 +784,7 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
         const submitData = {
           ...formData,
           imageCredit: formData.imageCredit || '',
-  imageCaption: formData.imageCaption || '',
- 
+          imageCaption: formData.imageCaption || '',
           content: editorRef.current?.innerHTML?.trim() || '',
           isDraft,
           wordCount,
@@ -870,6 +815,8 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
           tags: '',
           featuredImage: null,
           featuredImageUrl: '',
+          imageCredit: '',
+          imageCaption: '',
           style: 'modern',
           content: '',
           metaDescription: '',
@@ -930,302 +877,308 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
   };
 
   const ArticlePreview = ({ onClose }) => {
-  const previewData = {
-    id: 'preview-' + Date.now(),
-    title: formData.title || 'Article Title',
-    subtitle: formData.subtitle || '',
-    content: editorRef.current?.innerHTML || formData.content || '<p>Start writing your article content here...</p>',
-    author: formData.author || 'Author Name',
-    authorTitle: formData.authorTitle || '',
-    category: formData.category || 'General',
-    tags: formData.tags ? formData.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
-    imageUrl: imagePreview || formData.featuredImageUrl || null,
-    featuredImageUrl: imagePreview || formData.featuredImageUrl || null,
-    createdAt: new Date().toISOString(),
-    readTime: readingTime || 5,
-    wordCount: wordCount || 0,
-    metaDescription: formData.metaDescription || '',
-    style: formData.style || 'modern',
-    status: 'preview'
-  };
+    const previewData = {
+      id: 'preview-' + Date.now(),
+      title: formData.title || 'Article Title',
+      subtitle: formData.subtitle || '',
+      content: editorRef.current?.innerHTML || formData.content || '<p>Start writing your article content here...</p>',
+      author: formData.author || 'Author Name',
+      authorTitle: formData.authorTitle || '',
+      category: formData.category || 'General',
+      tags: formData.tags ? formData.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+      imageUrl: imagePreview || formData.featuredImageUrl || null,
+      featuredImageUrl: imagePreview || formData.featuredImageUrl || null,
+      createdAt: new Date().toISOString(),
+      readTime: readingTime || 5,
+      wordCount: wordCount || 0,
+      metaDescription: formData.metaDescription || '',
+      style: formData.style || 'modern',
+      status: 'preview'
+    };
 
-  const mockPublisher = {
-    name: currentUser?.companyName || 'Your Publication',
-    industry: 'Publishing',
-    logo: null
-  };
+    const mockPublisher = {
+      name: currentUser?.companyName || 'Your Publication',
+      industry: 'Publishing',
+      logo: null
+    };
 
-  // Format date for preview
-  const formatPreviewDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
+    // Format date for preview
+    const formatPreviewDate = (dateString) => {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    };
 
-  const getCurrentDate = () => {
-    const today = new Date();
-    return today.toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
+    const getCurrentDate = () => {
+      const today = new Date();
+      return today.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    };
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 z-50 overflow-y-auto">
-      <div className="min-h-screen bg-white">
-        {/* Preview Header */}
-        <div className="bg-blue-600 text-white p-4 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <Eye className="w-6 h-6" />
-            <div>
-              <h2 className="text-lg font-bold">Article Preview</h2>
-              <p className="text-sm opacity-90">How your article will appear to readers</p>
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-75 z-50 overflow-y-auto">
+        <div className="min-h-screen bg-white">
+          {/* Preview Header */}
+          <div className="bg-blue-600 text-white p-4 flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <Eye className="w-6 h-6" />
+              <div>
+                <h2 className="text-lg font-bold">Article Preview</h2>
+                <p className="text-sm opacity-90">How your article will appear to readers</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-3">
+              <span className="px-3 py-1 bg-blue-500 rounded-full text-xs font-medium">
+                PREVIEW MODE
+              </span>
+              <button
+                onClick={onClose}
+                className="text-white hover:text-gray-300 text-2xl font-bold"
+              >
+                ×
+              </button>
             </div>
           </div>
-          <div className="flex items-center space-x-3">
-            <span className="px-3 py-1 bg-blue-500 rounded-full text-xs font-medium">
-              PREVIEW MODE
-            </span>
-            <button
-              onClick={onClose}
-              className="text-white hover:text-gray-300 text-2xl font-bold"
-            >
-              ×
-            </button>
-          </div>
-        </div>
 
-        {/* Newspaper-style Article Preview */}
-        <div className="newspaper-container">
-          <style jsx>{`
-            .newspaper-container {
-              font-family: 'Times New Roman', 'Times', serif;
-              line-height: 1.6;
-              color: #1a1a1a;
-            }
-            
-            .newspaper-header {
-              border-bottom: 4px solid #000;
-              margin-bottom: 2rem;
-            }
-            
-            .newspaper-title {
-              font-family: 'Times New Roman', 'Times', serif;
-              font-weight: bold;
-              letter-spacing: 0.1em;
-              text-transform: uppercase;
-            }
-            
-            .newspaper-date-line {
-              border-top: 2px solid #000;
-              border-bottom: 2px solid #000;
-              padding: 0.5rem 0;
-              margin: 1rem 0;
-              text-align: center;
-            }
-            
-            .preview-main-image-container {
-              float: left;
-              width: 350px;
-              margin: 0 2rem 1.5rem 0;
-              border: 3px solid #000;
-              background: #fff;
-              box-shadow: 0 6px 12px rgba(0,0,0,0.2);
-              clear: left;
-            }
-            
-            .preview-main-image {
-              width: 100%;
-              height: 250px;
-              object-fit: cover;
-              display: block;
-              border-bottom: 2px solid #000;
-            }
-            
-            .preview-main-image-caption {
-              padding: 1rem;
-              font-size: 0.85em;
-              font-style: italic;
-              color: #333;
-              background: #f8f8f8;
-              line-height: 1.5;
-              font-family: 'Times New Roman', serif;
-              border-top: 1px solid #ccc;
-            }
-            
-            .preview-content {
-              text-align: justify;
-              hyphens: auto;
-              overflow-wrap: break-word;
-            }
-            
-            .preview-content p {
-              margin-bottom: 1.2rem;
-              text-indent: 1.5em;
-              line-height: 1.7;
-              overflow-wrap: break-word;
-            }
-            
-            .preview-content p:first-of-type {
-              text-indent: 0;
-              font-weight: 500;
-              font-size: 1.1em;
-              margin-bottom: 1.5rem;
-            }
-            
-            @media (max-width: 768px) {
-              .preview-main-image-container {
-                float: none;
-                width: 100%;
-                margin: 0 0 2rem 0;
+          {/* Newspaper-style Article Preview */}
+          <div className="newspaper-container">
+            <style jsx>{`
+              .newspaper-container {
+                font-family: 'Times New Roman', 'Times', serif;
+                line-height: 1.6;
+                color: #1a1a1a;
               }
-            }
-          `}</style>
+              
+              .newspaper-header {
+                border-bottom: 4px solid #000;
+                margin-bottom: 2rem;
+              }
+              
+              .newspaper-title {
+                font-family: 'Times New Roman', 'Times', serif;
+                font-weight: bold;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+              }
+              
+              .newspaper-date-line {
+                border-top: 2px solid #000;
+                border-bottom: 2px solid #000;
+                padding: 0.5rem 0;
+                margin: 1rem 0;
+                text-align: center;
+              }
+              
+              .preview-main-image-container {
+                float: left;
+                width: 350px;
+                margin: 0 2rem 1.5rem 0;
+                border: 3px solid #000;
+                background: #fff;
+                box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+                clear: left;
+              }
+              
+              .preview-main-image {
+                width: 100%;
+                height: 250px;
+                object-fit: cover;
+                display: block;
+                border-bottom: 2px solid #000;
+              }
+              
+              .preview-main-image-caption {
+                padding: 1rem;
+                font-size: 0.85em;
+                font-style: italic;
+                color: #333;
+                background: #f8f8f8;
+                line-height: 1.5;
+                font-family: 'Times New Roman', serif;
+                border-top: 1px solid #ccc;
+              }
+              
+              .preview-content {
+                text-align: justify;
+                hyphens: auto;
+                overflow-wrap: break-word;
+              }
+              
+              .preview-content p {
+                margin-bottom: 1.2rem;
+                text-indent: 1.5em;
+                line-height: 1.7;
+                overflow-wrap: break-word;
+              }
+              
+              .preview-content p:first-of-type {
+                text-indent: 0;
+                font-weight: 500;
+                font-size: 1.1em;
+                margin-bottom: 1.5rem;
+              }
+              
+              @media (max-width: 768px) {
+                .preview-main-image-container {
+                  float: none;
+                  width: 100%;
+                  margin: 0 0 2rem 0;
+                }
+              }
+            `}</style>
 
-          {/* Newspaper Header */}
-          <div className="newspaper-header">
-            <div className="max-w-6xl mx-auto px-8 py-6">
-              <div className="text-center mb-6">
-                <h1 className="newspaper-title text-6xl mb-2">
-                  {mockPublisher.name.toUpperCase()}
-                </h1>
-                <div className="newspaper-date-line">
-                  <p className="text-sm font-medium">
-                    {getCurrentDate()} • {mockPublisher.industry} • PREVIEW EDITION
-                  </p>
+            {/* Newspaper Header */}
+            <div className="newspaper-header">
+              <div className="max-w-6xl mx-auto px-8 py-6">
+                <div className="text-center mb-6">
+                  <h1 className="newspaper-title text-6xl mb-2">
+                    {mockPublisher.name.toUpperCase()}
+                  </h1>
+                  <div className="newspaper-date-line">
+                    <p className="text-sm font-medium">
+                      {getCurrentDate()} • {mockPublisher.industry} • PREVIEW EDITION
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Article Content */}
-          <div className="max-w-6xl mx-auto px-8 py-6">
-            {/* Article Header */}
-            <div className="mb-8">
-              {/* Category Badge */}
-              {previewData.category && (
-                <div className="mb-4">
-                  <span className="inline-block bg-black text-white px-4 py-2 text-xs font-bold uppercase tracking-widest">
-                    {previewData.category}
-                  </span>
-                </div>
-              )}
-
-              {/* Main Headline */}
-              <h1 className="newspaper-title text-5xl leading-tight mb-6 pb-4 border-b-4 border-black">
-                {previewData.title}
-              </h1>
-              
-              {/* Subtitle */}
-              {previewData.subtitle && (
-                <h2 className="text-xl italic text-gray-700 mb-4 font-medium">
-                  {previewData.subtitle}
-                </h2>
-              )}
-              
-              {/* Byline and Meta */}
-              <div className="flex items-center justify-between mb-6 text-sm border-b-2 border-gray-400 pb-4">
-                <div className="flex items-center space-x-6">
-                  <div className="flex items-center space-x-2">
-                    <span className="font-bold">
-                      By {previewData.author}
-                      {previewData.authorTitle && ` • ${previewData.authorTitle}`}
+            {/* Article Content */}
+            <div className="max-w-6xl mx-auto px-8 py-6">
+              {/* Article Header */}
+              <div className="mb-8">
+                {/* Category Badge */}
+                {previewData.category && (
+                  <div className="mb-4">
+                    <span className="inline-block bg-black text-white px-4 py-2 text-xs font-bold uppercase tracking-widest">
+                      {previewData.category}
                     </span>
                   </div>
-                  <div className="flex items-center space-x-1">
-                    <span>{formatPreviewDate(previewData.createdAt)}</span>
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <span>{previewData.readTime} min read</span>
-                  </div>
-                </div>
+                )}
+
+                {/* Main Headline */}
+                <h1 className="newspaper-title text-5xl leading-tight mb-6 pb-4 border-b-4 border-black">
+                  {previewData.title}
+                </h1>
                 
-                <div className="flex items-center space-x-1 text-gray-600">
-                  <span>{previewData.wordCount} words</span>
+                {/* Subtitle */}
+                {previewData.subtitle && (
+                  <h2 className="text-xl italic text-gray-700 mb-4 font-medium">
+                    {previewData.subtitle}
+                  </h2>
+                )}
+                
+                {/* Byline and Meta */}
+                <div className="flex items-center justify-between mb-6 text-sm border-b-2 border-gray-400 pb-4">
+                  <div className="flex items-center space-x-6">
+                    <div className="flex items-center space-x-2">
+                      <span className="font-bold">
+                        By {previewData.author}
+                        {previewData.authorTitle && ` • ${previewData.authorTitle}`}
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <span>{formatPreviewDate(previewData.createdAt)}</span>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <span>{previewData.readTime} min read</span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-1 text-gray-600">
+                    <span>{previewData.wordCount} words</span>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Article Layout */}
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-              {/* Main Article Content */}
-              <div className="lg:col-span-3">
-                {/* Article Body with Image */}
-                <div className="article-content-wrapper overflow-hidden">
-                  {/* Main Image */}
-                  {previewData.imageUrl && (
-                    <div className="preview-main-image-container">
-                      <img
-                        src={previewData.imageUrl}
-                        alt={previewData.title}
-                        className="preview-main-image"
-                        loading="eager"
-                      />
-                      <div className="preview-main-image-caption">
-                        <strong>{previewData.title}</strong>
+              {/* Article Layout */}
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                {/* Main Article Content */}
+                <div className="lg:col-span-3">
+                  {/* Article Body with Image */}
+                  <div className="article-content-wrapper overflow-hidden">
+                    {/* Main Image */}
+                    {previewData.imageUrl && (
+                      <div className="preview-main-image-container">
+                        <img
+                          src={previewData.imageUrl}
+                          alt={previewData.title}
+                          className="preview-main-image"
+                          loading="eager"
+                        />
+                        <div className="preview-main-image-caption">
+                          <strong>{previewData.title}</strong>
+                          {formData.imageCredit && (
+                            <div className="text-xs mt-1 text-gray-600">
+                              Photo: {formData.imageCredit}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Article Content */}
+                    <div className="preview-content">
+                      <div dangerouslySetInnerHTML={{ __html: previewData.content }} />
+                    </div>
+                    
+                    <div className="clear-both"></div>
+                  </div>
+                </div>
+
+                {/* Sidebar */}
+                <div className="lg:col-span-1">
+                  {/* Publication Info */}
+                  <div className="border-2 border-black p-4 bg-gray-50 mb-4">
+                    <h3 className="border-bottom-2 border-black pb-2 mb-3 font-bold text-sm uppercase">
+                      About {mockPublisher.name}
+                    </h3>
+                    <div className="space-y-3 text-sm">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-12 h-12 bg-black text-white flex items-center justify-center text-xl font-bold border-2 border-black">
+                          {mockPublisher.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <span className="font-bold text-black block">{mockPublisher.name}</span>
+                          <span className="text-gray-600 text-xs uppercase">{mockPublisher.industry}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Tags */}
+                  {previewData.tags && previewData.tags.length > 0 && (
+                    <div className="border-2 border-black p-4 bg-gray-50">
+                      <h3 className="border-bottom-2 border-black pb-2 mb-3 font-bold text-sm uppercase">Tags</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {previewData.tags.map((tag, index) => (
+                          <span 
+                            key={index}
+                            className="inline-block bg-black text-white px-3 py-1 text-xs font-bold uppercase tracking-wider"
+                          >
+                            {tag}
+                          </span>
+                        ))}
                       </div>
                     </div>
                   )}
-
-                  {/* Article Content */}
-                  <div className="preview-content">
-                    <div dangerouslySetInnerHTML={{ __html: previewData.content }} />
-                  </div>
-                  
-                  <div className="clear-both"></div>
                 </div>
-              </div>
-
-              {/* Sidebar */}
-              <div className="lg:col-span-1">
-                {/* Publication Info */}
-                <div className="border-2 border-black p-4 bg-gray-50 mb-4">
-                  <h3 className="border-bottom-2 border-black pb-2 mb-3 font-bold text-sm uppercase">
-                    About {mockPublisher.name}
-                  </h3>
-                  <div className="space-y-3 text-sm">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-12 h-12 bg-black text-white flex items-center justify-center text-xl font-bold border-2 border-black">
-                        {mockPublisher.name.charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <span className="font-bold text-black block">{mockPublisher.name}</span>
-                        <span className="text-gray-600 text-xs uppercase">{mockPublisher.industry}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Tags */}
-                {previewData.tags && previewData.tags.length > 0 && (
-                  <div className="border-2 border-black p-4 bg-gray-50">
-                    <h3 className="border-bottom-2 border-black pb-2 mb-3 font-bold text-sm uppercase">Tags</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {previewData.tags.map((tag, index) => (
-                        <span 
-                          key={index}
-                          className="inline-block bg-black text-white px-3 py-1 text-xs font-bold uppercase tracking-wider"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  );
-};
+    );
+  };
+
   return (
     <div className="flip-card-container w-full max-w-4xl mx-auto px-2 sm:px-4 md:px-6">
       <style jsx>{`
@@ -1261,7 +1214,6 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
           transform: rotateY(180deg);
         }
         
-        /* Fix for editor text overflow and formatting */
         .rich-editor {
           word-wrap: break-word;
           overflow-wrap: break-word;
@@ -1305,6 +1257,9 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
               Manual Entry
             </button>
           </div>
+
+          {/* Approval Status Banner */}
+          <ApprovalStatusBanner />
 
           <form onSubmit={handleUploadSubmit} className="w-full">
             <FileUpload
@@ -1351,8 +1306,8 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
                 <option>Education</option>
                 <option>Entertainment</option>
                 <option>Health</option>
-                <option>Goverment</option>
-                <option>Enviroment</option>
+                <option>Government</option>
+                <option>Environment</option>
                 <option>Other</option>
               </select>
               <select name="edition" id="edition" className="border p-1.5 rounded-md w-full text-xs">
@@ -1378,31 +1333,47 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
               rows="2"
             />
 
+            {/* Updated Submit Buttons with Approval Awareness */}
             <div className="flex flex-col sm:flex-row justify-between mb-3 gap-2">
               <button
                 type="button"
                 onClick={handleSaveDraft}
                 className="bg-blue-900 text-white px-3 py-1.5 rounded-md hover:bg-blue-800 transition-colors text-xs w-full sm:w-auto"
-                disabled={isSubmitting}
+                disabled={isSubmitting || !currentUser}
               >
                 {isSubmitting ? "Saving..." : "SAVE DRAFT"}
               </button>
+              
+              {/* Review button - always allowed */}
               <button
                 type="button"
                 onClick={(e) => handleUploadSubmit(e, 'review')}
-                className="bg-yellow-400 text-black font-semibold px-3 py-1.5 rounded-md hover:bg-yellow-500 transition-colors text-xsw-full sm:w-auto"
-                disabled={isSubmitting}
+                className="bg-yellow-400 text-black font-semibold px-3 py-1.5 rounded-md hover:bg-yellow-500 transition-colors text-xs w-full sm:w-auto"
+                disabled={isSubmitting || !currentUser}
               >
                 {isSubmitting ? "Submitting..." : "SUBMIT FOR REVIEW"}
               </button>
-              <button
-                type="button"
-                onClick={(e) => handleUploadSubmit(e, 'publish')}
-                className="bg-red-600 text-white px-3 py-1.5 rounded-md hover:bg-red-700 transition-colors text-xs w-full sm:w-auto"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? "Publishing..." : "PUBLISH NOW"}
-              </button>
+              
+              {/* Publish button - approval required */}
+              {publisherApproval.canPublish ? (
+                <button
+                  type="button"
+                  onClick={(e) => handleUploadSubmit(e, 'publish')}
+                  className="bg-red-600 text-white px-3 py-1.5 rounded-md hover:bg-red-700 transition-colors text-xs w-full sm:w-auto"
+                  disabled={isSubmitting || !currentUser}
+                >
+                  {isSubmitting ? "Publishing..." : "PUBLISH NOW"}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  className="bg-gray-400 text-white px-3 py-1.5 rounded-md cursor-not-allowed text-xs w-full sm:w-auto"
+                  title={publisherApproval.reason}
+                >
+                  PUBLISH RESTRICTED
+                </button>
+              )}
             </div>
 
             <PreviewToggle previewStyle={previewStyle} setPreviewStyle={setPreviewStyle} />
@@ -1436,7 +1407,7 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
           )}
         </div>
 
-        {/* Back Side - Manual Article Form - FIXED */}
+        {/* Back Side - Manual Article Form */}
         <div className="flip-card-back bg-white p-6 max-h-[90vh] overflow-y-auto w-full min-w-0">
           {/* Flip Button */}
           <div className="flex justify-between items-center mb-4">
@@ -1460,6 +1431,9 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
             </div>
           </div>
 
+          {/* Approval Status Banner */}
+          <ApprovalStatusBanner />
+
           {/* User Info Display */}
           {currentUser && (
             <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
@@ -1473,7 +1447,7 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
             </div>
           )}
 
-          {/* Featured Image Preview at Top Left */}
+          {/* Featured Image Preview */}
           {imagePreview && (
             <div className="mb-6">
               <div className="flex items-start gap-4">
@@ -1492,7 +1466,7 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
                   </button>
                   {isUploadingImage && (
                     <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                      <div className="text-white text-xs">Uploading...</div>
+                      <div className="text-white text-xs">Processing...</div>
                     </div>
                   )}
                 </div>
@@ -1502,12 +1476,12 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
                   </p>
                   {formData.featuredImageUrl && (
                     <p className="text-xs text-green-600">
-                      ✅ Uploaded to Firebase
+                      ✅ Image processed
                     </p>
                   )}
                   {isUploadingImage && (
                     <p className="text-xs text-blue-600">
-                      ⏳ Uploading to Firebase...
+                      ⏳ Processing image...
                     </p>
                   )}
                 </div>
@@ -1645,79 +1619,79 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
               </div>
             </div>
 
-            {/* Featured Image Upload - ENHANCED */}
-<div className="mb-4">
-  <label className="block text-sm font-medium text-gray-700 mb-2">
-    Featured Image
-  </label>
-  <div className="space-y-3">
-    {/* File Upload Button */}
-    <div className="flex items-center space-x-4">
-      <input
-  type="file"
-  ref={fileInputRef}
-  accept="image/*"
-  onChange={handleFileChange} // Make sure this matches your function name exactly
-  className="hidden"
-  key={imagePreview ? 'with-image' : 'no-image'} // Force re-render
-/>
-      <button
-        type="button"
-        onClick={() => fileInputRef.current?.click()}
-        className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors flex items-center disabled:opacity-50"
-        disabled={isUploadingImage}
-      >
-        <Upload className="w-4 h-4 mr-2" />
-        {isUploadingImage ? 'Uploading...' : 'Upload Image'}
-      </button>
-      {!imagePreview && (
-        <span className="text-gray-500 text-sm">{fileName}</span>
-      )}
-      {isUploadingImage && (
-        <div className="text-blue-600 text-sm flex items-center">
-          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-          Uploading to Firebase...
-        </div>
-      )}
-    </div>
+            {/* Featured Image Upload */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Featured Image
+              </label>
+              <div className="space-y-3">
+                {/* File Upload Button */}
+                <div className="flex items-center space-x-4">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="hidden"
+                    key={imagePreview ? 'with-image' : 'no-image'}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors flex items-center disabled:opacity-50"
+                    disabled={isUploadingImage}
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    {isUploadingImage ? 'Processing...' : 'Upload Image'}
+                  </button>
+                  {!imagePreview && (
+                    <span className="text-gray-500 text-sm">{fileName}</span>
+                  )}
+                  {isUploadingImage && (
+                    <div className="text-blue-600 text-sm flex items-center">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                      Processing image...
+                    </div>
+                  )}
+                </div>
 
-    {/* Image Credit Input - ONLY show when image is selected */}
-    {(imagePreview || formData.featuredImageUrl) && (
-      <div className="space-y-2">
-        <div>
-          <label htmlFor="imageCredit" className="block text-sm font-medium text-gray-600 mb-1">
-            Image Credit (Who took this photo?)
-          </label>
-          <input
-            type="text"
-            id="imageCredit"
-            name="imageCredit"
-            value={formData.imageCredit}
-            onChange={handleInputChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="e.g., John Smith, Reuters, Getty Images"
-          />
-        </div>
-        
-        <div>
-          <label htmlFor="imageCaption" className="block text-sm font-medium text-gray-600 mb-1">
-            Image Caption (Optional)
-          </label>
-          <input
-            type="text"
-            id="imageCaption"
-            name="imageCaption"
-            value={formData.imageCaption}
-            onChange={handleInputChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="Describe what's shown in the image..."
-          />
-        </div>
-      </div>
-    )}
-  </div>
-  {errors.featuredImage && <p className="text-red-500 text-sm mt-1">{errors.featuredImage}</p>}
-</div>
+                {/* Image Credit Input - ONLY show when image is selected */}
+                {(imagePreview || formData.featuredImageUrl) && (
+                  <div className="space-y-2">
+                    <div>
+                      <label htmlFor="imageCredit" className="block text-sm font-medium text-gray-600 mb-1">
+                        Image Credit (Who took this photo?)
+                      </label>
+                      <input
+                        type="text"
+                        id="imageCredit"
+                        name="imageCredit"
+                        value={formData.imageCredit}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="e.g., John Smith, Reuters, Getty Images"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label htmlFor="imageCaption" className="block text-sm font-medium text-gray-600 mb-1">
+                        Image Caption (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        id="imageCaption"
+                        name="imageCaption"
+                        value={formData.imageCaption}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Describe what's shown in the image..."
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+              {errors.featuredImage && <p className="text-red-500 text-sm mt-1">{errors.featuredImage}</p>}
+            </div>
 
             {/* Article Style */}
             <div className="mb-4">
@@ -1741,7 +1715,7 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
               </div>
             </div>
 
-            {/* Rich Text Editor - FIXED */}
+            {/* Rich Text Editor */}
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Article Content <span className="text-red-500">*</span>
@@ -1789,7 +1763,7 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
                   </button>
                 </div>
                 
-                {/* Editor - FIXED with better paragraph handling */}
+                {/* Editor */}
                 <div
                   ref={editorRef}
                   contentEditable
@@ -1876,35 +1850,51 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
               </div>
             </div>
 
-            {/* Submit Buttons */}
-           <div className="flex flex-col sm:flex-row gap-3 pt-4">
-  <button
-    type="button"
-    onClick={() => setShowPreview(true)}
-    disabled={!formData.title && !formData.content}
-    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center justify-center disabled:opacity-50  w-full sm:w-auto "
-  >
-    <Eye className="w-4 h-4 mr-2" />
-    Preview
-  </button>
-  <button
-    type="button"
-    onClick={handleManualSaveDraft}
-    disabled={isSubmitting || !currentUser}
-    className="flex-1 px-6 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors flex items-center justify-center disabled:opacity-50  w-full sm:w-auto"
-  >
-    <Save className="w-4 h-4 mr-2" />
-    {isSubmitting ? 'Saving...' : 'Save Draft'}
-  </button>
-  <button
-    type="submit"
-    disabled={isSubmitting || !currentUser}
-    className="flex-1 px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center disabled:opacity-50  w-full sm:w-auto"
-  >
-    <Send className="w-4 h-4 mr-2" />
-    {isSubmitting ? 'Publishing...' : 'Publish Article'}
-  </button>
-</div>
+            {/* Submit Buttons with Approval Awareness */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-4">
+              <button
+                type="button"
+                onClick={() => setShowPreview(true)}
+                disabled={!formData.title && !formData.content}
+                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center justify-center disabled:opacity-50 w-full sm:w-auto"
+              >
+                <Eye className="w-4 h-4 mr-2" />
+                Preview
+              </button>
+              
+              {/* Save Draft - always allowed */}
+              <button
+                type="button"
+                onClick={handleManualSaveDraft}
+                disabled={isSubmitting || !currentUser}
+                className="flex-1 px-6 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors flex items-center justify-center disabled:opacity-50 w-full sm:w-auto"
+              >
+                <Save className="w-4 h-4 mr-2" />
+                {isSubmitting ? 'Saving...' : 'Save Draft'}
+              </button>
+              
+              {/* Publish Article - approval required */}
+              {publisherApproval.canPublish ? (
+                <button
+                  type="submit"
+                  disabled={isSubmitting || !currentUser}
+                  className="flex-1 px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center disabled:opacity-50 w-full sm:w-auto"
+                >
+                  <Send className="w-4 h-4 mr-2" />
+                  {isSubmitting ? 'Publishing...' : 'Publish Article'}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  className="flex-1 px-6 py-2 bg-gray-400 text-white rounded-md cursor-not-allowed flex items-center justify-center w-full sm:w-auto"
+                  title={publisherApproval.reason}
+                >
+                  <Send className="w-4 h-4 mr-2" />
+                  Publishing Restricted
+                </button>
+              )}
+            </div>
 
             {/* Debug Information (remove in production) */}
             {process.env.NODE_ENV === 'development' && currentUser && (
@@ -1912,17 +1902,19 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
                 <h4 className="font-medium text-gray-800 mb-2">Debug Info:</h4>
                 <p><strong>User ID:</strong> {currentUser.uid}</p>
                 <p><strong>Company:</strong> {currentUser.companyName || 'Not set'}</p>
-                <p><strong>API Endpoint:</strong> /api/publish-article</p>
-                <p><strong>Publisher ID:</strong> {currentUser.uid}</p>
+                <p><strong>Can Publish:</strong> {publisherApproval.canPublish ? 'Yes' : 'No'}</p>
+                <p><strong>Restriction Reason:</strong> {publisherApproval.reason || 'None'}</p>
                 <p><strong>Featured Image URL:</strong> {formData.featuredImageUrl || 'Not uploaded'}</p>
               </div>
             )}
           </form>
         </div>
       </div>
+      
+      {/* Preview Modal */}
       {showPreview && (
-  <ArticlePreview onClose={() => setShowPreview(false)} />
-)}
+        <ArticlePreview onClose={() => setShowPreview(false)} />
+      )}
     </div>
   );
 }
