@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { auth } from '../../../Firebase/firebase'; // Make sure this path is correct
+import { auth } from '../../../Firebase/firebase'; 
 import { onAuthStateChanged } from 'firebase/auth';
 import { 
   Camera, User, Mail, Calendar, MapPin, Phone, Settings, Save, Edit2, X, 
