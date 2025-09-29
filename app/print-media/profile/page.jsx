@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { auth } from '../../../Firebase/firebase'; // Make sure this path is correct
+import { auth } from '../../../Firebase/firebase'; 
 import { onAuthStateChanged } from 'firebase/auth';
 import { 
   Camera, User, Mail, Calendar, MapPin, Phone, Settings, Save, Edit2, X, 
@@ -70,30 +70,73 @@ const PublisherProfile = () => {
     }
   };
 
+  // Updated validation to focus only on required fields
   const validateRequiredFields = () => {
+    // Only these fields are required - Legal Requirements + Personal Information
     const required = [
-      'companyName', 'contactName', 'jobTitle', 'dateOfBirth', 
-      'idNumber', 'businessRegistrationNumber', 'publishingLicense', 
-      'proofOfAddress', 'publicationType', 'audienceType'
+      'dateOfBirth',         // Personal Information
+      'idNumber',            // Personal Information  
+      'businessRegistrationNumber', // Legal Requirements
+      'publishingLicense',   // Legal Requirements
+      'proofOfAddress'       // Legal Requirements
     ];
     
-    const missing = required.filter(field => !formData[field]);
+    const missing = required.filter(field => {
+      const value = formData[field];
+      return !value || value === '';
+    });
+    
     setMissingRequirements(missing);
     setIsProfileComplete(missing.length === 0);
     
     return missing.length === 0;
   };
 
+  // Modified complete profile function
   const handleCompleteProfile = async () => {
     if (!validateRequiredFields()) {
-      alert('Please complete all required fields before proceeding');
+      const fieldLabels = {
+        'dateOfBirth': 'Date of Birth',
+        'idNumber': 'SA ID Number',
+        'businessRegistrationNumber': 'Business Registration Number',
+        'publishingLicense': 'Publishing License',
+        'proofOfAddress': 'Proof of Address'
+      };
+      
+      const missingLabels = missingRequirements.map(field => fieldLabels[field] || field);
+      alert(`Please complete these required fields before proceeding:\n\n• ${missingLabels.join('\n• ')}`);
       return;
     }
     
+    // Save profile data
     await handleSaveProfile();
     
+    // Mark profile as complete and redirect to overview
     if (isProfileComplete) {
-      router.push('/print-media/overview');
+      try {
+        const idToken = await authUser.getIdToken();
+        await fetch('/api/publisher-profile', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`
+          },
+          body: JSON.stringify({ 
+            profileComplete: true,
+            completedAt: new Date().toISOString()
+          })
+        });
+        
+        // Update local storage
+        const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+        currentUser.profileComplete = true;
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        
+        alert('Profile completed successfully! Your account is now pending admin approval.');
+        router.push('/print-media/overview');
+      } catch (error) {
+        console.error('Error marking profile complete:', error);
+      }
     }
   };
 
@@ -181,6 +224,7 @@ const PublisherProfile = () => {
         monthlyReadership: userData.monthlyReadership || '',
         companyDescription: userData.companyDescription || '',
         address: userData.address || '',
+        city: userData.city || '',
         foundedYear: userData.foundedYear || '',
         employeeCount: userData.employeeCount || '',
         profilePicture: null,
@@ -321,6 +365,13 @@ const PublisherProfile = () => {
     setFormData({
       companyName: user?.companyName || '',
       industry: user?.industry || '',
+      dateOfBirth: user?.dateOfBirth || '',
+      idNumber: user?.idNumber || '',
+      businessRegistrationNumber: user?.businessRegistrationNumber || '',
+      vatNumber: user?.vatNumber || '',
+      publishingLicense: user?.publishingLicense || null,
+      proofOfAddress: user?.proofOfAddress || null,
+      bankingDetails: user?.bankingDetails || '',
       companyWebsite: user?.companyWebsite || '',
       contactName: user?.contactName || '',
       jobTitle: user?.jobTitle || '',
@@ -330,6 +381,7 @@ const PublisherProfile = () => {
       monthlyReadership: user?.monthlyReadership || '',
       companyDescription: user?.companyDescription || '',
       address: user?.address || '',
+      city: user?.city || '',
       foundedYear: user?.foundedYear || '',
       employeeCount: user?.employeeCount || '',
       profilePicture: null,
@@ -370,7 +422,7 @@ const PublisherProfile = () => {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       <div className="max-w-5xl mx-auto px-4 py-8">
 
-        {/* Requirements Notice */}
+        {/* Updated Requirements Notice - Only show required fields */}
         {!isProfileComplete && (
           <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-6 mb-8 shadow-sm">
             <div className="flex items-start">
@@ -378,12 +430,19 @@ const PublisherProfile = () => {
                 <AlertTriangle className="h-6 w-6 text-amber-500" />
               </div>
               <div className="ml-4">
-                <h3 className="text-lg font-semibold text-amber-800 mb-2">Complete Your Profile</h3>
-                <p className="text-amber-700 mb-2">
-                  Please complete all required fields to activate your publisher account and access all features.
+                <h3 className="text-lg font-semibold text-amber-800 mb-2">Complete Required Fields</h3>
+                <p className="text-amber-700 mb-3">
+                  To activate your publisher account, please complete the following required sections:
                 </p>
+                <div className="bg-white/50 rounded-lg p-4 mb-3">
+                  <h4 className="font-semibold text-amber-800 mb-2">Required Sections:</h4>
+                  <ul className="text-sm text-amber-700 space-y-1">
+                    <li>• <strong>Personal Information:</strong> Date of Birth, SA ID Number</li>
+                    <li>• <strong>Legal Requirements:</strong> Business Registration, Publishing License, Proof of Address</li>
+                  </ul>
+                </div>
                 <p className="text-sm text-amber-600">
-                  Missing fields: <span className="font-medium">{missingRequirements.join(', ')}</span>
+                  Other fields are optional and can be completed later.
                 </p>
               </div>
             </div>

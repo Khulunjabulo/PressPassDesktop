@@ -92,33 +92,54 @@ export async function POST(request) {
       };
       console.log('👤 Prepared reader data');
     } else if (role === 'publisher') {
-      userData = {
-        ...userData,
-        companyName: companyName || '',
-        industry: industry || '',
-        companyWebsite: companyWebsite || '',
-        contactName: contactName || `${firstName} ${lastName}`.trim(),
-        jobTitle: jobTitle || '',
-        phone: phone || '',
-        publicationType: publicationType || '',
-        audienceType: audienceType || '',
-        monthlyReadership: parseInt(monthlyReadership) || 0,
-        firstName: firstName || '',
-        lastName: lastName || '',
-        profilePicture: profilePicture || null,
-        companyLogo: null,
-        staff: [],
-        articlesCount: 0,
-        lastPosted: null,
-        isVerified: false,
-        // Additional publisher fields
-        companyDescription: '',
-        address: '',
-        foundedYear: '',
-        employeeCount: ''
-      };
-      console.log('🏢 Prepared publisher data');
-    }
+  userData = {
+    ...userData,
+    companyName: companyName || '',
+    industry: industry || '',
+    companyWebsite: companyWebsite || '',
+    contactName: contactName || `${firstName} ${lastName}`.trim(),
+    jobTitle: jobTitle || '',
+    phone: phone || '',
+    publicationType: publicationType || '',
+    audienceType: audienceType || '',
+    monthlyReadership: parseInt(monthlyReadership) || 0,
+    firstName: firstName || '',
+    lastName: lastName || '',
+    profilePicture: profilePicture || null,
+    companyLogo: null,
+    staff: [],
+    articlesCount: 0,
+    lastPosted: null,
+    isVerified: false,
+    // ADD THESE NEW FIELDS:
+    isApproved: false,
+    approvalStatus: 'pending', // 'pending', 'approved', 'rejected'
+    profileComplete: false,
+    approvedBy: null,
+    approvedAt: null,
+    rejectedReason: null,
+    // Required fields tracking
+    requiredFields: [
+      'companyName', 'contactName', 'jobTitle', 'dateOfBirth', 
+      'idNumber', 'businessRegistrationNumber', 'publishingLicense', 
+      'proofOfAddress', 'publicationType', 'audienceType'
+    ],
+    // Additional publisher fields
+    companyDescription: '',
+    address: '',
+    city: '',
+    foundedYear: '',
+    employeeCount: '',
+    dateOfBirth: '',
+    idNumber: '',
+    businessRegistrationNumber: '',
+    vatNumber: '',
+    publishingLicense: null,
+    proofOfAddress: null,
+    bankingDetails: ''
+  };
+  console.log('🏢 Prepared publisher data with approval fields');
+}
 
     // Save to Firestore
     console.log('💾 Saving user data to Firestore...');
