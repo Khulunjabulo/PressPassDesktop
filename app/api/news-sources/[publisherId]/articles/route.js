@@ -1,6 +1,6 @@
 // app/api/news-sources/[publisherId]/articles/route.js
 import { NextResponse } from 'next/server';
-import { getFirestoreDb } from '../../../../lib/firebase-admin';
+import { getFirestoreDb } from '@/lib/firebase-admin.js';
 
 export async function GET(request, { params }) {
   try {
