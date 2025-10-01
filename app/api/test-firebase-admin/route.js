@@ -1,6 +1,6 @@
 // api/test-firebase-admin/route.js
 import { NextResponse } from 'next/server';
-import { getFirestoreDb, getAuth } from '../../lib/firebase-admin';
+import { getFirestoreDb, getAuth } from '@/lib/firebase-admin.js';
 
 export async function GET() {
   try {
