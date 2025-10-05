@@ -39,9 +39,14 @@ export default function MainHeader() {
 
   const handlePrintMediaClick = (e) => {
     e.preventDefault();
-    if (user && role !== 'print-media') {
-      alert('You are not a print media');
+    if (!user) {
+      // If user is not logged in, redirect to sign in page with print media role
+      router.push('/signin?role=publisher');
+    } else if (role !== 'publisher') {
+      // If user is logged in but not a publisher, redirect to sign up page
+      router.push('/signup?role=publisher');
     } else {
+      // If user is a publisher, redirect to print media section
       router.push('/print-media');
     }
   };
