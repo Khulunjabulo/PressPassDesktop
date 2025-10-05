@@ -13,6 +13,7 @@ import {
   validateReaderForm,
   validatePublisherForm
 } from '../../lib/authLogic';
+import Link from 'next/link';
 
 const MediaHubRegistration = () => {
   const [isPublisher, setIsPublisher] = useState(false);
@@ -623,6 +624,15 @@ const MediaHubRegistration = () => {
           </div>
         </div>
         
+      </div>
+ 
+
+
+
+      <div className="absolute top-4 left-4">
+        <Link href="/" className="text-gray-800 hover:underline flex items-center">
+          ← Back to Home
+        </Link>
       </div>
 
       {/* Google Sign-Up Modal */}
