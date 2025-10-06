@@ -73,7 +73,7 @@ export default function NewsReaderHeader({
   };
 
   return (
-    <header className="bg-[#329ae1] w-full flex justify-between items-center px-3 sm:px-6 py-2 sm:py-3 shadow-md h-16">
+    <header className="bg-[#329ae1] w-full flex justify-between items-center px-3 sm:px-6 py-2 sm:py-3 shadow-md h-16 md:h-32">
       {/* Logo Section */}
       <Link href="/news-reader">
         <Image
@@ -85,7 +85,7 @@ export default function NewsReaderHeader({
           priority
           onError={() => setLogoError(true)}
           onLoad={() => setLogoError(false)}
-          className="cursor-pointer hover:opacity-80 transition-opacity w-[80px] h-auto"
+          className="cursor-pointer hover:opacity-80 transition-opacity w-auto h-10 md:h-24"
         />
       </Link>
 
