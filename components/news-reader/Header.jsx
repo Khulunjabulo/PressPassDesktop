@@ -6,7 +6,7 @@ import { Home, Search, Star, FileText } from "lucide-react";
 
 export default function NewsReaderHeader() {
   return (
-    <header className="bg-[#329ae1] w-full flex justify-between items-center px-3 sm:px-6 py-2 shadow-md h-16 md:h-32">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-[#329ae1] flex justify-between items-center px-3 sm:px-6 py-2 shadow-md h-16 md:h-32">
       {/* Logo - always goes to news-reader */}
       <Link href="/">
         <Image
@@ -15,7 +15,7 @@ export default function NewsReaderHeader() {
           width={80}
           height={32}
           priority
-          className="cursor-pointer hover:opacity-80 transition-opacity w-auto h-10 md:h-24"
+          className="cursor-pointer hover:opacity-80 transition-opacity w-auto h-12 md:h-24"
         />
       </Link>
 

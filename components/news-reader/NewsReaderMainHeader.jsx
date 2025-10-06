@@ -52,7 +52,7 @@ export default function MainHeader() {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-[#329ae1] px-3 sm:px-6 py-2 shadow-md h-16 md:h-32">
+    <header className="bg-[#329ae1] px-3 sm:px-6 py-2 shadow-md h-16 md:h-32">
       <div className="max-w-7xl mx-auto flex items-center justify-between h-full">
         <div className="flex items-center">
           <Link href="/" className="flex-shrink-0">
@@ -61,7 +61,7 @@ export default function MainHeader() {
               alt="Press Pass logo"
               width={80}
               height={32}
-              className="w-auto h-10 md:h-24"
+              className="w-auto h-12 md:h-24"
               priority
             />
           </Link>

@@ -85,7 +85,7 @@ export default function NewsReaderHeader({
           priority
           onError={() => setLogoError(true)}
           onLoad={() => setLogoError(false)}
-          className="cursor-pointer hover:opacity-80 transition-opacity w-auto h-10 md:h-24"
+          className="cursor-pointer hover:opacity-80 transition-opacity w-auto h-12 md:h-24"
         />
       </Link>
 
