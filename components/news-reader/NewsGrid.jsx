@@ -949,7 +949,7 @@ export default function NewsGrid({ articles }) {
     <div className="relative">
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-4 px-4 sm:px-6 pb-10">
         {/* MAIN COLUMN */}
-        <div className="space-y-6">
+        <div className="space-y-6 mt-[100px]">
           {/* Banner Ad - Top of Headlines */}
           <section className="mt-6">
             <AdSlot 
