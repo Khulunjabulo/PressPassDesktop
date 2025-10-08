@@ -38,14 +38,14 @@ export default function NewsReaderHeader() {
         <Link href="/news-reader/favorites">
           <div className="flex flex-col items-center hover:text-gray-200 transition">
             <Star size={24} />
-            <span className="text-xs mt-1">Favorite</span>
+            <span className="text-xs mt-1">Favorites</span>
           </div>
         </Link>
 
         <Link href="/news-reader/classified">
           <div className="flex flex-col items-center hover:text-gray-200 transition">
             <FileText size={24} />
-            <span className="text-xs mt-1">Classified</span>
+            <span className="text-xs mt-1">Classifieds</span>
           </div>
         </Link>
       </nav>
