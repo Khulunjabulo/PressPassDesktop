@@ -13,6 +13,7 @@ import {
   validateReaderForm,
   validatePublisherForm
 } from '../../lib/authLogic';
+import Link from 'next/link';
 
 const MediaHubRegistration = () => {
   const [isPublisher, setIsPublisher] = useState(false);
@@ -292,15 +293,23 @@ const MediaHubRegistration = () => {
                   
                   {/* Terms Agreement - Moved to top */}
                   <label className="flex items-center bg-white p-4 rounded-lg border">
-                    <input 
-                      type="checkbox" 
-                      name="agreeToTerms" 
-                      checked={formData.agreeToTerms}
-                      onChange={handleInputChange}
-                      required 
-                      className="mr-3" 
-                    />
-                    <span className="text-sm">I agree to the Terms of Service and Privacy Policy</span>
+                     <input 
+    type="checkbox" 
+    name="agreeToTerms" 
+    checked={formData.agreeToTerms}
+    onChange={handleInputChange}
+    required 
+    className="mr-3" 
+  />
+  <span className="text-sm">
+    I agree to the 
+    <a href="/terms" target="_blank" className="text-blue-600 underline ml-1">
+      Terms of Service
+    </a> and 
+    <a href="/privacy" target="_blank" className="text-blue-600 underline ml-1">
+      Privacy Policy
+    </a>.
+  </span>
                   </label>
                   
                   {/* Google Sign Up Button */}
@@ -615,6 +624,15 @@ const MediaHubRegistration = () => {
           </div>
         </div>
         
+      </div>
+ 
+
+
+
+      <div className="absolute top-4 left-4">
+        <Link href="/" className="text-gray-800 hover:underline flex items-center">
+          ← Back to Home
+        </Link>
       </div>
 
       {/* Google Sign-Up Modal */}

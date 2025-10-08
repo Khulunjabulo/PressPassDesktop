@@ -61,6 +61,7 @@ export default function SignIn() {
   }
 
   return (
+    <> 
     <div className="bg-gray-50 min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-4xl bg-white rounded-2xl shadow-xl overflow-hidden">
         <div className="flex flex-col md:flex-row">
@@ -226,5 +227,11 @@ export default function SignIn() {
         </div>
       </div>
     </div>
+    <div className="absolute top-4 left-4">
+      <Link href="/" className="text-gray-800 hover:underline flex items-center">
+        ← Back to Home
+      </Link>
+    </div>
+     </>
   )
 }

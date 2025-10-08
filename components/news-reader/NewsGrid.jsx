@@ -947,9 +947,6 @@ export default function NewsGrid({ articles }) {
 
   return (
     <div className="relative">
-      {/* Bottom-sheet overlay */}
-      <RecommendedOverlayBottom articles={unique} />
-
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-4 px-4 sm:px-6 pb-10">
         {/* MAIN COLUMN */}
         <div className="space-y-6">
@@ -1124,6 +1121,7 @@ export default function NewsGrid({ articles }) {
                 </p>
               </div>
             )}
+
           </section>
         </div>
 
@@ -1153,6 +1151,9 @@ export default function NewsGrid({ articles }) {
             onAdvertiseClick={() => handleAdvertiseClick('sidebar_rectangle2', { width: 300, height: 250 })}
           />
         </aside>
+
+        {/* Recommended Articles Section (after main content) */}
+        <RecommendedOverlayBottom articles={unique} />
       </div>
 
       {/* Ad Creation Modal */}
