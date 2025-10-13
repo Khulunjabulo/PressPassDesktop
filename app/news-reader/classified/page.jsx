@@ -50,10 +50,17 @@ function Publication({ name, sections }) {
           {name}
         </h2>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {sections.map((section, idx) => (
-          <ClassifiedSection key={idx} {...section} />
-        ))}
+      <div className="relative">
+        <div className="flex overflow-x-auto space-x-6 pb-4 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200">
+          {sections.map((section, idx) => (
+            <div key={idx} className="flex-shrink-0 w-11/12 sm:w-1/2 md:w-[32%]">
+              <ClassifiedSection {...section} />
+            </div>
+          ))}
+        </div>
+        <div className="absolute top-1/2 -right-4 transform -translate-y-1/2 hidden md:flex items-center bg-gray-100 p-2 rounded-full shadow-md pointer-events-none">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-gray-600 animate-pulse"><path d="M9 18l6-6-6-6"/></svg>
+        </div>
       </div>
     </div>
   )

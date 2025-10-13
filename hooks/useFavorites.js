@@ -348,7 +348,7 @@ export const useFavorites = () => {
   // Get favorite stats
   const getFavoriteStats = useCallback(() => {
     const stats = {
-      all: favorites.length,
+      all: favorites.length + favoritePublishers.length,
       magazines: favorites.filter(fav => fav.type === 'magazine').length,
       newspapers: favorites.filter(fav => fav.type === 'newspaper').length,
       stories: favorites.filter(fav => fav.type === 'story').length,

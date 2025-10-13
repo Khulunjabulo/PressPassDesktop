@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, ArrowLeft } from 'next/navigation';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import "../globals.css";
 import GoogleSignUpModal from '@/components/GoogleSignUpModal';
@@ -630,8 +630,9 @@ const MediaHubRegistration = () => {
 
 
       <div className="absolute top-4 left-4">
-        <Link href="/" className="text-gray-800 hover:underline flex items-center">
-          ← Back to Home
+        <Link href="/" className="bg-[#3ba6e7] text-white px-4 py-2 rounded-md shadow-sm hover:bg-[#2a7ab8] transition-colors duration-200 mb-8 flex items-center text-sm">
+          <ArrowLeft className="w-4 h-4 mr-1" />
+          Back to Home
         </Link>
       </div>
 

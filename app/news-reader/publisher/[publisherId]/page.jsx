@@ -20,6 +20,10 @@ const NewsReaderHeader = dynamic(() => import('@/components/news-reader/NewsRead
   loading: () => <div className="h-16 bg-gray-100 animate-pulse"></div>
 });
 
+const MobileBottomNav = dynamic(() => import('@/components/news-reader/MobileBottomNav'), {
+  ssr: false,
+});
+
 // Helper function to strip HTML tags and clean text
 function stripHtml(html) {
   if (!html) return '';
@@ -296,7 +300,7 @@ export default function PublisherArticlesPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-8 py-12">
           <button
             onClick={handleBackClick}
-            className="text-sm text-gray-600 hover:text-black mb-8 flex items-center"
+            className="bg-[#3ba6e7] text-white px-4 py-2 rounded-md shadow-sm hover:bg-[#2a7ab8] transition-colors duration-200 mb-8 flex items-center text-sm"
           >
             <ArrowLeft className="w-4 h-4 mr-1" />
             Back to News Sources
@@ -323,7 +327,7 @@ export default function PublisherArticlesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white pb-16 md:pb-0">
       <div className="fixed top-0 left-0 right-0 z-40">
         {/* Pass publisher data to header component */}
         <NewsReaderHeader 
@@ -334,13 +338,16 @@ export default function PublisherArticlesPage() {
         />
       </div>
 
+      {/* Mobile Bottom Navigation (fixed at the bottom on mobile) */}
+      <MobileBottomNav />
+
       <div className="pt-16"> {/* Add padding to push content below the fixed header */}
         {/* Newspaper Header */}
         <div className="border-b-4 border-black">
           <div className="max-w-7xl mx-auto px-4 sm:px-8 py-6">
             <button
               onClick={handleBackClick}
-              className="text-sm text-gray-600 hover:text-black mb-6 flex items-center"
+              className="bg-[#3ba6e7] text-white px-4 py-2 rounded-md shadow-sm hover:bg-[#2a7ab8] transition-colors duration-200 mb-6 flex items-center text-sm"
             >
               <ArrowLeft className="w-4 h-4 mr-1" />
               Back to News Sources
@@ -518,7 +525,7 @@ export default function PublisherArticlesPage() {
                   )}
                 </div>
               ) : (
-                <div className="space-y-8">
+                <div className="space-y-2.5 md:space-y-8">
                   {filteredArticles.map((article, index) => {
                     // Debug log for each article
                     console.log(`Article ${index + 1}:`, {
@@ -533,17 +540,17 @@ export default function PublisherArticlesPage() {
                   return (
                     <article 
                       key={article.id}
-                      className="border-b border-gray-300 pb-6 last:border-b-0 cursor-pointer hover:bg-gray-50 transition-colors p-4 -m-4 rounded"
+                      className="cursor-pointer transition-all duration-200 ease-in-out group md:border-b md:border-gray-300 md:pb-6 md:last:border-b-0 md:hover:bg-gray-50 md:p-4 md:-m-4 md:rounded bg-white border border-gray-200 rounded-lg shadow-sm p-4 mb-2.5 md:bg-transparent md:border-none md:shadow-none md:p-0 md:mb-0"
                       onClick={() => handleArticleClick(article)}
                     >
-                      <div className="flex gap-6">
+                      <div className="flex flex-col md:flex-row md:gap-6">
                         {/* Article Image */}
                         {article.imageUrl && (
-                          <div className="flex-shrink-0">
+                          <div className="flex-shrink-0 mb-4 md:mb-0">
                             <img
                               src={article.imageUrl}
                               alt={article.title}
-                              className="w-28 h-30 object-cover border border-gray-400"
+                              className="w-full h-48 md:w-28 md:h-30 object-cover border border-gray-300 rounded-md"
                               onError={(e) => {
                                 console.log('Article image failed to load:', article.imageUrl);
                                 e.target.style.display = 'none';
@@ -553,7 +560,7 @@ export default function PublisherArticlesPage() {
                         )}
 
                           {/* Article Content */}
-                          <div className="flex-1">
+                          <div className="flex-1 min-w-0">
                             {/* Category */}
                             {article.category && (
                               <div className="mb-2">
@@ -564,14 +571,14 @@ export default function PublisherArticlesPage() {
                             )}
 
                             {/* Headline - smaller on mobile */}
-                            <h3 className="text-xl sm:text-2xl font-bold leading-tight mb-3 hover:underline" 
+                            <h3 className="text-lg md:text-xl lg:text-2xl font-bold leading-tight mb-3 group-hover:underline" 
                                 style={{fontFamily: 'Times, "Times New Roman", serif'}}>
                               {article.title}
                             </h3>
                             
                             {/* Summary or Content Preview */}
                             {(article.summary || article.content) && (
-                              <p className="text-sm sm:text-base text-gray-700 mb-3 leading-relaxed">
+                              <p className="text-sm text-gray-700 mb-3 leading-relaxed">
                                 {article.summary || article.content || 'No preview available'}
                               </p>
                             )}
@@ -844,10 +851,11 @@ export default function PublisherArticlesPage() {
                 <div className="flex items-center space-x-4">
                   <span className="text-gray-600">Edition: Digital</span>
                   <button
-                    onClick={handleBackClick}
-                    className="bg-black text-white px-4 py-2 text-xs font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors"
+                    onClick={handleBackClick}                    
+                    className="bg-[#3ba6e7] text-white px-4 py-2 rounded-md shadow-sm hover:bg-[#2a7ab8] transition-colors duration-200 flex items-center text-sm"
                   >
-                    Back to Sources
+                    <ArrowLeft className="w-4 h-4 mr-1" />
+                    Back to News Sources
                   </button>
                 </div>
               </div>
