@@ -540,7 +540,7 @@ export default function PublisherArticlesPage() {
                   return (
                     <article 
                       key={article.id}
-                      className="cursor-pointer transition-all duration-200 ease-in-out group md:border-b md:border-gray-300 md:pb-6 md:last:border-b-0 md:hover:bg-gray-50 md:p-4 md:-m-4 md:rounded bg-white border border-gray-200 rounded-lg shadow-sm p-4 mb-2.5 md:bg-transparent md:border-none md:shadow-none md:p-0 md:mb-0"
+                      className="cursor-pointer transition-all duration-200 ease-in-out group md:border-b md:border-gray-300 md:pb-6 md:last:border-b-0 md:hover:bg-gray-50 md:p-4 md:-m-4 md:rounded bg-white border border-gray-200 rounded-lg shadow-sm p-4 mb-2.5 md:bg-transparent md:border-none md:shadow-none md:mb-0"
                       onClick={() => handleArticleClick(article)}
                     >
                       <div className="flex flex-col md:flex-row md:gap-6">
