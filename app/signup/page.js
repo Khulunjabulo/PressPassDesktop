@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter, ArrowLeft } from 'next/navigation';
+import { useRouter } from 'next/navigation';
+import { ArrowLeft } from 'lucide-react';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import "../globals.css";
 import GoogleSignUpModal from '@/components/GoogleSignUpModal';
