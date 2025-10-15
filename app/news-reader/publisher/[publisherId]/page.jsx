@@ -5,6 +5,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent } from '@/components/UI/newscard';
 import { ArrowLeft, FileText, Clock, Globe, Building, Users, Calendar, Eye, Hash, Filter } from 'lucide-react';
 import { usePublisherArticles } from '@/hooks/useNewsSources';
+import LikeButton from '@/components/LikeButton'
 import dynamic from 'next/dynamic';
 
 // Lazy load components for better performance
@@ -71,6 +72,15 @@ export default function PublisherArticlesPage() {
   const [adUploadLoading, setAdUploadLoading] = useState(true);
   const [adUploadError, setAdUploadError] = useState(null);
 
+     const [currentUser, setCurrentUser] = useState(null);
+
+     useEffect(() => {
+    const userData = localStorage.getItem('currentUser');
+    if (userData) {
+      setCurrentUser(JSON.parse(userData));
+    }
+  }, []);
+  
   // Fetch the first ad upload
   useEffect(() => {
     const fetchAdUpload = async () => {
@@ -601,6 +611,24 @@ export default function PublisherArticlesPage() {
                                 </div>
                               )}
                             </div>
+
+                            {/* 🆕 ADD THIS: Engagement Section */}
+<div className="flex items-center space-x-4 pt-3 border-t border-gray-200">
+<LikeButton
+  articleId={article.id}
+  publisherId={params.publisherId}
+  userId={currentUser?.uid} // ✅ Use actual user ID
+  initialLikeCount={article.likeCount || 0}
+  size="small"
+/>
+  
+  {article.views && (
+    <div className="flex items-center space-x-1 text-gray-600 text-sm">
+      <Eye className="w-4 h-4" />
+      <span>{article.views}</span>
+    </div>
+  )}
+</div>
 
                             {/* Tags */}
                             {article.tags && article.tags.length > 0 && (
