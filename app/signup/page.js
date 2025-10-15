@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { ArrowLeft } from 'lucide-react';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import "../globals.css";
 import GoogleSignUpModal from '@/components/GoogleSignUpModal';
@@ -13,6 +14,7 @@ import {
   validateReaderForm,
   validatePublisherForm
 } from '../../lib/authLogic';
+import Link from 'next/link';
 
 const MediaHubRegistration = () => {
   const [isPublisher, setIsPublisher] = useState(false);
@@ -623,6 +625,16 @@ const MediaHubRegistration = () => {
           </div>
         </div>
         
+      </div>
+ 
+
+
+
+      <div className="absolute top-4 left-4">
+        <Link href="/" className="bg-[#3ba6e7] text-white px-4 py-2 rounded-md shadow-sm hover:bg-[#2a7ab8] transition-colors duration-200 mb-8 flex items-center text-sm">
+          <ArrowLeft className="w-4 h-4 mr-1" />
+          Back to Home
+        </Link>
       </div>
 
       {/* Google Sign-Up Modal */}

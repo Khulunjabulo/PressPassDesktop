@@ -1,13 +1,9 @@
 // app/news-reader/favorites/page.jsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/UI/Cards';
-import Header from '@/components/news-reader/Header';
-import MainHeader from '@/components/news-reader/NewsReaderMainHeader';
-import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '@/Firebase/firebase';
 import { 
   Home, Search, Heart, Tag, ChevronRight, User, Plus, Building,
   Linkedin, Youtube, Facebook, Volume2, ArrowRight, Clock, FileText,
@@ -16,12 +12,12 @@ import {
 import { useFavorites } from '@/hooks/useFavorites';
 import AdSlot from '@/components/news-reader/AdsSlot';
 import FavoriteButton from '@/components/FavoriteButton';
-import PublisherFavoriteButton from '@/components/PublisherFavoriteButton';
+import PublisherFavoriteButton from '@/components/PublisherFavoriteButton'; 
+import NewsReaderHeader from '@/components/news-reader/NewsReaderHeader';
+import MobileBottomNav from '@/components/news-reader/MobileBottomNav';
 
 export default function FavoritesPage() {
   const router = useRouter();
-  const [isMobile, setIsMobile] = useState(false);
-  const [user, setUser] = useState(null);
   const {
     favorites,
     favoritePublishers,
@@ -35,18 +31,6 @@ export default function FavoritesPage() {
 
   const [activeTab, setActiveTab] = useState('all');
   const favoriteStats = getFavoriteStats();
-
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (currentUser) => setUser(currentUser));
-    return () => unsub();
-  }, []);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -116,8 +100,9 @@ export default function FavoritesPage() {
 
   return (
     <div>
-    {isMobile && user ? <MainHeader /> : <Header />}
-    <div className={`min-h-screen bg-white ${isMobile && user ? 'pt-16 sm:pt-20' : ''}`}>
+    <NewsReaderHeader />
+    <MobileBottomNav />
+    <div className="min-h-screen bg-white pt-16 pb-16 md:pb-0">
       <div className="max-w-7xl mx-auto flex flex-col lg:flex-row">
         {/* Sidebar */}
         <aside className="hidden lg:block w-64 p-4 border-r">

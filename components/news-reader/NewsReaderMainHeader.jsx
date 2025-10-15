@@ -39,16 +39,21 @@ export default function MainHeader() {
 
   const handlePrintMediaClick = (e) => {
     e.preventDefault();
-    if (user && role !== 'print-media') {
-      alert('You are not a print media');
+    if (!user) {
+      // If user is not logged in, redirect to sign in page with print media role
+      router.push('/signin?role=publisher');
+    } else if (role !== 'publisher') {
+      // If user is logged in but not a publisher, redirect to sign up page
+      router.push('/signup?role=publisher');
     } else {
+      // If user is a publisher, redirect to print media section
       router.push('/print-media');
     }
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-[#329ae1] px-3 sm:px-6 py-2 shadow-md h-16">
-      <div className="max-w-7xl mx-auto flex items-center justify-between h-12 sm:h-16 md:h-18 lg:h-20">
+    <header className="bg-[#329ae1] px-3 sm:px-6 py-2 shadow-md h-16 md:h-32 fixed top-0 left-0 right-0 w-full z-50">
+      <div className="max-w-7xl mx-auto flex items-center justify-between h-full">
         <div className="flex items-center">
           <Link href="/" className="flex-shrink-0">
             <Image
@@ -56,13 +61,13 @@ export default function MainHeader() {
               alt="Press Pass logo"
               width={80}
               height={32}
-              className="w-[80px] h-auto sm:w-[140px] md:w-[160px] lg:w-[180px]"
+              className="w-auto h-12 md:h-24"
               priority
             />
           </Link>
         </div>
 
-        <nav className="hidden md:flex items-center gap-1 sm:gap-3 md:gap-4 text-white">
+        <nav className=" top-0 right-0 left-0 hidden md:flex items-center gap-1 sm:gap-3 md:gap-4 text-white">
           {/* Hide Print Media on mobile (425px and less), show on tablet (768px) and larger */}
           <button
             onClick={handlePrintMediaClick}
@@ -103,22 +108,37 @@ export default function MainHeader() {
 
         {/* Mobile Menu */}
         <div className="md:hidden relative">
-          {user && (
-            <>
-              <button onClick={() => setMenuOpen(!menuOpen)} className="text-white p-2">
-                <Menu size={24} />
-              </button>
-              {menuOpen && (
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50">
-                  <div className="py-1">
+          <button onClick={() => setMenuOpen(!menuOpen)} className="text-white p-2">
+            <Menu size={24} />
+          </button>
+          {menuOpen && (
+            <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50">
+              <div className="py-1">
+                {user ? (
+                  <>
                     <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
                       <LogOut className="w-4 h-4 mr-2" />
                       Logout
                     </button>
-                  </div>
-                </div>
-              )}
-            </>
+                  </>
+                ) : (
+                  <>
+                    <Link href="/signup">
+                      <div className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
+                        <UserPlus className="w-4 h-4 mr-2" />
+                        Sign Up
+                      </div>
+                    </Link>
+                    <Link href="/signin">
+                      <div className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
+                        <LogIn className="w-4 h-4 mr-2" />
+                        Login
+                      </div>
+                    </Link>
+                  </>
+                )}
+              </div>
+            </div>
           )}
         </div>
       </div>

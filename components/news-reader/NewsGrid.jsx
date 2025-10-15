@@ -3,6 +3,7 @@
 import { Heart, X, Upload, ExternalLink, CreditCard } from 'lucide-react';
 import { useState, useEffect, Fragment } from 'react';
 import { useRouter } from 'next/navigation';
+import { useFavorites } from '@/hooks/useFavorites';
 import RecommendedOverlayBottom from '@/components/news-reader/Overlay';
 import { Card, CardContent } from '@/components/UI/newscard';
 import { FileText, Clock, Globe, Building, Users, ArrowRight, Plus } from 'lucide-react';
@@ -828,6 +829,12 @@ export default function NewsGrid({ articles }) {
   const [selectedAdType, setSelectedAdType] = useState('');
   const [selectedDimensions, setSelectedDimensions] = useState({});
   const router = useRouter();
+  const { 
+    isPublisherFavorite, 
+    togglePublisherFavorite, 
+    currentUser,
+    loading: favoritesLoading 
+  } = useFavorites();
 
   // Fetch news sources with their recent articles
   useEffect(() => {
@@ -947,9 +954,6 @@ export default function NewsGrid({ articles }) {
 
   return (
     <div className="relative">
-      {/* Bottom-sheet overlay */}
-      <RecommendedOverlayBottom articles={unique} />
-
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-4 px-4 sm:px-6 pb-10">
         {/* MAIN COLUMN */}
         <div className="space-y-6">
@@ -1018,10 +1022,9 @@ export default function NewsGrid({ articles }) {
             {!loadingSources && !sourcesError && newsources.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 {newsources.map((source, idx) => (
-                  <Fragment key={`item-${source.id}`}>
+                  <Fragment key={source.id}>
                     <Card 
-                      key={source.id} 
-                      className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer"
+                      className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer relative"
                       onClick={() => handleSourceClick(source)}
                     >
                       <CardContent className="p-4">
@@ -1088,12 +1091,19 @@ export default function NewsGrid({ articles }) {
                           <PublisherFavoriteButton
                             type="button"
                             publisher={source}
-                            size="default"
-                            showText={false}
-                            className="hidden sm:inline-flex p-2 rounded-full bg-gray-100 hover:bg-red-100 transition-colors"
-                            disabled
-                          />
+                              size="default"
+                              showText={false}
+                              className="hidden sm:inline-flex p-2 rounded-full bg-gray-100 hover:bg-red-100 transition-colors"
+                            />
                         </div>
+
+                        {/* Mobile Favorite Button */}
+                        <PublisherFavoriteButton
+                          publisher={source}
+                          size="default"
+                          showText={false}
+                          className="sm:hidden absolute bottom-4 right-4 p-2 rounded-full bg-gray-100 hover:bg-red-100 transition-colors"
+                        />
                       </CardContent>
                     </Card>
                     
@@ -1124,6 +1134,7 @@ export default function NewsGrid({ articles }) {
                 </p>
               </div>
             )}
+
           </section>
         </div>
 
@@ -1153,6 +1164,9 @@ export default function NewsGrid({ articles }) {
             onAdvertiseClick={() => handleAdvertiseClick('sidebar_rectangle2', { width: 300, height: 250 })}
           />
         </aside>
+
+        {/* Recommended Articles Section (after main content) */}
+        <RecommendedOverlayBottom articles={unique} />
       </div>
 
       {/* Ad Creation Modal */}

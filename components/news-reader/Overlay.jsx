@@ -1,61 +1,68 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { FileText, ChevronDown, ChevronUp } from 'lucide-react';
+
+const LOCAL_STORAGE_KEY = 'recommended-section-is-open';
 
 export default function RecommendedOverlayBottom({ articles }) {
-  const [open, setOpen] = useState(false);
+  // Default to true, then check localStorage on the client to prevent hydration mismatch.
+  const [isOpen, setIsOpen] = useState(true);
   const recommended = (articles || []).slice(0, 8);
 
+  // On component mount, read the saved state from localStorage.
+  useEffect(() => {
+    const savedState = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (savedState !== null) {
+      setIsOpen(JSON.parse(savedState));
+    }
+  }, []);
+
+  // Whenever the state changes, save it to localStorage.
+  useEffect(() => {
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(isOpen));
+  }, [isOpen]);
+
   return (
-    <>
-      {!open && (
-        <button
-          onClick={() => setOpen(true)}
-          className="fixed bottom-5 Left-5 z-40 rounded-full bg-[#329ae1] text-white px-4 py-2 shadow-lg"
-        >
-          Recommended
-        </button>
-      )}
-
-      {/* Backdrop */}
-      {open && (
-        <div
-          className="fixed inset-0 z-50 bg-black/40"
-          onClick={() => setOpen(false)}
-        />
-      )}
-
-      {/* Bottom sheet */}
-      <div
-        className={`fixed inset-x-0 bottom-0 z-50 w-full max-h-[80vh] bg-white rounded-t-2xl shadow-2xl transition-transform duration-200 ${
-          open ? 'translate-y-0' : 'translate-y-full'
-        }`}
-        style={{ willChange: 'transform' }}
+    <div className="bg-gray-50 rounded-lg mt-8">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between p-4 sm:p-6 text-left hover:bg-gray-100 rounded-lg transition-colors"
+        aria-expanded={isOpen}
       >
-        <div className="p-4 border-b flex items-center justify-between">
-          <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto absolute left-1/2 -translate-x-1/2 top-2" />
-          <h3 className="text-lg font-semibold">Recommended for you</h3>
-          <button
-            className="text-sm text-gray-600 hover:text-gray-900"
-            onClick={() => setOpen(false)}
-          >
-            Close
-          </button>
-        </div>
+        <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+          <FileText className="w-5 h-5 mr-2 text-gray-500" />
+          Recommended For You
+        </h3>
+        {isOpen ? (
+          <ChevronUp className="w-5 h-5 text-gray-500" />
+        ) : (
+          <ChevronDown className="w-5 h-5 text-gray-500" />
+        )}
+      </button>
 
-        <div className="overflow-y-auto p-4 space-y-4">
-          {recommended.map((a, i) => (
-            <div key={i} className="border rounded-md p-3 hover:shadow-sm transition">
-              <p className="text-sm text-gray-500 mb-1">{a.source_id}</p>
-              <h4 className="font-semibold text-gray-900">{a.title}</h4>
+      {isOpen && (
+        <div className="p-4 sm:p-6 pt-0">
+          {recommended.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {recommended.map((a, i) => (
+                <a
+                  key={i}
+                  href={a.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block border rounded-lg p-3 bg-white hover:shadow-md hover:border-blue-400 transition-all"
+                >
+                  <p className="text-xs text-gray-500 mb-1 uppercase font-medium">{a.source_id}</p>
+                  <h4 className="font-semibold text-gray-800 leading-snug">{a.title}</h4>
+                </a>
+              ))}
             </div>
-          ))}
-
-          {recommended.length === 0 && (
-            <p className="text-sm text-gray-500">No recommendations yet.</p>
+          ) : (
+            <p className="text-sm text-gray-500">No recommendations available at the moment.</p>
           )}
         </div>
-      </div>
-    </>
+      )}
+    </div>
   );
 }
