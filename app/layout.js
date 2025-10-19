@@ -1,5 +1,8 @@
+// app/layout.js - Updated News Reader Layout
 import "../app/globals.css"
 import ServiceWorkerRegister from "../components/ServiceWorkerRegister"
+import { FloatingMessenger } from "../components/FloatingMessenger"
+import { AuthProvider } from "../components/AuthProvider"
 
 export default function RootLayout({ children }) {
   return (
@@ -21,9 +24,15 @@ export default function RootLayout({ children }) {
         <link rel="shortcut icon" href="/press-pass.png" />
       </head>
       <body className="flex flex-col min-h-screen">
-        <ServiceWorkerRegister />
-        <main className="flex-grow w-full">{children}</main>
+        <AuthProvider>
+          <ServiceWorkerRegister />
+          <main className="flex-grow w-full">{children}</main>
+          
+          {/* Floating Support Messenger - Available on all pages */}
+          <FloatingMessenger />
+        </AuthProvider>
       </body>
     </html>
   )
 }
+
