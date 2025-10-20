@@ -73,7 +73,7 @@ export default function NewsReaderHeader({
   };
 
   return (
-    <header className="bg-[#329ae1] w-full flex justify-between items-center px-3 sm:px-6 py-2 sm:py-3 shadow-md h-16 md:h-32 fixed top-0 left-0 right-0 z-50">
+    <header className="bg-[#329ae1] w-full flex justify-between items-center px-3 sm:px-6 py-2 sm:py-3 shadow-md h-16 md:h-32 fixed md:relative top-0 left-0 right-0 z-50">
       {/* Logo Section */}
       <Link href="/news-reader">
         <Image
