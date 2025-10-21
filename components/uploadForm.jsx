@@ -133,6 +133,22 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
     { value: 'academic', label: 'Academic', color: 'bg-green-600', description: 'Formal, research-oriented' }
   ];
 
+  // Auto-fill journalist position when selected
+useEffect(() => {
+  if (formData.author && currentUser?.staff) {
+    const selectedJournalist = currentUser.staff.find(
+      member => member.name === formData.author
+    );
+    
+    if (selectedJournalist && selectedJournalist.position) {
+      setFormData(prev => ({
+        ...prev,
+        authorTitle: selectedJournalist.position
+      }));
+    }
+  }
+}, [formData.author, currentUser]);
+
   // Check publisher approval status
   useEffect(() => {
     if (currentUser) {
@@ -642,17 +658,27 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Create auth token for API call
-  const getAuthToken = () => {
-    if (!currentUser) {
-      console.error('❌ No current user for auth token');
-      return null;
+// getAuth
+const getAuthToken = async () => {
+  try {
+    // Get Firebase Auth instance
+    const { auth } = await import('../Firebase/firebase');
+    const currentAuthUser = auth.currentUser;
+    
+    if (!currentAuthUser) {
+      throw new Error('No authenticated user. Please sign in.');
     }
     
-    const token = currentUser.uid || `mock_token_${Date.now()}`;
-    console.log('🔑 Generated auth token preview:', token.substring(0, 20) + '...');
-    return token;
-  };
+    // Get fresh Firebase ID token (JWT)
+    const idToken = await currentAuthUser.getIdToken(true);
+    console.log('✅ Firebase ID token retrieved:', idToken.substring(0, 20) + '...');
+    
+    return idToken;
+  } catch (error) {
+    console.error('❌ Error getting auth token:', error);
+    throw new Error('Authentication failed. Please sign in again.');
+  }
+};
 
   // Submit article to API with image handling
   const submitArticle = async (isDraft = false) => {
@@ -1547,40 +1573,71 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
               />
             </div>
 
-            {/* Author Information */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <label htmlFor="author" className="block text-sm font-medium text-gray-700 mb-2">
-                  Author Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  id="author"
-                  name="author"
-                  value={formData.author}
-                  onChange={handleInputChange}
-                  className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    errors.author ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                  placeholder="Your name"
-                />
-                {errors.author && <p className="text-red-500 text-sm mt-1">{errors.author}</p>}
-              </div>
-              <div>
-                <label htmlFor="authorTitle" className="block text-sm font-medium text-gray-700 mb-2">
-                  Author Title/Position
-                </label>
-                <input
-                  type="text"
-                  id="authorTitle"
-                  name="authorTitle"
-                  value={formData.authorTitle}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="e.g., Senior Writer, Editor"
-                />
-              </div>
-            </div>
+            {/* Author Information - UPDATED */}
+<div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+  <div>
+    <label htmlFor="author" className="block text-sm font-medium text-gray-700 mb-2">
+      Journalist Name <span className="text-red-500">*</span>
+      <span className="text-xs text-gray-500 ml-2">(Select from your team)</span>
+    </label>
+    <select
+      id="author"
+      name="author"
+      value={formData.author}
+      onChange={handleInputChange}
+      className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+        errors.author ? 'border-red-500' : 'border-gray-300'
+      }`}
+    >
+      <option value="">Select a journalist</option>
+      {currentUser?.staff
+        ?.filter(member => 
+          member.department === 'Editorial' || 
+          member.department === 'Journalism' ||
+          member.position?.toLowerCase().includes('journalist') ||
+          member.position?.toLowerCase().includes('reporter') ||
+          member.position?.toLowerCase().includes('editor') ||
+          member.position?.toLowerCase().includes('writer')
+        )
+        .map((journalist, index) => (
+          <option key={journalist.id || index} value={journalist.name}>
+            {journalist.name} - {journalist.position}
+          </option>
+        ))
+      }
+    </select>
+    {errors.author && <p className="text-red-500 text-sm mt-1">{errors.author}</p>}
+    
+    {/* Helper text if no journalists exist */}
+    {(!currentUser?.staff || currentUser.staff.filter(m => 
+      m.department === 'Editorial' || m.department === 'Journalism' ||
+      m.position?.toLowerCase().includes('journalist')
+    ).length === 0) && (
+      <p className="text-amber-600 text-xs mt-2 flex items-center">
+        <span className="mr-1">⚠️</span>
+        No journalists added yet. Please add team members to your profile.
+      </p>
+    )}
+  </div>
+  
+  {/* Position - Auto-filled */}
+  <div>
+    <label htmlFor="authorTitle" className="block text-sm font-medium text-gray-700 mb-2">
+      Position/Title
+      <span className="text-xs text-gray-500 ml-2">(Auto-filled)</span>
+    </label>
+    <input
+      type="text"
+      id="authorTitle"
+      name="authorTitle"
+      value={formData.authorTitle}
+      onChange={handleInputChange}
+      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50"
+      placeholder="Position will auto-fill"
+      readOnly
+    />
+  </div>
+</div>
 
             {/* Category and Tags */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
