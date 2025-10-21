@@ -1,4 +1,5 @@
 // app/api/favorites/publishers/route.js
+// UPDATED VERSION WITH SUBSCRIPTION TRACKING
 import { NextResponse } from 'next/server';
 import { 
   getFirestore, 
@@ -8,7 +9,8 @@ import {
   getDoc,
   setDoc, 
   deleteDoc,
-  serverTimestamp 
+  serverTimestamp,
+  increment
 } from 'firebase/firestore';
 import { app } from '@/Firebase/firebase';
 
@@ -17,14 +19,10 @@ const db = getFirestore(app);
 // Helper function to ensure userId has proper format
 const normalizeReaderId = (userId) => {
   if (!userId) return null;
-  
-  // If it already starts with "reader_", use as is
   if (userId.startsWith('reader_')) {
     console.log('✅ Reader ID already properly formatted:', userId);
     return userId;
   }
-  
-  // If it's just the Firebase UID, add "reader_" prefix
   const readerId = `reader_${userId}`;
   console.log('🔧 Normalized reader ID from', userId, 'to', readerId);
   return readerId;
@@ -45,11 +43,9 @@ export async function GET(request) {
       );
     }
 
-    // Normalize the reader ID
     const readerId = normalizeReaderId(userId);
     console.log('🔍 GET Request - Using normalized readerId:', readerId);
 
-    // Get user's favorite publishers from the readers collection subcollection
     const publishersRef = collection(db, 'readers', readerId, 'favoritePublishers');
     console.log('📍 Querying path:', `readers/${readerId}/favoritePublishers`);
     
@@ -64,7 +60,6 @@ export async function GET(request) {
       });
     });
 
-    // Sort by date added (newest first)
     publishers.sort((a, b) => {
       const dateA = a.addedAt?.toDate ? a.addedAt.toDate() : new Date(0);
       const dateB = b.addedAt?.toDate ? b.addedAt.toDate() : new Date(0);
@@ -93,7 +88,7 @@ export async function GET(request) {
   }
 }
 
-// POST - Add publisher to favorites
+// POST - Add publisher to favorites AND subscribe
 export async function POST(request) {
   try {
     const { userId, publisher } = await request.json();
@@ -109,38 +104,23 @@ export async function POST(request) {
       );
     }
 
-    // Normalize the reader ID
     const readerId = normalizeReaderId(userId);
     console.log('📝 POST Request - Using normalized readerId:', readerId);
 
-    // Check if the user document exists in the readers collection
     const userDocRef = doc(db, 'readers', readerId);
     console.log('👤 Checking reader document at:', userDocRef.path);
     
     const userDocSnap = await getDoc(userDocRef);
     console.log('👤 Reader document exists:', userDocSnap.exists());
 
-    // If user doesn't exist, we have a problem - they should exist
     if (!userDocSnap.exists()) {
       console.error('❌ Reader document not found at:', userDocRef.path);
-      console.error('❌ This reader should exist. Available readers in your database might be:');
-      
-      // Let's try to find similar reader documents
-      const readersRef = collection(db, 'readers');
-      const readersSnapshot = await getDocs(readersRef);
-      const existingReaders = [];
-      readersSnapshot.forEach((doc) => {
-        existingReaders.push(doc.id);
-      });
-      console.log('📋 Existing readers in database:', existingReaders);
-      
       return NextResponse.json(
         { 
           success: false, 
           error: 'Reader document not found',
           debug: {
             requestedReaderId: readerId,
-            existingReaders: existingReaders.slice(0, 10), // First 10 for debugging
             suggestion: `Make sure the reader ${readerId} exists in the database`
           }
         },
@@ -148,7 +128,6 @@ export async function POST(request) {
       );
     }
 
-    // Prepare publisher favorite data
     const publisherData = {
       id: publisher.id || `publisher_${Date.now()}`,
       name: publisher.name || publisher.companyName || 'Unknown Publisher',
@@ -159,12 +138,10 @@ export async function POST(request) {
       website: publisher.website || publisher.companyWebsite || '',
       description: publisher.description || publisher.companyDescription || '',
       addedAt: serverTimestamp(),
-      userId: readerId, // Store the normalized reader ID
-      // Preserve any additional fields from the original publisher
+      userId: readerId,
       ...publisher
     };
 
-    // Check if already favorited
     const publisherRef = doc(db, 'readers', readerId, 'favoritePublishers', publisherData.id);
     console.log('🔍 Checking if publisher already exists at:', publisherRef.path);
     
@@ -178,20 +155,39 @@ export async function POST(request) {
       );
     }
 
-    // Add to favorite publishers subcollection under the specific reader
-    console.log('💾 Saving publisher to:', publisherRef.path);
+    // Save to favorites
+    console.log('💾 Saving publisher to favorites:', publisherRef.path);
     await setDoc(publisherRef, publisherData);
 
-    console.log('✅ Successfully added publisher to favorites');
+    // 🆕 ADD SUBSCRIPTION TRACKING
+    console.log('📊 Adding subscriber tracking...');
+    const publisherMainRef = doc(db, 'publishers', publisherData.id);
+    const subscriberRef = doc(db, 'publishers', publisherData.id, 'subscribers', readerId);
+
+    // Add subscriber document
+    await setDoc(subscriberRef, {
+      readerId: readerId,
+      subscribedAt: serverTimestamp(),
+      active: true
+    });
+
+    // Increment subscriber count
+    await setDoc(publisherMainRef, {
+      subscriberCount: increment(1),
+      lastSubscriberUpdate: serverTimestamp()
+    }, { merge: true });
+
+    console.log('✅ Successfully added publisher to favorites and subscribed');
 
     return NextResponse.json({
       success: true,
-      message: 'Publisher added to favorites',
+      message: 'Publisher added to favorites and subscribed',
       publisher: publisherData,
       debug: {
         originalUserId: userId,
         normalizedReaderId: readerId,
-        savedToPath: publisherRef.path
+        savedToPath: publisherRef.path,
+        subscribedToPublisher: publisherData.id
       }
     });
 
@@ -204,7 +200,7 @@ export async function POST(request) {
   }
 }
 
-// DELETE - Remove publisher from favorites
+// DELETE - Remove publisher from favorites AND unsubscribe
 export async function DELETE(request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -222,25 +218,36 @@ export async function DELETE(request) {
       );
     }
 
-    // Normalize the reader ID
     const readerId = normalizeReaderId(userId);
     console.log('🗑️ DELETE Request - Using normalized readerId:', readerId);
 
-    // Remove from favorite publishers subcollection under the specific reader
+    // Remove from favorites
     const publisherRef = doc(db, 'readers', readerId, 'favoritePublishers', publisherId);
     console.log('🗑️ Deleting from path:', publisherRef.path);
-    
     await deleteDoc(publisherRef);
 
-    console.log('✅ Successfully removed publisher from favorites');
+    // 🆕 REMOVE SUBSCRIPTION TRACKING
+    console.log('📊 Removing subscriber tracking...');
+    const subscriberRef = doc(db, 'publishers', publisherId, 'subscribers', readerId);
+    await deleteDoc(subscriberRef);
+
+    // Decrement subscriber count
+    const publisherMainRef = doc(db, 'publishers', publisherId);
+    await setDoc(publisherMainRef, {
+      subscriberCount: increment(-1),
+      lastSubscriberUpdate: serverTimestamp()
+    }, { merge: true });
+
+    console.log('✅ Successfully removed publisher from favorites and unsubscribed');
 
     return NextResponse.json({
       success: true,
-      message: 'Publisher removed from favorites',
+      message: 'Publisher removed from favorites and unsubscribed',
       debug: {
         originalUserId: userId,
         normalizedReaderId: readerId,
-        deletedFromPath: publisherRef.path
+        deletedFromPath: publisherRef.path,
+        unsubscribedFromPublisher: publisherId
       }
     });
 
