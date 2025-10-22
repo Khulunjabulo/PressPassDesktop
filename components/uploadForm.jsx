@@ -133,6 +133,22 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
     { value: 'academic', label: 'Academic', color: 'bg-green-600', description: 'Formal, research-oriented' }
   ];
 
+  // Auto-fill journalist position when selected
+useEffect(() => {
+  if (formData.author && currentUser?.staff) {
+    const selectedJournalist = currentUser.staff.find(
+      member => member.name === formData.author
+    );
+    
+    if (selectedJournalist && selectedJournalist.position) {
+      setFormData(prev => ({
+        ...prev,
+        authorTitle: selectedJournalist.position
+      }));
+    }
+  }
+}, [formData.author, currentUser]);
+
   // Check publisher approval status
   useEffect(() => {
     if (currentUser) {
@@ -642,98 +658,153 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Create auth token for API call
-  const getAuthToken = () => {
-    if (!currentUser) {
-      console.error('❌ No current user for auth token');
-      return null;
+// getAuth
+const getAuthToken = async () => {
+  try {
+    // Get Firebase Auth instance
+    const { auth } = await import('../Firebase/firebase');
+    const currentAuthUser = auth.currentUser;
+    
+    if (!currentAuthUser) {
+      throw new Error('No authenticated user. Please sign in.');
     }
     
-    const token = currentUser.uid || `mock_token_${Date.now()}`;
-    console.log('🔑 Generated auth token preview:', token.substring(0, 20) + '...');
-    return token;
+    // Get fresh Firebase ID token (JWT)
+    const idToken = await currentAuthUser.getIdToken(true);
+    console.log('✅ Firebase ID token retrieved:', idToken.substring(0, 20) + '...');
+    
+    return idToken;
+  } catch (error) {
+    console.error('❌ Error getting auth token:', error);
+    throw new Error('Authentication failed. Please sign in again.');
+  }
+};
+
+ // Submit article to API with image handling and author tracking
+const submitArticle = async (isDraft = false) => {
+  console.log('📡 Submitting article to API...', { isDraft, currentUser: !!currentUser });
+  
+  // Get Firebase Auth token
+  const authToken = await getAuthToken();
+  if (!authToken) {
+    throw new Error('Authentication token required');
+  }
+
+  // Create FormData for proper file upload
+  const submitData = new FormData();
+
+  // Add all form data fields
+  Object.keys(formData).forEach(key => {
+    if (key === 'featuredImage' && formData[key]) {
+      console.log('🖼️ Adding featured image to FormData');
+      submitData.append(key, formData[key]);
+    } else if (key !== 'featuredImage' && formData[key] !== null && formData[key] !== undefined) {
+      submitData.append(key, formData[key]);
+    }
+  });
+
+  // Add content from editor with proper formatting
+  const content = editorRef.current?.innerHTML?.trim() || '';
+  submitData.append('content', content);
+  submitData.append('isDraft', isDraft.toString());
+  submitData.append('wordCount', wordCount.toString());
+  submitData.append('readingTime', readingTime.toString());
+
+  // CRITICAL: Add author/journalist information
+  // This must match the journalist name EXACTLY from the dropdown
+  const authorName = formData.author || currentUser?.companyName || 'Unknown Author';
+  const authorTitle = formData.authorTitle || '';
+  
+  console.log('✍️ Article author details:', {
+    authorName,
+    authorTitle,
+    journalist: formData.author
+  });
+
+  submitData.append('author', authorName);
+  submitData.append('authorName', authorName); // Backup field for matching
+  submitData.append('authorTitle', authorTitle);
+  submitData.append('journalist', authorName); // Another backup field
+
+  // Add publisher information (CRITICAL for Firebase path)
+  const publisherId = currentUser.uid;
+  const publisherName = currentUser.companyName || 'Unknown Publisher';
+  
+  console.log('🏢 Publisher details:', {
+    publisherId,
+    publisherName
+  });
+
+  submitData.append('publisherId', publisherId);
+  submitData.append('publisherName', publisherName);
+
+  // Add image URL if available
+  if (formData.featuredImageUrl) {
+    submitData.append('featuredImageUrl', formData.featuredImageUrl);
+  }
+
+  // Add image credit and caption
+  if (formData.imageCredit) {
+    submitData.append('imageCredit', formData.imageCredit);
+  }
+  if (formData.imageCaption) {
+    submitData.append('imageCaption', formData.imageCaption);
+  }
+
+  // Add timestamps
+  submitData.append('createdAt', new Date().toISOString());
+  submitData.append('updatedAt', new Date().toISOString());
+
+  // Add initial engagement metrics
+  submitData.append('views', '0');
+  submitData.append('engagement', '0');
+  submitData.append('likes', '0');
+  submitData.append('comments', '0');
+  submitData.append('shares', '0');
+
+  // Prepare headers and URL
+  const headers = {
+    'Authorization': `Bearer ${authToken}`
+    // Don't set Content-Type - browser will set it with boundary for FormData
   };
 
-  // Submit article to API with image handling
-  const submitArticle = async (isDraft = false) => {
-    console.log('📡 Submitting article to API...', { isDraft, currentUser: !!currentUser });
-    
-    const authToken = getAuthToken();
-    if (!authToken) {
-      throw new Error('Authentication token required');
-    }
+  // Use the correct API endpoint for article submission
+  const url = `/api/publish-article`;
+  
+  console.log('📡 Making request to:', url);
+  console.log('📦 FormData keys:', [...submitData.keys()]);
+  console.log('📦 Form data summary:', {
+    title: formData.title,
+    author: authorName,
+    authorTitle: authorTitle,
+    category: formData.category,
+    isDraft,
+    contentLength: content.length,
+    hasImage: !!formData.featuredImage,
+    imageUrl: formData.featuredImageUrl ? 'Yes' : 'No',
+    publisherId: publisherId,
+    publisherName: publisherName
+  });
 
-    // Create FormData for proper file upload
-    const submitData = new FormData();
+  // Make API call
+  const response = await fetch(url, {
+    method: 'POST',
+    headers,
+    body: submitData
+  });
 
-    // Add all form data fields
-    Object.keys(formData).forEach(key => {
-      if (key === 'featuredImage' && formData[key]) {
-        console.log('🖼️ Adding featured image to FormData');
-        submitData.append(key, formData[key]);
-      } else if (key !== 'featuredImage') {
-        submitData.append(key, formData[key]);
-      }
-    });
+  console.log('📡 Response status:', response.status);
+  console.log('📡 Response ok:', response.ok);
 
-    // Add content from editor with proper formatting
-    const content = editorRef.current?.innerHTML?.trim() || '';
-    submitData.append('content', content);
-    submitData.append('isDraft', isDraft.toString());
-    submitData.append('wordCount', wordCount.toString());
-    submitData.append('readingTime', readingTime.toString());
+  const result = await response.json();
+  console.log('📡 Response data:', result);
 
-    // Add publisher information
-    submitData.append('publisherId', currentUser.uid);
-    if (currentUser.companyName) {
-      submitData.append('publisherName', currentUser.companyName);
-    }
+  if (!response.ok) {
+    throw new Error(result.error || `HTTP error! status: ${response.status}`);
+  }
 
-    // Add image URL if available
-    if (formData.featuredImageUrl) {
-      submitData.append('featuredImageUrl', formData.featuredImageUrl);
-    }
-
-    // Prepare headers and URL
-    const headers = {
-      'Authorization': `Bearer ${authToken}`
-    };
-
-    const url = `/api/publish-article?publisherId=${encodeURIComponent(currentUser.uid)}`;
-    
-    console.log('📡 Making request to:', url);
-    console.log('📡 Request headers:', headers);
-    console.log('📡 FormData keys:', [...submitData.keys()]);
-    console.log('📦 Form data summary:', {
-      title: formData.title,
-      author: formData.author,
-      category: formData.category,
-      isDraft,
-      contentLength: content.length,
-      hasImage: !!formData.featuredImage,
-      imageUrl: formData.featuredImageUrl,
-      publisherId: currentUser.uid
-    });
-
-    // Make API call
-    const response = await fetch(url, {
-      method: 'POST',
-      headers,
-      body: submitData
-    });
-
-    console.log('📡 Response status:', response.status);
-    console.log('📡 Response ok:', response.ok);
-
-    const result = await response.json();
-    console.log('📡 Response data:', result);
-
-    if (!response.ok) {
-      throw new Error(result.error || `HTTP error! status: ${response.status}`);
-    }
-
-    return result;
-  };
+  return result;
+};
 
   // Handle form submission
   const handleManualSubmit = async (e, isDraft = false) => {
@@ -1547,40 +1618,71 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
               />
             </div>
 
-            {/* Author Information */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <label htmlFor="author" className="block text-sm font-medium text-gray-700 mb-2">
-                  Author Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  id="author"
-                  name="author"
-                  value={formData.author}
-                  onChange={handleInputChange}
-                  className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    errors.author ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                  placeholder="Your name"
-                />
-                {errors.author && <p className="text-red-500 text-sm mt-1">{errors.author}</p>}
-              </div>
-              <div>
-                <label htmlFor="authorTitle" className="block text-sm font-medium text-gray-700 mb-2">
-                  Author Title/Position
-                </label>
-                <input
-                  type="text"
-                  id="authorTitle"
-                  name="authorTitle"
-                  value={formData.authorTitle}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="e.g., Senior Writer, Editor"
-                />
-              </div>
-            </div>
+            {/* Author Information - UPDATED */}
+<div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+  <div>
+    <label htmlFor="author" className="block text-sm font-medium text-gray-700 mb-2">
+      Journalist Name <span className="text-red-500">*</span>
+      <span className="text-xs text-gray-500 ml-2">(Select from your team)</span>
+    </label>
+    <select
+      id="author"
+      name="author"
+      value={formData.author}
+      onChange={handleInputChange}
+      className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+        errors.author ? 'border-red-500' : 'border-gray-300'
+      }`}
+    >
+      <option value="">Select a journalist</option>
+      {currentUser?.staff
+        ?.filter(member => 
+          member.department === 'Editorial' || 
+          member.department === 'Journalism' ||
+          member.position?.toLowerCase().includes('journalist') ||
+          member.position?.toLowerCase().includes('reporter') ||
+          member.position?.toLowerCase().includes('editor') ||
+          member.position?.toLowerCase().includes('writer')
+        )
+        .map((journalist, index) => (
+          <option key={journalist.id || index} value={journalist.name}>
+            {journalist.name} - {journalist.position}
+          </option>
+        ))
+      }
+    </select>
+    {errors.author && <p className="text-red-500 text-sm mt-1">{errors.author}</p>}
+    
+    {/* Helper text if no journalists exist */}
+    {(!currentUser?.staff || currentUser.staff.filter(m => 
+      m.department === 'Editorial' || m.department === 'Journalism' ||
+      m.position?.toLowerCase().includes('journalist')
+    ).length === 0) && (
+      <p className="text-amber-600 text-xs mt-2 flex items-center">
+        <span className="mr-1">⚠️</span>
+        No journalists added yet. Please add team members to your profile.
+      </p>
+    )}
+  </div>
+  
+  {/* Position - Auto-filled */}
+  <div>
+    <label htmlFor="authorTitle" className="block text-sm font-medium text-gray-700 mb-2">
+      Position/Title
+      <span className="text-xs text-gray-500 ml-2">(Auto-filled)</span>
+    </label>
+    <input
+      type="text"
+      id="authorTitle"
+      name="authorTitle"
+      value={formData.authorTitle}
+      onChange={handleInputChange}
+      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50"
+      placeholder="Position will auto-fill"
+      readOnly
+    />
+  </div>
+</div>
 
             {/* Category and Tags */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
