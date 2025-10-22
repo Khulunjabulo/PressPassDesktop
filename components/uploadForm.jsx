@@ -680,86 +680,131 @@ const getAuthToken = async () => {
   }
 };
 
-  // Submit article to API with image handling
-  const submitArticle = async (isDraft = false) => {
-    console.log('📡 Submitting article to API...', { isDraft, currentUser: !!currentUser });
-    
-    const authToken = getAuthToken();
-    if (!authToken) {
-      throw new Error('Authentication token required');
+ // Submit article to API with image handling and author tracking
+const submitArticle = async (isDraft = false) => {
+  console.log('📡 Submitting article to API...', { isDraft, currentUser: !!currentUser });
+  
+  // Get Firebase Auth token
+  const authToken = await getAuthToken();
+  if (!authToken) {
+    throw new Error('Authentication token required');
+  }
+
+  // Create FormData for proper file upload
+  const submitData = new FormData();
+
+  // Add all form data fields
+  Object.keys(formData).forEach(key => {
+    if (key === 'featuredImage' && formData[key]) {
+      console.log('🖼️ Adding featured image to FormData');
+      submitData.append(key, formData[key]);
+    } else if (key !== 'featuredImage' && formData[key] !== null && formData[key] !== undefined) {
+      submitData.append(key, formData[key]);
     }
+  });
 
-    // Create FormData for proper file upload
-    const submitData = new FormData();
+  // Add content from editor with proper formatting
+  const content = editorRef.current?.innerHTML?.trim() || '';
+  submitData.append('content', content);
+  submitData.append('isDraft', isDraft.toString());
+  submitData.append('wordCount', wordCount.toString());
+  submitData.append('readingTime', readingTime.toString());
 
-    // Add all form data fields
-    Object.keys(formData).forEach(key => {
-      if (key === 'featuredImage' && formData[key]) {
-        console.log('🖼️ Adding featured image to FormData');
-        submitData.append(key, formData[key]);
-      } else if (key !== 'featuredImage') {
-        submitData.append(key, formData[key]);
-      }
-    });
+  // CRITICAL: Add author/journalist information
+  // This must match the journalist name EXACTLY from the dropdown
+  const authorName = formData.author || currentUser?.companyName || 'Unknown Author';
+  const authorTitle = formData.authorTitle || '';
+  
+  console.log('✍️ Article author details:', {
+    authorName,
+    authorTitle,
+    journalist: formData.author
+  });
 
-    // Add content from editor with proper formatting
-    const content = editorRef.current?.innerHTML?.trim() || '';
-    submitData.append('content', content);
-    submitData.append('isDraft', isDraft.toString());
-    submitData.append('wordCount', wordCount.toString());
-    submitData.append('readingTime', readingTime.toString());
+  submitData.append('author', authorName);
+  submitData.append('authorName', authorName); // Backup field for matching
+  submitData.append('authorTitle', authorTitle);
+  submitData.append('journalist', authorName); // Another backup field
 
-    // Add publisher information
-    submitData.append('publisherId', currentUser.uid);
-    if (currentUser.companyName) {
-      submitData.append('publisherName', currentUser.companyName);
-    }
+  // Add publisher information (CRITICAL for Firebase path)
+  const publisherId = currentUser.uid;
+  const publisherName = currentUser.companyName || 'Unknown Publisher';
+  
+  console.log('🏢 Publisher details:', {
+    publisherId,
+    publisherName
+  });
 
-    // Add image URL if available
-    if (formData.featuredImageUrl) {
-      submitData.append('featuredImageUrl', formData.featuredImageUrl);
-    }
+  submitData.append('publisherId', publisherId);
+  submitData.append('publisherName', publisherName);
 
-    // Prepare headers and URL
-    const headers = {
-      'Authorization': `Bearer ${authToken}`
-    };
+  // Add image URL if available
+  if (formData.featuredImageUrl) {
+    submitData.append('featuredImageUrl', formData.featuredImageUrl);
+  }
 
-    const url = `/api/publish-article?publisherId=${encodeURIComponent(currentUser.uid)}`;
-    
-    console.log('📡 Making request to:', url);
-    console.log('📡 Request headers:', headers);
-    console.log('📡 FormData keys:', [...submitData.keys()]);
-    console.log('📦 Form data summary:', {
-      title: formData.title,
-      author: formData.author,
-      category: formData.category,
-      isDraft,
-      contentLength: content.length,
-      hasImage: !!formData.featuredImage,
-      imageUrl: formData.featuredImageUrl,
-      publisherId: currentUser.uid
-    });
+  // Add image credit and caption
+  if (formData.imageCredit) {
+    submitData.append('imageCredit', formData.imageCredit);
+  }
+  if (formData.imageCaption) {
+    submitData.append('imageCaption', formData.imageCaption);
+  }
 
-    // Make API call
-    const response = await fetch(url, {
-      method: 'POST',
-      headers,
-      body: submitData
-    });
+  // Add timestamps
+  submitData.append('createdAt', new Date().toISOString());
+  submitData.append('updatedAt', new Date().toISOString());
 
-    console.log('📡 Response status:', response.status);
-    console.log('📡 Response ok:', response.ok);
+  // Add initial engagement metrics
+  submitData.append('views', '0');
+  submitData.append('engagement', '0');
+  submitData.append('likes', '0');
+  submitData.append('comments', '0');
+  submitData.append('shares', '0');
 
-    const result = await response.json();
-    console.log('📡 Response data:', result);
-
-    if (!response.ok) {
-      throw new Error(result.error || `HTTP error! status: ${response.status}`);
-    }
-
-    return result;
+  // Prepare headers and URL
+  const headers = {
+    'Authorization': `Bearer ${authToken}`
+    // Don't set Content-Type - browser will set it with boundary for FormData
   };
+
+  // Use the correct API endpoint for article submission
+  const url = `/api/publish-article`;
+  
+  console.log('📡 Making request to:', url);
+  console.log('📦 FormData keys:', [...submitData.keys()]);
+  console.log('📦 Form data summary:', {
+    title: formData.title,
+    author: authorName,
+    authorTitle: authorTitle,
+    category: formData.category,
+    isDraft,
+    contentLength: content.length,
+    hasImage: !!formData.featuredImage,
+    imageUrl: formData.featuredImageUrl ? 'Yes' : 'No',
+    publisherId: publisherId,
+    publisherName: publisherName
+  });
+
+  // Make API call
+  const response = await fetch(url, {
+    method: 'POST',
+    headers,
+    body: submitData
+  });
+
+  console.log('📡 Response status:', response.status);
+  console.log('📡 Response ok:', response.ok);
+
+  const result = await response.json();
+  console.log('📡 Response data:', result);
+
+  if (!response.ok) {
+    throw new Error(result.error || `HTTP error! status: ${response.status}`);
+  }
+
+  return result;
+};
 
   // Handle form submission
   const handleManualSubmit = async (e, isDraft = false) => {

@@ -7,7 +7,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts'
 import { useCurrentPublisher } from "@/hooks/useCurrentPublisher"
-import { X, Plus, User, AlertCircle } from 'lucide-react'
+import { X, Plus, User, AlertCircle, RefreshCw } from 'lucide-react'
 import { auth } from '../../../Firebase/firebase'
 
 export default function Journalist() {
@@ -17,6 +17,7 @@ export default function Journalist() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [isRefreshing, setIsRefreshing] = useState(false); // NEW
   
   // New journalist form state
   const [newJournalist, setNewJournalist] = useState({
@@ -47,36 +48,90 @@ export default function Journalist() {
     }
   }, [publisher]);
 
+  // AUTO-REFRESH: Reload stats every 30 seconds
+  useEffect(() => {
+    if (journalists.length > 0) {
+      const interval = setInterval(() => {
+        console.log('🔄 Auto-refreshing journalist stats...');
+        loadJournalistStats(journalists);
+      }, 30000); // 30 seconds
+
+      return () => clearInterval(interval);
+    }
+  }, [journalists]);
+
   const loadJournalistStats = async (journalistList) => {
-    try {
-      const response = await fetch('/api/articles');
-      if (!response.ok) {
-        console.error('Failed to fetch articles');
-        return;
-      }
-      
-      const articles = await response.json();
-      
-      const stats = {};
-      journalistList.forEach(journalist => {
-        const journalistArticles = articles.filter(
-          article => article.author === journalist.name
-        );
+  try {
+    console.log('📊 Loading stats for', journalistList.length, 'journalists...');
+    
+    const response = await fetch('/api/articles');
+    if (!response.ok) {
+      console.error('Failed to fetch articles');
+      return;
+    }
+    
+    const result = await response.json();
+    
+    // Handle response format
+    const articles = result.articles || [];
+    
+    console.log('📚 Total articles found:', articles.length);
+    
+    // Log all unique authors for debugging
+    const uniqueAuthors = [...new Set(articles.map(a => a.author || a.authorName))];
+    console.log('👥 All authors in system:', uniqueAuthors);
+    
+    const stats = {};
+    journalistList.forEach(journalist => {
+      // Match by journalist name (case-insensitive and trimmed)
+      const journalistName = journalist.name.trim();
+      const journalistArticles = articles.filter(article => {
+        const articleAuthor = (article.author || article.authorName || '').trim();
+        const match = articleAuthor.toLowerCase() === journalistName.toLowerCase();
         
-        stats[journalist.name] = {
-          articleCount: journalistArticles.length,
-          totalViews: journalistArticles.reduce((sum, a) => sum + (a.views || 0), 0),
-          avgEngagement: journalistArticles.length > 0 
-            ? (journalistArticles.reduce((sum, a) => sum + (a.engagement || 0), 0) / journalistArticles.length).toFixed(1)
-            : 0,
-          status: journalist.status || 'Active'
-        };
+        if (match) {
+          console.log(`✅ Match found: Article "${article.title?.substring(0, 30)}" by "${articleAuthor}"`);
+        }
+        
+        return match;
       });
       
-      setArticlesData(stats);
-    } catch (error) {
-      console.error('Error loading journalist stats:', error);
-    }
+      console.log(`📰 ${journalistName}: ${journalistArticles.length} articles`);
+      
+      // Calculate engagement metrics
+      const totalViews = journalistArticles.reduce((sum, a) => sum + (parseInt(a.views) || 0), 0);
+      const totalEngagement = journalistArticles.reduce((sum, a) => sum + (parseFloat(a.engagement) || 0), 0);
+      const avgEngagement = journalistArticles.length > 0 
+        ? (totalEngagement / journalistArticles.length).toFixed(1)
+        : 0;
+      
+      stats[journalist.name] = {
+        articleCount: journalistArticles.length,
+        totalViews: totalViews,
+        avgEngagement: avgEngagement,
+        status: journalist.status || 'Active',
+        lastArticle: journalistArticles.length > 0 
+          ? journalistArticles[0].title 
+          : null
+      };
+      
+      // Log individual stats
+      console.log(`  📊 Stats: ${journalistArticles.length} articles, ${totalViews} views, ${avgEngagement}% engagement`);
+    });
+    
+    console.log('✅ All stats loaded:', stats);
+    setArticlesData(stats);
+  } catch (error) {
+    console.error('❌ Error loading journalist stats:', error);
+  }
+};
+
+  // MANUAL REFRESH FUNCTION
+  const handleRefreshStats = async () => {
+    setIsRefreshing(true);
+    console.log('🔄 Manually refreshing stats...');
+    await loadJournalistStats(journalists);
+    setTimeout(() => setIsRefreshing(false), 1000);
   };
 
   const getJournalistColor = (index) => {
@@ -107,7 +162,6 @@ export default function Journalist() {
     setSubmitError('');
 
     try {
-      // Check if user is authenticated
       const currentAuthUser = auth.currentUser;
       
       if (!currentAuthUser) {
@@ -192,9 +246,20 @@ export default function Journalist() {
         <PublisherSidebar />
         <main className="flex-1 p-2 sm:p-4 md:p-6 bg-gray-50 min-h-screen">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3">
-            <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-800">
-              Journalists ({journalists.length})
-            </h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-800">
+                Journalists ({journalists.length})
+              </h1>
+              {/* REFRESH BUTTON */}
+              <button
+                onClick={handleRefreshStats}
+                disabled={isRefreshing}
+                className="p-2 text-gray-600 hover:text-violet-600 hover:bg-violet-50 rounded-lg transition-colors disabled:opacity-50"
+                title="Refresh statistics"
+              >
+                <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
             <button 
               onClick={() => setShowAddModal(true)}
               className="bg-violet-600 text-white px-4 py-2 rounded-md hover:bg-violet-700 text-sm w-full sm:w-auto flex items-center justify-center gap-2"
@@ -307,7 +372,7 @@ export default function Journalist() {
         </main>
       </div>
 
-      {/* Add Journalist Modal */}
+      {/* Add Journalist Modal - Same as before */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
