@@ -52,7 +52,7 @@ export default function MainHeader() {
   };
 
   return (
-    <header className="bg-[#329ae1] px-3 sm:px-6 py-2 shadow-md h-16 md:h-32 fixed top-0 left-0 right-0 w-full z-50">
+    <header className="bg-[#329ae1] px-3 sm:px-6 py-2 shadow-md h-16 md:h-32 fixed md:relative top-0 left-0 right-0 w-full z-50">
       <div className="max-w-7xl mx-auto flex items-center justify-between h-full">
         <div className="flex items-center">
           <Link href="/" className="flex-shrink-0">
