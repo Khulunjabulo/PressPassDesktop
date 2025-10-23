@@ -42,10 +42,22 @@ export async function GET(request) {
     const publisherDoc = await getDoc(publisherRef);
 
     if (!publisherDoc.exists()) {
-      return NextResponse.json(
-        { success: false, error: 'Publisher not found' },
-        { status: 404 }
-      );
+      // Initialize publisher document with 0 subscribers
+      console.log('📝 Publisher document not found, initializing...');
+      await setDoc(publisherRef, {
+        subscriberCount: 0,
+        lastSubscriberUpdate: serverTimestamp(),
+        createdAt: serverTimestamp()
+      }, { merge: true });
+
+      console.log('✅ Publisher initialized with 0 subscribers');
+
+      return NextResponse.json({
+        success: true,
+        subscriberCount: 0,
+        publisherId,
+        initialized: true
+      });
     }
 
     const publisherData = publisherDoc.data();
@@ -86,6 +98,17 @@ export async function POST(request) {
     const publisherRef = doc(db, 'publishers', publisherId);
     const subscriberRef = doc(db, 'publishers', publisherId, 'subscribers', readerId);
 
+    // Ensure publisher document exists before updating
+    const publisherDoc = await getDoc(publisherRef);
+    if (!publisherDoc.exists()) {
+      await setDoc(publisherRef, {
+        subscriberCount: 0,
+        lastSubscriberUpdate: serverTimestamp(),
+        createdAt: serverTimestamp()
+      });
+      console.log('📝 Initialized publisher document');
+    }
+
     if (action === 'subscribe') {
       // Add subscriber document
       await setDoc(subscriberRef, {
@@ -112,9 +135,12 @@ export async function POST(request) {
       // Remove subscriber document
       await deleteDoc(subscriberRef);
 
-      // Decrement subscriber count
+      // Decrement subscriber count (prevent negative values)
+      const currentDoc = await getDoc(publisherRef);
+      const currentCount = currentDoc.data()?.subscriberCount || 0;
+      
       await setDoc(publisherRef, {
-        subscriberCount: increment(-1),
+        subscriberCount: Math.max(0, currentCount - 1),
         lastSubscriberUpdate: serverTimestamp()
       }, { merge: true });
 

@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useRef } from "react"
 import { MessageCircle, X, Send, Paperclip, User } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/UI/button"
+import { Input } from "@/components/UI/input"
+import { Badge } from "@/components/UI/badge"
 
 export function FloatingMessenger({ user = null }) {
   const [isOpen, setIsOpen] = useState(false)
