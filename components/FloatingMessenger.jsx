@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef } from "react"
 import { MessageCircle, X, Send, Paperclip, User } from "lucide-react"
-import { Button } from "@/components/UI/button"
-import { Input } from "@/components/UI/input"
+import { Button } from "@/components/UI/Button"
+import { Input } from "@/components/UI/Input"
 import { Badge } from "@/components/UI/badge"
 
 export function FloatingMessenger({ user = null }) {

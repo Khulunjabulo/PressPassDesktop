@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Button } from "@/components/UI/button";
+import { Button } from "@/components/UI/Button";
 
 // Paystack script loader
 const loadPaystackScript = () => {

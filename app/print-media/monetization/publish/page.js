@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/UI/button";
+import { Button } from "@/components/UI/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/MonetizationCards";
-import { Input } from "@/components/UI/input";
+import { Input } from "@/components/UI/Input";
 import { Textarea } from "@/components/UI/textarea";
 import { CalendarIcon, Upload } from "lucide-react";
 import { Calendar } from "@/components/UI/calendar";

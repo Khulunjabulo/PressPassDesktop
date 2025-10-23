@@ -4,7 +4,7 @@ import Header from "@/components/UI/header";
 import { FileText, Users, Megaphone, LayoutDashboard, Menu, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/UI/button";
+import { Button } from "@/components/UI/Button";
 import AdUploadOverlay from "@/components/AdUploadOverlay";
 import { useCurrentPublisher } from "@/hooks/useCurrentPublisher";
 import PrintMediaFooter from '@/components/UI/PrintMediaFooter';
