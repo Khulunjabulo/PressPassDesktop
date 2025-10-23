@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, } from "@/components/MonetizationCards";
-import { Button } from "@/components/UI/Button";
-import { Input } from "@/components/UI/Input";
+import { Button } from "@/components/UI/button";
+import { Input } from "@/components/UI/input";
 import { Label } from "@/components/UI/label";
 import { Checkbox } from "@/components/UI/checkbox";
 import {
