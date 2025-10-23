@@ -9,7 +9,9 @@ import {
   deleteDoc,
   getDocs,
   serverTimestamp,
-  increment
+  increment,
+  query,
+  where
 } from 'firebase/firestore';
 import { app } from '@/Firebase/firebase';
 
@@ -22,11 +24,12 @@ const normalizeReaderId = (userId) => {
   return `reader_${userId}`;
 };
 
-// GET - Fetch subscriber count for a publisher
+// GET - Fetch subscriber data for a publisher
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const publisherId = searchParams.get('publisherId');
+    const includeDetails = searchParams.get('includeDetails') === 'true';
     
     if (!publisherId) {
       return NextResponse.json(
@@ -35,46 +38,154 @@ export async function GET(request) {
       );
     }
 
-    console.log('📊 Fetching subscriber count for publisher:', publisherId);
+    console.log('📊 Fetching subscriber data for publisher:', publisherId);
 
-    // Get publisher document to read subscriber count
-    const publisherRef = doc(db, 'publishers', publisherId);
-    const publisherDoc = await getDoc(publisherRef);
+    // Get all subscribers from subcollection
+    const subscribersRef = collection(db, 'publishers', publisherId, 'subscribers');
+    const subscribersSnapshot = await getDocs(subscribersRef);
 
-    if (!publisherDoc.exists()) {
-      // Initialize publisher document with 0 subscribers
-      console.log('📝 Publisher document not found, initializing...');
-      await setDoc(publisherRef, {
-        subscriberCount: 0,
-        lastSubscriberUpdate: serverTimestamp(),
-        createdAt: serverTimestamp()
-      }, { merge: true });
+    const allSubscribers = [];
+    subscribersSnapshot.forEach((doc) => {
+      const data = doc.data();
+      allSubscribers.push({
+        id: doc.id,
+        ...data,
+        subscribedAt: data.subscribedAt?.toDate?.() || null,
+        unsubscribedAt: data.unsubscribedAt?.toDate?.() || null
+      });
+    });
 
-      console.log('✅ Publisher initialized with 0 subscribers');
+    // Filter active subscribers
+    const activeSubscribers = allSubscribers.filter(sub => sub.active === true);
+    const churned = allSubscribers.filter(sub => sub.active === false);
 
-      return NextResponse.json({
-        success: true,
-        subscriberCount: 0,
-        publisherId,
-        initialized: true
+    // Calculate metrics
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+
+    // New subscribers this month
+    const newThisMonth = activeSubscribers.filter(sub => 
+      sub.subscribedAt && sub.subscribedAt >= startOfMonth
+    ).length;
+
+    // Calculate churn rate (monthly)
+    const activeStartOfMonth = allSubscribers.filter(sub => {
+      if (!sub.subscribedAt) return false;
+      if (sub.subscribedAt < startOfMonth) {
+        // Was subscribed before this month
+        if (sub.active) return true;
+        // Churned this month
+        if (sub.unsubscribedAt && sub.unsubscribedAt >= startOfMonth) return true;
+      }
+      return false;
+    }).length;
+
+    const churnedThisMonth = allSubscribers.filter(sub => 
+      sub.unsubscribedAt && 
+      sub.unsubscribedAt >= startOfMonth &&
+      sub.active === false
+    ).length;
+
+    const churnRate = activeStartOfMonth > 0 
+      ? ((churnedThisMonth / activeStartOfMonth) * 100).toFixed(2)
+      : 0;
+
+    // Growth data for graphs
+    const growthData = {
+      weekly: [],
+      monthly: []
+    };
+
+    // Weekly data (last 7 days)
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(now);
+      date.setDate(date.getDate() - i);
+      date.setHours(0, 0, 0, 0);
+      
+      const nextDate = new Date(date);
+      nextDate.setDate(nextDate.getDate() + 1);
+
+      const daySubscribers = activeSubscribers.filter(sub => 
+        sub.subscribedAt && 
+        sub.subscribedAt >= date && 
+        sub.subscribedAt < nextDate
+      ).length;
+
+      const dayChurned = churned.filter(sub => 
+        sub.unsubscribedAt && 
+        sub.unsubscribedAt >= date && 
+        sub.unsubscribedAt < nextDate
+      ).length;
+
+      growthData.weekly.push({
+        date: date.toISOString().split('T')[0],
+        label: date.toLocaleDateString('en-US', { weekday: 'short' }),
+        subscribed: daySubscribers,
+        churned: dayChurned,
+        net: daySubscribers - dayChurned
       });
     }
 
-    const publisherData = publisherDoc.data();
-    const subscriberCount = publisherData.subscriberCount || 0;
+    // Monthly data (last 30 days)
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date(now);
+      date.setDate(date.getDate() - i);
+      date.setHours(0, 0, 0, 0);
+      
+      const nextDate = new Date(date);
+      nextDate.setDate(nextDate.getDate() + 1);
 
-    console.log('✅ Subscriber count:', subscriberCount);
+      const daySubscribers = activeSubscribers.filter(sub => 
+        sub.subscribedAt && 
+        sub.subscribedAt >= date && 
+        sub.subscribedAt < nextDate
+      ).length;
 
-    return NextResponse.json({
-      success: true,
-      subscriberCount,
-      publisherId
+      const dayChurned = churned.filter(sub => 
+        sub.unsubscribedAt && 
+        sub.unsubscribedAt >= date && 
+        sub.unsubscribedAt < nextDate
+      ).length;
+
+      growthData.monthly.push({
+        date: date.toISOString().split('T')[0],
+        label: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        subscribed: daySubscribers,
+        churned: dayChurned,
+        net: daySubscribers - dayChurned
+      });
+    }
+
+    console.log('✅ Subscriber analytics calculated:', {
+      total: activeSubscribers.length,
+      newThisMonth,
+      churned: churned.length,
+      churnRate: `${churnRate}%`
     });
 
+    const response = {
+      success: true,
+      subscriberCount: activeSubscribers.length,
+      totalChurned: churned.length,
+      newThisMonth,
+      churnRate: parseFloat(churnRate),
+      growthData,
+      publisherId
+    };
+
+    if (includeDetails) {
+      response.subscribers = activeSubscribers;
+      response.churnedSubscribers = churned;
+    }
+
+    return NextResponse.json(response);
+
   } catch (error) {
-    console.error('❌ Error fetching subscriber count:', error);
+    console.error('❌ Error fetching subscriber data:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch subscriber count' },
+      { success: false, error: 'Failed to fetch subscriber data' },
       { status: 500 }
     );
   }
@@ -110,18 +221,33 @@ export async function POST(request) {
     }
 
     if (action === 'subscribe') {
-      // Add subscriber document
+      // Check if subscriber already exists
+      const existingSubscriber = await getDoc(subscriberRef);
+      
+      if (existingSubscriber.exists() && existingSubscriber.data().active) {
+        console.log('⚠️ User already subscribed');
+        return NextResponse.json({
+          success: true,
+          message: 'Already subscribed',
+          action: 'subscribe'
+        });
+      }
+
+      // Add or reactivate subscriber document
       await setDoc(subscriberRef, {
         readerId: readerId,
         subscribedAt: serverTimestamp(),
-        active: true
-      });
-
-      // Increment subscriber count
-      await setDoc(publisherRef, {
-        subscriberCount: increment(1),
-        lastSubscriberUpdate: serverTimestamp()
+        active: true,
+        unsubscribedAt: null
       }, { merge: true });
+
+      // Increment subscriber count only if it was a new subscription or reactivation
+      if (!existingSubscriber.exists() || !existingSubscriber.data().active) {
+        await setDoc(publisherRef, {
+          subscriberCount: increment(1),
+          lastSubscriberUpdate: serverTimestamp()
+        }, { merge: true });
+      }
 
       console.log('✅ Subscribed successfully');
 
@@ -132,8 +258,23 @@ export async function POST(request) {
       });
 
     } else if (action === 'unsubscribe') {
-      // Remove subscriber document
-      await deleteDoc(subscriberRef);
+      // Soft delete: mark as inactive instead of deleting
+      const existingSubscriber = await getDoc(subscriberRef);
+      
+      if (!existingSubscriber.exists()) {
+        console.log('⚠️ Subscriber not found');
+        return NextResponse.json({
+          success: true,
+          message: 'Not subscribed',
+          action: 'unsubscribe'
+        });
+      }
+
+      // Mark as inactive and set unsubscribe date
+      await setDoc(subscriberRef, {
+        active: false,
+        unsubscribedAt: serverTimestamp()
+      }, { merge: true });
 
       // Decrement subscriber count (prevent negative values)
       const currentDoc = await getDoc(publisherRef);

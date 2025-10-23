@@ -1,7 +1,7 @@
 "use client"
 
-import { Button } from "@/components/UI/button"
-import { Input } from "@/components/UI/input"
+import { Button } from "@/components/UI/Button"
+import { Input } from "@/components/UI/Input"
 import Header from "@/components/news-reader/Header"
 import MainHeader from "@/components/news-reader/NewsReaderMainHeader";
 import { onAuthStateChanged } from 'firebase/auth';

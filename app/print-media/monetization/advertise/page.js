@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useState } from "react";
-import { Button } from "@/components/UI/button";
+import { Button } from "@/components/UI/Button";
 import {
   Card,
   CardContent,
@@ -10,7 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/MonetizationCards";
-import { Input } from "@/components/UI/input";
+import { Input } from "@/components/UI/Input";
 import { Label } from "@/components/UI/label";
 import { RadioGroup, RadioGroupItem } from "@/components/UI/radio-group";
 import { Checkbox } from "@/components/UI/checkbox";
