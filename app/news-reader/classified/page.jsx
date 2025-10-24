@@ -11,24 +11,26 @@ import { useEffect, useState, useMemo } from 'react';
 // Classified Item Component
 function ClassifiedItem({ title, description, contact, price, imageUrl }) {
   return (
-    <div className="border-b pb-3 last:border-b-0 last:pb-0">
+    <div className="bg-white rounded-lg overflow-hidden shadow-sm border border-gray-200">
       {imageUrl && (
-        <div className="mb-2">
+        <div className="w-full h-48 overflow-hidden">
           <img
             src={imageUrl}
             alt={title}
-            className="w-full h-32 object-cover rounded-md"
+            className="w-full h-full object-cover"
             onError={(e) => {
               e.target.style.display = 'none';
             }}
           />
         </div>
       )}
-      <h4 className="font-semibold text-gray-800">{title}</h4>
-      <p className="text-sm text-gray-600">{description}</p>
-      <div className="flex justify-between items-center mt-2">
-        <span className="text-xs text-gray-500">{contact}</span>
-        <span className="text-red-500 font-bold">{price}</span>
+      <div className="p-4">
+        <h4 className="font-semibold text-gray-800 mb-2">{title}</h4>
+        <p className="text-sm text-gray-600 mb-3 line-clamp-2">{description}</p>
+        <div className="flex justify-between items-center">
+          <span className="text-xs text-gray-500">{contact}</span>
+          <span className="text-red-500 font-bold text-lg">{price}</span>
+        </div>
       </div>
     </div>
   )
@@ -37,15 +39,10 @@ function ClassifiedItem({ title, description, contact, price, imageUrl }) {
 // Classified Section Component (Real Estate, Vehicles, Jobs)
 function ClassifiedSection({ title, items }) {
   return (
-    <div className="bg-white rounded-lg overflow-hidden shadow-sm">
-      <div className="bg-blue-500 text-white text-center py-3">
-        <h3 className="font-semibold">{title}</h3>
-      </div>
-      <div className="p-4 space-y-4">
-        {items.map((item, idx) => (
-          <ClassifiedItem key={idx} {...item} />
-        ))}
-      </div>
+    <div className="space-y-4">
+      {items.map((item, idx) => (
+        <ClassifiedItem key={idx} {...item} />
+      ))}
     </div>
   )
 }
@@ -65,18 +62,16 @@ function Publication({ name, sections }) {
       <div className="relative">
         {/* Desktop: 3 columns grid */}
         <div className="hidden lg:grid lg:grid-cols-3 gap-6">
-          {sections.map((section, idx) => (
-            <div key={idx}>
-              <ClassifiedSection {...section} />
-            </div>
+          {sections.flatMap(section => section.items).map((item, idx) => (
+            <ClassifiedItem key={idx} {...item} />
           ))}
         </div>
 
         {/* Tablet and below: horizontal scroll */}
         <div className="lg:hidden flex overflow-x-auto space-x-6 pb-4 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200">
-          {sections.map((section, idx) => (
-            <div key={idx} className="flex-shrink-0 w-11/12 sm:w-1/2 md:w-[32%]">
-              <ClassifiedSection {...section} />
+          {sections.flatMap(section => section.items).map((item, idx) => (
+            <div key={idx} className="flex-shrink-0 w-80">
+              <ClassifiedItem {...item} />
             </div>
           ))}
         </div>
