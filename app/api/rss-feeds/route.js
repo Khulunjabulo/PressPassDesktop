@@ -15,6 +15,19 @@ const parser = new Parser({
   }
 });
 
+// ✅ CRITICAL FIX: Ensure publisher ID always has the prefix
+function ensurePublisherPrefix(publisherId) {
+  if (!publisherId) return null;
+  
+  // If it already starts with "publisher_", return as is
+  if (publisherId.startsWith('publisher_')) {
+    return publisherId;
+  }
+  
+  // Otherwise, add the prefix
+  return `publisher_${publisherId}`;
+}
+
 // Helper to extract image from RSS item
 function extractImage(item) {
   // Try different image sources
@@ -37,7 +50,14 @@ function extractImage(item) {
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { publisherId, feedUrl, feedName, action } = body;
+    let { publisherId, feedUrl, feedName, action } = body;
+
+    console.log('🔍 RSS Feed Request (BEFORE FIX):', { publisherId, feedUrl, feedName, action });
+
+    // ✅ FIX: Ensure publisher ID has the correct prefix
+    publisherId = ensurePublisherPrefix(publisherId);
+    
+    console.log('✅ RSS Feed Request (AFTER FIX):', { publisherId, feedUrl, feedName, action });
 
     if (!publisherId || !feedUrl) {
       return NextResponse.json(
@@ -51,11 +71,15 @@ export async function POST(request) {
     const publisherSnap = await getDoc(publisherRef);
     
     if (!publisherSnap.exists()) {
+      console.error('❌ Publisher not found:', publisherId);
       return NextResponse.json(
-        { success: false, error: 'Publisher not found' },
+        { success: false, error: `Publisher not found with ID: ${publisherId}` },
         { status: 404 }
       );
     }
+
+    const publisherData = publisherSnap.data();
+    console.log('✅ Publisher found:', publisherData.companyName, '| ID:', publisherId);
 
     console.log(`📡 Fetching RSS feed: ${feedUrl}`);
 
@@ -100,10 +124,10 @@ export async function POST(request) {
       };
       
       console.log('📄 Extracted article:', {
-        title: article.title,
+        title: article.title?.substring(0, 50),
         hasContent: !!article.content,
         hasImage: !!article.imageUrl,
-        guid: article.guid
+        guid: article.guid?.substring(0, 50)
       });
       
       return article;
@@ -128,7 +152,8 @@ export async function POST(request) {
 
     // If action is 'publish', save to Firestore
     if (action === 'publish') {
-      const publisherData = publisherSnap.data();
+      console.log('📝 Starting to publish RSS feed to Firestore...');
+      console.log(`📍 Using Publisher ID: ${publisherId}`);
       
       // Save RSS feed metadata
       const rssFeedRef = collection(db, 'publishers', publisherId, 'rssFeeds');
@@ -147,7 +172,8 @@ export async function POST(request) {
         publisherName: publisherData.companyName || 'Unknown Publisher'
       });
 
-      console.log(`✅ RSS feed saved with ID: ${feedDoc.id}`);
+      console.log(`✅ RSS feed metadata saved with ID: ${feedDoc.id}`);
+      console.log(`✅ RSS feed path: publishers/${publisherId}/rssFeeds/${feedDoc.id}`);
 
       // Save each article to articles subcollection
       const articlesRef = collection(db, 'publishers', publisherId, 'articles');
@@ -155,7 +181,8 @@ export async function POST(request) {
       let successCount = 0;
       let errorCount = 0;
 
-      console.log(`💾 Starting to save ${articles.length} articles...`);
+      console.log(`💾 Starting to save ${articles.length} articles to Firestore...`);
+      console.log(`📍 Articles collection path: publishers/${publisherId}/articles`);
 
       for (const article of articles) {
         try {
@@ -172,54 +199,79 @@ export async function POST(request) {
             summary: article.summary || '',
             link: article.link || '',
             imageUrl: article.imageUrl || null,
+            featuredImageUrl: article.imageUrl || null,
             publishedDate: article.publishedDate,
             author: article.author,
             category: article.category,
+            tags: [],
             guid: article.guid,
+            // 🔥 CRITICAL: RSS Feed flags
             isRssFeed: true,
             rssFeedId: feedDoc.id,
             rssFeedName: feedName || feed.title || 'RSS Feed',
             rssFeedUrl: feedUrl,
+            // Publisher info - ✅ NOW USING CORRECT PREFIXED ID
             publisherId,
             publisherName: publisherData.companyName || 'Unknown Publisher',
             publisherLogo: publisherData.companyLogo || null,
+            // Article metadata
             status: 'published',
             views: 0,
             likeCount: 0,
+            wordCount: article.content ? article.content.split(' ').length : 0,
+            readTime: article.content ? Math.ceil(article.content.split(' ').length / 200) : 5,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp()
           };
 
-          console.log(`  💾 Saving article: ${article.title.substring(0, 50)}...`);
+          console.log(`  💾 Saving article: "${article.title.substring(0, 50)}..."`);
+          console.log(`  📊 Article data:`, {
+            hasTitle: !!articleData.title,
+            hasContent: !!articleData.content,
+            hasImage: !!articleData.imageUrl,
+            isRssFeed: articleData.isRssFeed,
+            rssFeedId: articleData.rssFeedId,
+            publisherId: articleData.publisherId, // ✅ Should now have prefix
+            category: articleData.category
+          });
           
           const articleDoc = await addDoc(articlesRef, articleData);
           
           savedArticles.push({ id: articleDoc.id, ...article });
           successCount++;
           console.log(`  ✅ Article saved with ID: ${articleDoc.id}`);
+          console.log(`  ✅ Article path: publishers/${publisherId}/articles/${articleDoc.id}`);
         } catch (error) {
           errorCount++;
           console.error(`  ❌ Failed to save article "${article.title}":`, error);
+          console.error(`  Error details:`, error.message);
         }
       }
 
       console.log(`📊 Save complete: ${successCount} successful, ${errorCount} failed`);
 
       if (successCount === 0) {
+        console.error('❌ No articles were saved, deleting RSS feed metadata...');
         // If no articles were saved, delete the feed document
-        await deleteDoc(feedRef);
+        const feedDocRef = doc(db, 'publishers', publisherId, 'rssFeeds', feedDoc.id);
+        await deleteDoc(feedDocRef);
         return NextResponse.json(
           { success: false, error: 'Failed to save any articles from the RSS feed' },
           { status: 500 }
         );
       }
 
+      console.log(`🎉 RSS feed published successfully! ${successCount} articles added.`);
+
       return NextResponse.json({
         success: true,
         message: 'RSS feed published successfully',
         feedId: feedDoc.id,
         articlesPublished: savedArticles.length,
-        articles: savedArticles
+        successCount,
+        errorCount,
+        articles: savedArticles,
+        publisherId // ✅ Return the corrected publisher ID
       });
     }
 
@@ -230,6 +282,7 @@ export async function POST(request) {
 
   } catch (error) {
     console.error('❌ Error in RSS feed API:', error);
+    console.error('Error stack:', error.stack);
     return NextResponse.json(
       { success: false, error: error.message },
       { status: 500 }
@@ -241,7 +294,7 @@ export async function POST(request) {
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
-    const publisherId = searchParams.get('publisherId');
+    let publisherId = searchParams.get('publisherId');
 
     if (!publisherId) {
       return NextResponse.json(
@@ -249,6 +302,10 @@ export async function GET(request) {
         { status: 400 }
       );
     }
+
+    // ✅ FIX: Ensure publisher ID has the correct prefix
+    publisherId = ensurePublisherPrefix(publisherId);
+    console.log('✅ Fetching RSS feeds for publisher:', publisherId);
 
     const rssFeedsRef = collection(db, 'publishers', publisherId, 'rssFeeds');
     const q = query(rssFeedsRef, orderBy('createdAt', 'desc'));
@@ -260,6 +317,8 @@ export async function GET(request) {
       createdAt: doc.data().createdAt?.toDate?.() || null,
       lastFetched: doc.data().lastFetched?.toDate?.() || null
     }));
+
+    console.log(`✅ Found ${feeds.length} RSS feeds for publisher ${publisherId}`);
 
     return NextResponse.json({
       success: true,
