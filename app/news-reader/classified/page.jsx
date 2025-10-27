@@ -9,14 +9,28 @@ import { auth } from '@/Firebase/firebase';
 import { useEffect, useState, useMemo } from 'react';
 
 // Classified Item Component
-function ClassifiedItem({ title, description, contact, price }) {
+function ClassifiedItem({ title, description, contact, price, imageUrl }) {
   return (
-    <div className="border-b pb-3 last:border-b-0 last:pb-0">
-      <h4 className="font-semibold text-gray-800">{title}</h4>
-      <p className="text-sm text-gray-600">{description}</p>
-      <div className="flex justify-between items-center mt-2">
-        <span className="text-xs text-gray-500">{contact}</span>
-        <span className="text-red-500 font-bold">{price}</span>
+    <div className="bg-white rounded-lg overflow-hidden shadow-sm border border-gray-200">
+      {imageUrl && (
+        <div className="w-full h-48 overflow-hidden">
+          <img
+            src={imageUrl}
+            alt={title}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              e.target.style.display = 'none';
+            }}
+          />
+        </div>
+      )}
+      <div className="p-4">
+        <h4 className="font-semibold text-gray-800 mb-2">{title}</h4>
+        <p className="text-sm text-gray-600 mb-3 line-clamp-2">{description}</p>
+        <div className="flex justify-between items-center">
+          <span className="text-xs text-gray-500">{contact}</span>
+          <span className="text-red-500 font-bold text-lg">{price}</span>
+        </div>
       </div>
     </div>
   )
@@ -25,15 +39,10 @@ function ClassifiedItem({ title, description, contact, price }) {
 // Classified Section Component (Real Estate, Vehicles, Jobs)
 function ClassifiedSection({ title, items }) {
   return (
-    <div className="bg-white rounded-lg overflow-hidden shadow-sm">
-      <div className="bg-blue-500 text-white text-center py-3">
-        <h3 className="font-semibold">{title}</h3>
-      </div>
-      <div className="p-4 space-y-4">
-        {items.map((item, idx) => (
-          <ClassifiedItem key={idx} {...item} />
-        ))}
-      </div>
+    <div className="space-y-4">
+      {items.map((item, idx) => (
+        <ClassifiedItem key={idx} {...item} />
+      ))}
     </div>
   )
 }
@@ -51,14 +60,24 @@ function Publication({ name, sections }) {
         </h2>
       </div>
       <div className="relative">
-        <div className="flex overflow-x-auto space-x-6 pb-4 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200">
-          {sections.map((section, idx) => (
-            <div key={idx} className="flex-shrink-0 w-11/12 sm:w-1/2 md:w-[32%]">
-              <ClassifiedSection {...section} />
+        {/* Desktop: 3 columns grid */}
+        <div className="hidden lg:grid lg:grid-cols-3 gap-6">
+          {sections.flatMap(section => section.items).map((item, idx) => (
+            <ClassifiedItem key={idx} {...item} />
+          ))}
+        </div>
+
+        {/* Tablet and below: horizontal scroll */}
+        <div className="lg:hidden flex overflow-x-auto space-x-6 pb-4 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200">
+          {sections.flatMap(section => section.items).map((item, idx) => (
+            <div key={idx} className="flex-shrink-0 w-80">
+              <ClassifiedItem {...item} />
             </div>
           ))}
         </div>
-        <div className="absolute top-1/2 -right-4 transform -translate-y-1/2 hidden md:flex items-center bg-gray-100 p-2 rounded-full shadow-md pointer-events-none">
+
+        {/* Scroll indicator for mobile/tablet */}
+        <div className="absolute top-1/2 -right-4 transform -translate-y-1/2 lg:hidden flex items-center bg-gray-100 p-2 rounded-full shadow-md pointer-events-none">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-gray-600 animate-pulse"><path d="M9 18l6-6-6-6"/></svg>
         </div>
       </div>
@@ -73,7 +92,7 @@ function WeatherForecast() {
   const [error, setError] = useState(null);
   const [location, setLocation] = useState(null);
 
-  const API_KEY = '5e41f9571f08b9aa7bc528dd0ab76c54'; 
+  const API_KEY = '5e41f9571f08b9aa7bc528dd0ab76c54';
   const DEFAULT_CITY = 'Johannesburg';
 
   useEffect(() => {
@@ -82,7 +101,7 @@ function WeatherForecast() {
       setError(null);
       try {
 
-        const url = lat && lon 
+        const url = lat && lon
           ? `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric`
           : `https://api.openweathermap.org/data/2.5/weather?q=${DEFAULT_CITY}&appid=${API_KEY}&units=metric`;
 
@@ -166,219 +185,93 @@ function WeatherForecast() {
 }
 
 export default function ClassifiedsPage() {
-  // Publication Data
-  const publications = [
-    {
-          name: <div className="flex justify-center items-center">
-  <img src="/isolezwe.png" alt="Isolezwe" className="h-6 w-auto" />
-</div>,
-          sections: [
-        {
-          title: "REAL ESTATE",
-          items: [
-            {
-              title: "3BR House - Downtown",
-              description: "Spacious family home with garden, near schools and shopping centers.",
-              contact: "Contact: 555-0123",
-              price: "R450,000",
-            },
-            {
-              title: "2BR Apartment - City Center",
-              description: "Modern apartment with balcony, fully furnished, available immediately.",
-              contact: "Contact: 555-0456",
-              price: "R1,200/month",
-            },
-            {
-              title: "Office Space for Rent",
-              description: "Prime location, 500 sq ft, parking included.",
-              contact: "Contact: 555-0789",
-              price: "R800/month",
-            },
-          ],
-        },
-        {
-          title: "VEHICLES",
-          items: [
-            {
-              title: "2018 Honda Civic",
-              description: "Excellent condition, low mileage, one owner, full service history.",
-              contact: "Contact: 555-1234",
-              price: "R18,500",
-            },
-            {
-              title: "2020 Ford F-150",
-              description: "Pickup truck, 4WD, excellent for work or family adventures.",
-              contact: "Contact: 555-5678",
-              price: "R32,000",
-            },
-            {
-              title: "Mountain Bike",
-              description: "Trek mountain bike, rarely used, perfect for trails.",
-              contact: "Contact: 555-9012",
-              price: "R500",
-            },
-          ],
-        },
-        {
-          title: "JOBS",
-          items: [
-            {
-              title: "Marketing Manager",
-              description: "Full-time position, 3+ years experience required, marketing degree.",
-              contact: "Contact: hr@company.com",
-              price: "R65,000/year",
-            },
-            {
-              title: "Part-time Cashier",
-              description: "Retail store, great for students, retail experience preferred.",
-              contact: "Contact: 555-3456",
-              price: "R1500/hour",
-            },
-            {
-              title: "Freelance Writer",
-              description: "Content writer for various clients, remote work available.",
-              contact: "Contact: writer@media.com",
-              price: "R2500/article",
-            },
-          ],
-        },
-      ],
-    },
-    {
-      name: <div className="flex justify-center items-center">
-  <img src="/The Citizen.png" alt="The Citizen" className="h-40 w-60" />
-</div>,
-      sections: [
-        {
-          title: "REAL ESTATE",
-          items: [
-            {
-              title: "Townhouse in Suburbs",
-              description: "Secure complex, 2 bedrooms, pool access.",
-              contact: "Contact: 555-2222",
-              price: "R850,000",
-            },
-          ],
-        },
-        {
-          title: "VEHICLES",
-          items: [
-            {
-              title: "Toyota Corolla 2017",
-              description: "Well maintained, fuel efficient.",
-              contact: "Contact: 555-3333",
-              price: "R150,000",
-            },
-          ],
-        },
-        {
-          title: "JOBS",
-          items: [
-            {
-              title: "Graphic Designer",
-              description: "Creative agency, portfolio required.",
-              contact: "Contact: design@citizen.com",
-              price: "R25,000/month",
-            },
-          ],
-        },
-      ],
-    },
-    {
-      name: <div className="flex justify-center items-center">
-  <img src="/The Mercury.png" alt="The Mercury" className="h-40 w-60 " />
-</div>,
-      sections: [
-        {
-          title: "REAL ESTATE",
-          items: [
-            {
-              title: "Warehouse for Rent",
-              description: "Industrial park, 2000 sq ft, loading dock.",
-              contact: "Contact: 555-4444",
-              price: "R12,000/month",
-            },
-          ],
-        },
-        {
-          title: "VEHICLES",
-          items: [
-            {
-              title: "Isuzu Truck",
-              description: "Perfect for logistics, durable and reliable.",
-              contact: "Contact: 555-5555",
-              price: "R350,000",
-            },
-          ],
-        },
-        {
-          title: "JOBS",
-          items: [
-            {
-              title: "Boilermaker",
-              description: "Experienced artisan required, full-time.",
-              contact: "Contact: jobs@pjthermal.com",
-              price: "R30,000/month",
-            },
-          ],
-        },
-      ],
-    },
-    {
-      name: <div className="flex justify-center items-center ">
-  <img src="/Herald.png" alt="Herald" className="h-40 w-60 " />
-</div>,
-      sections: [
-        {
-          title: "REAL ESTATE",
-          items: [
-            {
-              title: "Farm for Sale",
-              description: "50 hectares with water rights.",
-              contact: "Contact: 555-6666",
-              price: "R2,500,000",
-            },
-          ],
-        },
-        {
-          title: "VEHICLES",
-          items: [
-            {
-              title: "Tractor Massey Ferguson",
-              description: "Good condition, recently serviced.",
-              contact: "Contact: 555-7777",
-              price: "R200,000",
-            },
-          ],
-        },
-        {
-          title: "JOBS",
-          items: [
-            {
-              title: "Farmhand",
-              description: "Full-time, experience with livestock preferred.",
-              contact: "Contact: thabang@farm.com",
-              price: "R12,000/month",
-            },
-          ],
-        },
-      ],
-    },
-  ]
+  const [classifieds, setClassifieds] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const [isMobile, setIsMobile] = useState(false);
   const [user, setUser] = useState(null);
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Fetch classifieds from API
+  useEffect(() => {
+    const fetchClassifieds = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Get all publishers and their classifieds
+        const response = await fetch('/api/classifieds?publisherId=all');
+        if (!response.ok) {
+          throw new Error('Failed to fetch classifieds');
+        }
+
+        const data = await response.json();
+        if (data.success) {
+          // Group classifieds by publisher
+          const groupedByPublisher = {};
+
+          // Since we can't easily get all publishers' classifieds at once,
+          // we'll need to fetch from each publisher individually
+          // For now, let's assume we have a way to get all publishers
+          // This is a simplified version - you might need to adjust based on your API
+
+          // Mock data structure for now - replace with actual API calls
+          const mockClassifieds = data.classifieds || [];
+
+          // Group by publisher
+          mockClassifieds.forEach(classified => {
+            const publisherId = classified.publisherId;
+            if (!groupedByPublisher[publisherId]) {
+              groupedByPublisher[publisherId] = {
+                name: classified.publisherName || 'Unknown Publisher',
+                classifieds: []
+              };
+            }
+            groupedByPublisher[publisherId].classifieds.push(classified);
+          });
+
+          // Convert to the expected format
+          const publications = Object.values(groupedByPublisher).map(publisher => ({
+            name: publisher.name,
+            sections: [
+              {
+                title: "CLASSIFIEDS",
+                items: publisher.classifieds.map(classified => ({
+                  title: classified.title,
+                  description: classified.description,
+                  contact: `Contact: ${classified.publisherName}`,
+                  price: `R${classified.price}`,
+                  imageUrl: classified.imageUrl
+                }))
+              }
+            ]
+          }));
+
+          setClassifieds(publications);
+        } else {
+          throw new Error(data.error || 'Failed to load classifieds');
+        }
+      } catch (err) {
+        console.error('Error fetching classifieds:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchClassifieds();
+  }, []);
+
   const filteredPublications = useMemo(() => {
     if (!searchQuery.trim()) {
-      return publications;
+      return classifieds;
     }
 
     const lowercasedQuery = searchQuery.toLowerCase();
 
-    return publications.map(pub => {
+    return classifieds.map(pub => {
       // For each publication, filter its sections based on the search query.
       const filteredSections = pub.sections.map(section => {
         // An item matches if its title or description includes the query.
@@ -403,7 +296,7 @@ export default function ClassifiedsPage() {
       return null;
     }).filter(Boolean); // Remove any publications that have no matching content.
 
-  }, [searchQuery, publications]);
+  }, [searchQuery, classifieds]);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -455,9 +348,9 @@ export default function ClassifiedsPage() {
           <WeatherForecast />
 
           <div className="flex gap-2 mb-4 mt-5" >
-            <Input 
-              placeholder="Search by publication, category, or title..." 
-              className="flex-1" 
+            <Input
+              placeholder="Search by publication, category, or title..."
+              className="flex-1"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)} />
             <Button className="bg-red-500 hover:bg-red-600 text-white px-6">
@@ -475,14 +368,24 @@ export default function ClassifiedsPage() {
       </div>
 
       <div className="max-w-6xl mx-auto px-4 pb-8">
-        {filteredPublications.length > 0 ? (
+        {loading ? (
+          <div className="text-center py-16">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+            <p className="text-gray-500 mt-4">Loading classifieds...</p>
+          </div>
+        ) : error ? (
+          <div className="text-center py-16">
+            <h3 className="text-xl font-semibold text-red-600">Error Loading Classifieds</h3>
+            <p className="text-gray-500 mt-2">{error}</p>
+          </div>
+        ) : filteredPublications.length > 0 ? (
           filteredPublications.map((pub, idx) => (
             <Publication key={idx} {...pub} />
           ))
         ) : (
           <div className="text-center py-16">
-            <h3 className="text-xl font-semibold text-gray-700">No Results Found</h3>
-            <p className="text-gray-500 mt-2">Try adjusting your search terms.</p>
+            <h3 className="text-xl font-semibold text-gray-700">No Classifieds Found</h3>
+            <p className="text-gray-500 mt-2">No classifieds are available at the moment.</p>
           </div>
         )}
       </div>
