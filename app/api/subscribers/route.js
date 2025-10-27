@@ -70,6 +70,12 @@ export async function GET(request) {
       sub.subscribedAt && sub.subscribedAt >= startOfMonth
     ).length;
 
+    // Subscribers from last month
+    const lastMonthTotal = allSubscribers.filter(sub => 
+      sub.subscribedAt && sub.subscribedAt < startOfMonth
+    ).length;
+    const changeVsLastMonth = lastMonthTotal > 0 ? (((activeSubscribers.length - lastMonthTotal) / lastMonthTotal) * 100).toFixed(1) : (activeSubscribers.length > 0 ? 100.0 : 0.0);
+
     // Calculate churn rate (monthly)
     const activeStartOfMonth = allSubscribers.filter(sub => {
       if (!sub.subscribedAt) return false;
@@ -171,6 +177,7 @@ export async function GET(request) {
       totalChurned: churned.length,
       newThisMonth,
       churnRate: parseFloat(churnRate),
+      change: `${changeVsLastMonth >= 0 ? '+' : ''}${changeVsLastMonth}%`,
       growthData,
       publisherId
     };

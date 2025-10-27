@@ -1,6 +1,7 @@
 'use client'
 
-import Header from '@/components/UI/header'
+import React, { useState, useEffect } from 'react';
+import Header from '@/components/UI/header';
 import PublisherSidebar from '@/components/UI/publisherSidebar'
 import { Wallet, Users, BarChart2, Rss } from 'lucide-react'
 import {
@@ -13,41 +14,44 @@ import {
   Pie,
   Cell,
   ResponsiveContainer,
-} from 'recharts'
+} from 'recharts';
 import { useCurrentPublisher } from "@/hooks/useCurrentPublisher";
 import { useWallet } from "@/hooks/useWallet";
 import PrintMediaFooter from '@/components/UI/PrintMediaFooter';
 
 /**
- * Sample data for weekly performance chart
- */
-const weeklyData = [
-  { day: 'Mon', value: 50000 },
-  { day: 'Tue', value: 56000 },
-  { day: 'Wed', value: 53000 },
-  { day: 'Thu', value: 67000 },
-  { day: 'Fri', value: 64000 },
-  { day: 'Sat', value: 48000 },
-  { day: 'Sun', value: 42000 },
-]
-
-/**
  * Weekly Performance Area Chart Component
+ * @param {Object[]} props.data - The data for the chart.
  * @returns {JSX.Element} Weekly performance chart
  */
-function WeeklyPerformanceChart() {
+function WeeklyPerformanceChart({ data }) {
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      const dataPoint = payload[0].payload;
+      return (
+        <div className="p-2 bg-white border rounded-lg shadow-lg text-sm">
+          <p className="font-bold mb-1 text-gray-700">{dataPoint.label}</p>
+          <p className="text-green-600">New: {dataPoint.subscribed}</p>
+          <p className="text-red-600">Churn: {dataPoint.churned}</p>
+          <p className="font-semibold mt-1 text-gray-800">Net: {dataPoint.net}</p>
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="col-span-2 bg-white p-4 rounded-xl shadow min-w-0 w-full">
-      <h2 className="font-semibold mb-4 text-sm">Weekly Performance</h2>
+      <h2 className="font-semibold mb-4 text-sm">Weekly Growth</h2>
       <div className="h-48 bg-purple-100 rounded-xl flex items-center justify-center text-purple-600 font-bold w-full">
         <ResponsiveContainer width="100%" height={180}>
-          <AreaChart data={weeklyData}>
-            <XAxis dataKey="day" />
+          <AreaChart data={data}>
+            <XAxis dataKey="label" tick={{ fontSize: 12 }} />
             <YAxis />
-            <Tooltip />
+            <Tooltip content={<CustomTooltip />} />
             <Area
               type="monotone"
-              dataKey="value"
+              dataKey="net"
               stroke="#8884d8"
               fill="#d5c9ff"
               animationDuration={800}
@@ -169,6 +173,46 @@ function StatCard({ icon, title, value, change, showPeriod = true }) {
 export default function Dashboard() {
   const { publisher, loading } = useCurrentPublisher("currentPublisherId");
   const wallet = useWallet(publisher?.id);
+  const [subscriberData, setSubscriberData] = useState({ count: 0, change: '+0.0%' });
+  const [pageViewsData, setPageViewsData] = useState({ count: 0, change: '+0.0%' });
+  const [rssSubscribersData, setRssSubscribersData] = useState({ count: 0, change: '+0.0%' });
+  const [weeklyChartData, setWeeklyChartData] = useState([]);
+
+  useEffect(() => {
+    const fetchAllAnalytics = async (currentPublisher) => {
+      try {
+        const [subscribersResponse, analyticsResponse] = await Promise.all([
+          fetch(`/api/subscribers?publisherId=${currentPublisher.id}`),
+          fetch(`/api/overview?publisherId=${currentPublisher.id}`)
+        ]);
+
+        if (subscribersResponse.ok) {
+          const data = await subscribersResponse.json();
+          if (data.success) {
+            setSubscriberData({
+              count: data.subscriberCount,
+              change: data.change
+            });
+            setWeeklyChartData(data.growthData?.weekly || []);
+          }
+        }
+
+        if (analyticsResponse.ok) {
+          const data = await analyticsResponse.json();
+          if (data.success) {
+            setPageViewsData(data.pageViews);
+            setRssSubscribersData(data.rssSubscribers);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch dashboard analytics:", error);
+      }
+    };
+
+    if (publisher?.id) {
+      fetchAllAnalytics(publisher);
+    }
+  }, [publisher?.id]);
 
   /**
    * Calculates the percentage change between two numbers.
@@ -244,7 +288,7 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6 w-full">
             {/* Weekly Performance Chart */}
             <div className="md:col-span-2 col-span-1 w-full min-w-0">
-              <WeeklyPerformanceChart />
+              <WeeklyPerformanceChart data={weeklyChartData} />
             </div>
             {/* Stats Panel */}
             <div className="grid grid-cols-2 gap-4 w-full min-w-0">
@@ -258,20 +302,20 @@ export default function Dashboard() {
               <StatCard
                 icon={<Users className="text-indigo-600" />}
                 title="Total Subscribers"
-                value="44.170"
-                change="+12.5%"
+                value={subscriberData.count.toLocaleString()}
+                change={subscriberData.change}
               />
               <StatCard
                 icon={<BarChart2 className="text-sky-600" />}
                 title="Page Views"
-                value="1.2M"
-                change="+15.3%"
+                value={pageViewsData.count.toLocaleString()}
+                change={pageViewsData.change}
               />
               <StatCard
                 icon={<Rss className="text-orange-500" />}
                 title="RSS Subscribers"
-                value="37,700"
-                change="+6.8%"
+                value={rssSubscribersData.count.toLocaleString()}
+                change={rssSubscribersData.change}
               />
             </div>
           </div>
