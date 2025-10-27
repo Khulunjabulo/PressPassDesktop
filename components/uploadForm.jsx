@@ -23,6 +23,7 @@ import {
   X
 } from 'lucide-react';
 import FileUpload from "./fileUpload";
+import ClassifiedsUploadForm from "./ClassifiedsUploadForm";
 import { checkPublisherApproval } from '@/lib/publisherAuth';
 import { useRouter } from 'next/navigation';
 
@@ -59,8 +60,9 @@ const PreviewToggle = ({ previewStyle, setPreviewStyle }) => (
 );
 
 export default function FlipCardUploadForm({ onSubmit, onClose }) {
-  const [isFlipped, setIsFlipped] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
+   const [isFlipped, setIsFlipped] = useState(false);
+   const [showPreview, setShowPreview] = useState(false);
+   const [showClassifiedsForm, setShowClassifiedsForm] = useState(false);
   
   // Upload Form States
   const [priority, setPriority] = useState(null);
@@ -1327,6 +1329,13 @@ const submitArticle = async (isDraft = false) => {
               <Edit3 className="w-4 h-4 mr-1" />
               Manual Entry
             </button>
+            <button
+              onClick={() => setShowClassifiedsForm(true)}
+              className="flex items-center px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors text-sm"
+            >
+              <Edit3 className="w-4 h-4 mr-1" />
+              Classifieds Manual entry
+            </button>
           </div>
 
           {/* Approval Status Banner */}
@@ -2016,6 +2025,21 @@ const submitArticle = async (isDraft = false) => {
       {/* Preview Modal */}
       {showPreview && (
         <ArticlePreview onClose={() => setShowPreview(false)} />
+      )}
+
+      {/* Classifieds Upload Form Modal */}
+      {showClassifiedsForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <ClassifiedsUploadForm
+            onSubmit={async (classifiedData) => {
+              // Handle classified submission here
+              console.log('Classified submitted:', classifiedData);
+              // You can add API call logic here
+              setShowClassifiedsForm(false);
+            }}
+            onClose={() => setShowClassifiedsForm(false)}
+          />
+        </div>
       )}
     </div>
   );
