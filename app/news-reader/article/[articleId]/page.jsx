@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Calendar, Clock, Eye, Hash, User, Globe, Share2, Bookmark } from 'lucide-react';
+import LikeButton from '@/components/LikeButton'
 import dynamic from 'next/dynamic';
 
 // Lazy load components for better performance
@@ -24,6 +25,15 @@ export default function ArticleViewPage() {
   const [publisher, setPublisher] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const [currentUser, setCurrentUser] = useState(null);
+
+useEffect(() => {
+  const userData = localStorage.getItem('currentUser');
+  if (userData) {
+    setCurrentUser(JSON.parse(userData));
+  }
+}, []);
 
   useEffect(() => {
     fetchArticleAndPublisher();
@@ -1244,6 +1254,32 @@ const testImageUrl = async (url) => {
                 </p>
               </div>
             </div>
+
+            {/* 🆕 ADD THIS: Engagement Section */}
+<div className="mt-8 pt-6 border-t-2 border-gray-300">
+  <div className="flex items-center justify-between">
+    <div className="flex items-center space-x-6">
+      <LikeButton
+  articleId={article.id}
+  publisherId={publisherId}
+  userId={currentUser?.uid} // ✅ Use actual user ID
+  initialLikeCount={article.likeCount || 0}
+  size="large"
+/>
+      
+      {article.views && (
+        <div className="flex items-center space-x-2 text-gray-600">
+          <Eye className="w-5 h-5" />
+          <span className="text-lg">{article.views.toLocaleString()} views</span>
+        </div>
+      )}
+    </div>
+    
+    <div className="text-sm text-gray-500">
+      Share this article with others
+    </div>
+  </div>
+</div>
 
 
             {/* Article Footer */}

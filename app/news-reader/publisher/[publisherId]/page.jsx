@@ -3,8 +3,9 @@
 import { useParams, useRouter } from 'next/navigation';
 import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent } from '@/components/UI/newscard';
-import { ArrowLeft, FileText, Clock, Globe, Building, Users, Calendar, Eye, Hash, Filter } from 'lucide-react';
+import { ArrowLeft, FileText, Clock, Globe, Building, Users, Calendar, Eye, Hash, Filter, Rss } from 'lucide-react';
 import { usePublisherArticles } from '@/hooks/useNewsSources';
+import LikeButton from '@/components/LikeButton'
 import dynamic from 'next/dynamic';
 
 // Lazy load components for better performance
@@ -20,18 +21,18 @@ const NewsReaderHeader = dynamic(() => import('@/components/news-reader/NewsRead
   loading: () => <div className="h-16 bg-gray-100 animate-pulse"></div>
 });
 
+const MobileBottomNav = dynamic(() => import('@/components/news-reader/MobileBottomNav'), {
+  ssr: false,
+});
+
 // Helper function to strip HTML tags and clean text
 function stripHtml(html) {
   if (!html) return '';
   
-  // Create a temporary div element to parse HTML
   const temp = document.createElement('div');
   temp.innerHTML = html;
   
-  // Get text content and clean it up
   let text = temp.textContent || temp.innerText || '';
-  
-  // Remove extra whitespace and normalize
   text = text.replace(/\s+/g, ' ').trim();
   
   return text;
@@ -71,6 +72,15 @@ export default function PublisherArticlesPage() {
   const [adUploadLoading, setAdUploadLoading] = useState(true);
   const [adUploadError, setAdUploadError] = useState(null);
 
+  const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+    const userData = localStorage.getItem('currentUser');
+    if (userData) {
+      setCurrentUser(JSON.parse(userData));
+    }
+  }, []);
+  
   // Fetch the first ad upload
   useEffect(() => {
     const fetchAdUpload = async () => {
@@ -141,39 +151,29 @@ export default function PublisherArticlesPage() {
   // Improved date formatting with better error handling
   const formatDate = (timestamp) => {
     if (!timestamp) {
-      console.log('No timestamp provided');
       return 'No date available';
     }
     
     try {
       let date;
       
-      // Handle different timestamp formats
       if (timestamp && typeof timestamp === 'object') {
-        // Handle Firestore Timestamp objects
         if (timestamp.toDate && typeof timestamp.toDate === 'function') {
           date = timestamp.toDate();
         } else if (timestamp.seconds && typeof timestamp.seconds === 'number') {
-          // Handle plain Firestore timestamp objects
           date = new Date(timestamp.seconds * 1000);
         } else if (timestamp._seconds) {
-          // Handle some Firestore timestamp variations
           date = new Date(timestamp._seconds * 1000);
         } else {
-          // Try to create date from object
           date = new Date(timestamp);
         }
       } else if (typeof timestamp === 'string' || typeof timestamp === 'number') {
-        // Handle string or number timestamps
         date = new Date(timestamp);
       } else {
-        console.log('Unknown timestamp format:', typeof timestamp, timestamp);
         return 'Invalid date format';
       }
       
-      // Check if date is valid
       if (isNaN(date.getTime())) {
-        console.log('Invalid date created from timestamp:', timestamp);
         return 'Invalid date';
       }
       
@@ -217,38 +217,20 @@ export default function PublisherArticlesPage() {
     };
   }, [publisher]);
 
-  // Debug logging - Enhanced to show publisher data
+  // Debug logging
   console.log('Publisher Page Debug:', {
     publisherId: params.publisherId,
     hasPublisher: !!cleanPublisher,
     publisherName: cleanPublisher?.name,
-    publisherLogo: cleanPublisher?.logo,
-    publisherCompanyLogo: cleanPublisher?.companyLogo,
     articlesCount: articles?.length || 0,
+    rssArticlesCount: articles?.filter(a => a.isRssFeed).length || 0, // ✅ NEW DEBUG
     filteredArticlesCount: filteredArticles?.length || 0,
-    categoriesCount: categories?.length || 0,
-    categories,
-    selectedCategory,
-    loading,
-    error,
-    fullPublisherData: cleanPublisher // Log full publisher object
-  });
-
-  // Additional debug for header props
-  console.log('🔍 Header Props Debug:', {
-    publisherImage: cleanPublisher?.logo || cleanPublisher?.companyLogo,
-    publisherName: cleanPublisher?.name || cleanPublisher?.companyName,
-    publisherExists: !!cleanPublisher,
-    logoField: cleanPublisher?.logo,
-    companyLogoField: cleanPublisher?.companyLogo,
-    nameField: cleanPublisher?.name,
-    companyNameField: cleanPublisher?.companyName
+    categoriesCount: categories?.length || 0
   });
 
   if (loading) {
     return (
       <div className="min-h-screen bg-white">
-        {/* Show header even during loading, but with loading state */}
         <NewsReaderHeader 
           publisherImage={null}
           publisherName="Loading..."
@@ -286,7 +268,6 @@ export default function PublisherArticlesPage() {
   if (error) {
     return (
       <div className="min-h-screen bg-white">
-        {/* Show header even during error state */}
         <NewsReaderHeader 
           publisherImage={null}
           publisherName="Publisher Not Found"
@@ -296,7 +277,7 @@ export default function PublisherArticlesPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-8 py-12">
           <button
             onClick={handleBackClick}
-            className="text-sm text-gray-600 hover:text-black mb-8 flex items-center"
+            className="bg-[#3ba6e7] text-white px-4 py-2 rounded-md shadow-sm hover:bg-[#2a7ab8] transition-colors duration-200 mb-8 flex items-center text-sm"
           >
             <ArrowLeft className="w-4 h-4 mr-1" />
             Back to News Sources
@@ -323,24 +304,25 @@ export default function PublisherArticlesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white pb-16 md:pb-0">
       <div className="fixed top-0 left-0 right-0 z-40">
-        {/* Pass publisher data to header component */}
         <NewsReaderHeader 
           publisherImage={cleanPublisher?.logo || cleanPublisher?.companyLogo}
           publisherName={cleanPublisher?.name || cleanPublisher?.companyName}
           publisherId={params.publisherId}
-          publisher={cleanPublisher} // Pass full publisher object if needed
+          publisher={cleanPublisher}
         />
       </div>
 
-      <div className="pt-16"> {/* Add padding to push content below the fixed header */}
+      <MobileBottomNav />
+
+      <div className="pt-16">
         {/* Newspaper Header */}
         <div className="border-b-4 border-black">
           <div className="max-w-7xl mx-auto px-4 sm:px-8 py-6">
             <button
               onClick={handleBackClick}
-              className="text-sm text-gray-600 hover:text-black mb-6 flex items-center"
+              className="bg-[#3ba6e7] text-white px-4 py-2 rounded-md shadow-sm hover:bg-[#2a7ab8] transition-colors duration-200 mb-6 flex items-center text-sm"
             >
               <ArrowLeft className="w-4 h-4 mr-1" />
               Back to News Sources
@@ -380,26 +362,25 @@ export default function PublisherArticlesPage() {
           </div>
         </div>
 
-      {/* Banner Ad */}
-      <div className="max-w-7xl mx-auto h-28 bg-[#3ba6e7] flex items-center justify-between px-8 rounded-md shadow-md mt-4">
-              <div className="flex flex-col items-center mt-5">
-                  {adUploadLoading ? (
-                    <div className="w-32 h-20 bg-gray-200 animate-pulse rounded"></div>
-                  ) : adUpload?.imageSrc ? (
-                    <img
-                      src={adUpload.imageSrc}
-                      alt="Uploaded Ad"
-                      className="w-1000 h-30 object-cover rounded"
-                      style={{ maxWidth: '1300px', maxHeight: '200px' }}
-                    />
-                  ) : (
-                    <div className="w-32 h-20 bg-white bg-opacity-20 rounded flex items-center justify-center">
-                      <span className="text-white text-xs opacity-70">Ad Space</span>
-                    </div>
-                  )}
+        {/* Banner Ad */}
+        <div className="max-w-7xl mx-auto h-28 bg-[#3ba6e7] flex items-center justify-between px-8 rounded-md shadow-md mt-4">
+          <div className="flex flex-col items-center mt-5">
+            {adUploadLoading ? (
+              <div className="w-32 h-20 bg-gray-200 animate-pulse rounded"></div>
+            ) : adUpload?.imageSrc ? (
+              <img
+                src={adUpload.imageSrc}
+                alt="Uploaded Ad"
+                className="w-1000 h-30 object-cover rounded"
+                style={{ maxWidth: '1300px', maxHeight: '200px' }}
+              />
+            ) : (
+              <div className="w-32 h-20 bg-white bg-opacity-20 rounded flex items-center justify-center">
+                <span className="text-white text-xs opacity-70">Ad Space</span>
               </div>
-           
+            )}
           </div>
+        </div>
 
         {/* Main Content Layout */}
         <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4">
@@ -422,9 +403,8 @@ export default function PublisherArticlesPage() {
                   </div>
                   
                   <div className="flex flex-wrap gap-2">
-                    {/* All Articles Filter */}
                     <button
-                      onClick={() => handleCategoryFilter('all')} // This will be full width on mobile
+                      onClick={() => handleCategoryFilter('all')}
                       className={`px-3 py-2 text-xs font-bold uppercase tracking-wider border transition-colors ${
                         selectedCategory === 'all'
                           ? 'bg-black text-white border-black'
@@ -434,7 +414,6 @@ export default function PublisherArticlesPage() {
                       All Articles ({articles.length})
                     </button>
 
-                    {/* Dynamic Category Filters */}
                     {categories.map((category) => {
                       const categoryCount = articles.filter(article => 
                         article.category && article.category.toLowerCase() === category.toLowerCase()
@@ -443,7 +422,7 @@ export default function PublisherArticlesPage() {
                       return (
                         <button
                           key={category}
-                          onClick={() => handleCategoryFilter(category)} // This will be full width on mobile
+                          onClick={() => handleCategoryFilter(category)}
                           className={`px-3 py-2 text-xs font-bold uppercase tracking-wider border transition-colors ${
                             selectedCategory.toLowerCase() === category.toLowerCase()
                               ? 'bg-black text-white border-black'
@@ -455,10 +434,9 @@ export default function PublisherArticlesPage() {
                       );
                     })}
 
-                    {/* Uncategorized Filter (if there are articles without categories) */}
                     {articles.some(article => !article.category) && (
                       <button
-                        onClick={() => handleCategoryFilter('uncategorized')} // This will be full width on mobile
+                        onClick={() => handleCategoryFilter('uncategorized')}
                         className={`px-3 py-2 text-xs font-bold uppercase tracking-wider border transition-colors ${
                           selectedCategory === 'uncategorized'
                             ? 'bg-black text-white border-black'
@@ -470,7 +448,6 @@ export default function PublisherArticlesPage() {
                     )}
                   </div>
 
-                  {/* Active Filter Indicator */}
                   {selectedCategory !== 'all' && (
                     <div className="mt-3 text-sm text-gray-600">
                       <span>Showing </span>
@@ -518,42 +495,32 @@ export default function PublisherArticlesPage() {
                   )}
                 </div>
               ) : (
-                <div className="space-y-8">
+                <div className="space-y-2.5 md:space-y-8">
                   {filteredArticles.map((article, index) => {
-                    // Debug log for each article
-                    console.log(`Article ${index + 1}:`, {
-                      id: article.id,
-                      title: article.title,
-                      category: article.category,
-                      hasContent: !!article.content,
-                      createdAt: article.createdAt,
-                      createdAtType: typeof article.createdAt
-                    });
-
-                  return (
-                    <article 
-                      key={article.id}
-                      className="border-b border-gray-300 pb-6 last:border-b-0 cursor-pointer hover:bg-gray-50 transition-colors p-4 -m-4 rounded"
-                      onClick={() => handleArticleClick(article)}
-                    >
-                      <div className="flex gap-6">
-                        {/* Article Image */}
-                        {article.imageUrl && (
-                          <div className="flex-shrink-0">
-                            <img
-                              src={article.imageUrl}
-                              alt={article.title}
-                              className="w-28 h-30 object-cover border border-gray-400"
-                              onError={(e) => {
-                                console.log('Article image failed to load:', article.imageUrl);
-                                e.target.style.display = 'none';
-                              }}
-                            />
-                          </div>
-                        )}
+                    return (
+                      <article 
+                        key={article.id}
+                        className="cursor-pointer transition-all duration-200 ease-in-out group md:border-b md:border-gray-300 md:pb-6 md:last:border-b-0 md:hover:bg-gray-50 md:p-4 md:-m-4 md:rounded bg-white border border-gray-200 rounded-lg shadow-sm p-4 mb-2.5 md:bg-transparent md:border-none md:shadow-none md:mb-0"
+                        onClick={() => handleArticleClick(article)}
+                      >
+                        <div className="flex flex-col md:flex-row md:gap-6">
+                          {/* Article Image */}
+                          {article.imageUrl && (
+                            <div className="flex-shrink-0 mb-4 md:mb-0">
+                              <img
+                                src={article.imageUrl}
+                                alt={article.title}
+                                className="w-full h-48 md:w-28 md:h-30 object-cover border border-gray-300 rounded-md"
+                                onError={(e) => {
+                                  console.log('Article image failed to load:', article.imageUrl);
+                                  e.target.style.display = 'none';
+                                }}
+                              />
+                            </div>
+                          )}
 
                           {/* Article Content */}
-                          <div className="flex-1">
+                          <div className="flex-1 min-w-0">
                             {/* Category */}
                             {article.category && (
                               <div className="mb-2">
@@ -563,15 +530,41 @@ export default function PublisherArticlesPage() {
                               </div>
                             )}
 
-                            {/* Headline - smaller on mobile */}
-                            <h3 className="text-xl sm:text-2xl font-bold leading-tight mb-3 hover:underline" 
+                            {/* Headline with RSS Icon - ✅ CRITICAL ADDITION */}
+                            <h3 className="text-lg md:text-xl lg:text-2xl font-bold leading-tight mb-3 group-hover:underline flex items-start gap-2" 
                                 style={{fontFamily: 'Times, "Times New Roman", serif'}}>
-                              {article.title}
+                              {/* ✅ RSS ICON - Shows only for RSS feed articles */}
+                              {article.isRssFeed && (
+                                <Rss 
+                                  className="w-5 h-5 md:w-6 md:h-6 text-orange-500 flex-shrink-0 mt-1" 
+                                  title={`RSS Feed: ${article.rssFeedName || 'External Source'}`}
+                                />
+                              )}
+                              <span className="flex-1">{article.title}</span>
                             </h3>
+                            
+                            {/* RSS Feed Source Info - ✅ OPTIONAL: Show RSS feed source */}
+                            {article.isRssFeed && article.rssFeedName && (
+                              <div className="mb-2 flex items-center gap-2 text-xs text-orange-600">
+                                <span className="font-medium">Source: {article.rssFeedName}</span>
+                                {article.link && (
+                                  <a 
+                                    href={article.link} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="hover:underline flex items-center gap-1"
+                                    title="View original article"
+                                  >
+                                    (Original)
+                                  </a>
+                                )}
+                              </div>
+                            )}
                             
                             {/* Summary or Content Preview */}
                             {(article.summary || article.content) && (
-                              <p className="text-sm sm:text-base text-gray-700 mb-3 leading-relaxed">
+                              <p className="text-sm text-gray-700 mb-3 leading-relaxed">
                                 {article.summary || article.content || 'No preview available'}
                               </p>
                             )}
@@ -602,9 +595,27 @@ export default function PublisherArticlesPage() {
                               )}
                             </div>
 
+                            {/* Engagement Section */}
+                            <div className="flex items-center space-x-4 pt-3 border-t border-gray-200">
+                              <LikeButton
+                                articleId={article.id}
+                                publisherId={params.publisherId}
+                                userId={currentUser?.uid}
+                                initialLikeCount={article.likeCount || 0}
+                                size="small"
+                              />
+                              
+                              {article.views && (
+                                <div className="flex items-center space-x-1 text-gray-600 text-sm">
+                                  <Eye className="w-4 h-4" />
+                                  <span>{article.views}</span>
+                                </div>
+                              )}
+                            </div>
+
                             {/* Tags */}
                             {article.tags && article.tags.length > 0 && (
-                              <div className="flex items-center space-x-2">
+                              <div className="flex items-center space-x-2 mt-3">
                                 <Hash className="w-3 h-3 text-gray-400" />
                                 <div className="flex flex-wrap gap-2">
                                   {article.tags.slice(0, 4).map((tag, tagIndex) => (
@@ -724,7 +735,6 @@ export default function PublisherArticlesPage() {
                 preferredType="square"
                 className="border-2 border-black-400"
               />
-              
 
               {/* Today's Headlines Box */}
               <div className="border-2 border-black p-4">
@@ -773,7 +783,10 @@ export default function PublisherArticlesPage() {
                         className="border-b border-gray-300 pb-2 cursor-pointer hover:bg-gray-50 p-2 -m-2 rounded"
                         onClick={() => handleArticleClick(article)}
                       >
-                        <h4 className="font-bold mb-1 hover:underline">{article.title}</h4>
+                        <h4 className="font-bold mb-1 hover:underline flex items-center gap-1">
+                          {article.isRssFeed && <Rss className="w-3 h-3 text-orange-500" />}
+                          {article.title}
+                        </h4>
                         <p className="text-gray-600 text-xs">
                           {formatDate(article.createdAt)} • {formatReadTime(article.readTime)}
                         </p>
@@ -809,26 +822,25 @@ export default function PublisherArticlesPage() {
             </div>
           </div>
 
-        {/* Bottom Banner Ad */}
-        <div className="max-w-7xl mx-auto h-28 bg-[#3ba6e7] flex items-center justify-between px-8 rounded-md shadow-md mt-4">
-        <div className="flex flex-col items-center mt-5">
-            {adUploadLoading ? (
-              <div className="w-32 h-20 bg-gray-200 animate-pulse rounded"></div>
-            ) : adUpload?.imageSrc ? (
-              <img
-                src={adUpload.imageSrc}
-                alt="Uploaded Ad"
-                className="w-1000 h-30 object-cover rounded"
-                style={{ maxWidth: '1200px', maxHeight: '200px' }}
-              />
-            ) : (
-              <div className="w-32 h-20 bg-white bg-opacity-20 rounded flex items-center justify-center">
-                <span className="text-white text-xs opacity-70">Ad Space</span>
-              </div>
-            )}s
-        </div>
-     
-    </div>
+          {/* Bottom Banner Ad */}
+          <div className="max-w-7xl mx-auto h-28 bg-[#3ba6e7] flex items-center justify-between px-8 rounded-md shadow-md mt-4">
+            <div className="flex flex-col items-center mt-5">
+              {adUploadLoading ? (
+                <div className="w-32 h-20 bg-gray-200 animate-pulse rounded"></div>
+              ) : adUpload?.imageSrc ? (
+                <img
+                  src={adUpload.imageSrc}
+                  alt="Uploaded Ad"
+                  className="w-1000 h-30 object-cover rounded"
+                  style={{ maxWidth: '1200px', maxHeight: '200px' }}
+                />
+              ) : (
+                <div className="w-32 h-20 bg-white bg-opacity-20 rounded flex items-center justify-center">
+                  <span className="text-white text-xs opacity-70">Ad Space</span>
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* Footer */}
           <div className="border-t-2 border-black mt-8">
@@ -844,10 +856,11 @@ export default function PublisherArticlesPage() {
                 <div className="flex items-center space-x-4">
                   <span className="text-gray-600">Edition: Digital</span>
                   <button
-                    onClick={handleBackClick}
-                    className="bg-black text-white px-4 py-2 text-xs font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors"
+                    onClick={handleBackClick}                    
+                    className="bg-[#3ba6e7] text-white px-4 py-2 rounded-md shadow-sm hover:bg-[#2a7ab8] transition-colors duration-200 flex items-center text-sm"
                   >
-                    Back to Sources
+                    <ArrowLeft className="w-4 h-4 mr-1" />
+                    Back to News Sources
                   </button>
                 </div>
               </div>

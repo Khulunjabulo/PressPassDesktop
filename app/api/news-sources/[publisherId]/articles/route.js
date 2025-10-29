@@ -39,8 +39,13 @@ export async function GET(request, { params }) {
     const articles = [];
     
     // Process published articles
+    console.log('📊 Processing', articlesSnapshot.size, 'published articles...');
+    
     articlesSnapshot.forEach((doc) => {
       const articleData = doc.data();
+      
+      // 🔍 DEBUG: Log each article's RSS status
+      console.log('📄 Article:', articleData.title?.substring(0, 40), '| isRssFeed:', articleData.isRssFeed, '| rssFeedId:', articleData.rssFeedId);
       
       // Enhanced image URL extraction
       let imageUrl = articleData.featuredImageUrl || 
@@ -81,13 +86,25 @@ export async function GET(request, { params }) {
         priority: articleData.priority || 'normal',
         style: articleData.style || 'modern',
         allowComments: articleData.allowComments !== false,
-        isDraft: false
+        isDraft: false,
+        // ✅ RSS FEED FIELDS - CRITICAL: Check for existence first
+        isRssFeed: articleData.isRssFeed === true, // ← FIXED: Explicit boolean check
+        rssFeedId: articleData.rssFeedId || null,
+        rssFeedName: articleData.rssFeedName || null,
+        rssFeedUrl: articleData.rssFeedUrl || null,
+        link: articleData.link || null, // Original RSS article link
+        guid: articleData.guid || null // RSS article unique identifier
       });
     });
     
     // Process drafts (include them as well for completeness)
+    console.log('📊 Processing', draftsSnapshot.size, 'draft articles...');
+    
     draftsSnapshot.forEach((doc) => {
       const articleData = doc.data();
+      
+      // 🔍 DEBUG: Log each draft's RSS status
+      console.log('📄 Draft:', articleData.title?.substring(0, 40), '| isRssFeed:', articleData.isRssFeed);
       
       // Enhanced image URL extraction for drafts too
       let imageUrl = articleData.featuredImageUrl || 
@@ -127,12 +144,36 @@ export async function GET(request, { params }) {
         priority: articleData.priority || 'normal',
         style: articleData.style || 'modern',
         allowComments: articleData.allowComments !== false,
-        isDraft: true
+        isDraft: true,
+        // ✅ RSS FEED FIELDS - CRITICAL: Explicit boolean check
+        isRssFeed: articleData.isRssFeed === true, // ← FIXED
+        rssFeedId: articleData.rssFeedId || null,
+        rssFeedName: articleData.rssFeedName || null,
+        rssFeedUrl: articleData.rssFeedUrl || null,
+        link: articleData.link || null,
+        guid: articleData.guid || null
       });
     });
     
+    // Count RSS articles
+    const rssArticlesCount = articles.filter(a => a.isRssFeed === true).length;
+    
     console.log('📰 Total articles found:', articles.length);
+    console.log('📡 RSS feed articles:', rssArticlesCount);
     console.log('🖼️ Articles with images:', articles.filter(a => a.imageUrl).length);
+    
+    // 🔍 DEBUG: List all RSS articles found
+    if (rssArticlesCount > 0) {
+      console.log('📡 RSS Articles Details:');
+      articles.filter(a => a.isRssFeed).forEach((article, idx) => {
+        console.log(`  ${idx + 1}. "${article.title.substring(0, 50)}" - Feed: ${article.rssFeedName}`);
+      });
+    } else {
+      console.log('⚠️ NO RSS ARTICLES FOUND - Checking why...');
+      articles.forEach((article, idx) => {
+        console.log(`  ${idx + 1}. "${article.title.substring(0, 50)}" - isRssFeed: ${article.isRssFeed}, rssFeedId: ${article.rssFeedId}`);
+      });
+    }
     
     return NextResponse.json({
       success: true,
@@ -149,7 +190,8 @@ export async function GET(request, { params }) {
       articles: articles,
       totalArticles: articles.length,
       publishedArticles: articles.filter(a => !a.isDraft).length,
-      drafts: articles.filter(a => a.isDraft).length
+      drafts: articles.filter(a => a.isDraft).length,
+      rssArticles: rssArticlesCount // ✅ NEW: Count RSS articles
     });
     
   } catch (error) {

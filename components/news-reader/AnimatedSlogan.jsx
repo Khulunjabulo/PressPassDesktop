@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 
-const slogans = ['APP.', 'PLACE.', 'PLATE.']
+const slogans = ['APP.', 'PLACE.', 'SPACE.']
 
 export default function AnimatedSlogan() {
   const [index, setIndex] = useState(0)

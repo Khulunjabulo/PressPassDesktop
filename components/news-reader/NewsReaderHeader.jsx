@@ -66,14 +66,14 @@ export default function NewsReaderHeader({
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      router.push('/page.js'); // Redirect to the main landing page
+      router.push('/'); // Redirect to the main landing page
     } catch (error) {
       console.error("Error signing out: ", error);
     }
   };
 
   return (
-    <header className="bg-[#329ae1] w-full flex justify-between items-center px-3 sm:px-6 py-2 sm:py-3 shadow-md h-16">
+    <header className="bg-[#329ae1] w-full flex justify-between items-center px-3 sm:px-6 py-2 sm:py-3 shadow-md h-16 md:h-32 fixed md:relative top-0 left-0 right-0 z-50">
       {/* Logo Section */}
       <Link href="/news-reader">
         <Image
@@ -85,7 +85,7 @@ export default function NewsReaderHeader({
           priority
           onError={() => setLogoError(true)}
           onLoad={() => setLogoError(false)}
-          className="cursor-pointer hover:opacity-80 transition-opacity w-[80px] h-auto"
+          className="cursor-pointer hover:opacity-80 transition-opacity w-auto h-12 md:h-24"
         />
       </Link>
 
@@ -104,7 +104,6 @@ export default function NewsReaderHeader({
                 <LogOut className="w-4 h-4 mr-2" />
                 Logout
               </button>
-              {/* You can add other mobile menu items here */}
             </div>
           </div>
         )}

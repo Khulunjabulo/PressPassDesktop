@@ -1,7 +1,7 @@
 "use client"
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Newspaper, FilePen, Check, BarChart3, Smartphone } from "lucide-react"
+import { Newspaper, FilePen, Check, BarChart3, Smartphone, ArrowLeft } from "lucide-react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { handleSignIn, handleGoogleSignIn, initializeGoogleSignIn } from "../../lib/authLogic"
@@ -228,8 +228,9 @@ export default function SignIn() {
       </div>
     </div>
     <div className="absolute top-4 left-4">
-      <Link href="/" className="text-gray-800 hover:underline flex items-center">
-        ← Back to Home
+      <Link href="/" className="bg-[#3ba6e7] text-white px-4 py-2 rounded-md shadow-sm hover:bg-[#2a7ab8] transition-colors duration-200 mb-8 flex items-center text-sm">
+        <ArrowLeft className="w-4 h-4 mr-1" />
+        Back to Home
       </Link>
     </div>
      </>
