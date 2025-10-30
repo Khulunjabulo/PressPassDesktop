@@ -72,6 +72,15 @@ const PublisherProfile = () => {
 
   // Updated validation to focus only on required fields
   const validateRequiredFields = () => {
+
+      // Check if already verified/approved - if so, profile is considered complete
+  if (user?.isVerified || user?.isApproved) {
+    console.log('✅ User is verified/approved - profile complete');
+    setIsProfileComplete(true);
+    setMissingRequirements([]);
+    return true;
+  }
+
     // Only these fields are required - Legal Requirements + Personal Information
     const required = [
       'dateOfBirth',         // Personal Information
@@ -85,6 +94,13 @@ const PublisherProfile = () => {
       const value = formData[field];
       return !value || value === '';
     });
+
+     console.log('📋 Validation result:', {
+    missing: missing,
+    isComplete: missing.length === 0,
+    isVerified: user?.isVerified,
+    isApproved: user?.isApproved
+  });
     
     setMissingRequirements(missing);
     setIsProfileComplete(missing.length === 0);
@@ -145,11 +161,17 @@ const PublisherProfile = () => {
     'Design', 'Photography', 'Research', 'Legal', 'Finance'
   ];
 
-  useEffect(() => {
-    if (user) {
-      validateRequiredFields();
-    }
-  }, [user, formData]);
+useEffect(() => {
+  if (user) {
+    console.log('🔍 Running validation check...', {
+      hasUser: !!user,
+      isVerified: user.isVerified,
+      isApproved: user.isApproved,
+      profileComplete: user.profileComplete
+    });
+    validateRequiredFields();
+  }
+}, [user, formData]);
 
   // Handle authentication state changes
   useEffect(() => {
@@ -175,72 +197,85 @@ const PublisherProfile = () => {
     };
   }, [router]);
 
-  const loadPublisherProfile = async (currentUser = null) => {
-    try {
-      setIsLoading(true);
-      const userToUse = currentUser || authUser;
-      
-      if (!userToUse) {
-        console.warn('⚠️ No authenticated user available');
-        return;
-      }
-
-      console.log('📡 Fetching publisher profile from API...');
-      const idToken = await userToUse.getIdToken();
-      
-      const response = await fetch('/api/publisher-profile', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${idToken}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to fetch profile');
-      }
-
-      const userData = await response.json();
-      console.log('✅ Publisher profile loaded:', userData);
-
-      setUser(userData);
-      setFormData({
-        companyName: userData.companyName || '',
-        industry: userData.industry || '',
-        dateOfBirth: userData.dateOfBirth || '',
-        idNumber: userData.idNumber || '',
-        businessRegistrationNumber: userData.businessRegistrationNumber || '',
-        vatNumber: userData.vatNumber || '',
-        publishingLicense: userData.publishingLicense || null,
-        proofOfAddress: userData.proofOfAddress || null,
-        bankingDetails: userData.bankingDetails || '',
-        companyWebsite: userData.companyWebsite || '',
-        contactName: userData.contactName || userData.email || '',
-        jobTitle: userData.jobTitle || '',
-        phone: userData.phone || '',
-        publicationType: userData.publicationType || '',
-        audienceType: userData.audienceType || '',
-        monthlyReadership: userData.monthlyReadership || '',
-        companyDescription: userData.companyDescription || '',
-        address: userData.address || '',
-        city: userData.city || '',
-        foundedYear: userData.foundedYear || '',
-        employeeCount: userData.employeeCount || '',
-        profilePicture: null,
-        companyLogo: null,
-        staff: userData.staff || []
-      });
-      setProfilePicPreview(userData.profilePicture || '');
-      setCompanyLogoPreview(userData.companyLogo || '');
-
-    } catch (error) {
-      console.error('❌ Error loading profile:', error);
-      alert(`Failed to load profile: ${error.message}`);
-    } finally {
-      setIsLoading(false);
+ const loadPublisherProfile = async (currentUser = null) => {
+  try {
+    setIsLoading(true);
+    const userToUse = currentUser || authUser;
+    
+    if (!userToUse) {
+      console.warn('⚠️ No authenticated user available');
+      return;
     }
-  };
+
+    console.log('📡 Fetching publisher profile from API...');
+    const idToken = await userToUse.getIdToken();
+    
+    const response = await fetch('/api/publisher-profile', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${idToken}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to fetch profile');
+    }
+
+    const userData = await response.json();
+    console.log('✅ Publisher profile loaded:', userData);
+    console.log('👥 Staff members:', userData.staff?.length || 0);
+
+    setUser(userData);
+    
+    // CRITICAL FIX: Update localStorage with fresh data including staff
+    const updatedUserData = {
+      uid: userToUse.uid,
+      email: userToUse.email,
+      ...userData,
+      role: 'publisher' // Ensure role is set
+    };
+    
+    console.log('💾 Updating localStorage with fresh data...');
+    localStorage.setItem('currentUser', JSON.stringify(updatedUserData));
+    
+    setFormData({
+      companyName: userData.companyName || '',
+      industry: userData.industry || '',
+      dateOfBirth: userData.dateOfBirth || '',
+      idNumber: userData.idNumber || '',
+      businessRegistrationNumber: userData.businessRegistrationNumber || '',
+      vatNumber: userData.vatNumber || '',
+      publishingLicense: userData.publishingLicense || null,
+      proofOfAddress: userData.proofOfAddress || null,
+      bankingDetails: userData.bankingDetails || '',
+      companyWebsite: userData.companyWebsite || '',
+      contactName: userData.contactName || userData.email || '',
+      jobTitle: userData.jobTitle || '',
+      phone: userData.phone || '',
+      publicationType: userData.publicationType || '',
+      audienceType: userData.audienceType || '',
+      monthlyReadership: userData.monthlyReadership || '',
+      companyDescription: userData.companyDescription || '',
+      address: userData.address || '',
+      city: userData.city || '',
+      foundedYear: userData.foundedYear || '',
+      employeeCount: userData.employeeCount || '',
+      profilePicture: null,
+      companyLogo: null,
+      staff: userData.staff || []
+    });
+    setProfilePicPreview(userData.profilePicture || '');
+    setCompanyLogoPreview(userData.companyLogo || '');
+
+  } catch (error) {
+    console.error('❌ Error loading profile:', error);
+    alert(`Failed to load profile: ${error.message}`);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -423,31 +458,49 @@ const PublisherProfile = () => {
       <div className="max-w-5xl mx-auto px-4 py-8">
 
         {/* Updated Requirements Notice - Only show required fields */}
-        {!isProfileComplete && (
-          <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-6 mb-8 shadow-sm">
-            <div className="flex items-start">
-              <div className="flex-shrink-0">
-                <AlertTriangle className="h-6 w-6 text-amber-500" />
-              </div>
-              <div className="ml-4">
-                <h3 className="text-lg font-semibold text-amber-800 mb-2">Complete Required Fields</h3>
-                <p className="text-amber-700 mb-3">
-                  To activate your publisher account, please complete the following required sections:
-                </p>
-                <div className="bg-white/50 rounded-lg p-4 mb-3">
-                  <h4 className="font-semibold text-amber-800 mb-2">Required Sections:</h4>
-                  <ul className="text-sm text-amber-700 space-y-1">
-                    <li>• <strong>Personal Information:</strong> Date of Birth, SA ID Number</li>
-                    <li>• <strong>Legal Requirements:</strong> Business Registration, Publishing License, Proof of Address</li>
-                  </ul>
-                </div>
-                <p className="text-sm text-amber-600">
-                  Other fields are optional and can be completed later.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Updated Requirements Notice - Only show if NOT verified AND missing fields */}
+{!isProfileComplete && !user?.isVerified && !user?.isApproved && (
+  <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-6 mb-8 shadow-sm">
+    <div className="flex items-start">
+      <div className="flex-shrink-0">
+        <AlertTriangle className="h-6 w-6 text-amber-500" />
+      </div>
+      <div className="ml-4">
+        <h3 className="text-lg font-semibold text-amber-800 mb-2">Complete Required Fields</h3>
+        <p className="text-amber-700 mb-3">
+          To activate your publisher account, please complete the following required sections:
+        </p>
+        <div className="bg-white/50 rounded-lg p-4 mb-3">
+          <h4 className="font-semibold text-amber-800 mb-2">Required Sections:</h4>
+          <ul className="text-sm text-amber-700 space-y-1">
+            <li>• <strong>Personal Information:</strong> Date of Birth, SA ID Number</li>
+            <li>• <strong>Legal Requirements:</strong> Business Registration, Publishing License, Proof of Address</li>
+          </ul>
+        </div>
+        <p className="text-sm text-amber-600">
+          Other fields are optional and can be completed later.
+        </p>
+      </div>
+    </div>
+  </div>
+)}
+
+{/* Show success banner when verified */}
+{(user?.isVerified || user?.isApproved) && (
+  <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-6 mb-8 shadow-sm">
+    <div className="flex items-start">
+      <div className="flex-shrink-0">
+        <CheckCircle className="h-6 w-6 text-green-500" />
+      </div>
+      <div className="ml-4">
+        <h3 className="text-lg font-semibold text-green-800 mb-2">Profile Verified</h3>
+        <p className="text-green-700">
+          Your publisher account has been approved and verified. You can now publish articles without restrictions.
+        </p>
+      </div>
+    </div>
+  </div>
+)}
 
         {/* Header Section */}
         <div className="bg-white rounded-2xl shadow-lg mb-8 overflow-hidden border border-slate-200">

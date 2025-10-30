@@ -159,9 +159,11 @@ useEffect(() => {
   }, [currentUser]);
 
   // Get current user from localStorage
-  useEffect(() => {
-    console.log('🎯 FlipCardUploadForm mounted');
-    
+// Replace the existing useEffect for loading currentUser
+useEffect(() => {
+  console.log('🎯 FlipCardUploadForm mounted');
+  
+  const loadUserData = async () => {
     if (typeof window !== 'undefined') {
       try {
         const userData = localStorage.getItem('currentUser');
@@ -173,14 +175,69 @@ useEffect(() => {
             uid: parsedUser.uid, 
             role: parsedUser.role,
             companyName: parsedUser.companyName,
-            email: parsedUser.email
+            email: parsedUser.email,
+            staffCount: parsedUser.staff?.length || 0
           });
-          setCurrentUser(parsedUser);
+          
+          // CRITICAL FIX: Fetch fresh profile data to ensure staff is loaded
+          if (parsedUser.uid && parsedUser.role === 'publisher') {
+            console.log('🔄 Fetching fresh profile data for dropdown...');
+            
+            try {
+              const { auth } = await import('../Firebase/firebase');
+              const currentAuthUser = auth.currentUser;
+              
+              if (currentAuthUser) {
+                const idToken = await currentAuthUser.getIdToken();
+                
+                const response = await fetch('/api/publisher-profile', {
+                  method: 'GET',
+                  headers: {
+                    'Authorization': `Bearer ${idToken}`,
+                    'Content-Type': 'application/json'
+                  }
+                });
+                
+                if (response.ok) {
+                  const freshData = await response.json();
+                  console.log('✅ Fresh profile data loaded with', freshData.staff?.length || 0, 'staff members');
+                  
+                  // Update currentUser with fresh staff data
+                  const updatedUser = {
+                    ...parsedUser,
+                    staff: freshData.staff || [],
+                    profileComplete: freshData.profileComplete,
+                    isVerified: freshData.isVerified,
+                    isApproved: freshData.isApproved
+                  };
+                  
+                  // Update localStorage
+                  localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+                  
+                  setCurrentUser(updatedUser);
+                } else {
+                  console.warn('⚠️ Failed to fetch fresh profile, using cached data');
+                  setCurrentUser(parsedUser);
+                }
+              } else {
+                console.warn('⚠️ No authenticated user, using cached data');
+                setCurrentUser(parsedUser);
+              }
+            } catch (fetchError) {
+              console.error('❌ Error fetching fresh profile:', fetchError);
+              setCurrentUser(parsedUser);
+            }
+          } else {
+            setCurrentUser(parsedUser);
+          }
           
           // Pre-fill author name if available
-          if (parsedUser.companyName && !formData.author) {
-            console.log('👤 Pre-filling author name:', parsedUser.companyName);
-            setFormData(prev => ({ ...prev, author: parsedUser.companyName }));
+          if ((parsedUser.companyName || parsedUser.displayName) && !formData.author) {
+            console.log('👤 Pre-filling author name:', parsedUser.companyName || parsedUser.displayName);
+            setFormData(prev => ({ 
+              ...prev, 
+              author: parsedUser.companyName || parsedUser.displayName || '' 
+            }));
           }
         } else {
           console.warn('⚠️ No current user found in localStorage');
@@ -188,7 +245,8 @@ useEffect(() => {
           setCurrentUser({
             uid: 'demo-user-123',
             companyName: 'Demo Publisher',
-            role: 'Editor'
+            role: 'Editor',
+            staff: []
           });
           setFormData(prev => ({ ...prev, author: 'Demo Publisher' }));
         }
@@ -198,18 +256,21 @@ useEffect(() => {
         setCurrentUser({
           uid: 'demo-user-123',
           companyName: 'Demo Publisher',
-          role: 'Editor'
+          role: 'Editor',
+          staff: []
         });
         setFormData(prev => ({ ...prev, author: 'Demo Publisher' }));
       }
     }
-    
-    updateWordCount();
-    
-    return () => {
-      console.log('🎯 FlipCardUploadForm unmounted');
-    };
-  }, []);
+  };
+  
+  loadUserData();
+  updateWordCount();
+  
+  return () => {
+    console.log('🎯 FlipCardUploadForm unmounted');
+  };
+}, []); // Empty dependency array - runs once on mount
 
   // Upload Form Functions
   const handlePreview = (previewUrl) => {

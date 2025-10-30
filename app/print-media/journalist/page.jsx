@@ -32,33 +32,39 @@ export default function Journalist() {
   ];
 
   // Load journalists from publisher profile
-  useEffect(() => {
-    if (publisher?.staff) {
-      const journalistStaff = publisher.staff.filter(member => 
-        member.department === 'Editorial' || 
-        member.department === 'Journalism' ||
-        member.position?.toLowerCase().includes('journalist') ||
-        member.position?.toLowerCase().includes('reporter') ||
-        member.position?.toLowerCase().includes('editor') ||
-        member.position?.toLowerCase().includes('writer')
-      );
-      
-      setJournalists(journalistStaff);
+ useEffect(() => {
+  if (publisher?.staff) {
+    const journalistStaff = publisher.staff.filter(member => 
+      member.department === 'Editorial' || 
+      member.department === 'Journalism' ||
+      member.position?.toLowerCase().includes('journalist') ||
+      member.position?.toLowerCase().includes('reporter') ||
+      member.position?.toLowerCase().includes('editor') ||
+      member.position?.toLowerCase().includes('writer')
+    );
+    
+    console.log('👥 Journalists loaded:', journalistStaff.length);
+    setJournalists(journalistStaff);
+    
+    // CRITICAL FIX: Load stats immediately after setting journalists
+    if (journalistStaff.length > 0) {
+      console.log('🔄 Auto-loading stats for', journalistStaff.length, 'journalists...');
       loadJournalistStats(journalistStaff);
     }
-  }, [publisher]);
+  }
+}, [publisher]);
 
   // AUTO-REFRESH: Reload stats every 30 seconds
-  useEffect(() => {
-    if (journalists.length > 0) {
-      const interval = setInterval(() => {
-        console.log('🔄 Auto-refreshing journalist stats...');
-        loadJournalistStats(journalists);
-      }, 30000); // 30 seconds
+useEffect(() => {
+  if (journalists.length > 0) {
+    const interval = setInterval(() => {
+      console.log('🔄 Auto-refreshing journalist stats...');
+      loadJournalistStats(journalists);
+    }, 30000); // 30 seconds
 
-      return () => clearInterval(interval);
-    }
-  }, [journalists]);
+    return () => clearInterval(interval);
+  }
+}, [journalists]);
 
   const loadJournalistStats = async (journalistList) => {
   try {
