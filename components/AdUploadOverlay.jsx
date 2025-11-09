@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { X } from 'lucide-react';
+import { X, Monitor, Smartphone } from 'lucide-react';
 
-export default function AdUploadOverlay({ isOpen, onClose, onUpload }) {
+export default function AdUploadOverlay({ isOpen, onClose, onUpload, deviceType = 'desktop' }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -95,10 +95,16 @@ export default function AdUploadOverlay({ isOpen, onClose, onUpload }) {
       // Call the parent's upload function
       await onUpload(selectedFile);
       // Show success message
-      setSuccess('Ad uploaded successfully!');
+      setSuccess(`Ad uploaded successfully for ${deviceType}!`);
+      // Reset state
+      setSelectedFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
       // Close the overlay after a short delay to show the success message
       setTimeout(() => {
         onClose();
+        setSuccess('');
       }, 2000);
     } catch (err) {
       setError('Upload failed. Please try again.');
@@ -125,7 +131,26 @@ export default function AdUploadOverlay({ isOpen, onClose, onUpload }) {
       >
         {/* Header */}
         <div className="flex justify-between items-center p-4 border-b">
-          <h3 className="text-lg font-semibold">Upload Ad Media</h3>
+          <div className="flex items-center gap-3">
+            <h3 className="text-lg font-semibold">Upload Ad Media</h3>
+            <div className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${
+              deviceType === 'mobile' 
+                ? 'bg-blue-100 text-blue-700' 
+                : 'bg-green-100 text-green-700'
+            }`}>
+              {deviceType === 'mobile' ? (
+                <>
+                  <Smartphone size={14} />
+                  <span>Mobile</span>
+                </>
+              ) : (
+                <>
+                  <Monitor size={14} />
+                  <span>Desktop</span>
+                </>
+              )}
+            </div>
+          </div>
           <button 
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700"
@@ -136,6 +161,12 @@ export default function AdUploadOverlay({ isOpen, onClose, onUpload }) {
 
         {/* Body */}
         <div className="p-6">
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+            <p className="text-sm text-blue-800">
+              <span className="font-semibold">Note:</span> This ad will be displayed on <span className="font-semibold">{deviceType}</span> devices only.
+            </p>
+          </div>
+
           <div
             className={`border-2 border-dashed rounded-lg p-6 text-center transition-all duration-200 cursor-pointer ${
               isDragOver
@@ -230,7 +261,7 @@ export default function AdUploadOverlay({ isOpen, onClose, onUpload }) {
                   : "bg-gray-400 cursor-not-allowed"
               }`}
             >
-              {uploading ? "Uploading..." : "Upload"}
+              {uploading ? "Uploading..." : `Upload for ${deviceType}`}
             </button>
           </div>
         </div>

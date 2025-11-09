@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { auth } from '@/Firebase/firebase'; // your Firebase client SDK
+import { auth } from '@/Firebase/firebase';
 
 export const useCurrentPublisher = () => {
   const [publisher, setPublisher] = useState(null);
@@ -14,7 +14,9 @@ export const useCurrentPublisher = () => {
       setError(null);
 
       const currentUser = auth.currentUser;
-      if (!currentUser) throw new Error('Not authenticated');
+      if (!currentUser) {
+        throw new Error('Not authenticated');
+      }
 
       const idToken = await currentUser.getIdToken();
 
@@ -25,23 +27,31 @@ export const useCurrentPublisher = () => {
         },
       });
 
-      if (!res.ok) throw new Error('Failed to fetch publisher profile');
+      if (!res.ok) {
+        throw new Error('Failed to fetch publisher profile');
+      }
 
       const data = await res.json();
       if (data.success) {
-        // ADDED: Ensure the publisher has an 'id' field for wallet functionality
+        // Ensure publisher has an ID field
         const publisherWithId = {
           ...data,
-          id: data.uid || data.id || data.publisherId, // Use uid as id if id doesn't exist
+          id: data.uid || data.id || data.publisherId,
         };
         
-        console.log('Publisher loaded with ID:', publisherWithId.id); // Debug log
+        console.log('✅ Publisher loaded with ID:', publisherWithId.id);
         setPublisher(publisherWithId);
+
+        // FIX: Auto-store publisher ID in localStorage for other components
+        if (publisherWithId.id) {
+          localStorage.setItem('currentPublisherId', publisherWithId.id);
+          console.log('💾 Publisher ID auto-stored in localStorage:', publisherWithId.id);
+        }
       } else {
         throw new Error(data.error || 'Failed to fetch profile');
       }
     } catch (err) {
-      console.error('Error fetching publisher:', err);
+      console.error('❌ Error fetching publisher:', err);
       setError(err.message);
     } finally {
       setLoading(false);

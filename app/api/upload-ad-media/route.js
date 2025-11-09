@@ -1,7 +1,14 @@
-// app/api/upload-ad-media/route.js
+// app/api/upload-ad-media/route.js - UPDATED VERSION
 import { NextResponse } from 'next/server';
 import { getFirestoreDb } from '../../../lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
+
+// Utility function to normalize publisher ID
+function normalizePublisherId(publisherId) {
+  if (!publisherId) return null;
+  // Remove 'publisher_' prefix if it exists
+  return publisherId.replace(/^publisher_/, '');
+}
 
 export async function POST(req) {
   try {
@@ -16,26 +23,32 @@ export async function POST(req) {
 
     const formData = await req.formData();
     const file = formData.get('file');
-    const publisherId = formData.get('publisherId');
+    const rawPublisherId = formData.get('publisherId');
     const templateId = formData.get('templateId');
+    const deviceType = formData.get('deviceType');
 
-    if (!file || !publisherId || !templateId) {
+    if (!file || !rawPublisherId || !templateId || !deviceType) {
       return NextResponse.json(
-        { success: false, error: 'File, publisherId, and templateId are required' },
+        { success: false, error: 'File, publisherId, templateId, and deviceType are required' },
         { status: 400 }
       );
     }
+
+    // Normalize publisher ID (remove 'publisher_' prefix if present)
+    const publisherId = normalizePublisherId(rawPublisherId);
 
     console.log('📁 Processing ad media upload:', {
       fileName: file.name,
       fileSize: file.size,
       fileType: file.type,
-      publisherId,
-      templateId
+      rawPublisherId,
+      normalizedPublisherId: publisherId,
+      templateId,
+      deviceType
     });
 
     // Validate file size (max 10MB)
-    const maxSize = 10 * 1024 * 1024; // 10MB
+    const maxSize = 10 * 1024 * 1024;
     if (file.size > maxSize) {
       return NextResponse.json(
         { success: false, error: 'File size must be less than 10MB' },
@@ -60,40 +73,62 @@ export async function POST(req) {
       );
     }
 
-    // Convert file to ArrayBuffer for Firestore storage
-    const arrayBuffer = await file.arrayBuffer();
-    const fileData = new Uint8Array(arrayBuffer);
+    // Validate deviceType
+    if (!['mobile', 'desktop'].includes(deviceType)) {
+      return NextResponse.json(
+        { success: false, error: 'deviceType must be "mobile" or "desktop"' },
+        { status: 400 }
+      );
+    }
 
-    // Prepare document data
+    // Convert file to base64
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const base64String = buffer.toString('base64');
+    
+    // Create data URL with proper MIME type
+    const dataUrl = `data:${file.type};base64,${base64String}`;
+
+    // Prepare document data for Firestore with NORMALIZED publisher ID
     const adMediaData = {
-      publisherId,
+      publisherId, // Using normalized ID (without 'publisher_' prefix)
       templateId: parseInt(templateId, 10),
+      deviceType,
       fileName: file.name,
       fileSize: file.size,
       fileType: file.type,
-      fileData: fileData,
+      imageSrc: dataUrl,
       uploadedAt: Timestamp.now(),
-      status: 'uploaded'
+      status: 'active',
+      impressions: 0,
+      clicks: 0
     };
 
-    // Save to Firestore
+    // Save metadata to Firestore
     const db = getFirestoreDb();
     const docRef = await db.collection('adUploads').add(adMediaData);
 
     console.log('✅ Ad media uploaded successfully:', {
       docId: docRef.id,
       fileName: file.name,
-      publisherId,
-      templateId
+      normalizedPublisherId: publisherId,
+      templateId,
+      deviceType,
+      dataUrlLength: dataUrl.length
     });
 
     return NextResponse.json({
       success: true,
       message: 'Ad media uploaded successfully',
-      docId: docRef.id,
-      fileName: file.name,
-      fileSize: file.size,
-      uploadedAt: adMediaData.uploadedAt.toDate().toISOString()
+      data: {
+        docId: docRef.id,
+        fileName: file.name,
+        fileSize: file.size,
+        publisherId, // Return normalized ID
+        deviceType,
+        imageSrc: dataUrl,
+        uploadedAt: adMediaData.uploadedAt.toDate().toISOString()
+      }
     });
 
   } catch (error) {
