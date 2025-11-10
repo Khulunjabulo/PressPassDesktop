@@ -51,15 +51,11 @@ const MediaHubRegistration = () => {
   const router = useRouter();
 
   console.log('🔄 Rendering MediaHubRegistration component');
-  console.log('📊 Current formData:', formData);
-  console.log('📷 Profile pic preview:', profilePicPreview);
-  console.log('⏳ isLoading:', isLoading);
-  console.log('👥 isPublisher:', isPublisher);
-  console.log('🔍 Google modal state:', { showFormModal, googleUserData: !!googleUserData });
 
+  // Initialize Google Sign-In
   useEffect(() => {
     const handleGoogleCallback = (response) => {
-      console.log('📞 Google callback received');
+      console.log('📞 Google callback received in signup page');
       handleGoogleSignUp(response, setIsLoading, setShowFormModal, setGoogleUserData);
     };
 
@@ -81,6 +77,7 @@ const MediaHubRegistration = () => {
               shape: 'rectangular'
             }
           );
+          console.log('✅ Reader Google button rendered');
         }
 
         // Render button for publisher section
@@ -96,11 +93,10 @@ const MediaHubRegistration = () => {
               shape: 'rectangular'
             }
           );
+          console.log('✅ Publisher Google button rendered');
         }
-
-        console.log('✅ Google Sign-In buttons rendered');
       }
-    }, 1000); // Wait for script to load
+    }, 1000);
 
     return () => clearTimeout(timer);
   }, []);
@@ -121,24 +117,18 @@ const MediaHubRegistration = () => {
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     console.log('🖼️ Image selected:', file ? file.name : 'No file');
-    if (file) {
-      console.log('📏 File size:', file.size, 'bytes | Type:', file.type);
-    }
 
-    setFormData((prev) => {
-      const updated = { ...prev, profilePic: file };
-      console.log('💾 Updated formData.profilePic:', updated.profilePic);
-      return updated;
-    });
+    setFormData((prev) => ({
+      ...prev,
+      profilePic: file
+    }));
 
     const reader = new FileReader();
     reader.onloadend = () => {
       console.log('🎨 FileReader finished loading image');
       setProfilePicPreview(reader.result);
-      console.log('👀 Profile pic preview updated (data URL length):', reader.result.length);
     };
     if (file) {
-      console.log('🔍 Reading file as data URL...');
       reader.readAsDataURL(file);
     } else {
       setProfilePicPreview('');
@@ -147,52 +137,13 @@ const MediaHubRegistration = () => {
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    console.log(`📝 Input change detected: ${name} = ${type === 'checkbox' ? checked : value} (${type})`);
+    console.log(`📝 Input change: ${name}`);
 
-    setFormData((prev) => {
-      const updated = {
-        ...prev,
-        [name]: type === 'checkbox' ? checked : value,
-      };
-      console.log('🔄 Form data updated:', updated);
-      return updated;
-    });
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
   };
-
-  const handleToggleForm = () => {
-    console.log('🔄 Toggling registration form: isPublisher was', isPublisher);
-    const newIsPublisher = !isPublisher;
-    setIsPublisher(newIsPublisher);
-
-    setFormData((prev) => {
-      const role = newIsPublisher ? 'publisher' : 'reader';
-      console.log(`🔁 Switching role to: ${role}`);
-
-      const updated = {
-        ...prev,
-        role,
-      };
-
-      if (newIsPublisher === false) {
-        // Switching to reader: clear publisher fields
-        delete updated.companyName;
-        delete updated.industry;
-        delete updated.companyWebsite;
-        delete updated.contactName;
-        delete updated.jobTitle;
-        delete updated.phone;
-        delete updated.publicationType;
-        delete updated.audienceType;
-        delete updated.monthlyReadership;
-
-        console.log('🧹 Cleared publisher-specific fields');
-      }
-
-      console.log('🔄 Final formData after toggle:', updated);
-      return updated;
-    });
-  };
-
 
   const handleReaderSubmit = async () => {
     console.log('📝 Reader submit button clicked');
@@ -292,25 +243,25 @@ const MediaHubRegistration = () => {
                 <div className="space-y-4 md:space-y-6 bg-blue-50 p-4 md:p-6 rounded-xl">
                   <h2 className="text-xl md:text-2xl font-bold text-gray-800 text-center">News Reader Registration</h2>
                   
-                  {/* Terms Agreement - Moved to top */}
+                  {/* Terms Agreement */}
                   <label className="flex items-center bg-white p-4 rounded-lg border">
-                     <input 
-    type="checkbox" 
-    name="agreeToTerms" 
-    checked={formData.agreeToTerms}
-    onChange={handleInputChange}
-    required 
-    className="mr-3" 
-  />
-  <span className="text-sm">
-    I agree to the 
-    <a href="/terms" target="_blank" className="text-blue-600 underline ml-1">
-      Terms of Service
-    </a> and 
-    <a href="/privacy" target="_blank" className="text-blue-600 underline ml-1">
-      Privacy Policy
-    </a>.
-  </span>
+                    <input 
+                      type="checkbox" 
+                      name="agreeToTerms" 
+                      checked={formData.agreeToTerms}
+                      onChange={handleInputChange}
+                      required 
+                      className="mr-3" 
+                    />
+                    <span className="text-sm">
+                      I agree to the 
+                      <a href="/terms" target="_blank" className="text-blue-600 underline ml-1">
+                        Terms of Service
+                      </a> and 
+                      <a href="/privacy" target="_blank" className="text-blue-600 underline ml-1">
+                        Privacy Policy
+                      </a>.
+                    </span>
                   </label>
                   
                   {/* Google Sign Up Button */}
@@ -321,9 +272,6 @@ const MediaHubRegistration = () => {
                     ></div>
                     {!formData.agreeToTerms && (
                       <p className="text-sm text-red-600 mt-2">Please agree to the terms first</p>
-                    )}
-                    {isLoading && (
-                      <p className="text-sm text-blue-600 mt-2">Loading Google Sign-In...</p>
                     )}
                   </div>
 
@@ -414,10 +362,10 @@ const MediaHubRegistration = () => {
                   </button>
                 </div>
               ) : (
-                <div className="space-y-4 md:space-y-6 bg-blue-50 p-4 md:p-6 rounded-xl">
+                <div className="space-y-4 md:space-y-6 bg-blue-50 p-4 md:p-6 rounded-xl max-h-[70vh] overflow-y-auto">
                   <h2 className="text-xl md:text-2xl font-bold text-gray-800 text-center">Print Media Registration</h2>
                   
-                  {/* Terms Agreement - Moved to top */}
+                  {/* Terms Agreement */}
                   <label className="flex items-center bg-white p-4 rounded-lg border">
                     <input 
                       type="checkbox" 
@@ -438,9 +386,6 @@ const MediaHubRegistration = () => {
                     ></div>
                     {!formData.agreeToTerms && (
                       <p className="text-sm text-red-600 mt-2">Please agree to the terms first</p>
-                    )}
-                    {isLoading && (
-                      <p className="text-sm text-blue-600 mt-2">Loading Google Sign-In...</p>
                     )}
                   </div>
 
@@ -624,11 +569,7 @@ const MediaHubRegistration = () => {
             </div>
           </div>
         </div>
-        
       </div>
- 
-
-
 
       <div className="absolute top-4 left-4">
         <Link href="/" className="bg-[#3ba6e7] text-white px-4 py-2 rounded-md shadow-sm hover:bg-[#2a7ab8] transition-colors duration-200 mb-8 flex items-center text-sm">

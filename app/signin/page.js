@@ -4,23 +4,39 @@ import Link from "next/link"
 import { Newspaper, FilePen, Check, BarChart3, Smartphone, ArrowLeft } from "lucide-react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
-import { handleSignIn, handleGoogleSignIn, initializeGoogleSignIn } from "../../lib/authLogic"
+import { handleSignIn, initializeGoogleSignIn, handleGoogleSignInCallback, completeGoogleSignIn } from "../../lib/authLogic"
 
 export default function SignIn() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [keepSignedIn, setKeepSignedIn] = useState(false)
-  // Changed default to reader to show News Reader first
   const [role, setRole] = useState("reader")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  
+  // Role selector states for Google Sign-In
+  const [showRoleSelector, setShowRoleSelector] = useState(false)
+  const [availableRoles, setAvailableRoles] = useState([])
+  const [pendingGoogleCredential, setPendingGoogleCredential] = useState(null)
+  
   const router = useRouter()
 
   // Initialize Google Sign-In when component mounts
   useEffect(() => {
     console.log('🔧 Initializing Google Sign-In in SignIn component...');
-    initializeGoogleSignIn((response) => handleGoogleSignInCallback(response, role, keepSignedIn, router, setError, setLoading));
-  }, []);
+    const callback = (response) => {
+      handleGoogleSignInCallback(
+        response, 
+        router, 
+        setError, 
+        setLoading,
+        setShowRoleSelector,
+        setAvailableRoles,
+        setPendingGoogleCredential
+      );
+    };
+    initializeGoogleSignIn(callback);
+  }, [router]);
 
   // Enforce reader-only on mobile screens
   useEffect(() => {
@@ -34,14 +50,6 @@ export default function SignIn() {
     return () => window.removeEventListener('resize', enforceMobileRole);
   }, []);
 
-  // Handle Google Sign-In callback
-  const handleGoogleSignInCallback = (response) => {
-    // This function is now just a wrapper. The logic is handled by initializeGoogleSignIn's callback.
-    // The actual logic is now inside the useEffect hook where initializeGoogleSignIn is called.
-    // This keeps the sign-in page cleaner.
-    console.log('Google Sign-In credential received by page, authLogic will handle it.');
-  };
-
   const handleFormSubmit = async (e) => {
     e.preventDefault()
     await handleSignIn(email, password, role, keepSignedIn, router, setError, setLoading)
@@ -49,7 +57,26 @@ export default function SignIn() {
 
   const handleGoogleSignInClick = async () => {
     console.log('🔘 Google Sign-In button clicked');
-    await handleGoogleSignIn(role, keepSignedIn, router, setError, setLoading);
+    setError('');
+    
+    if (!window.google) {
+      setError('Google Sign-In is not available. Please refresh the page.');
+      return;
+    }
+
+    // Trigger Google Sign-In prompt
+    console.log('🚀 Launching Google Sign-In prompt...');
+    window.google.accounts.id.prompt((notification) => {
+      if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+        console.log('⚠️ Google prompt was not displayed or was skipped');
+      }
+    });
+  }
+
+  const handleRoleSelection = async (selectedRole) => {
+    console.log('👤 User selected role:', selectedRole);
+    setShowRoleSelector(false);
+    await completeGoogleSignIn(pendingGoogleCredential, selectedRole, router, setError, setLoading);
   }
 
   const RoleIcon = () => {
@@ -227,6 +254,49 @@ export default function SignIn() {
         </div>
       </div>
     </div>
+    
+    {/* Role Selector Modal */}
+    {showRoleSelector && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Select Your Role</h2>
+          <p className="text-gray-600 mb-6">
+            We found multiple accounts associated with your Google account. Please select which account you'd like to sign in to:
+          </p>
+          <div className="space-y-3">
+            {availableRoles.includes('reader') && (
+              <button
+                onClick={() => handleRoleSelection('reader')}
+                className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg transition duration-300 flex items-center justify-center gap-2"
+              >
+                <Newspaper className="w-5 h-5" />
+                Sign in as News Reader
+              </button>
+            )}
+            {availableRoles.includes('publisher') && (
+              <button
+                onClick={() => handleRoleSelection('publisher')}
+                className="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-4 rounded-lg transition duration-300 flex items-center justify-center gap-2"
+              >
+                <FilePen className="w-5 h-5" />
+                Sign in as Print Media Publisher
+              </button>
+            )}
+          </div>
+          <button
+            onClick={() => {
+              setShowRoleSelector(false);
+              setPendingGoogleCredential(null);
+              setLoading(false);
+            }}
+            className="w-full mt-4 text-gray-600 hover:text-gray-800 font-medium py-2"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    )}
+    
     <div className="absolute top-4 left-4">
       <Link href="/" className="bg-[#3ba6e7] text-white px-4 py-2 rounded-md shadow-sm hover:bg-[#2a7ab8] transition-colors duration-200 mb-8 flex items-center text-sm">
         <ArrowLeft className="w-4 h-4 mr-1" />
