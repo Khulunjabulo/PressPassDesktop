@@ -44,13 +44,22 @@ function truncateText(text, maxLength = 200) {
 function cleanArticleData(article) {
   if (!article) return null;
   
+  console.log('🔍 Cleaning article:', {
+    id: article.id,
+    title: article.title?.substring(0, 50),
+    hasTemplateId: !!article.templateId,
+    templateId: article.templateId
+  });
+  
   return {
     ...article,
     title: stripHtml(article.title),
     summary: article.summary ? truncateText(article.summary, 200) : null,
     content: article.content ? truncateText(article.content, 200) : null,
     category: article.category ? stripHtml(article.category) : null,
-    author: article.author ? stripHtml(article.author) : null
+    author: article.author ? stripHtml(article.author) : null,
+    templateId: article.templateId || 3, // Default to Classic Newspaper if not set
+    templateCredit: article.templateCredit || ''
   };
 }
 
@@ -67,7 +76,6 @@ function PublisherAd({ publisherId, templateId, className = '', height = 120 }) 
     const checkDevice = () => {
       const isMobile = window.innerWidth < 768;
       setDeviceType(isMobile ? 'mobile' : 'desktop');
-      console.log('📱 Device detected:', isMobile ? 'mobile' : 'desktop', 'width:', window.innerWidth);
     };
     
     checkDevice();
@@ -80,7 +88,6 @@ function PublisherAd({ publisherId, templateId, className = '', height = 120 }) 
   useEffect(() => {
     const fetchAds = async () => {
       if (!publisherId || !templateId) {
-        console.warn('⚠️ Missing required params:', { publisherId, templateId });
         setLoading(false);
         return;
       }
@@ -90,24 +97,15 @@ function PublisherAd({ publisherId, templateId, className = '', height = 120 }) 
         setError(null);
         
         const apiUrl = `/api/get-ads?publisherId=${publisherId}&templateId=${templateId}&deviceType=${deviceType}`;
-        console.log('🔍 Fetching ads from:', apiUrl);
         
         const response = await fetch(apiUrl);
         const result = await response.json();
 
-        console.log('📦 Ad fetch result:', {
-          success: result.success,
-          count: result.data?.length || 0,
-          data: result.data
-        });
-
         if (result.success && result.data && result.data.length > 0) {
-          console.log('✅ Ads loaded:', result.data.length, 'ads');
           setAds(result.data);
           setCurrentAdIndex(0);
           setError(null);
         } else {
-          console.log('ℹ️ No ads found for:', { publisherId, templateId, deviceType });
           setAds([]);
         }
       } catch (error) {
@@ -126,19 +124,13 @@ function PublisherAd({ publisherId, templateId, className = '', height = 120 }) 
   useEffect(() => {
     if (ads.length <= 1) return;
 
-    console.log('🔄 Starting ad rotation for', ads.length, 'ads');
     const interval = setInterval(() => {
-      setCurrentAdIndex((prevIndex) => {
-        const nextIndex = (prevIndex + 1) % ads.length;
-        console.log('🔄 Rotating ad:', prevIndex, '->', nextIndex);
-        return nextIndex;
-      });
-    }, 10000); // 10 seconds
+      setCurrentAdIndex((prevIndex) => (prevIndex + 1) % ads.length);
+    }, 10000);
 
     return () => clearInterval(interval);
   }, [ads.length]);
 
-  // Loading state
   if (loading) {
     return (
       <div 
@@ -150,7 +142,6 @@ function PublisherAd({ publisherId, templateId, className = '', height = 120 }) 
     );
   }
 
-  // Error state
   if (error) {
     return (
       <div 
@@ -165,7 +156,6 @@ function PublisherAd({ publisherId, templateId, className = '', height = 120 }) 
     );
   }
 
-  // No ads - show placeholder
   if (ads.length === 0) {
     return (
       <div 
@@ -181,24 +171,17 @@ function PublisherAd({ publisherId, templateId, className = '', height = 120 }) 
         </div>
         <h3 className="text-yellow-400 font-bold text-sm">Advertise Here</h3>
         <p className="text-white text-xs">Partners@presspass.africa</p>
-        
-        {/* Debug info - remove in production */}
-        <div className="mt-2 text-xs text-white opacity-50">
-          Template {templateId} | {deviceType}
-        </div>
       </div>
     );
   }
 
   const currentAd = ads[currentAdIndex];
 
-  // Display ad
   return (
     <div 
       className={`w-full rounded-md overflow-hidden shadow-sm relative ${className}`}
       style={{ height }}
     >
-      {/* Display image or video */}
       {currentAd.fileType?.startsWith('video/') ? (
         <video
           src={currentAd.imageSrc}
@@ -214,13 +197,11 @@ function PublisherAd({ publisherId, templateId, className = '', height = 120 }) 
           alt={currentAd.fileName}
           className="w-full h-full object-cover"
           onError={(e) => {
-            console.error('❌ Image load error:', currentAd.fileName);
-            e.target.src = '/Presspass.png'; // Fallback image
+            e.target.src = '/Presspass.png';
           }}
         />
       )}
       
-      {/* Ad indicator dots if multiple ads */}
       {ads.length > 1 && (
         <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex gap-1">
           {ads.map((_, index) => (
@@ -234,14 +215,8 @@ function PublisherAd({ publisherId, templateId, className = '', height = 120 }) 
         </div>
       )}
       
-      {/* Ad label */}
       <div className="absolute top-2 right-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
         Ad {ads.length > 1 ? `${currentAdIndex + 1}/${ads.length}` : ''}
-      </div>
-
-      {/* Debug info - remove in production */}
-      <div className="absolute top-2 left-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
-        T{templateId} | {deviceType}
       </div>
     </div>
   );
@@ -260,11 +235,49 @@ export default function PublisherArticlesPage() {
       setCurrentUser(JSON.parse(userData));
     }
   }, []);
+
+  // Debug logging for articles
+  useEffect(() => {
+    if (rawArticles) {
+      console.log('📰 Raw articles received:', {
+        count: rawArticles.length,
+        articles: rawArticles.map(a => ({
+          id: a.id,
+          title: a.title?.substring(0, 50),
+          hasTemplateId: !!a.templateId,
+          templateId: a.templateId,
+          isRssFeed: a.isRssFeed,
+          isDraft: a.isDraft,
+          status: a.status
+        }))
+      });
+    }
+  }, [rawArticles]);
   
-  // Clean articles data to remove HTML
+  // Clean articles data to remove HTML and ensure templateId
   const articles = useMemo(() => {
-    if (!rawArticles) return [];
-    return rawArticles.map(cleanArticleData);
+    if (!rawArticles) {
+      console.log('⚠️ No raw articles available');
+      return [];
+    }
+    
+    console.log('🔄 Processing articles:', rawArticles.length);
+    const cleaned = rawArticles.map(cleanArticleData).filter(article => {
+      // Filter out drafts and unpublished articles
+      if (article.isDraft || article.status === 'draft') {
+        console.log('⏭️ Skipping draft article:', article.id);
+        return false;
+      }
+      return true;
+    });
+    
+    console.log('✅ Cleaned articles:', {
+      total: cleaned.length,
+      withTemplates: cleaned.filter(a => a.templateId).length,
+      rssFeeds: cleaned.filter(a => a.isRssFeed).length
+    });
+    
+    return cleaned;
   }, [rawArticles]);
 
   // Get all unique categories from articles
@@ -292,6 +305,11 @@ export default function PublisherArticlesPage() {
   }, [articles, selectedCategory]);
 
   const handleArticleClick = (article) => {
+    console.log('🔗 Navigating to article:', {
+      id: article.id,
+      templateId: article.templateId,
+      publisherId: params.publisherId
+    });
     router.push(`/news-reader/article/${article.id}?publisherId=${params.publisherId}`);
   };
 
@@ -680,6 +698,15 @@ export default function PublisherArticlesPage() {
                   <p className="text-gray-600 max-w-md mx-auto mb-4">
                     This publisher's newsroom is ready for content. Check back later for breaking news and updates.
                   </p>
+                  {process.env.NODE_ENV === 'development' && (
+                    <div className="mt-4 p-4 bg-gray-100 rounded text-xs text-left max-w-md mx-auto">
+                      <strong>Debug Info:</strong>
+                      <div>Publisher ID: {params.publisherId}</div>
+                      <div>Raw Articles: {rawArticles?.length || 0}</div>
+                      <div>Filtered Articles: {articles?.length || 0}</div>
+                      <div>Selected Category: {selectedCategory}</div>
+                    </div>
+                  )}
                   <button 
                     onClick={refreshArticles}
                     className="bg-black text-white px-6 py-2 text-sm font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors"

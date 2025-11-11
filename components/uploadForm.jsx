@@ -20,12 +20,24 @@ import {
   RotateCcw,
   Edit3,
   Image as ImageIcon,
-  X
+  X,
+  Camera
 } from 'lucide-react';
 import FileUpload from "./fileUpload";
 import ClassifiedsUploadForm from "./ClassifiedsUploadForm";
 import { checkPublisherApproval } from '@/lib/publisherAuth';
 import { useRouter } from 'next/navigation';
+
+// Import Template Layouts
+import { 
+  FashionMagazineLayout,
+  TechBusinessLayout,
+  ClassicNewspaperLayout,
+  MagazineFeatureLayout,
+  MinimalCleanLayout,
+  ModernGridLayout,
+  EditorialLayout
+} from './TemplateLayouts';
 
 const PrioritySelector = ({ priority, setPriority }) => (
   <div className="mb-3">
@@ -60,9 +72,9 @@ const PreviewToggle = ({ previewStyle, setPreviewStyle }) => (
 );
 
 export default function FlipCardUploadForm({ onSubmit, onClose }) {
-   const [isFlipped, setIsFlipped] = useState(false);
-   const [showPreview, setShowPreview] = useState(false);
-   const [showClassifiedsForm, setShowClassifiedsForm] = useState(false);
+  const [isFlipped, setIsFlipped] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [showClassifiedsForm, setShowClassifiedsForm] = useState(false);
   
   // Upload Form States
   const [priority, setPriority] = useState(null);
@@ -77,6 +89,10 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
   const [autofill, setAutofill] = useState({ headline: "", byline: "", location: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Template States
+  const [selectedTemplateId, setSelectedTemplateId] = useState(3); // Default: Classic Newspaper
+  const [templateCredit, setTemplateCredit] = useState('');
+
   // Manual Article Form States
   const [formData, setFormData] = useState({
     title: '',
@@ -89,12 +105,13 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
     featuredImageUrl: '',
     imageCredit: '', 
     imageCaption: '',
-    style: 'modern',
     content: '',
     metaDescription: '',
     publishNow: true,
     allowComments: true,
-    sendNewsletter: false
+    sendNewsletter: false,
+    templateId: 3, // Default template
+    templateCredit: ''
   });
 
   const [wordCount, setWordCount] = useState(0);
@@ -114,6 +131,59 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
   const editorRef = useRef(null);
   const fileInputRef = useRef(null);
 
+  // Template Options
+  const templates = [
+    {
+      id: 1,
+      name: "Fashion Magazine",
+      description: "Elegant layout for fashion, lifestyle, and style articles",
+      component: FashionMagazineLayout,
+      color: "from-pink-500 to-purple-500"
+    },
+    {
+      id: 2,
+      name: "Tech & Business",
+      description: "Professional layout for technology and business news",
+      component: TechBusinessLayout,
+      color: "from-blue-600 to-blue-800"
+    },
+    {
+      id: 3,
+      name: "Classic Newspaper",
+      description: "Traditional newspaper layout for breaking news",
+      component: ClassicNewspaperLayout,
+      color: "from-gray-700 to-gray-900"
+    },
+    {
+      id: 4,
+      name: "Magazine Feature",
+      description: "Full-screen feature layout with visual storytelling",
+      component: MagazineFeatureLayout,
+      color: "from-yellow-500 to-orange-600"
+    },
+    {
+      id: 5,
+      name: "Minimal Clean",
+      description: "Clean, minimalist layout for focused reading",
+      component: MinimalCleanLayout,
+      color: "from-gray-300 to-gray-500"
+    },
+    {
+      id: 6,
+      name: "Modern Grid",
+      description: "Contemporary grid-based layout with bold design",
+      component: ModernGridLayout,
+      color: "from-indigo-600 to-purple-600"
+    },
+    {
+      id: 7,
+      name: "Editorial Opinion",
+      description: "Professional editorial layout for opinion pieces",
+      component: EditorialLayout,
+      color: "from-amber-600 to-orange-700"
+    }
+  ];
+
   const categories = [
     { value: '', label: 'Select a category' },
     { value: 'technology', label: 'Technology' },
@@ -128,28 +198,21 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
     { value: 'other', label: 'Other' }
   ];
 
-  const styleOptions = [
-    { value: 'modern', label: 'Modern', color: 'bg-blue-500', description: 'Clean, contemporary design' },
-    { value: 'classic', label: 'Classic', color: 'bg-gray-800', description: 'Traditional serif typography' },
-    { value: 'minimal', label: 'Minimal', color: 'bg-gray-300', description: 'Simple, distraction-free' },
-    { value: 'academic', label: 'Academic', color: 'bg-green-600', description: 'Formal, research-oriented' }
-  ];
-
   // Auto-fill journalist position when selected
-useEffect(() => {
-  if (formData.author && currentUser?.staff) {
-    const selectedJournalist = currentUser.staff.find(
-      member => member.name === formData.author
-    );
-    
-    if (selectedJournalist && selectedJournalist.position) {
-      setFormData(prev => ({
-        ...prev,
-        authorTitle: selectedJournalist.position
-      }));
+  useEffect(() => {
+    if (formData.author && currentUser?.staff) {
+      const selectedJournalist = currentUser.staff.find(
+        member => member.name === formData.author
+      );
+      
+      if (selectedJournalist && selectedJournalist.position) {
+        setFormData(prev => ({
+          ...prev,
+          authorTitle: selectedJournalist.position
+        }));
+      }
     }
-  }
-}, [formData.author, currentUser]);
+  }, [formData.author, currentUser]);
 
   // Check publisher approval status
   useEffect(() => {
@@ -161,89 +224,92 @@ useEffect(() => {
   }, [currentUser]);
 
   // Get current user from localStorage
-// Replace the existing useEffect for loading currentUser
-useEffect(() => {
-  console.log('🎯 FlipCardUploadForm mounted');
-  
-  const loadUserData = async () => {
-    if (typeof window !== 'undefined') {
-      try {
-        const userData = localStorage.getItem('currentUser');
-        console.log('👤 Raw user data from localStorage:', userData);
-        
-        if (userData) {
-          const parsedUser = JSON.parse(userData);
-          console.log('👤 Current user loaded:', { 
-            uid: parsedUser.uid, 
-            role: parsedUser.role,
-            companyName: parsedUser.companyName,
-            email: parsedUser.email,
-            staffCount: parsedUser.staff?.length || 0
-          });
+  useEffect(() => {
+    console.log('🎯 FlipCardUploadForm mounted');
+    
+    const loadUserData = async () => {
+      if (typeof window !== 'undefined') {
+        try {
+          const userData = localStorage.getItem('currentUser');
+          console.log('👤 Raw user data from localStorage:', userData);
           
-          // CRITICAL FIX: Fetch fresh profile data to ensure staff is loaded
-          if (parsedUser.uid && parsedUser.role === 'publisher') {
-            console.log('🔄 Fetching fresh profile data for dropdown...');
+          if (userData) {
+            const parsedUser = JSON.parse(userData);
+            console.log('👤 Current user loaded:', { 
+              uid: parsedUser.uid, 
+              role: parsedUser.role,
+              companyName: parsedUser.companyName,
+              email: parsedUser.email,
+              staffCount: parsedUser.staff?.length || 0
+            });
             
-            try {
-              const { auth } = await import('../Firebase/firebase');
-              const currentAuthUser = auth.currentUser;
+            if (parsedUser.uid && parsedUser.role === 'publisher') {
+              console.log('🔄 Fetching fresh profile data for dropdown...');
               
-              if (currentAuthUser) {
-                const idToken = await currentAuthUser.getIdToken();
+              try {
+                const { auth } = await import('../Firebase/firebase');
+                const currentAuthUser = auth.currentUser;
                 
-                const response = await fetch('/api/publisher-profile', {
-                  method: 'GET',
-                  headers: {
-                    'Authorization': `Bearer ${idToken}`,
-                    'Content-Type': 'application/json'
+                if (currentAuthUser) {
+                  const idToken = await currentAuthUser.getIdToken();
+                  
+                  const response = await fetch('/api/publisher-profile', {
+                    method: 'GET',
+                    headers: {
+                      'Authorization': `Bearer ${idToken}`,
+                      'Content-Type': 'application/json'
+                    }
+                  });
+                  
+                  if (response.ok) {
+                    const freshData = await response.json();
+                    console.log('✅ Fresh profile data loaded with', freshData.staff?.length || 0, 'staff members');
+                    
+                    const updatedUser = {
+                      ...parsedUser,
+                      staff: freshData.staff || [],
+                      profileComplete: freshData.profileComplete,
+                      isVerified: freshData.isVerified,
+                      isApproved: freshData.isApproved
+                    };
+                    
+                    localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+                    setCurrentUser(updatedUser);
+                  } else {
+                    console.warn('⚠️ Failed to fetch fresh profile, using cached data');
+                    setCurrentUser(parsedUser);
                   }
-                });
-                
-                if (response.ok) {
-                  const freshData = await response.json();
-                  console.log('✅ Fresh profile data loaded with', freshData.staff?.length || 0, 'staff members');
-                  
-                  // Update currentUser with fresh staff data
-                  const updatedUser = {
-                    ...parsedUser,
-                    staff: freshData.staff || [],
-                    profileComplete: freshData.profileComplete,
-                    isVerified: freshData.isVerified,
-                    isApproved: freshData.isApproved
-                  };
-                  
-                  // Update localStorage
-                  localStorage.setItem('currentUser', JSON.stringify(updatedUser));
-                  
-                  setCurrentUser(updatedUser);
                 } else {
-                  console.warn('⚠️ Failed to fetch fresh profile, using cached data');
+                  console.warn('⚠️ No authenticated user, using cached data');
                   setCurrentUser(parsedUser);
                 }
-              } else {
-                console.warn('⚠️ No authenticated user, using cached data');
+              } catch (fetchError) {
+                console.error('❌ Error fetching fresh profile:', fetchError);
                 setCurrentUser(parsedUser);
               }
-            } catch (fetchError) {
-              console.error('❌ Error fetching fresh profile:', fetchError);
+            } else {
               setCurrentUser(parsedUser);
             }
+            
+            if ((parsedUser.companyName || parsedUser.displayName) && !formData.author) {
+              console.log('👤 Pre-filling author name:', parsedUser.companyName || parsedUser.displayName);
+              setFormData(prev => ({ 
+                ...prev, 
+                author: parsedUser.companyName || parsedUser.displayName || '' 
+              }));
+            }
           } else {
-            setCurrentUser(parsedUser);
+            console.warn('⚠️ No current user found in localStorage');
+            setCurrentUser({
+              uid: 'demo-user-123',
+              companyName: 'Demo Publisher',
+              role: 'Editor',
+              staff: []
+            });
+            setFormData(prev => ({ ...prev, author: 'Demo Publisher' }));
           }
-          
-          // Pre-fill author name if available
-          if ((parsedUser.companyName || parsedUser.displayName) && !formData.author) {
-            console.log('👤 Pre-filling author name:', parsedUser.companyName || parsedUser.displayName);
-            setFormData(prev => ({ 
-              ...prev, 
-              author: parsedUser.companyName || parsedUser.displayName || '' 
-            }));
-          }
-        } else {
-          console.warn('⚠️ No current user found in localStorage');
-          // Mock current user for demo
+        } catch (error) {
+          console.error('❌ Error parsing user data:', error);
           setCurrentUser({
             uid: 'demo-user-123',
             companyName: 'Demo Publisher',
@@ -252,27 +318,26 @@ useEffect(() => {
           });
           setFormData(prev => ({ ...prev, author: 'Demo Publisher' }));
         }
-      } catch (error) {
-        console.error('❌ Error parsing user data:', error);
-        // Mock current user for demo
-        setCurrentUser({
-          uid: 'demo-user-123',
-          companyName: 'Demo Publisher',
-          role: 'Editor',
-          staff: []
-        });
-        setFormData(prev => ({ ...prev, author: 'Demo Publisher' }));
       }
-    }
+    };
+    
+    loadUserData();
+    updateWordCount();
+    
+    return () => {
+      console.log('🎯 FlipCardUploadForm unmounted');
+    };
+  }, []);
+
+  // Handle template selection
+  const handleTemplateChange = (e) => {
+    const templateId = parseInt(e.target.value);
+    setSelectedTemplateId(templateId);
+    setFormData(prev => ({
+      ...prev,
+      templateId: templateId
+    }));
   };
-  
-  loadUserData();
-  updateWordCount();
-  
-  return () => {
-    console.log('🎯 FlipCardUploadForm unmounted');
-  };
-}, []); // Empty dependency array - runs once on mount
 
   // Upload Form Functions
   const handlePreview = (previewUrl) => {
@@ -323,7 +388,6 @@ useEffect(() => {
   const handleUploadSubmit = async (e, action = 'publish') => {
     e.preventDefault();
     
-    // Check approval status before allowing publish
     if (action === 'publish' && !publisherApproval.canPublish) {
       setUploadError(`Cannot publish: ${publisherApproval.reason}`);
       return;
@@ -333,57 +397,44 @@ useEffect(() => {
     setIsSubmitting(true);
 
     try {
-      // If we have a file, extract content from PDF
       if (file) {
         try {
-          // Extract text from PDF
           const { extractTextFromPDF } = await import('../lib/pdfExtractor');
           const pdfText = await extractTextFromPDF(file);
           
-          // Split text into lines and clean up
           const lines = pdfText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-          
-          // Extract headline (first non-empty line)
           const headline = lines[0] || 'Untitled Article';
           
-          // Extract byline (look for "by" pattern)
           let byline = '';
           const bylineIndex = lines.findIndex(line => line.toLowerCase().startsWith('by '));
           if (bylineIndex !== -1) {
             byline = lines[bylineIndex].substring(3).trim();
           }
           
-          // Extract location (look for location pattern)
           let location = '';
           const locationMatch = pdfText.match(/\b[A-Z][a-z]+(?: [A-Z][a-z]+)*,\s*(?:[A-Z]{2}|[a-z]+)\b/);
           if (locationMatch) {
             location = locationMatch[0];
           }
           
-          // Extract content (everything after headline and byline)
           let contentStartIndex = 1;
           if (bylineIndex !== -1) {
             contentStartIndex = Math.max(contentStartIndex, bylineIndex + 1);
           }
           
-          // Get content from remaining lines
           const contentLines = lines.slice(contentStartIndex);
           const content = contentLines.join('\n');
-          
-          // Auto-generate meta description (first 160 characters)
           const metaDescription = content.substring(0, 160) + (content.length > 160 ? '...' : '');
           
-          // Create article data
           const articleData = {
             title: headline,
             subtitle: '',
             author: byline || currentUser?.companyName || 'Unknown Author',
             authorTitle: '',
-            category: 'general', // Default category
+            category: 'general',
             tags: [],
             featuredImage: null,
             featuredImageUrl: '',
-            style: 'modern',
             content: content,
             metaDescription: metaDescription,
             publishNow: action === 'publish',
@@ -393,23 +444,23 @@ useEffect(() => {
             wordCount: content.split(/\s+/).filter(word => word.length > 0).length,
             readingTime: Math.ceil(content.split(/\s+/).filter(word => word.length > 0).length / 200) || 1,
             publisherId: currentUser?.uid,
-            publisherName: currentUser?.companyName || 'Unknown Publisher'
+            publisherName: currentUser?.companyName || 'Unknown Publisher',
+            templateId: selectedTemplateId,
+            templateCredit: templateCredit
           };
           
           if (onSubmit && typeof onSubmit === 'function') {
-            await onSubmit(articleData);  // delegate to parent (page.js)
+            await onSubmit(articleData);
             setSubmitStatus('success');
           } else {
             await submitArticle(action !== 'publish');
             setSubmitStatus('success');
           }
           
-          // Reset form
           setFile(null);
           setUploadProgress(null);
           setAutofill({ headline: "", byline: "", location: "" });
           
-          // Auto-close after success
           setTimeout(() => {
             onClose?.();
           }, 2000);
@@ -433,7 +484,6 @@ useEffect(() => {
     await handleUploadSubmit(e, 'draft');
   };
 
-  // Fixed text formatting with better paragraph handling
   const formatText = (command, value = null) => {
     console.log('🎨 Formatting text with command:', command, value);
     try {
@@ -442,14 +492,11 @@ useEffect(() => {
         return;
       }
 
-      // Focus the editor first
       editorRef.current.focus();
       
-      // Special handling for paragraph formatting
       if (command === 'formatBlock') {
         document.execCommand('formatBlock', false, value || 'p');
       } else if (command === 'insertParagraph') {
-        // Insert a proper paragraph break
         document.execCommand('insertHTML', false, '<br><br>');
       } else {
         document.execCommand(command, false, value);
@@ -470,7 +517,6 @@ useEffect(() => {
       } else if (command === 'insertImage') {
         const imageUrl = prompt('Enter the image URL:');
         if (imageUrl) {
-          // Insert image with proper styling
           const imageHtml = `<div class="image-container" style="margin: 20px 0; text-align: center;">
             <img src="${imageUrl}" alt="Article image" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px;" />
           </div>`;
@@ -485,7 +531,6 @@ useEffect(() => {
     }
   };
 
-  // Fixed word count function with better content handling
   const updateWordCount = () => {
     try {
       if (!editorRef.current) {
@@ -502,7 +547,6 @@ useEffect(() => {
       setWordCount(words);
       setReadingTime(readingTimeCalc);
       
-      // Store the HTML content
       const content = editorRef.current.innerHTML;
       setFormData(prev => ({ ...prev, content: content }));
     } catch (error) {
@@ -510,7 +554,6 @@ useEffect(() => {
     }
   };
 
-  // Fixed file change handler with proper image upload
   const handleFileChange = async (e) => {
     console.log('📁 File input changed');
     try {
@@ -527,48 +570,42 @@ useEffect(() => {
           ...prev, 
           featuredImage: null, 
           featuredImageUrl: '',
-          imageCredit: prev.imageCredit || '' // Keep existing image credit
+          imageCredit: prev.imageCredit || ''
         }));
         setImagePreview(null);
         return;
       }
 
-      // Validate file type
       if (!file.type.startsWith('image/')) {
         console.error('❌ Invalid file type:', file.type);
         setErrors(prev => ({ ...prev, featuredImage: 'Please select a valid image file' }));
         return;
       }
 
-      // Validate file size (5MB limit)
       if (file.size > 5 * 1024 * 1024) {
         console.error('❌ File too large:', file.size);
         setErrors(prev => ({ ...prev, featuredImage: 'Image size must be less than 5MB' }));
         return;
       }
 
-      // Show local preview immediately
       const localImageUrl = URL.createObjectURL(file);
       setImagePreview(localImageUrl);
       setFileName(file.name);
       setIsUploadingImage(true);
 
       try {
-        // Convert image to base64 data URL (like logo system)
         const reader = new FileReader();
         reader.onload = function(e) {
           const base64DataUrl = e.target.result;
           console.log('✅ Image converted to base64:', base64DataUrl.substring(0, 50) + '...');
           
-          // Update form data with base64 data URL
           setFormData(prev => ({ 
             ...prev, 
             featuredImage: file,
-            featuredImageUrl: base64DataUrl, // Base64 data URL
-            imageUrl: base64DataUrl // Backup field
+            featuredImageUrl: base64DataUrl,
+            imageUrl: base64DataUrl
           }));
           
-          // Update preview to use base64 data URL
           setImagePreview(base64DataUrl);
           setIsUploadingImage(false);
         };
@@ -577,7 +614,6 @@ useEffect(() => {
           throw new Error('Failed to read file: ' + error.message);
         };
         
-        // Read file as data URL (base64)
         reader.readAsDataURL(file);
         
       } catch (uploadError) {
@@ -587,7 +623,6 @@ useEffect(() => {
           featuredImage: 'Failed to process image: ' + uploadError.message 
         }));
         
-        // Keep local preview as fallback
         setFormData(prev => ({ 
           ...prev, 
           featuredImage: file,
@@ -624,7 +659,6 @@ useEffect(() => {
         [name]: type === 'checkbox' ? checked : value
       }));
 
-      // Clear errors for this field
       if (errors[name]) {
         setErrors(prev => ({ ...prev, [name]: null }));
       }
@@ -637,25 +671,21 @@ useEffect(() => {
     }
   };
 
-  // Handle editor content changes with better paragraph handling
   const handleEditorInput = () => {
     try {
       if (!editorRef.current) return;
 
-      // Fix empty paragraphs and ensure proper line breaks
       const content = editorRef.current.innerHTML;
       
-      // Replace multiple <br> tags with proper paragraphs
       const fixedContent = content
         .replace(/<br\s*\/?>\s*<br\s*\/?>/g, '</p><p>')
         .replace(/^(?!<p>)/, '<p>')
         .replace(/(?!<\/p>)$/, '</p>')
-        .replace(/<p><\/p>/g, '<p><br></p>'); // Fix empty paragraphs
+        .replace(/<p><\/p>/g, '<p><br></p>');
 
       if (fixedContent !== content) {
         editorRef.current.innerHTML = fixedContent;
         
-        // Move cursor to end
         const range = document.createRange();
         const selection = window.getSelection();
         range.selectNodeContents(editorRef.current);
@@ -670,17 +700,14 @@ useEffect(() => {
     }
   };
 
-  // Handle Enter key in editor for better paragraph handling
   const handleEditorKeyDown = (e) => {
     if (e.key === 'Enter') {
-      // Don't prevent default, but ensure we have proper paragraph structure
       setTimeout(() => {
         handleEditorInput();
       }, 10);
     }
   };
 
-  // Validate form
   const validateForm = () => {
     console.log('✅ Validating form...');
     const newErrors = {};
@@ -721,159 +748,148 @@ useEffect(() => {
     return Object.keys(newErrors).length === 0;
   };
 
-// getAuth
-const getAuthToken = async () => {
-  try {
-    // Get Firebase Auth instance
-    const { auth } = await import('../Firebase/firebase');
-    const currentAuthUser = auth.currentUser;
-    
-    if (!currentAuthUser) {
-      throw new Error('No authenticated user. Please sign in.');
+  const getAuthToken = async () => {
+    try {
+      const { auth } = await import('../Firebase/firebase');
+      const currentAuthUser = auth.currentUser;
+      
+      if (!currentAuthUser) {
+        throw new Error('No authenticated user. Please sign in.');
+      }
+      
+      const idToken = await currentAuthUser.getIdToken(true);
+      console.log('✅ Firebase ID token retrieved:', idToken.substring(0, 20) + '...');
+      
+      return idToken;
+    } catch (error) {
+      console.error('❌ Error getting auth token:', error);
+      throw new Error('Authentication failed. Please sign in again.');
     }
-    
-    // Get fresh Firebase ID token (JWT)
-    const idToken = await currentAuthUser.getIdToken(true);
-    console.log('✅ Firebase ID token retrieved:', idToken.substring(0, 20) + '...');
-    
-    return idToken;
-  } catch (error) {
-    console.error('❌ Error getting auth token:', error);
-    throw new Error('Authentication failed. Please sign in again.');
-  }
-};
-
- // Submit article to API with image handling and author tracking
-const submitArticle = async (isDraft = false) => {
-  console.log('📡 Submitting article to API...', { isDraft, currentUser: !!currentUser });
-  
-  // Get Firebase Auth token
-  const authToken = await getAuthToken();
-  if (!authToken) {
-    throw new Error('Authentication token required');
-  }
-
-  // Create FormData for proper file upload
-  const submitData = new FormData();
-
-  // Add all form data fields
-  Object.keys(formData).forEach(key => {
-    if (key === 'featuredImage' && formData[key]) {
-      console.log('🖼️ Adding featured image to FormData');
-      submitData.append(key, formData[key]);
-    } else if (key !== 'featuredImage' && formData[key] !== null && formData[key] !== undefined) {
-      submitData.append(key, formData[key]);
-    }
-  });
-
-  // Add content from editor with proper formatting
-  const content = editorRef.current?.innerHTML?.trim() || '';
-  submitData.append('content', content);
-  submitData.append('isDraft', isDraft.toString());
-  submitData.append('wordCount', wordCount.toString());
-  submitData.append('readingTime', readingTime.toString());
-
-  // CRITICAL: Add author/journalist information
-  // This must match the journalist name EXACTLY from the dropdown
-  const authorName = formData.author || currentUser?.companyName || 'Unknown Author';
-  const authorTitle = formData.authorTitle || '';
-  
-  console.log('✍️ Article author details:', {
-    authorName,
-    authorTitle,
-    journalist: formData.author
-  });
-
-  submitData.append('author', authorName);
-  submitData.append('authorName', authorName); // Backup field for matching
-  submitData.append('authorTitle', authorTitle);
-  submitData.append('journalist', authorName); // Another backup field
-
-  // Add publisher information (CRITICAL for Firebase path)
-  const publisherId = currentUser.uid;
-  const publisherName = currentUser.companyName || 'Unknown Publisher';
-  
-  console.log('🏢 Publisher details:', {
-    publisherId,
-    publisherName
-  });
-
-  submitData.append('publisherId', publisherId);
-  submitData.append('publisherName', publisherName);
-
-  // Add image URL if available
-  if (formData.featuredImageUrl) {
-    submitData.append('featuredImageUrl', formData.featuredImageUrl);
-  }
-
-  // Add image credit and caption
-  if (formData.imageCredit) {
-    submitData.append('imageCredit', formData.imageCredit);
-  }
-  if (formData.imageCaption) {
-    submitData.append('imageCaption', formData.imageCaption);
-  }
-
-  // Add timestamps
-  submitData.append('createdAt', new Date().toISOString());
-  submitData.append('updatedAt', new Date().toISOString());
-
-  // Add initial engagement metrics
-  submitData.append('views', '0');
-  submitData.append('engagement', '0');
-  submitData.append('likes', '0');
-  submitData.append('comments', '0');
-  submitData.append('shares', '0');
-
-  // Prepare headers and URL
-  const headers = {
-    'Authorization': `Bearer ${authToken}`
-    // Don't set Content-Type - browser will set it with boundary for FormData
   };
 
-  // Use the correct API endpoint for article submission
-  const url = `/api/publish-article`;
-  
-  console.log('📡 Making request to:', url);
-  console.log('📦 FormData keys:', [...submitData.keys()]);
-  console.log('📦 Form data summary:', {
-    title: formData.title,
-    author: authorName,
-    authorTitle: authorTitle,
-    category: formData.category,
-    isDraft,
-    contentLength: content.length,
-    hasImage: !!formData.featuredImage,
-    imageUrl: formData.featuredImageUrl ? 'Yes' : 'No',
-    publisherId: publisherId,
-    publisherName: publisherName
-  });
+  const submitArticle = async (isDraft = false) => {
+    console.log('📡 Submitting article to API...', { isDraft, currentUser: !!currentUser });
+    
+    const authToken = await getAuthToken();
+    if (!authToken) {
+      throw new Error('Authentication token required');
+    }
 
-  // Make API call
-  const response = await fetch(url, {
-    method: 'POST',
-    headers,
-    body: submitData
-  });
+    const submitData = new FormData();
 
-  console.log('📡 Response status:', response.status);
-  console.log('📡 Response ok:', response.ok);
+    Object.keys(formData).forEach(key => {
+      if (key === 'featuredImage' && formData[key]) {
+        console.log('🖼️ Adding featured image to FormData');
+        submitData.append(key, formData[key]);
+      } else if (key !== 'featuredImage' && formData[key] !== null && formData[key] !== undefined) {
+        submitData.append(key, formData[key]);
+      }
+    });
 
-  const result = await response.json();
-  console.log('📡 Response data:', result);
+    const content = editorRef.current?.innerHTML?.trim() || '';
+    submitData.append('content', content);
+    submitData.append('isDraft', isDraft.toString());
+    submitData.append('wordCount', wordCount.toString());
+    submitData.append('readingTime', readingTime.toString());
 
-  if (!response.ok) {
-    throw new Error(result.error || `HTTP error! status: ${response.status}`);
-  }
+    const authorName = formData.author || currentUser?.companyName || 'Unknown Author';
+    const authorTitle = formData.authorTitle || '';
+    
+    console.log('✍️ Article author details:', {
+      authorName,
+      authorTitle,
+      journalist: formData.author
+    });
 
-  return result;
-};
+    submitData.append('author', authorName);
+    submitData.append('authorName', authorName);
+    submitData.append('authorTitle', authorTitle);
+    submitData.append('journalist', authorName);
 
-  // Handle form submission
+    const publisherId = currentUser.uid;
+    const publisherName = currentUser.companyName || 'Unknown Publisher';
+    
+    console.log('🏢 Publisher details:', {
+      publisherId,
+      publisherName
+    });
+
+    submitData.append('publisherId', publisherId);
+    submitData.append('publisherName', publisherName);
+
+    // Add template information
+    submitData.append('templateId', selectedTemplateId.toString());
+    submitData.append('templateCredit', templateCredit);
+    console.log('🎨 Template details:', {
+      templateId: selectedTemplateId,
+      templateCredit: templateCredit
+    });
+
+    if (formData.featuredImageUrl) {
+      submitData.append('featuredImageUrl', formData.featuredImageUrl);
+    }
+
+    if (formData.imageCredit) {
+      submitData.append('imageCredit', formData.imageCredit);
+    }
+    if (formData.imageCaption) {
+      submitData.append('imageCaption', formData.imageCaption);
+    }
+
+    submitData.append('createdAt', new Date().toISOString());
+    submitData.append('updatedAt', new Date().toISOString());
+
+    submitData.append('views', '0');
+    submitData.append('engagement', '0');
+    submitData.append('likes', '0');
+    submitData.append('comments', '0');
+    submitData.append('shares', '0');
+
+    const headers = {
+      'Authorization': `Bearer ${authToken}`
+    };
+
+    const url = `/api/publish-article`;
+    
+    console.log('📡 Making request to:', url);
+    console.log('📦 FormData keys:', [...submitData.keys()]);
+    console.log('📦 Form data summary:', {
+      title: formData.title,
+      author: authorName,
+      authorTitle: authorTitle,
+      category: formData.category,
+      isDraft,
+      contentLength: content.length,
+      hasImage: !!formData.featuredImage,
+      imageUrl: formData.featuredImageUrl ? 'Yes' : 'No',
+      publisherId: publisherId,
+      publisherName: publisherName,
+      templateId: selectedTemplateId,
+      templateCredit: templateCredit
+    });
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: submitData
+    });
+
+    console.log('📡 Response status:', response.status);
+    console.log('📡 Response ok:', response.ok);
+
+    const result = await response.json();
+    console.log('📡 Response data:', result);
+
+    if (!response.ok) {
+      throw new Error(result.error || `HTTP error! status: ${response.status}`);
+    }
+
+    return result;
+  };
+
   const handleManualSubmit = async (e, isDraft = false) => {
     e.preventDefault();
     
-    // Check approval status before allowing publish
     if (!isDraft && !publisherApproval.canPublish) {
       setErrors(prev => ({
         ...prev,
@@ -888,7 +904,6 @@ const submitArticle = async (isDraft = false) => {
       userId: currentUser?.uid
     });
     
-    // Clear previous status
     setSubmitStatus(null);
     setErrors({});
     
@@ -897,7 +912,6 @@ const submitArticle = async (isDraft = false) => {
       return;
     }
 
-    // Check authentication even for drafts
     if (!currentUser) {
       console.error('❌ No authenticated user');
       setErrors(prev => ({ ...prev, auth: 'Please sign in to publish articles' }));
@@ -911,10 +925,8 @@ const submitArticle = async (isDraft = false) => {
       
       let result;
       if (onSubmit && typeof onSubmit === 'function') {
-        // Use custom onSubmit handler if provided
         console.log('📡 Using custom onSubmit handler...');
         
-        // Prepare data for custom handler
         const submitData = {
           ...formData,
           imageCredit: formData.imageCredit || '',
@@ -924,12 +936,13 @@ const submitArticle = async (isDraft = false) => {
           wordCount,
           readingTime,
           publisherId: currentUser.uid,
-          publisherName: currentUser.companyName
+          publisherName: currentUser.companyName,
+          templateId: selectedTemplateId,
+          templateCredit: templateCredit
         };
         
         result = await onSubmit(submitData);
       } else {
-        // Use built-in API call
         console.log('📡 Using built-in API call...');
         result = await submitArticle(isDraft);
       }
@@ -937,7 +950,6 @@ const submitArticle = async (isDraft = false) => {
       console.log('✅ Submit successful:', result);
       setSubmitStatus('success');
       
-      // Clear form data on successful publish (but not for drafts)
       if (!isDraft) {
         console.log('🧹 Clearing form after successful publish...');
         setFormData({
@@ -951,22 +963,24 @@ const submitArticle = async (isDraft = false) => {
           featuredImageUrl: '',
           imageCredit: '',
           imageCaption: '',
-          style: 'modern',
           content: '',
           metaDescription: '',
           publishNow: true,
           allowComments: true,
-          sendNewsletter: false
+          sendNewsletter: false,
+          templateId: 3,
+          templateCredit: ''
         });
         setFileName('No file chosen');
         setImagePreview(null);
+        setSelectedTemplateId(3);
+        setTemplateCredit('');
         if (editorRef.current) {
           editorRef.current.innerHTML = '';
         }
         updateWordCount();
       }
       
-      // Auto-close after success (optional)
       setTimeout(() => {
         onClose?.();
       }, 2000);
@@ -981,7 +995,6 @@ const submitArticle = async (isDraft = false) => {
       
       setSubmitStatus('error');
       
-      // Show user-friendly error message
       setErrors(prev => ({
         ...prev,
         submit: error.message || 'An error occurred while submitting. Please try again.'
@@ -992,7 +1005,6 @@ const submitArticle = async (isDraft = false) => {
     }
   };
 
-  // Handle save draft
   const handleManualSaveDraft = async (e) => {
     console.log('💾 Save draft requested');
     const title = formData.title.trim();
@@ -1026,288 +1038,34 @@ const submitArticle = async (isDraft = false) => {
       readTime: readingTime || 5,
       wordCount: wordCount || 0,
       metaDescription: formData.metaDescription || '',
-      style: formData.style || 'modern',
+      templateCredit: templateCredit || '',
       status: 'preview'
     };
 
-    const mockPublisher = {
-      name: currentUser?.companyName || 'Your Publication',
-      industry: 'Publishing',
-      logo: null
-    };
-
-    // Format date for preview
-    const formatPreviewDate = (dateString) => {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('en-US', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      });
-    };
-
-    const getCurrentDate = () => {
-      const today = new Date();
-      return today.toLocaleDateString('en-US', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      });
-    };
+    const SelectedTemplate = templates.find(t => t.id === selectedTemplateId)?.component || ClassicNewspaperLayout;
 
     return (
       <div className="fixed inset-0 bg-black bg-opacity-75 z-50 overflow-y-auto">
         <div className="min-h-screen bg-white">
-          {/* Preview Header */}
-          <div className="bg-blue-600 text-white p-4 flex items-center justify-between">
+          <div className="bg-blue-600 text-white p-4 flex items-center justify-between sticky top-0 z-10">
             <div className="flex items-center space-x-3">
               <Eye className="w-6 h-6" />
               <div>
                 <h2 className="text-lg font-bold">Article Preview</h2>
-                <p className="text-sm opacity-90">How your article will appear to readers</p>
+                <p className="text-sm opacity-90">
+                  Template: {templates.find(t => t.id === selectedTemplateId)?.name}
+                </p>
               </div>
             </div>
-            <div className="flex items-center space-x-3">
-              <span className="px-3 py-1 bg-blue-500 rounded-full text-xs font-medium">
-                PREVIEW MODE
-              </span>
-              <button
-                onClick={onClose}
-                className="text-white hover:text-gray-300 text-2xl font-bold"
-              >
-                ×
-              </button>
-            </div>
+            <button
+              onClick={onClose}
+              className="text-white hover:text-gray-300 text-2xl font-bold"
+            >
+              ×
+            </button>
           </div>
 
-          {/* Newspaper-style Article Preview */}
-          <div className="newspaper-container">
-            <style jsx>{`
-              .newspaper-container {
-                font-family: 'Times New Roman', 'Times', serif;
-                line-height: 1.6;
-                color: #1a1a1a;
-              }
-              
-              .newspaper-header {
-                border-bottom: 4px solid #000;
-                margin-bottom: 2rem;
-              }
-              
-              .newspaper-title {
-                font-family: 'Times New Roman', 'Times', serif;
-                font-weight: bold;
-                letter-spacing: 0.1em;
-                text-transform: uppercase;
-              }
-              
-              .newspaper-date-line {
-                border-top: 2px solid #000;
-                border-bottom: 2px solid #000;
-                padding: 0.5rem 0;
-                margin: 1rem 0;
-                text-align: center;
-              }
-              
-              .preview-main-image-container {
-                float: left;
-                width: 350px;
-                margin: 0 2rem 1.5rem 0;
-                border: 3px solid #000;
-                background: #fff;
-                box-shadow: 0 6px 12px rgba(0,0,0,0.2);
-                clear: left;
-              }
-              
-              .preview-main-image {
-                width: 100%;
-                height: 250px;
-                object-fit: cover;
-                display: block;
-                border-bottom: 2px solid #000;
-              }
-              
-              .preview-main-image-caption {
-                padding: 1rem;
-                font-size: 0.85em;
-                font-style: italic;
-                color: #333;
-                background: #f8f8f8;
-                line-height: 1.5;
-                font-family: 'Times New Roman', serif;
-                border-top: 1px solid #ccc;
-              }
-              
-              .preview-content {
-                text-align: justify;
-                hyphens: auto;
-                overflow-wrap: break-word;
-              }
-              
-              .preview-content p {
-                margin-bottom: 1.2rem;
-                text-indent: 1.5em;
-                line-height: 1.7;
-                overflow-wrap: break-word;
-              }
-              
-              .preview-content p:first-of-type {
-                text-indent: 0;
-                font-weight: 500;
-                font-size: 1.1em;
-                margin-bottom: 1.5rem;
-              }
-              
-              @media (max-width: 768px) {
-                .preview-main-image-container {
-                  float: none;
-                  width: 100%;
-                  margin: 0 0 2rem 0;
-                }
-              }
-            `}</style>
-
-            {/* Newspaper Header */}
-            <div className="newspaper-header">
-              <div className="max-w-6xl mx-auto px-8 py-6">
-                <div className="text-center mb-6">
-                  <h1 className="newspaper-title text-6xl mb-2">
-                    {mockPublisher.name.toUpperCase()}
-                  </h1>
-                  <div className="newspaper-date-line">
-                    <p className="text-sm font-medium">
-                      {getCurrentDate()} • {mockPublisher.industry} • PREVIEW EDITION
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Article Content */}
-            <div className="max-w-6xl mx-auto px-8 py-6">
-              {/* Article Header */}
-              <div className="mb-8">
-                {/* Category Badge */}
-                {previewData.category && (
-                  <div className="mb-4">
-                    <span className="inline-block bg-black text-white px-4 py-2 text-xs font-bold uppercase tracking-widest">
-                      {previewData.category}
-                    </span>
-                  </div>
-                )}
-
-                {/* Main Headline */}
-                <h1 className="newspaper-title text-5xl leading-tight mb-6 pb-4 border-b-4 border-black">
-                  {previewData.title}
-                </h1>
-                
-                {/* Subtitle */}
-                {previewData.subtitle && (
-                  <h2 className="text-xl italic text-gray-700 mb-4 font-medium">
-                    {previewData.subtitle}
-                  </h2>
-                )}
-                
-                {/* Byline and Meta */}
-                <div className="flex items-center justify-between mb-6 text-sm border-b-2 border-gray-400 pb-4">
-                  <div className="flex items-center space-x-6">
-                    <div className="flex items-center space-x-2">
-                      <span className="font-bold">
-                        By {previewData.author}
-                        {previewData.authorTitle && ` • ${previewData.authorTitle}`}
-                      </span>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <span>{formatPreviewDate(previewData.createdAt)}</span>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <span>{previewData.readTime} min read</span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center space-x-1 text-gray-600">
-                    <span>{previewData.wordCount} words</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Article Layout */}
-              <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                {/* Main Article Content */}
-                <div className="lg:col-span-3">
-                  {/* Article Body with Image */}
-                  <div className="article-content-wrapper overflow-hidden">
-                    {/* Main Image */}
-                    {previewData.imageUrl && (
-                      <div className="preview-main-image-container">
-                        <img
-                          src={previewData.imageUrl}
-                          alt={previewData.title}
-                          className="preview-main-image"
-                          loading="eager"
-                        />
-                        <div className="preview-main-image-caption">
-                          <strong>{previewData.title}</strong>
-                          {formData.imageCredit && (
-                            <div className="text-xs mt-1 text-gray-600">
-                              Photo: {formData.imageCredit}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Article Content */}
-                    <div className="preview-content">
-                      <div dangerouslySetInnerHTML={{ __html: previewData.content }} />
-                    </div>
-                    
-                    <div className="clear-both"></div>
-                  </div>
-                </div>
-
-                {/* Sidebar */}
-                <div className="lg:col-span-1">
-                  {/* Publication Info */}
-                  <div className="border-2 border-black p-4 bg-gray-50 mb-4">
-                    <h3 className="border-bottom-2 border-black pb-2 mb-3 font-bold text-sm uppercase">
-                      About {mockPublisher.name}
-                    </h3>
-                    <div className="space-y-3 text-sm">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-12 h-12 bg-black text-white flex items-center justify-center text-xl font-bold border-2 border-black">
-                          {mockPublisher.name.charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                          <span className="font-bold text-black block">{mockPublisher.name}</span>
-                          <span className="text-gray-600 text-xs uppercase">{mockPublisher.industry}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Tags */}
-                  {previewData.tags && previewData.tags.length > 0 && (
-                    <div className="border-2 border-black p-4 bg-gray-50">
-                      <h3 className="border-bottom-2 border-black pb-2 mb-3 font-bold text-sm uppercase">Tags</h3>
-                      <div className="flex flex-wrap gap-2">
-                        {previewData.tags.map((tag, index) => (
-                          <span 
-                            key={index}
-                            className="inline-block bg-black text-white px-3 py-1 text-xs font-bold uppercase tracking-wider"
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
+          <SelectedTemplate article={previewData} isPreview={true} />
         </div>
       </div>
     );
@@ -1380,7 +1138,6 @@ const submitArticle = async (isDraft = false) => {
       <div className={`flip-card ${isFlipped ? 'flipped' : ''}`}>
         {/* Front Side - Upload Form */}
         <div className="flip-card-front bg-white p-4 sm:p-6 w-full min-w-0">
-          {/* Flip Button */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
             <h2 className="text-lg sm:text-xl font-bold text-gray-800">Document Upload</h2>
             <button
@@ -1399,7 +1156,6 @@ const submitArticle = async (isDraft = false) => {
             </button>
           </div>
 
-          {/* Approval Status Banner */}
           <ApprovalStatusBanner />
 
           <form onSubmit={handleUploadSubmit} className="w-full">
@@ -1474,7 +1230,6 @@ const submitArticle = async (isDraft = false) => {
               rows="2"
             />
 
-            {/* Updated Submit Buttons with Approval Awareness */}
             <div className="flex flex-col sm:flex-row justify-between mb-3 gap-2">
               <button
                 type="button"
@@ -1485,7 +1240,6 @@ const submitArticle = async (isDraft = false) => {
                 {isSubmitting ? "Saving..." : "SAVE DRAFT"}
               </button>
               
-              {/* Review button - always allowed */}
               <button
                 type="button"
                 onClick={(e) => handleUploadSubmit(e, 'review')}
@@ -1495,7 +1249,6 @@ const submitArticle = async (isDraft = false) => {
                 {isSubmitting ? "Submitting..." : "SUBMIT FOR REVIEW"}
               </button>
               
-              {/* Publish button - approval required */}
               {publisherApproval.canPublish ? (
                 <button
                   type="button"
@@ -1520,7 +1273,6 @@ const submitArticle = async (isDraft = false) => {
             <PreviewToggle previewStyle={previewStyle} setPreviewStyle={setPreviewStyle} />
           </form>
 
-          {/* PDF Previews */}
           {immediatePreviewUrl && !pdfPreviewUrl && (
             <div className="mt-3 bg-white rounded-lg shadow-md p-3">
               <div className="flex justify-between items-center mb-2">
@@ -1550,7 +1302,6 @@ const submitArticle = async (isDraft = false) => {
 
         {/* Back Side - Manual Article Form */}
         <div className="flip-card-back bg-white p-6 max-h-[90vh] overflow-y-auto w-full min-w-0">
-          {/* Flip Button */}
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold text-gray-800">Manual Article Entry</h2>
             <div className="flex gap-2">
@@ -1572,10 +1323,8 @@ const submitArticle = async (isDraft = false) => {
             </div>
           </div>
 
-          {/* Approval Status Banner */}
           <ApprovalStatusBanner />
 
-          {/* User Info Display */}
           {currentUser && (
             <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
               <p className="text-sm text-blue-800">
@@ -1588,7 +1337,6 @@ const submitArticle = async (isDraft = false) => {
             </div>
           )}
 
-          {/* Featured Image Preview */}
           {imagePreview && (
             <div className="mb-6">
               <div className="flex items-start gap-4">
@@ -1630,7 +1378,6 @@ const submitArticle = async (isDraft = false) => {
             </div>
           )}
 
-          {/* Status Messages */}
           {submitStatus === 'success' && (
             <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-md flex items-center">
               <CheckCircle className="w-5 h-5 text-green-500 mr-2" />
@@ -1688,71 +1435,69 @@ const submitArticle = async (isDraft = false) => {
               />
             </div>
 
-            {/* Author Information - UPDATED */}
-<div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-  <div>
-    <label htmlFor="author" className="block text-sm font-medium text-gray-700 mb-2">
-      Journalist Name <span className="text-red-500">*</span>
-      <span className="text-xs text-gray-500 ml-2">(Select from your team)</span>
-    </label>
-    <select
-      id="author"
-      name="author"
-      value={formData.author}
-      onChange={handleInputChange}
-      className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-        errors.author ? 'border-red-500' : 'border-gray-300'
-      }`}
-    >
-      <option value="">Select a journalist</option>
-      {currentUser?.staff
-        ?.filter(member => 
-          member.department === 'Editorial' || 
-          member.department === 'Journalism' ||
-          member.position?.toLowerCase().includes('journalist') ||
-          member.position?.toLowerCase().includes('reporter') ||
-          member.position?.toLowerCase().includes('editor') ||
-          member.position?.toLowerCase().includes('writer')
-        )
-        .map((journalist, index) => (
-          <option key={journalist.id || index} value={journalist.name}>
-            {journalist.name} - {journalist.position}
-          </option>
-        ))
-      }
-    </select>
-    {errors.author && <p className="text-red-500 text-sm mt-1">{errors.author}</p>}
-    
-    {/* Helper text if no journalists exist */}
-    {(!currentUser?.staff || currentUser.staff.filter(m => 
-      m.department === 'Editorial' || m.department === 'Journalism' ||
-      m.position?.toLowerCase().includes('journalist')
-    ).length === 0) && (
-      <p className="text-amber-600 text-xs mt-2 flex items-center">
-        <span className="mr-1">⚠️</span>
-        No journalists added yet. Please add team members to your profile.
-      </p>
-    )}
-  </div>
-  
-  {/* Position - Auto-filled */}
-  <div>
-    <label htmlFor="authorTitle" className="block text-sm font-medium text-gray-700 mb-2">
-      Position/Title
-      <span className="text-xs text-gray-500 ml-2">(Auto-filled)</span>
-    </label>
-    <input
-      type="text"
-      id="authorTitle"
-      name="authorTitle"
-      value={formData.authorTitle}
-      onChange={handleInputChange}
-      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50"
-      placeholder="Position will auto-fill"
-      readOnly
-    />
-  </div>
-</div>
+            {/* Author Information */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label htmlFor="author" className="block text-sm font-medium text-gray-700 mb-2">
+                  Journalist Name <span className="text-red-500">*</span>
+                  <span className="text-xs text-gray-500 ml-2">(Select from your team)</span>
+                </label>
+                <select
+                  id="author"
+                  name="author"
+                  value={formData.author}
+                  onChange={handleInputChange}
+                  className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                    errors.author ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                >
+                  <option value="">Select a journalist</option>
+                  {currentUser?.staff
+                    ?.filter(member => 
+                      member.department === 'Editorial' || 
+                      member.department === 'Journalism' ||
+                      member.position?.toLowerCase().includes('journalist') ||
+                      member.position?.toLowerCase().includes('reporter') ||
+                      member.position?.toLowerCase().includes('editor') ||
+                      member.position?.toLowerCase().includes('writer')
+                    )
+                    .map((journalist, index) => (
+                      <option key={journalist.id || index} value={journalist.name}>
+                        {journalist.name} - {journalist.position}
+                      </option>
+                    ))
+                  }
+                </select>
+                {errors.author && <p className="text-red-500 text-sm mt-1">{errors.author}</p>}
+                
+                {(!currentUser?.staff || currentUser.staff.filter(m => 
+                  m.department === 'Editorial' || m.department === 'Journalism' ||
+                  m.position?.toLowerCase().includes('journalist')
+                ).length === 0) && (
+                  <p className="text-amber-600 text-xs mt-2 flex items-center">
+                    <span className="mr-1">⚠️</span>
+                    No journalists added yet. Please add team members to your profile.
+                  </p>
+                )}
+              </div>
+              
+              <div>
+                <label htmlFor="authorTitle" className="block text-sm font-medium text-gray-700 mb-2">
+                  Position/Title
+                  <span className="text-xs text-gray-500 ml-2">(Auto-filled)</span>
+                </label>
+                <input
+                  type="text"
+                  id="authorTitle"
+                  name="authorTitle"
+                  value={formData.authorTitle}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50"
+                  placeholder="Position will auto-fill"
+                  readOnly
+                />
+              </div>
+            </div>
 
             {/* Category and Tags */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -1791,13 +1536,55 @@ const submitArticle = async (isDraft = false) => {
               </div>
             </div>
 
+            {/* Template Selector */}
+            <div className="mb-4 p-4 border-2 border-blue-200 rounded-lg bg-blue-50">
+              <label htmlFor="templateId" className="block text-sm font-medium text-gray-700 mb-2">
+                Article Template <span className="text-red-500">*</span>
+              </label>
+              <select
+                id="templateId"
+                value={selectedTemplateId}
+                onChange={handleTemplateChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-3"
+              >
+                {templates.map(template => (
+                  <option key={template.id} value={template.id}>
+                    {template.name} - {template.description}
+                  </option>
+                ))}
+              </select>
+              
+              <div className="mb-2">
+                <div className={`h-12 rounded-md bg-gradient-to-r ${templates.find(t => t.id === selectedTemplateId)?.color} flex items-center justify-center text-white font-bold`}>
+                  {templates.find(t => t.id === selectedTemplateId)?.name}
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="templateCredit" className="flex items-center text-sm font-medium text-gray-700 mb-1">
+                  <Camera className="w-4 h-4 mr-1" />
+                  Designer/Photographer Credit (Optional)
+                </label>
+                <input
+                  type="text"
+                  id="templateCredit"
+                  value={templateCredit}
+                  onChange={(e) => {
+                    setTemplateCredit(e.target.value);
+                    setFormData(prev => ({ ...prev, templateCredit: e.target.value }));
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="e.g., John Smith Photography"
+                />
+              </div>
+            </div>
+
             {/* Featured Image Upload */}
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Featured Image
               </label>
               <div className="space-y-3">
-                {/* File Upload Button */}
                 <div className="flex items-center space-x-4">
                   <input
                     type="file"
@@ -1827,7 +1614,6 @@ const submitArticle = async (isDraft = false) => {
                   )}
                 </div>
 
-                {/* Image Credit Input - ONLY show when image is selected */}
                 {(imagePreview || formData.featuredImageUrl) && (
                   <div className="space-y-2">
                     <div>
@@ -1865,28 +1651,6 @@ const submitArticle = async (isDraft = false) => {
               {errors.featuredImage && <p className="text-red-500 text-sm mt-1">{errors.featuredImage}</p>}
             </div>
 
-            {/* Article Style */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Article Style/Format
-              </label>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                {styleOptions.map(style => (
-                  <div
-                    key={style.value}
-                    onClick={() => setFormData(prev => ({ ...prev, style: style.value }))}
-                    className={`cursor-pointer border rounded-lg p-3 transition-all hover:shadow-md ${
-                      formData.style === style.value ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
-                    }`}
-                  >
-                    <div className={`w-8 h-8 ${style.color} rounded-full mb-2`}></div>
-                    <h4 className="font-medium text-gray-800 text-sm">{style.label}</h4>
-                    <p className="text-xs text-gray-500">{style.description}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
             {/* Rich Text Editor */}
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1895,7 +1659,6 @@ const submitArticle = async (isDraft = false) => {
               <div className={`border rounded-md overflow-hidden ${
                 errors.content ? 'border-red-500' : 'border-gray-300'
               }`}>
-                {/* Toolbar */}
                 <div className="flex flex-wrap gap-1 p-2 bg-gray-50 border-b">
                   <button type="button" onClick={() => handleToolbarClick('bold')} className="p-2 hover:bg-gray-200 rounded transition-colors" title="Bold">
                     <Bold className="w-4 h-4" />
@@ -1935,7 +1698,6 @@ const submitArticle = async (isDraft = false) => {
                   </button>
                 </div>
                 
-                {/* Editor */}
                 <div
                   ref={editorRef}
                   contentEditable
@@ -1956,13 +1718,11 @@ const submitArticle = async (isDraft = false) => {
               {errors.content && <p className="text-red-500 text-sm mt-1">{errors.content}</p>}
             </div>
 
-            {/* Word Count */}
             <div className="flex justify-between text-sm text-gray-500 mb-4">
               <span>Words: {wordCount}</span>
               <span>Reading time: {readingTime} min</span>
             </div>
 
-            {/* Meta Description */}
             <div className="mb-4">
               <label htmlFor="metaDescription" className="block text-sm font-medium text-gray-700 mb-2">
                 Meta Description (for SEO)
@@ -1985,7 +1745,6 @@ const submitArticle = async (isDraft = false) => {
               </div>
             </div>
 
-            {/* Publishing Options */}
             <div className="bg-gray-50 rounded-lg p-4 mb-6">
               <h3 className="font-medium text-gray-800 mb-3">Publishing Options</h3>
               <div className="space-y-3">
@@ -2022,7 +1781,6 @@ const submitArticle = async (isDraft = false) => {
               </div>
             </div>
 
-            {/* Submit Buttons with Approval Awareness */}
             <div className="flex flex-col sm:flex-row gap-3 pt-4">
               <button
                 type="button"
@@ -2034,7 +1792,6 @@ const submitArticle = async (isDraft = false) => {
                 Preview
               </button>
               
-              {/* Save Draft - always allowed */}
               <button
                 type="button"
                 onClick={handleManualSaveDraft}
@@ -2045,7 +1802,6 @@ const submitArticle = async (isDraft = false) => {
                 {isSubmitting ? 'Saving...' : 'Save Draft'}
               </button>
               
-              {/* Publish Article - approval required */}
               {publisherApproval.canPublish ? (
                 <button
                   type="submit"
@@ -2068,7 +1824,6 @@ const submitArticle = async (isDraft = false) => {
               )}
             </div>
 
-            {/* Debug Information (remove in production) */}
             {process.env.NODE_ENV === 'development' && currentUser && (
               <div className="mt-4 p-3 bg-gray-100 rounded-md text-xs">
                 <h4 className="font-medium text-gray-800 mb-2">Debug Info:</h4>
@@ -2077,25 +1832,23 @@ const submitArticle = async (isDraft = false) => {
                 <p><strong>Can Publish:</strong> {publisherApproval.canPublish ? 'Yes' : 'No'}</p>
                 <p><strong>Restriction Reason:</strong> {publisherApproval.reason || 'None'}</p>
                 <p><strong>Featured Image URL:</strong> {formData.featuredImageUrl || 'Not uploaded'}</p>
+                <p><strong>Template ID:</strong> {selectedTemplateId}</p>
+                <p><strong>Template Name:</strong> {templates.find(t => t.id === selectedTemplateId)?.name}</p>
               </div>
             )}
           </form>
         </div>
       </div>
       
-      {/* Preview Modal */}
       {showPreview && (
         <ArticlePreview onClose={() => setShowPreview(false)} />
       )}
 
-      {/* Classifieds Upload Form Modal */}
       {showClassifiedsForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
           <ClassifiedsUploadForm
             onSubmit={async (classifiedData) => {
-              // Handle classified submission here
               console.log('Classified submitted:', classifiedData);
-              // You can add API call logic here
               setShowClassifiedsForm(false);
             }}
             onClose={() => setShowClassifiedsForm(false)}
