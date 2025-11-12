@@ -25,7 +25,7 @@ const NewsReaderHeader = dynamic(() => import('@/components/news-reader/NewsRead
   loading: () => <div className="h-16 bg-gray-100 animate-pulse"></div>
 });
 
-// Publisher Ad Component (simplified for template context)
+// Publisher Ad Component
 function PublisherAd({ publisherId, templateId, className = '', height = 120 }) {
   const [ads, setAds] = useState([]);
   const [currentAdIndex, setCurrentAdIndex] = useState(0);
@@ -191,9 +191,13 @@ export default function ArticleViewPage() {
       if (data.success) {
         const foundArticle = data.articles.find(a => a.id === params.articleId);
         if (foundArticle) {
+          console.log('Article found:', {
+            id: foundArticle.id,
+            style: foundArticle.style,
+            hasStyle: !!foundArticle.style
+          });
           setArticle(foundArticle);
           setPublisher(data.publisher);
-          console.log('Article template:', foundArticle.templateId || 'Default (3)');
         } else {
           setError('Article not found');
         }
@@ -213,6 +217,56 @@ export default function ArticleViewPage() {
       router.push(`/news-reader/publisher/${publisherId}`);
     } else {
       router.back();
+    }
+  };
+
+  const formatDate = (timestamp) => {
+    if (!timestamp) {
+      return new Date().toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    }
+    
+    try {
+      let date;
+      
+      if (timestamp && typeof timestamp === 'object') {
+        if (timestamp.toDate && typeof timestamp.toDate === 'function') {
+          date = timestamp.toDate();
+        } else if (timestamp.seconds && typeof timestamp.seconds === 'number') {
+          date = new Date(timestamp.seconds * 1000);
+        } else if (timestamp._seconds) {
+          date = new Date(timestamp._seconds * 1000);
+        } else {
+          date = new Date(timestamp);
+        }
+      } else if (typeof timestamp === 'string' || typeof timestamp === 'number') {
+        date = new Date(timestamp);
+      } else {
+        date = new Date();
+      }
+      
+      if (isNaN(date.getTime())) {
+        date = new Date();
+      }
+      
+      return date.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return new Date().toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
     }
   };
 
@@ -254,11 +308,21 @@ export default function ArticleViewPage() {
     );
   }
 
-  // Get template component based on article's templateId (default to Classic Newspaper if not set)
-  const templateId = article.templateId || 3;
+  // Map style names to template IDs
+  const styleToTemplateId = {
+    'fashion': 1,
+    'tech': 2,
+    'classic': 3,
+    'magazine': 4,
+    'minimal': 5,
+    'modern': 6,
+    'editorial': 7
+  };
+
+  const templateId = article.style ? styleToTemplateId[article.style] || 3 : 3;
   const TemplateComponent = templateComponents[templateId] || ClassicNewspaperLayout;
 
-  console.log('Rendering with template:', templateId, 'Component:', TemplateComponent.name);
+  console.log('Rendering with template:', templateId, 'Style:', article.style, 'Component:', TemplateComponent.name);
 
   return (
     <div className="min-h-screen bg-white">
@@ -272,7 +336,6 @@ export default function ArticleViewPage() {
       </div>
 
       <div className="pt-16">
-        {/* Back Button Overlay */}
         <div className="max-w-6xl mx-auto px-8 py-4">
           <div className="flex items-center justify-between">
             <button
@@ -304,11 +367,15 @@ export default function ArticleViewPage() {
               >
                 <Share2 className="w-5 h-5" />
               </button>
+
+              <FavoriteButton
+                item={article}
+                size="default"
+              />
             </div>
           </div>
         </div>
 
-        {/* Ad Placement - Top Banner */}
         <div className="max-w-6xl mx-auto px-8 mb-6">
           <PublisherAd 
             publisherId={publisherId} 
@@ -318,10 +385,8 @@ export default function ArticleViewPage() {
           />
         </div>
 
-        {/* Render Article with Selected Template */}
         <TemplateComponent article={article} isPreview={false} />
 
-        {/* Engagement Section */}
         <div className="max-w-6xl mx-auto px-8 py-8">
           <div className="border-t-2 border-gray-300 pt-6">
             <div className="flex items-center justify-between">
@@ -348,7 +413,6 @@ export default function ArticleViewPage() {
             </div>
           </div>
 
-          {/* Bottom Banner Ad */}
           <div className="mt-8">
             <PublisherAd 
               publisherId={publisherId} 
@@ -358,26 +422,15 @@ export default function ArticleViewPage() {
             />
           </div>
 
-          {/* Article Footer */}
           <div className="mt-12 pt-6 border-t-4 border-black">
             <div className="flex items-center justify-between text-sm">
               <div>
                 <p className="font-bold">
-                  Published: {new Date(article.createdAt || Date.now()).toLocaleDateString('en-US', { 
-                    weekday: 'long', 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
-                  })}
+                  Published: {formatDate(article.createdAt)}
                 </p>
                 {article.updatedAt && article.updatedAt !== article.createdAt && (
                   <p className="text-gray-600 mt-1">
-                    Last updated: {new Date(article.updatedAt).toLocaleDateString('en-US', { 
-                      weekday: 'long', 
-                      year: 'numeric', 
-                      month: 'long', 
-                      day: 'numeric' 
-                    })}
+                    Last updated: {formatDate(article.updatedAt)}
                   </p>
                 )}
                 {article.templateCredit && (

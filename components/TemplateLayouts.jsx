@@ -1,14 +1,58 @@
 import React from 'react';
 import { Camera, User, Calendar, Clock } from 'lucide-react';
 
-// Template 1: Fashion Magazine Layout
+const formatDate = (timestamp) => {
+  if (!timestamp) {
+    return new Date().toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  }
+  
+  try {
+    let date;
+    
+    if (timestamp && typeof timestamp === 'object') {
+      if (timestamp.toDate && typeof timestamp.toDate === 'function') {
+        date = timestamp.toDate();
+      } else if (timestamp.seconds && typeof timestamp.seconds === 'number') {
+        date = new Date(timestamp.seconds * 1000);
+      } else if (timestamp._seconds) {
+        date = new Date(timestamp._seconds * 1000);
+      } else {
+        date = new Date(timestamp);
+      }
+    } else if (typeof timestamp === 'string' || typeof timestamp === 'number') {
+      date = new Date(timestamp);
+    } else {
+      date = new Date();
+    }
+    
+    if (isNaN(date.getTime())) {
+      date = new Date();
+    }
+    
+    return date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return new Date().toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  }
+};
+
 export const FashionMagazineLayout = ({ article, isPreview }) => (
   <div className="bg-white min-h-screen font-serif">
-    <style jsx>{`
-      .fashion-title { font-family: 'Playfair Display', serif; letter-spacing: 2px; }
-      .fashion-body { font-family: 'Cormorant Garamond', serif; line-height: 1.8; }
-    `}</style>
-    
     <div className="relative h-96 overflow-hidden">
       {article.featuredImageUrl && (
         <img src={article.featuredImageUrl} alt={article.title} className="w-full h-full object-cover" />
@@ -16,21 +60,30 @@ export const FashionMagazineLayout = ({ article, isPreview }) => (
       <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
       <div className="absolute bottom-0 left-0 right-0 p-12 text-white">
         <p className="text-sm uppercase tracking-widest mb-2">{article.category || 'Fashion'}</p>
-        <h1 className="fashion-title text-6xl font-bold mb-4">{article.title}</h1>
+        <h1 className="text-6xl font-bold mb-4" style={{fontFamily: 'Playfair Display, serif', letterSpacing: '2px'}}>{article.title}</h1>
         {article.subtitle && <p className="text-xl italic opacity-90">{article.subtitle}</p>}
       </div>
     </div>
 
     <div className="max-w-4xl mx-auto px-8 py-12">
+      {article.featuredImageUrl && article.imageCredit && (
+        <div className="mb-6 text-sm italic text-gray-600 border-l-4 border-gray-300 pl-4">
+          Photo: {article.imageCredit}
+          {article.imageCaption && (
+            <div className="mt-1 not-italic text-gray-700">{article.imageCaption}</div>
+          )}
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-8 pb-4 border-b">
         <div className="flex items-center space-x-4 text-sm">
           <span className="font-medium">By {article.author}</span>
           <span className="text-gray-500">•</span>
-          <span className="text-gray-600">{new Date(article.createdAt || Date.now()).toLocaleDateString()}</span>
+          <span className="text-gray-600">{formatDate(article.createdAt)}</span>
         </div>
       </div>
 
-      <div className="fashion-body text-lg leading-relaxed" dangerouslySetInnerHTML={{ __html: article.content }} />
+      <div className="text-lg leading-relaxed" style={{fontFamily: 'Cormorant Garamond, serif', lineHeight: '1.8'}} dangerouslySetInnerHTML={{ __html: article.content }} />
       
       {article.templateCredit && (
         <div className="mt-12 pt-6 border-t text-sm text-gray-500 italic">
@@ -41,7 +94,6 @@ export const FashionMagazineLayout = ({ article, isPreview }) => (
   </div>
 );
 
-// Template 2: Tech & Business Layout
 export const TechBusinessLayout = ({ article, isPreview }) => (
   <div className="bg-gray-50 min-h-screen">
     <div className="bg-gradient-to-r from-blue-900 to-blue-700 text-white py-16">
@@ -58,12 +110,22 @@ export const TechBusinessLayout = ({ article, isPreview }) => (
       <div className="grid grid-cols-3 gap-8">
         <div className="col-span-2 bg-white rounded-lg shadow-md p-8">
           {article.featuredImageUrl && (
-            <img src={article.featuredImageUrl} alt={article.title} className="w-full h-64 object-cover rounded-lg mb-6" />
+            <div className="mb-6">
+              <img src={article.featuredImageUrl} alt={article.title} className="w-full h-64 object-cover rounded-lg" />
+              {article.imageCredit && (
+                <div className="mt-2 text-sm text-gray-600">
+                  <span className="italic">Photo: {article.imageCredit}</span>
+                  {article.imageCaption && (
+                    <div className="mt-1 text-gray-700">{article.imageCaption}</div>
+                  )}
+                </div>
+              )}
+            </div>
           )}
           
           <div className="flex items-center space-x-6 text-sm text-gray-600 mb-6">
             <span className="flex items-center"><User className="w-4 h-4 mr-1" />{article.author}</span>
-            <span className="flex items-center"><Calendar className="w-4 h-4 mr-1" />{new Date(article.createdAt || Date.now()).toLocaleDateString()}</span>
+            <span className="flex items-center"><Calendar className="w-4 h-4 mr-1" />{formatDate(article.createdAt)}</span>
             <span className="flex items-center"><Clock className="w-4 h-4 mr-1" />{article.readTime || 5} min read</span>
           </div>
 
@@ -92,21 +154,26 @@ export const TechBusinessLayout = ({ article, isPreview }) => (
   </div>
 );
 
-// Template 3: Classic Newspaper Layout
 export const ClassicNewspaperLayout = ({ article, isPreview }) => (
   <div className="bg-white min-h-screen">
     <style jsx>{`
-      .newspaper-title { font-family: 'Times New Roman', Times, serif; }
-      .newspaper-body { font-family: Georgia, serif; column-count: 2; column-gap: 2rem; text-align: justify; }
-      @media (max-width: 768px) { .newspaper-body { column-count: 1; } }
+      .newspaper-body { 
+        font-family: Georgia, serif; 
+        column-count: 2; 
+        column-gap: 2rem; 
+        text-align: justify; 
+      }
+      @media (max-width: 768px) { 
+        .newspaper-body { column-count: 1; } 
+      }
     `}</style>
 
     <div className="border-b-4 border-black">
       <div className="max-w-6xl mx-auto px-8 py-6">
         <div className="text-center mb-4">
-          <h1 className="newspaper-title text-6xl font-bold">THE DAILY PRESS</h1>
+          <h1 className="text-6xl font-bold" style={{fontFamily: 'Times New Roman, Times, serif'}}>THE DAILY PRESS</h1>
           <div className="flex items-center justify-center space-x-4 text-sm mt-2 border-t border-b border-black py-2">
-            <span>{new Date(article.createdAt || Date.now()).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+            <span>{formatDate(article.createdAt)}</span>
             <span>•</span>
             <span>TODAY'S EDITION</span>
           </div>
@@ -121,7 +188,7 @@ export const ClassicNewspaperLayout = ({ article, isPreview }) => (
         </span>
       </div>
 
-      <h1 className="newspaper-title text-5xl font-bold leading-tight mb-4 border-b-4 border-black pb-4">
+      <h1 className="text-5xl font-bold leading-tight mb-4 border-b-4 border-black pb-4" style={{fontFamily: 'Times New Roman, Times, serif'}}>
         {article.title}
       </h1>
 
@@ -132,13 +199,24 @@ export const ClassicNewspaperLayout = ({ article, isPreview }) => (
       <div className="flex items-center space-x-4 text-sm mb-6 pb-4 border-b-2 border-gray-400">
         <span className="font-bold">By {article.author}</span>
         <span>•</span>
-        <span>{new Date(article.createdAt || Date.now()).toLocaleDateString()}</span>
+        <span>{formatDate(article.createdAt)}</span>
       </div>
 
       {article.featuredImageUrl && (
         <div className="float-left w-96 mr-6 mb-4">
           <img src={article.featuredImageUrl} alt={article.title} className="w-full border-2 border-black" />
-          <p className="text-xs italic text-gray-600 mt-2 border-l-2 border-black pl-2">{article.title}</p>
+          <div className="mt-2 text-xs text-gray-600 border-l-2 border-black pl-2">
+            {article.imageCredit ? (
+              <>
+                <div className="italic">Photo: {article.imageCredit}</div>
+                {article.imageCaption && (
+                  <div className="mt-1 not-italic">{article.imageCaption}</div>
+                )}
+              </>
+            ) : (
+              <div className="italic">{article.title}</div>
+            )}
+          </div>
         </div>
       )}
 
@@ -155,7 +233,6 @@ export const ClassicNewspaperLayout = ({ article, isPreview }) => (
   </div>
 );
 
-// Template 4: Magazine Feature Layout
 export const MagazineFeatureLayout = ({ article, isPreview }) => (
   <div className="bg-white min-h-screen">
     {article.featuredImageUrl && (
@@ -169,14 +246,25 @@ export const MagazineFeatureLayout = ({ article, isPreview }) => (
             {article.subtitle && <p className="text-2xl font-light max-w-3xl mx-auto">{article.subtitle}</p>}
           </div>
         </div>
+        {article.imageCredit && (
+          <div className="absolute bottom-4 right-4 bg-black bg-opacity-70 text-white text-xs px-3 py-2 rounded">
+            Photo: {article.imageCredit}
+          </div>
+        )}
       </div>
     )}
 
     <div className="max-w-4xl mx-auto px-8 py-16">
+      {article.imageCaption && (
+        <div className="mb-8 text-center text-gray-600 italic">
+          {article.imageCaption}
+        </div>
+      )}
+
       <div className="flex items-center justify-center space-x-6 mb-12 text-sm">
         <span className="font-medium text-lg">{article.author}</span>
         <span>•</span>
-        <span className="text-gray-600">{new Date(article.createdAt || Date.now()).toLocaleDateString()}</span>
+        <span className="text-gray-600">{formatDate(article.createdAt)}</span>
       </div>
 
       <div className="prose prose-lg max-w-none" style={{ fontSize: '1.125rem', lineHeight: '1.8' }} dangerouslySetInnerHTML={{ __html: article.content }} />
@@ -190,7 +278,6 @@ export const MagazineFeatureLayout = ({ article, isPreview }) => (
   </div>
 );
 
-// Template 5: Minimal Clean Layout
 export const MinimalCleanLayout = ({ article, isPreview }) => (
   <div className="bg-white min-h-screen">
     <div className="max-w-3xl mx-auto px-8 py-20">
@@ -207,11 +294,21 @@ export const MinimalCleanLayout = ({ article, isPreview }) => (
       <div className="flex items-center space-x-4 mb-12 pb-8 border-b text-sm text-gray-500">
         <span>{article.author}</span>
         <span>·</span>
-        <span>{new Date(article.createdAt || Date.now()).toLocaleDateString()}</span>
+        <span>{formatDate(article.createdAt)}</span>
       </div>
 
       {article.featuredImageUrl && (
-        <img src={article.featuredImageUrl} alt={article.title} className="w-full h-96 object-cover mb-12" />
+        <div className="mb-12">
+          <img src={article.featuredImageUrl} alt={article.title} className="w-full h-96 object-cover" />
+          {article.imageCredit && (
+            <div className="mt-3 text-sm text-gray-500 italic">
+              Photo: {article.imageCredit}
+              {article.imageCaption && (
+                <div className="mt-1 not-italic text-gray-600">{article.imageCaption}</div>
+              )}
+            </div>
+          )}
+        </div>
       )}
 
       <div className="prose prose-lg max-w-none font-light" style={{ lineHeight: '1.8' }} dangerouslySetInnerHTML={{ __html: article.content }} />
@@ -225,7 +322,6 @@ export const MinimalCleanLayout = ({ article, isPreview }) => (
   </div>
 );
 
-// Template 6: Modern Grid Layout
 export const ModernGridLayout = ({ article, isPreview }) => (
   <div className="bg-gray-100 min-h-screen">
     <div className="bg-black text-white py-20">
@@ -238,11 +334,21 @@ export const ModernGridLayout = ({ article, isPreview }) => (
             <div className="flex items-center space-x-4 mt-8 text-sm">
               <span>{article.author}</span>
               <span>•</span>
-              <span>{new Date(article.createdAt || Date.now()).toLocaleDateString()}</span>
+              <span>{formatDate(article.createdAt)}</span>
             </div>
           </div>
           {article.featuredImageUrl && (
-            <img src={article.featuredImageUrl} alt={article.title} className="w-full h-96 object-cover rounded-lg shadow-2xl" />
+            <div>
+              <img src={article.featuredImageUrl} alt={article.title} className="w-full h-96 object-cover rounded-lg shadow-2xl" />
+              {article.imageCredit && (
+                <div className="mt-3 text-sm text-gray-300 italic">
+                  Photo: {article.imageCredit}
+                  {article.imageCaption && (
+                    <div className="mt-1 not-italic text-gray-400">{article.imageCaption}</div>
+                  )}
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -262,7 +368,6 @@ export const ModernGridLayout = ({ article, isPreview }) => (
   </div>
 );
 
-// Template 7: Editorial Opinion Layout
 export const EditorialLayout = ({ article, isPreview }) => (
   <div className="bg-amber-50 min-h-screen">
     <div className="max-w-4xl mx-auto px-8 py-16">
@@ -278,11 +383,21 @@ export const EditorialLayout = ({ article, isPreview }) => (
         <div className="flex items-center justify-center space-x-4 mb-8 pb-8 border-b-2 border-amber-200 text-sm">
           <span className="font-medium">{article.author}</span>
           <span>•</span>
-          <span className="text-gray-600">{new Date(article.createdAt || Date.now()).toLocaleDateString()}</span>
+          <span className="text-gray-600">{formatDate(article.createdAt)}</span>
         </div>
 
         {article.featuredImageUrl && (
-          <img src={article.featuredImageUrl} alt={article.title} className="w-full h-80 object-cover mb-8 border-4 border-amber-100" />
+          <div className="mb-8">
+            <img src={article.featuredImageUrl} alt={article.title} className="w-full h-80 object-cover border-4 border-amber-100" />
+            {article.imageCredit && (
+              <div className="mt-3 text-sm text-gray-600 text-center">
+                <span className="italic">Photo: {article.imageCredit}</span>
+                {article.imageCaption && (
+                  <div className="mt-1">{article.imageCaption}</div>
+                )}
+              </div>
+            )}
+          </div>
         )}
 
         <div className="prose prose-lg max-w-none font-serif" dangerouslySetInnerHTML={{ __html: article.content }} />
