@@ -131,6 +131,16 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
   const editorRef = useRef(null);
   const fileInputRef = useRef(null);
 
+  const templateIdToStyle = {
+  1: 'fashion',
+  2: 'tech',
+  3: 'classic',
+  4: 'magazine',
+  5: 'minimal',
+  6: 'modern',
+  7: 'editorial'
+};
+
   // Template Options
   const templates = [
     {
@@ -446,6 +456,7 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
             publisherId: currentUser?.uid,
             publisherName: currentUser?.companyName || 'Unknown Publisher',
             templateId: selectedTemplateId,
+            style: templateIdToStyle[selectedTemplateId] || 'classic',
             templateCredit: templateCredit
           };
           
@@ -818,8 +829,12 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
     submitData.append('publisherName', publisherName);
 
     // Add template information
+    const styleString = templateIdToStyle[selectedTemplateId] || 'classic';
     submitData.append('templateId', selectedTemplateId.toString());
+    submitData.append('style', styleString); 
     submitData.append('templateCredit', templateCredit);
+
+
     console.log('🎨 Template details:', {
       templateId: selectedTemplateId,
       templateCredit: templateCredit
@@ -938,6 +953,7 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
           publisherId: currentUser.uid,
           publisherName: currentUser.companyName,
           templateId: selectedTemplateId,
+          style: templateIdToStyle[selectedTemplateId] || 'classic',
           templateCredit: templateCredit
         };
         
