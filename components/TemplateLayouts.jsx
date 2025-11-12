@@ -1,5 +1,5 @@
 import React from 'react';
-import { Camera, User, Calendar, Clock } from 'lucide-react';
+import { Camera, User, Calendar, Clock, Share2, Tag } from 'lucide-react';
 
 const formatDate = (timestamp) => {
   if (!timestamp) {
@@ -51,6 +51,56 @@ const formatDate = (timestamp) => {
   }
 };
 
+const ShareButton = ({ article }) => {
+  const handleShare = () => {
+    if (typeof window !== 'undefined') {
+      if (navigator.share) {
+        navigator.share({
+          title: article.title,
+          text: article.subtitle || article.metaDescription,
+          url: window.location.href
+        }).catch(err => console.log('Share failed:', err));
+      } else {
+        navigator.clipboard.writeText(window.location.href)
+          .then(() => alert('Link copied to clipboard!'))
+          .catch(err => console.log('Copy failed:', err));
+      }
+    }
+  };
+
+  return (
+    <button
+      onClick={handleShare}
+      className="fixed bottom-8 right-8 bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-full shadow-lg transition-all hover:scale-110 z-50"
+      title="Share this article"
+    >
+      <Share2 className="w-6 h-6" />
+    </button>
+  );
+};
+
+const TagsList = ({ tags }) => {
+  if (!tags || tags.length === 0) return null;
+  
+  const tagArray = Array.isArray(tags) ? tags : tags.split(',').map(t => t.trim()).filter(Boolean);
+  
+  return (
+    <div className="bg-white rounded-lg shadow-md p-6">
+      <h3 className="font-bold text-lg mb-4 flex items-center">
+        <Tag className="w-5 h-5 mr-2" />
+        Article Tags
+      </h3>
+      <div className="flex flex-wrap gap-2">
+        {tagArray.map((tag, index) => (
+          <span key={index} className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
+            {tag}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 export const FashionMagazineLayout = ({ article, isPreview }) => (
   <div className="bg-white min-h-screen font-serif">
     <div className="relative h-96 overflow-hidden">
@@ -66,9 +116,20 @@ export const FashionMagazineLayout = ({ article, isPreview }) => (
     </div>
 
     <div className="max-w-4xl mx-auto px-8 py-12">
-      {article.featuredImageUrl && article.imageCredit && (
-        <div className="mb-6 text-sm italic text-gray-600 border-l-4 border-gray-300 pl-4">
-          Photo: {article.imageCredit}
+      {article.metaDescription && (
+        <div className="mb-8 text-lg text-gray-700 italic border-l-4 border-pink-500 pl-4">
+          {article.metaDescription}
+        </div>
+      )}
+
+      {article.featuredImageUrl && (
+        <div className="mb-6 text-sm text-gray-600 border-l-4 border-gray-300 pl-4">
+          {article.imageCredit && (
+            <div className="flex items-center italic mb-1">
+              <Camera className="w-4 h-4 mr-2" />
+              Photo: {article.imageCredit}
+            </div>
+          )}
           {article.imageCaption && (
             <div className="mt-1 not-italic text-gray-700">{article.imageCaption}</div>
           )}
@@ -83,6 +144,12 @@ export const FashionMagazineLayout = ({ article, isPreview }) => (
         </div>
       </div>
 
+      {article.tags && (
+        <div className="mb-8">
+          <TagsList tags={article.tags} />
+        </div>
+      )}
+
       <div className="text-lg leading-relaxed" style={{fontFamily: 'Cormorant Garamond, serif', lineHeight: '1.8'}} dangerouslySetInnerHTML={{ __html: article.content }} />
       
       {article.templateCredit && (
@@ -91,6 +158,8 @@ export const FashionMagazineLayout = ({ article, isPreview }) => (
         </div>
       )}
     </div>
+    
+    {!isPreview && <ShareButton article={article} />}
   </div>
 );
 
@@ -102,7 +171,10 @@ export const TechBusinessLayout = ({ article, isPreview }) => (
           {article.category || 'Technology'}
         </div>
         <h1 className="text-5xl font-bold mb-4 leading-tight">{article.title}</h1>
-        {article.subtitle && <p className="text-xl text-blue-100">{article.subtitle}</p>}
+        {article.subtitle && <p className="text-xl text-blue-100 mb-2">{article.subtitle}</p>}
+        {article.metaDescription && (
+          <p className="text-lg text-blue-200 italic">{article.metaDescription}</p>
+        )}
       </div>
     </div>
 
@@ -112,14 +184,18 @@ export const TechBusinessLayout = ({ article, isPreview }) => (
           {article.featuredImageUrl && (
             <div className="mb-6">
               <img src={article.featuredImageUrl} alt={article.title} className="w-full h-64 object-cover rounded-lg" />
-              {article.imageCredit && (
-                <div className="mt-2 text-sm text-gray-600">
-                  <span className="italic">Photo: {article.imageCredit}</span>
-                  {article.imageCaption && (
-                    <div className="mt-1 text-gray-700">{article.imageCaption}</div>
-                  )}
-                </div>
-              )}
+              <div className="mt-3 text-sm text-gray-600">
+                {article.imageCredit && (
+                  <div className="flex items-center italic mb-1">
+                    <Camera className="w-4 h-4 mr-2 text-blue-600" />
+                    <span className="font-medium">Photo:</span>
+                    <span className="ml-1">{article.imageCredit}</span>
+                  </div>
+                )}
+                {article.imageCaption && (
+                  <div className="mt-1 text-gray-700">{article.imageCaption}</div>
+                )}
+              </div>
             </div>
           )}
           
@@ -133,14 +209,7 @@ export const TechBusinessLayout = ({ article, isPreview }) => (
         </div>
 
         <div className="col-span-1 space-y-6">
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="font-bold text-lg mb-4">Key Highlights</h3>
-            <ul className="space-y-2 text-sm text-gray-700">
-              <li className="flex items-start"><span className="text-blue-600 mr-2">•</span>Innovation Focus</li>
-              <li className="flex items-start"><span className="text-blue-600 mr-2">•</span>Industry Insights</li>
-              <li className="flex items-start"><span className="text-blue-600 mr-2">•</span>Expert Analysis</li>
-            </ul>
-          </div>
+          {article.tags && <TagsList tags={article.tags} />}
           
           {article.templateCredit && (
             <div className="bg-blue-50 rounded-lg p-4 text-xs text-gray-600">
@@ -151,6 +220,8 @@ export const TechBusinessLayout = ({ article, isPreview }) => (
         </div>
       </div>
     </div>
+    
+    {!isPreview && <ShareButton article={article} />}
   </div>
 );
 
@@ -193,7 +264,13 @@ export const ClassicNewspaperLayout = ({ article, isPreview }) => (
       </h1>
 
       {article.subtitle && (
-        <h2 className="text-xl italic text-gray-700 mb-6">{article.subtitle}</h2>
+        <h2 className="text-xl italic text-gray-700 mb-4">{article.subtitle}</h2>
+      )}
+
+      {article.metaDescription && (
+        <p className="text-lg text-gray-700 mb-6 font-medium border-l-4 border-black pl-4">
+          {article.metaDescription}
+        </p>
       )}
 
       <div className="flex items-center space-x-4 text-sm mb-6 pb-4 border-b-2 border-gray-400">
@@ -202,19 +279,30 @@ export const ClassicNewspaperLayout = ({ article, isPreview }) => (
         <span>{formatDate(article.createdAt)}</span>
       </div>
 
+      {article.tags && (
+        <div className="mb-6 p-4 bg-gray-50 border-2 border-black">
+          <h3 className="font-bold text-sm uppercase mb-2 flex items-center">
+            <Tag className="w-4 h-4 mr-2" />
+            Story Tags
+          </h3>
+          <div className="text-sm">
+            {Array.isArray(article.tags) ? article.tags.join(', ') : article.tags}
+          </div>
+        </div>
+      )}
+
       {article.featuredImageUrl && (
         <div className="float-left w-96 mr-6 mb-4">
           <img src={article.featuredImageUrl} alt={article.title} className="w-full border-2 border-black" />
           <div className="mt-2 text-xs text-gray-600 border-l-2 border-black pl-2">
-            {article.imageCredit ? (
-              <>
-                <div className="italic">Photo: {article.imageCredit}</div>
-                {article.imageCaption && (
-                  <div className="mt-1 not-italic">{article.imageCaption}</div>
-                )}
-              </>
-            ) : (
-              <div className="italic">{article.title}</div>
+            {article.imageCredit && (
+              <div className="flex items-center italic mb-1">
+                <Camera className="w-3 h-3 mr-1" />
+                Photo: {article.imageCredit}
+              </div>
+            )}
+            {article.imageCaption && (
+              <div className="mt-1 not-italic">{article.imageCaption}</div>
             )}
           </div>
         </div>
@@ -230,6 +318,8 @@ export const ClassicNewspaperLayout = ({ article, isPreview }) => (
         </div>
       )}
     </div>
+    
+    {!isPreview && <ShareButton article={article} />}
   </div>
 );
 
@@ -243,11 +333,13 @@ export const MagazineFeatureLayout = ({ article, isPreview }) => (
           <div>
             <p className="text-sm uppercase tracking-widest mb-4 text-yellow-400">{article.category || 'Feature'}</p>
             <h1 className="text-7xl font-bold mb-6 leading-tight drop-shadow-lg">{article.title}</h1>
-            {article.subtitle && <p className="text-2xl font-light max-w-3xl mx-auto">{article.subtitle}</p>}
+            {article.subtitle && <p className="text-2xl font-light max-w-3xl mx-auto mb-4">{article.subtitle}</p>}
+            {article.metaDescription && <p className="text-lg italic max-w-2xl mx-auto opacity-90">{article.metaDescription}</p>}
           </div>
         </div>
         {article.imageCredit && (
-          <div className="absolute bottom-4 right-4 bg-black bg-opacity-70 text-white text-xs px-3 py-2 rounded">
+          <div className="absolute bottom-4 right-4 bg-black bg-opacity-80 text-white text-xs px-4 py-2 rounded flex items-center">
+            <Camera className="w-3 h-3 mr-2" />
             Photo: {article.imageCredit}
           </div>
         )}
@@ -267,6 +359,12 @@ export const MagazineFeatureLayout = ({ article, isPreview }) => (
         <span className="text-gray-600">{formatDate(article.createdAt)}</span>
       </div>
 
+      {article.tags && (
+        <div className="mb-12">
+          <TagsList tags={article.tags} />
+        </div>
+      )}
+
       <div className="prose prose-lg max-w-none" style={{ fontSize: '1.125rem', lineHeight: '1.8' }} dangerouslySetInnerHTML={{ __html: article.content }} />
       
       {article.templateCredit && (
@@ -275,6 +373,8 @@ export const MagazineFeatureLayout = ({ article, isPreview }) => (
         </div>
       )}
     </div>
+    
+    {!isPreview && <ShareButton article={article} />}
   </div>
 );
 
@@ -288,7 +388,13 @@ export const MinimalCleanLayout = ({ article, isPreview }) => (
       <h1 className="text-6xl font-light mb-6 leading-tight">{article.title}</h1>
       
       {article.subtitle && (
-        <p className="text-xl text-gray-600 font-light mb-12">{article.subtitle}</p>
+        <p className="text-xl text-gray-600 font-light mb-6">{article.subtitle}</p>
+      )}
+
+      {article.metaDescription && (
+        <p className="text-lg text-gray-700 italic mb-12 pb-6 border-b border-gray-200">
+          {article.metaDescription}
+        </p>
       )}
 
       <div className="flex items-center space-x-4 mb-12 pb-8 border-b text-sm text-gray-500">
@@ -297,14 +403,32 @@ export const MinimalCleanLayout = ({ article, isPreview }) => (
         <span>{formatDate(article.createdAt)}</span>
       </div>
 
+      {article.tags && (
+        <div className="mb-12">
+          <div className="flex flex-wrap gap-2 pb-8 border-b border-gray-200">
+            <Tag className="w-4 h-4 text-gray-400" />
+            {(Array.isArray(article.tags) ? article.tags : article.tags.split(',')).map((tag, index) => (
+              <span key={index} className="text-sm text-gray-600 bg-gray-100 px-3 py-1 rounded">
+                {tag.trim()}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       {article.featuredImageUrl && (
         <div className="mb-12">
           <img src={article.featuredImageUrl} alt={article.title} className="w-full h-96 object-cover" />
-          {article.imageCredit && (
-            <div className="mt-3 text-sm text-gray-500 italic">
-              Photo: {article.imageCredit}
+          {(article.imageCredit || article.imageCaption) && (
+            <div className="mt-3 text-sm text-gray-500">
+              {article.imageCredit && (
+                <div className="flex items-center italic mb-1">
+                  <Camera className="w-4 h-4 mr-2" />
+                  Photo: {article.imageCredit}
+                </div>
+              )}
               {article.imageCaption && (
-                <div className="mt-1 not-italic text-gray-600">{article.imageCaption}</div>
+                <div className="not-italic text-gray-600">{article.imageCaption}</div>
               )}
             </div>
           )}
@@ -319,6 +443,8 @@ export const MinimalCleanLayout = ({ article, isPreview }) => (
         </div>
       )}
     </div>
+    
+    {!isPreview && <ShareButton article={article} />}
   </div>
 );
 
@@ -330,7 +456,8 @@ export const ModernGridLayout = ({ article, isPreview }) => (
           <div>
             <span className="text-yellow-400 text-sm uppercase tracking-widest">{article.category || 'Featured'}</span>
             <h1 className="text-6xl font-bold mt-4 mb-6">{article.title}</h1>
-            {article.subtitle && <p className="text-xl text-gray-300">{article.subtitle}</p>}
+            {article.subtitle && <p className="text-xl text-gray-300 mb-4">{article.subtitle}</p>}
+            {article.metaDescription && <p className="text-lg text-gray-400 italic">{article.metaDescription}</p>}
             <div className="flex items-center space-x-4 mt-8 text-sm">
               <span>{article.author}</span>
               <span>•</span>
@@ -340,11 +467,16 @@ export const ModernGridLayout = ({ article, isPreview }) => (
           {article.featuredImageUrl && (
             <div>
               <img src={article.featuredImageUrl} alt={article.title} className="w-full h-96 object-cover rounded-lg shadow-2xl" />
-              {article.imageCredit && (
-                <div className="mt-3 text-sm text-gray-300 italic">
-                  Photo: {article.imageCredit}
+              {(article.imageCredit || article.imageCaption) && (
+                <div className="mt-3 text-sm">
+                  {article.imageCredit && (
+                    <div className="flex items-center text-gray-300 italic mb-1">
+                      <Camera className="w-4 h-4 mr-2" />
+                      Photo: {article.imageCredit}
+                    </div>
+                  )}
                   {article.imageCaption && (
-                    <div className="mt-1 not-italic text-gray-400">{article.imageCaption}</div>
+                    <div className="not-italic text-gray-400">{article.imageCaption}</div>
                   )}
                 </div>
               )}
@@ -355,6 +487,12 @@ export const ModernGridLayout = ({ article, isPreview }) => (
     </div>
 
     <div className="max-w-5xl mx-auto px-8 py-16">
+      {article.tags && (
+        <div className="mb-8">
+          <TagsList tags={article.tags} />
+        </div>
+      )}
+
       <div className="bg-white rounded-lg shadow-lg p-12">
         <div className="prose prose-lg max-w-none" dangerouslySetInnerHTML={{ __html: article.content }} />
       </div>
@@ -365,6 +503,8 @@ export const ModernGridLayout = ({ article, isPreview }) => (
         </div>
       )}
     </div>
+    
+    {!isPreview && <ShareButton article={article} />}
   </div>
 );
 
@@ -377,7 +517,12 @@ export const EditorialLayout = ({ article, isPreview }) => (
             {article.category || 'Editorial'}
           </div>
           <h1 className="text-5xl font-serif font-bold mb-4">{article.title}</h1>
-          {article.subtitle && <p className="text-xl text-gray-600 italic">{article.subtitle}</p>}
+          {article.subtitle && <p className="text-xl text-gray-600 italic mb-4">{article.subtitle}</p>}
+          {article.metaDescription && (
+            <p className="text-lg text-gray-700 max-w-2xl mx-auto border-t border-b border-amber-200 py-4 mt-6">
+              {article.metaDescription}
+            </p>
+          )}
         </div>
 
         <div className="flex items-center justify-center space-x-4 mb-8 pb-8 border-b-2 border-amber-200 text-sm">
@@ -386,12 +531,36 @@ export const EditorialLayout = ({ article, isPreview }) => (
           <span className="text-gray-600">{formatDate(article.createdAt)}</span>
         </div>
 
+        {article.tags && (
+          <div className="mb-8">
+            <div className="border-2 border-amber-200 rounded-lg p-4">
+              <h3 className="font-bold text-sm uppercase mb-2 flex items-center text-amber-700">
+                <Tag className="w-4 h-4 mr-2" />
+                Article Topics
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {(Array.isArray(article.tags) ? article.tags : article.tags.split(',')).map((tag, index) => (
+                  <span key={index} className="bg-amber-100 text-amber-800 px-3 py-1 rounded text-sm">
+                    {tag.trim()}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {article.featuredImageUrl && (
           <div className="mb-8">
             <img src={article.featuredImageUrl} alt={article.title} className="w-full h-80 object-cover border-4 border-amber-100" />
-            {article.imageCredit && (
-              <div className="mt-3 text-sm text-gray-600 text-center">
-                <span className="italic">Photo: {article.imageCredit}</span>
+            {(article.imageCredit || article.imageCaption) && (
+              <div className="mt-3 text-sm text-gray-600 text-center bg-amber-50 p-3 rounded">
+                {article.imageCredit && (
+                  <div className="flex items-center justify-center italic mb-1">
+                    <Camera className="w-4 h-4 mr-2 text-amber-600" />
+                    <span className="font-medium">Photo:</span>
+                    <span className="ml-1">{article.imageCredit}</span>
+                  </div>
+                )}
                 {article.imageCaption && (
                   <div className="mt-1">{article.imageCaption}</div>
                 )}
@@ -409,5 +578,7 @@ export const EditorialLayout = ({ article, isPreview }) => (
         )}
       </div>
     </div>
+    
+    {!isPreview && <ShareButton article={article} />}
   </div>
 );
