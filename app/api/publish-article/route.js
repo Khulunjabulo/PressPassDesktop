@@ -1,10 +1,10 @@
-// app/api/publish-article/route.js
+// app/api/publish-article/route.js - COMPLETE WITH PDF SUPPORT
 import { NextResponse } from 'next/server';
 import { getFirestoreDb } from '../../../lib/firebase-admin';
 import { v4 as uuidv4 } from 'uuid';
 import { Timestamp } from 'firebase-admin/firestore';
 
-// GET handler - Retrieve articles and drafts from separate collections
+// GET handler - Retrieve articles and drafts with PDF support
 export async function GET(req) {
   try {
     const { searchParams } = new URL(req.url);
@@ -24,7 +24,6 @@ export async function GET(req) {
 
     console.log('🔄 Fetching content for publisherId:', publisherId, 'type:', type);
 
-    // Test Firebase connection first
     let db;
     try {
       db = getFirestoreDb();
@@ -42,7 +41,6 @@ export async function GET(req) {
     // If requesting a specific article
     if (articleId) {
       try {
-        // First try to find in articles collection
         let articleDoc = await publisherRef
           .collection('articles')
           .doc(articleId)
@@ -50,7 +48,6 @@ export async function GET(req) {
 
         let collectionType = 'articles';
         
-        // If not found in articles, try drafts collection
         if (!articleDoc.exists) {
           articleDoc = await publisherRef
             .collection('drafts')
@@ -75,16 +72,24 @@ export async function GET(req) {
           updatedAt: data.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
           publishedAt: data.publishedAt?.toDate?.()?.toISOString() || null,
           collection: collectionType,
-          // Ensure image URLs are properly included
+          
+          // Image URLs
           imageUrl: data.featuredImageUrl || data.imageUrl || data.image || null,
-          featuredImageUrl: data.featuredImageUrl || null
+          featuredImageUrl: data.featuredImageUrl || null,
+          
+          // PDF fields
+          isPdfArticle: data.isPdfArticle || false,
+          pdfUrl: data.pdfUrl || null,
+          pdfFileName: data.pdfFileName || null,
+          pdfSize: data.pdfSize || null,
+          pdfType: data.pdfType || null,
+          
+          // Image credits
+          imageCredit: data.imageCredit || null,
+          imageCaption: data.imageCaption || null
         };
 
         console.log('✅ Single article retrieved:', articleData.title, 'from', collectionType);
-        console.log('🖼️ Article image URLs:', {
-          imageUrl: articleData.imageUrl,
-          featuredImageUrl: articleData.featuredImageUrl
-        });
         
         return NextResponse.json({
           success: true,
@@ -125,14 +130,25 @@ export async function GET(req) {
             views: data.views || 0,
             likes: data.likes || 0,
             comments: data.comments || 0,
-            // Ensure image URLs are properly mapped
+            
+            // Image URLs
             imageUrl: data.featuredImageUrl || data.imageUrl || data.image || null,
-            featuredImageUrl: data.featuredImageUrl || null
+            featuredImageUrl: data.featuredImageUrl || null,
+            
+            // PDF fields
+            isPdfArticle: data.isPdfArticle || false,
+            pdfUrl: data.pdfUrl || null,
+            pdfFileName: data.pdfFileName || null,
+            pdfSize: data.pdfSize || null,
+            pdfType: data.pdfType || null,
+            
+            // Image credits
+            imageCredit: data.imageCredit || null,
+            imageCaption: data.imageCaption || null
           };
         });
 
         console.log('📰 Published articles found:', articles.length);
-        console.log('🖼️ Articles with images:', articles.filter(a => a.imageUrl || a.featuredImageUrl).length);
       }
 
       // Get drafts from 'drafts' collection
@@ -156,14 +172,25 @@ export async function GET(req) {
             views: 0,
             likes: 0,
             comments: 0,
-            // Ensure image URLs are properly mapped
+            
+            // Image URLs
             imageUrl: data.featuredImageUrl || data.imageUrl || data.image || null,
-            featuredImageUrl: data.featuredImageUrl || null
+            featuredImageUrl: data.featuredImageUrl || null,
+            
+            // PDF fields
+            isPdfArticle: data.isPdfArticle || false,
+            pdfUrl: data.pdfUrl || null,
+            pdfFileName: data.pdfFileName || null,
+            pdfSize: data.pdfSize || null,
+            pdfType: data.pdfType || null,
+            
+            // Image credits
+            imageCredit: data.imageCredit || null,
+            imageCaption: data.imageCaption || null
           };
         });
 
         console.log('✏️ Drafts found:', drafts.length);
-        console.log('🖼️ Drafts with images:', drafts.filter(d => d.imageUrl || d.featuredImageUrl).length);
       }
 
     } catch (queryError) {
@@ -207,7 +234,7 @@ export async function GET(req) {
   }
 }
 
-// POST handler - Create/Update articles and drafts with proper image handling
+// POST handler - Create/Update articles and drafts with PDF support
 export async function POST(req) {
   try {
     const contentType = req.headers.get('content-type') || '';
@@ -216,18 +243,15 @@ export async function POST(req) {
 
     console.log('📝 POST request received, content-type:', contentType);
 
-    // Handle FormData from ManualArticleForm
     if (contentType.includes('multipart/form-data')) {
       const formData = await req.formData();
       
-      // Convert FormData to plain object
       formData.forEach((value, key) => {
         data[key] = value;
       });
       
       publisherId = data.publisherId || null;
     } else {
-      // Handle JSON fallback
       const body = await req.json();
       data = body;
       publisherId = body.publisherId || null;
@@ -241,57 +265,54 @@ export async function POST(req) {
     }
 
     console.log('📝 Saving article for publisherId:', publisherId);
-    console.log('🖼️ Image data received:', {
-      featuredImageUrl: data.featuredImageUrl ? 'Present' : 'Missing',
-      imageUrl: data.imageUrl ? 'Present' : 'Missing',
-      featuredImage: data.featuredImage ? 'File present' : 'No file'
-    });
 
     const isDraft = data.isDraft === 'true' || data.isDraft === true;
     const status = isDraft ? 'draft' : 'published';
 
-    // Prepare article document with proper image handling
+    // Prepare article document with PDF support
     const articleData = {
-  title: data.title || '',
-  subtitle: data.subtitle || '',
-  author: data.author || '',
-  authorTitle: data.authorTitle || '',
-  category: data.category || '',
-  tags: data.tags ? (Array.isArray(data.tags) ? data.tags : data.tags.split(',').map(t => t.trim())) : [],
-  style: data.style || 'modern',
-  content: data.content || '',
-  metaDescription: data.metaDescription || '',
-  publishNow: !isDraft,
-  allowComments: data.allowComments === 'true' || data.allowComments === true,
-  sendNewsletter: data.sendNewsletter === 'true' || data.sendNewsletter === true,
-  isDraft: isDraft,
-  wordCount: parseInt(data.wordCount || '0', 10),
-  readingTime: parseInt(data.readingTime || '0', 10),
-  publisherId,
-  publisherName: data.publisherName || '',
-  updatedAt: Timestamp.now(),
-  status: status,
-  views: isDraft ? 0 : (data.views || 0),
-  likes: isDraft ? 0 : (data.likes || 0),
-  comments: isDraft ? 0 : (data.comments || 0),
-  
-  // ENHANCED: Properly handle all image fields
-  featuredImageUrl: data.featuredImageUrl || null,
-  imageUrl: data.featuredImageUrl || data.imageUrl || null,
-  image: data.featuredImageUrl || data.imageUrl || null,
-  
-  // ADD THESE NEW FIELDS:
-  imageCredit: data.imageCredit || null,        // NEW: Who took the photo
-  imageCaption: data.imageCaption || null,      // NEW: Image description
-};
-
-console.log('💾 Final article data with image fields:', {
-  featuredImageUrl: articleData.featuredImageUrl,
-  imageUrl: articleData.imageUrl,
-  image: articleData.image,
-  imageCredit: articleData.imageCredit,         // NEW LOG
-  imageCaption: articleData.imageCaption        // NEW LOG
-});
+      title: data.title || '',
+      subtitle: data.subtitle || '',
+      author: data.author || '',
+      authorTitle: data.authorTitle || '',
+      category: data.category || '',
+      tags: data.tags ? (Array.isArray(data.tags) ? data.tags : data.tags.split(',').map(t => t.trim())) : [],
+      style: data.style || 'modern',
+      content: data.content || '',
+      metaDescription: data.metaDescription || '',
+      description: data.description || '',
+      publishNow: !isDraft,
+      allowComments: data.allowComments === 'true' || data.allowComments === true,
+      sendNewsletter: data.sendNewsletter === 'true' || data.sendNewsletter === true,
+      isDraft: isDraft,
+      wordCount: parseInt(data.wordCount || '0', 10),
+      readingTime: parseInt(data.readingTime || '0', 10),
+      publisherId,
+      publisherName: data.publisherName || '',
+      updatedAt: Timestamp.now(),
+      status: status,
+      views: isDraft ? 0 : (data.views || 0),
+      likes: isDraft ? 0 : (data.likes || 0),
+      comments: isDraft ? 0 : (data.comments || 0),
+      
+      // Image fields
+      featuredImageUrl: data.featuredImageUrl || null,
+      imageUrl: data.featuredImageUrl || data.imageUrl || null,
+      image: data.featuredImageUrl || data.imageUrl || null,
+      imageCredit: data.imageCredit || null,
+      imageCaption: data.imageCaption || null,
+      
+      // PDF fields
+      isPdfArticle: data.isPdfArticle || false,
+      pdfUrl: data.pdfUrl || null,
+      pdfFileName: data.pdfFileName || null,
+      pdfSize: data.pdfSize ? parseInt(data.pdfSize) : null,
+      pdfType: data.pdfType || null,
+      
+      // Template fields
+      templateId: data.templateId ? parseInt(data.templateId) : 3,
+      templateCredit: data.templateCredit || null
+    };
 
     // Set createdAt for new articles/drafts
     if (!data.articleId) {
@@ -303,10 +324,10 @@ console.log('💾 Final article data with image fields:', {
       articleData.publishedAt = data.articleId ? (data.publishedAt ? Timestamp.fromDate(new Date(data.publishedAt)) : Timestamp.now()) : Timestamp.now();
     }
 
-    console.log('💾 Final article data image fields:', {
-      featuredImageUrl: articleData.featuredImageUrl,
-      imageUrl: articleData.imageUrl,
-      image: articleData.image
+    console.log('💾 Article data prepared:', {
+      isPdfArticle: articleData.isPdfArticle,
+      hasImage: !!articleData.featuredImageUrl,
+      hasPdfUrl: !!articleData.pdfUrl
     });
 
     const db = getFirestoreDb();
@@ -315,11 +336,9 @@ console.log('💾 Final article data with image fields:', {
     let docRef;
     let message;
 
-    // Determine which collection to use
     const collectionName = isDraft ? 'drafts' : 'articles';
 
     if (data.articleId) {
-      // Update existing article/draft
       const currentDraftDoc = await publisherRef.collection('drafts').doc(data.articleId).get();
       const currentArticleDoc = await publisherRef.collection('articles').doc(data.articleId).get();
       
@@ -328,7 +347,6 @@ console.log('💾 Final article data with image fields:', {
       else if (currentArticleDoc.exists) currentCollection = 'articles';
       
       if (currentCollection && currentCollection !== collectionName) {
-        // Move between collections
         console.log(`🔄 Moving item from ${currentCollection} to ${collectionName}`);
         
         await publisherRef.collection(currentCollection).doc(data.articleId).delete();
@@ -337,7 +355,6 @@ console.log('💾 Final article data with image fields:', {
         
         message = `Article moved from ${currentCollection} to ${collectionName} successfully`;
       } else if (currentCollection) {
-        // Update in same collection
         docRef = publisherRef.collection(collectionName).doc(data.articleId);
         await docRef.update(articleData);
         message = `${isDraft ? 'Draft' : 'Article'} updated successfully`;
@@ -348,16 +365,11 @@ console.log('💾 Final article data with image fields:', {
         );
       }
     } else {
-      // Create new article/draft
       docRef = await publisherRef.collection(collectionName).add(articleData);
       message = `${isDraft ? 'Draft' : 'Article'} created successfully`;
     }
 
     console.log(`✅ ${message} in collection: ${collectionName}`);
-    console.log('🖼️ Saved with image URLs:', {
-      featuredImageUrl: articleData.featuredImageUrl,
-      imageUrl: articleData.imageUrl
-    });
 
     return NextResponse.json({
       success: true,
@@ -365,7 +377,7 @@ console.log('💾 Final article data with image fields:', {
       articleId: typeof docRef === 'string' ? docRef : docRef.id,
       status: articleData.status,
       collection: collectionName,
-      savedImageUrl: articleData.featuredImageUrl || articleData.imageUrl
+      isPdfArticle: articleData.isPdfArticle
     });
 
   } catch (error) {
@@ -377,7 +389,7 @@ console.log('💾 Final article data with image fields:', {
   }
 }
 
-// DELETE handler - Delete articles or drafts from appropriate collections
+// DELETE handler - Delete articles or drafts
 export async function DELETE(req) {
   try {
     const { searchParams } = new URL(req.url);

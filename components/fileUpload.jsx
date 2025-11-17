@@ -1,77 +1,67 @@
+// components/fileUpload.jsx - MERGED VERSION with PDF Options
 import React, { useState, useRef } from "react"
+import { FileText, AlertCircle } from 'lucide-react';
 
-export default function FileUpload({ setFile, uploadProgress, onPreview, onExtract }) {
+export default function FileUpload({ 
+  setFile, 
+  uploadProgress, 
+  onPreview, 
+  onExtract,
+  pdfPublishMode,
+  setPdfPublishMode 
+}) {
   const [selectedFile, setSelectedFile] = useState(null)
   const [error, setError] = useState("")
   const [isDragOver, setIsDragOver] = useState(false)
   const [isExtracting, setIsExtracting] = useState(false)
   const fileInputRef = useRef(null)
 
- {/**  const handleFileChange = (file) => {
-    setError("")
+  const handleFileChange = async (file) => {
+    setError("");
+    
+    if (!file) return;
 
-    if (file) {
-      // Validate file type
-      if (file.type !== "application/pdf") {
-        setError("Please select a PDF file only")
-        setSelectedFile(null)
-        setFile(null)
-        return
-      }
+    // Validate file type
+    if (file.type !== "application/pdf") {
+      setError("Please select a PDF file only");
+      setSelectedFile(null);
+      setFile(null);
+      return;
+    }
 
-      // Validate file size (max 10MB)
-      const maxSize = 10 * 1024 * 1024
-      if (file.size > maxSize) {
-        setError("File size must be less than 10MB")
-        setSelectedFile(null)
-        setFile(null)
-        return
-      }
+    // Validate file size (max 10MB)
+    const maxSize = 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      setError("File size must be less than 10MB");
+      setSelectedFile(null);
+      setFile(null);
+      return;
+    }
 
-      setSelectedFile(file)
-      setFile(file)
-      
-      // Create preview URL for immediate preview
-      if (onPreview) {
-        const previewUrl = URL.createObjectURL(file)
-        onPreview(previewUrl)
+    setSelectedFile(file);
+    setFile(file);
+
+    // Create preview URL for immediate preview
+    if (onPreview) {
+      const previewUrl = URL.createObjectURL(file);
+      onPreview(previewUrl);
+    }
+
+    // Auto-extract if in extract mode
+    if (pdfPublishMode === 'extract' && onExtract) {
+      setIsExtracting(true);
+      try {
+        const { extractTextFromPDF, extractArticleInfo } = await import("../lib/pdfExtractor");
+        const text = await extractTextFromPDF(file);
+        const info = extractArticleInfo ? extractArticleInfo(text) : { headline: "", byline: "", location: "" };
+        onExtract(info);
+      } catch (err) {
+        console.error("PDF extraction failed:", err);
+      } finally {
+        setIsExtracting(false);
       }
     }
- }
- **/}
-
- const handleFileChange = async (file) => {
-  setError("");
-  if (!file || file.type !== "application/pdf" || file.size > 10 * 1024 * 1024) {
-    setError("Please select a valid PDF file under 10MB");
-    setSelectedFile(null);
-    setFile(null);
-    return;
-  }
-
-  setSelectedFile(file);
-  setFile(file);
-
-  if (onPreview) {
-    const previewUrl = URL.createObjectURL(file);
-    onPreview(previewUrl);
-  }
-
-  if (onExtract) {
-    setIsExtracting(true);
-    try {
-      const { extractTextFromPDF, extractArticleInfo } = await import("../lib/pdfExtractor");
-      const text = await extractTextFromPDF(file);
-      const info = extractArticleInfo(text);
-      onExtract(info); // Pass to parent
-    } catch (err) {
-      console.error("PDF extraction failed:", err);
-    } finally {
-      setIsExtracting(false);
-    }
-  }
-};
-
+  };
 
   const handleInputChange = (e) => {
     const file = e.target.files[0]
@@ -113,6 +103,55 @@ export default function FileUpload({ setFile, uploadProgress, onPreview, onExtra
 
   return (
     <div className="mb-3">
+      {/* PDF Option Selector - Only show if setPdfPublishMode is provided */}
+      {setPdfPublishMode && (
+        <div className="mb-4 p-4 border-2 border-blue-200 rounded-lg bg-blue-50">
+          <h3 className="text-sm font-bold text-gray-800 mb-3 flex items-center">
+            <FileText className="w-5 h-5 mr-2" />
+            📄 PDF Publishing Options
+          </h3>
+          
+          <div className="space-y-2">
+            <label className="flex items-start p-3 border-2 rounded-md cursor-pointer transition-all hover:bg-white bg-white"
+                   style={{ borderColor: pdfPublishMode === 'extract' ? '#3b82f6' : '#e5e7eb', backgroundColor: pdfPublishMode === 'extract' ? '#eff6ff' : '#ffffff' }}>
+              <input
+                type="radio"
+                name="pdfOption"
+                value="extract"
+                checked={pdfPublishMode === 'extract'}
+                onChange={(e) => setPdfPublishMode(e.target.value)}
+                className="mt-1 mr-3"
+              />
+              <div>
+                <div className="font-semibold text-sm">✨ Extract & Format</div>
+                <div className="text-xs text-gray-600 mt-1">
+                  Extract text from PDF and create a formatted article with templates
+                </div>
+              </div>
+            </label>
+
+            <label className="flex items-start p-3 border-2 rounded-md cursor-pointer transition-all hover:bg-white bg-white"
+                   style={{ borderColor: pdfPublishMode === 'publish-as-is' ? '#3b82f6' : '#e5e7eb', backgroundColor: pdfPublishMode === 'publish-as-is' ? '#eff6ff' : '#ffffff' }}>
+              <input
+                type="radio"
+                name="pdfOption"
+                value="publish-as-is"
+                checked={pdfPublishMode === 'publish-as-is'}
+                onChange={(e) => setPdfPublishMode(e.target.value)}
+                className="mt-1 mr-3"
+              />
+              <div>
+                <div className="font-semibold text-sm">📄 Publish as PDF</div>
+                <div className="text-xs text-gray-600 mt-1">
+                  Keep original PDF format - readers will view/download the PDF
+                </div>
+              </div>
+            </label>
+          </div>
+        </div>
+      )}
+
+      {/* File Upload Area */}
       <div
         className={`border-2 border-dashed rounded-lg p-4 text-center transition-all duration-200 cursor-pointer ${
           isDragOver
@@ -153,7 +192,12 @@ export default function FileUpload({ setFile, uploadProgress, onPreview, onExtra
             <p className="text-xs text-gray-500 mb-2">
               Size: {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
             </p>
-            <div className="flex space-x-2">
+            {pdfPublishMode && (
+              <p className="text-xs text-blue-600 mb-2 font-medium">
+                Mode: {pdfPublishMode === 'extract' ? '✨ Extract Text' : '📄 Publish as PDF'}
+              </p>
+            )}
+            <div className="flex justify-center space-x-2">
               {onPreview && (
                 <button
                   type="button"
@@ -191,25 +235,31 @@ export default function FileUpload({ setFile, uploadProgress, onPreview, onExtra
             <p className="text-xs text-gray-500 mb-2">
               Drag and drop your PDF file here, or click to browse
             </p>
-<button
-  type="button"
-  onClick={(e) => {
-    e.stopPropagation();
-    fileInputRef.current?.click();
-  }}
-  className="inline-flex items-center px-3 py-1 border border-blue-300 text-xs font-medium rounded-md text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
->
-  <svg className="mr-1 h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="2"
-      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-    />
-  </svg>
-  Choose PDF File
-</button>
-
+            {pdfPublishMode && (
+              <p className="text-xs text-gray-500 mb-2">
+                {pdfPublishMode === 'extract' 
+                  ? '✨ Text will be extracted and formatted with templates' 
+                  : '📄 PDF will be published in original format'}
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                fileInputRef.current?.click();
+              }}
+              className="inline-flex items-center px-3 py-1 border border-blue-300 text-xs font-medium rounded-md text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <svg className="mr-1 h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                />
+              </svg>
+              Choose PDF File
+            </button>
           </div>
         )}
       </div>
@@ -219,6 +269,30 @@ export default function FileUpload({ setFile, uploadProgress, onPreview, onExtra
           <div className="flex items-center">
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
             <p className="text-sm text-blue-600">Extracting text from PDF...</p>
+          </div>
+        </div>
+      )}
+
+      {pdfPublishMode === 'publish-as-is' && selectedFile && (
+        <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+          <div className="flex items-start">
+            <AlertCircle className="w-4 h-4 text-yellow-600 mt-0.5 mr-2 flex-shrink-0" />
+            <div className="text-xs text-yellow-800">
+              <strong>Note:</strong> You'll need to provide a title, category, and brief description 
+              for this PDF article before publishing. Readers will be able to view and download the full PDF.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {pdfPublishMode === 'extract' && selectedFile && (
+        <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
+          <div className="flex items-start">
+            <AlertCircle className="w-4 h-4 text-blue-600 mt-0.5 mr-2 flex-shrink-0" />
+            <div className="text-xs text-blue-800">
+              <strong>Extract Mode:</strong> The PDF text will be extracted and you can format it using 
+              our professional templates. The form fields below will be auto-filled when available.
+            </div>
           </div>
         </div>
       )}

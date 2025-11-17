@@ -1,10 +1,11 @@
+// app/news-reader/article/[articleId]/page.jsx - COMPLETE WITH PDF SUPPORT
 'use client';
 
-import { useState, useEffect } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, Calendar, Clock, Eye, Share2 } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, Eye, Share2, FileText } from 'lucide-react';
 import LikeButton from '@/components/LikeButton';
 import dynamic from 'next/dynamic';
+import { useState, useEffect } from 'react';
 
 // Import Template Layouts
 import {
@@ -23,6 +24,18 @@ const FavoriteButton = dynamic(() => import('@/components/FavoriteButton'), {
 
 const NewsReaderHeader = dynamic(() => import('@/components/news-reader/NewsReaderHeader'), {
   loading: () => <div className="h-16 bg-gray-100 animate-pulse"></div>
+});
+
+const PdfArticleViewer = dynamic(() => import('@/components/PdfArticleViewer'), {
+  loading: () => (
+    <div className="max-w-6xl mx-auto px-8 py-12">
+      <div className="animate-pulse">
+        <div className="h-64 bg-gray-200 mb-4"></div>
+        <div className="h-8 bg-gray-200 w-3/4 mb-4"></div>
+        <div className="h-4 bg-gray-200 w-1/2"></div>
+      </div>
+    </div>
+  )
 });
 
 // Publisher Ad Component
@@ -193,6 +206,7 @@ export default function ArticleViewPage() {
         if (foundArticle) {
           console.log('Article found:', {
             id: foundArticle.id,
+            isPdfArticle: foundArticle.isPdfArticle,
             style: foundArticle.style,
             hasStyle: !!foundArticle.style
           });
@@ -316,13 +330,12 @@ export default function ArticleViewPage() {
     'magazine': 4,
     'minimal': 5,
     'modern': 6,
-    'editorial': 7
+    'editorial': 7,
+    'pdf': 3 // Default for PDFs
   };
 
   const templateId = article.style ? styleToTemplateId[article.style] || 3 : 3;
   const TemplateComponent = templateComponents[templateId] || ClassicNewspaperLayout;
-
-  console.log('Rendering with template:', templateId, 'Style:', article.style, 'Component:', TemplateComponent.name);
 
   return (
     <div className="min-h-screen bg-white">
@@ -385,7 +398,12 @@ export default function ArticleViewPage() {
           />
         </div>
 
-        <TemplateComponent article={article} isPreview={false} />
+        {/* CHECK IF PDF ARTICLE - RENDER DIFFERENTLY */}
+        {article.isPdfArticle ? (
+          <PdfArticleViewer article={article} />
+        ) : (
+          <TemplateComponent article={article} isPreview={false} />
+        )}
 
         <div className="max-w-6xl mx-auto px-8 py-8">
           <div className="border-t-2 border-gray-300 pt-6">
@@ -408,7 +426,7 @@ export default function ArticleViewPage() {
               </div>
               
               <div className="text-sm text-gray-500">
-                Share this article with others
+                {article.isPdfArticle ? 'Download and share this PDF' : 'Share this article with others'}
               </div>
             </div>
           </div>
@@ -433,7 +451,13 @@ export default function ArticleViewPage() {
                     Last updated: {formatDate(article.updatedAt)}
                   </p>
                 )}
-                {article.templateCredit && (
+                {article.isPdfArticle && (
+                  <p className="text-blue-600 mt-1 flex items-center">
+                    <FileText className="w-4 h-4 mr-1" />
+                    PDF Document: {article.pdfFileName}
+                  </p>
+                )}
+                {article.templateCredit && !article.isPdfArticle && (
                   <p className="text-gray-500 mt-1 italic">
                     Design Credit: {article.templateCredit}
                   </p>

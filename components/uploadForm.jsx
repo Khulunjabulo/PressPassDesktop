@@ -88,9 +88,10 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
   const [immediatePreviewUrl, setImmediatePreviewUrl] = useState(null);
   const [autofill, setAutofill] = useState({ headline: "", byline: "", location: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pdfPublishMode, setPdfPublishMode] = useState('extract');
 
   // Template States
-  const [selectedTemplateId, setSelectedTemplateId] = useState(3); // Default: Classic Newspaper
+  const [selectedTemplateId, setSelectedTemplateId] = useState(3);
   const [templateCredit, setTemplateCredit] = useState('');
 
   // Manual Article Form States
@@ -110,7 +111,7 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
     publishNow: true,
     allowComments: true,
     sendNewsletter: false,
-    templateId: 3, // Default template
+    templateId: 3,
     templateCredit: ''
   });
 
@@ -124,7 +125,6 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
   const [imagePreview, setImagePreview] = useState(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
 
-  // Publisher approval states
   const router = useRouter();
   const [publisherApproval, setPublisherApproval] = useState({ canPublish: false });
 
@@ -132,16 +132,15 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
   const fileInputRef = useRef(null);
 
   const templateIdToStyle = {
-  1: 'fashion',
-  2: 'tech',
-  3: 'classic',
-  4: 'magazine',
-  5: 'minimal',
-  6: 'modern',
-  7: 'editorial'
-};
+    1: 'fashion',
+    2: 'tech',
+    3: 'classic',
+    4: 'magazine',
+    5: 'minimal',
+    6: 'modern',
+    7: 'editorial'
+  };
 
-  // Template Options
   const templates = [
     {
       id: 1,
@@ -208,7 +207,6 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
     { value: 'other', label: 'Other' }
   ];
 
-  // Auto-fill journalist position when selected
   useEffect(() => {
     if (formData.author && currentUser?.staff) {
       const selectedJournalist = currentUser.staff.find(
@@ -224,38 +222,23 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
     }
   }, [formData.author, currentUser]);
 
-  // Check publisher approval status
   useEffect(() => {
     if (currentUser) {
       const approval = checkPublisherApproval(currentUser);
       setPublisherApproval(approval);
-      console.log('Publisher approval status:', approval);
     }
   }, [currentUser]);
 
-  // Get current user from localStorage
   useEffect(() => {
-    console.log('🎯 FlipCardUploadForm mounted');
-    
     const loadUserData = async () => {
       if (typeof window !== 'undefined') {
         try {
           const userData = localStorage.getItem('currentUser');
-          console.log('👤 Raw user data from localStorage:', userData);
           
           if (userData) {
             const parsedUser = JSON.parse(userData);
-            console.log('👤 Current user loaded:', { 
-              uid: parsedUser.uid, 
-              role: parsedUser.role,
-              companyName: parsedUser.companyName,
-              email: parsedUser.email,
-              staffCount: parsedUser.staff?.length || 0
-            });
             
             if (parsedUser.uid && parsedUser.role === 'publisher') {
-              console.log('🔄 Fetching fresh profile data for dropdown...');
-              
               try {
                 const { auth } = await import('../Firebase/firebase');
                 const currentAuthUser = auth.currentUser;
@@ -273,7 +256,6 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
                   
                   if (response.ok) {
                     const freshData = await response.json();
-                    console.log('✅ Fresh profile data loaded with', freshData.staff?.length || 0, 'staff members');
                     
                     const updatedUser = {
                       ...parsedUser,
@@ -286,15 +268,12 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
                     localStorage.setItem('currentUser', JSON.stringify(updatedUser));
                     setCurrentUser(updatedUser);
                   } else {
-                    console.warn('⚠️ Failed to fetch fresh profile, using cached data');
                     setCurrentUser(parsedUser);
                   }
                 } else {
-                  console.warn('⚠️ No authenticated user, using cached data');
                   setCurrentUser(parsedUser);
                 }
               } catch (fetchError) {
-                console.error('❌ Error fetching fresh profile:', fetchError);
                 setCurrentUser(parsedUser);
               }
             } else {
@@ -302,14 +281,12 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
             }
             
             if ((parsedUser.companyName || parsedUser.displayName) && !formData.author) {
-              console.log('👤 Pre-filling author name:', parsedUser.companyName || parsedUser.displayName);
               setFormData(prev => ({ 
                 ...prev, 
                 author: parsedUser.companyName || parsedUser.displayName || '' 
               }));
             }
           } else {
-            console.warn('⚠️ No current user found in localStorage');
             setCurrentUser({
               uid: 'demo-user-123',
               companyName: 'Demo Publisher',
@@ -319,7 +296,7 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
             setFormData(prev => ({ ...prev, author: 'Demo Publisher' }));
           }
         } catch (error) {
-          console.error('❌ Error parsing user data:', error);
+          console.error('Error parsing user data:', error);
           setCurrentUser({
             uid: 'demo-user-123',
             companyName: 'Demo Publisher',
@@ -333,13 +310,8 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
     
     loadUserData();
     updateWordCount();
-    
-    return () => {
-      console.log('🎯 FlipCardUploadForm unmounted');
-    };
   }, []);
 
-  // Handle template selection
   const handleTemplateChange = (e) => {
     const templateId = parseInt(e.target.value);
     setSelectedTemplateId(templateId);
@@ -349,7 +321,6 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
     }));
   };
 
-  // Upload Form Functions
   const handlePreview = (previewUrl) => {
     setImmediatePreviewUrl(previewUrl);
   };
@@ -395,6 +366,149 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
     );
   };
 
+  const getAuthToken = async () => {
+    try {
+      const { auth } = await import('../Firebase/firebase');
+      const currentAuthUser = auth.currentUser;
+      
+      if (!currentAuthUser) {
+        throw new Error('No authenticated user. Please sign in.');
+      }
+      
+      const idToken = await currentAuthUser.getIdToken(true);
+      return idToken;
+    } catch (error) {
+      console.error('Error getting auth token:', error);
+      throw new Error('Authentication failed. Please sign in again.');
+    }
+  };
+
+  const handlePdfAsIsUpload = async (action) => {
+    try {
+      const title = document.getElementById('headline')?.value;
+      const author = document.getElementById('byline')?.value;
+      const category = document.getElementById('section')?.value;
+      const description = document.getElementById('lead')?.value || document.getElementById('body')?.value;
+
+      if (!title || !category) {
+        setUploadError("Please provide at least a title and category for the PDF.");
+        return;
+      }
+
+      const authToken = await getAuthToken();
+      
+      const formData = new FormData();
+      formData.append('pdfFile', file);
+      formData.append('publisherId', currentUser.uid);
+      formData.append('publisherName', currentUser.companyName || 'Unknown Publisher');
+      formData.append('title', title);
+      formData.append('category', category.toLowerCase());
+      formData.append('description', description || '');
+      formData.append('author', author || currentUser.companyName || 'Unknown Author');
+      formData.append('isDraft', action !== 'publish');
+
+      const response = await fetch('/api/upload-pdf', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        },
+        body: formData
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to upload PDF');
+      }
+
+      setSubmitStatus('success');
+      
+      setFile(null);
+      setUploadProgress(null);
+      document.getElementById('headline').value = '';
+      document.getElementById('byline').value = '';
+      document.getElementById('lead').value = '';
+      document.getElementById('body').value = '';
+      
+      setTimeout(() => {
+        onClose?.();
+      }, 2000);
+
+    } catch (error) {
+      console.error('Error uploading PDF:', error);
+      setUploadError(error.message || "Failed to upload PDF. Please try again.");
+    }
+  };
+
+  const handleExtractAndPublish = async (action) => {
+    try {
+      const { extractTextFromPDF } = await import('../lib/pdfExtractor');
+      const pdfText = await extractTextFromPDF(file);
+      
+      const lines = pdfText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+      const headline = lines[0] || 'Untitled Article';
+      
+      let byline = '';
+      const bylineIndex = lines.findIndex(line => line.toLowerCase().startsWith('by '));
+      if (bylineIndex !== -1) {
+        byline = lines[bylineIndex].substring(3).trim();
+      }
+      
+      let contentStartIndex = 1;
+      if (bylineIndex !== -1) {
+        contentStartIndex = Math.max(contentStartIndex, bylineIndex + 1);
+      }
+      
+      const contentLines = lines.slice(contentStartIndex);
+      const content = contentLines.join('\n');
+      const metaDescription = content.substring(0, 160) + (content.length > 160 ? '...' : '');
+      
+      const articleData = {
+        title: headline,
+        subtitle: '',
+        author: byline || currentUser?.companyName || 'Unknown Author',
+        authorTitle: '',
+        category: 'general',
+        tags: [],
+        featuredImage: null,
+        featuredImageUrl: '',
+        content: content,
+        metaDescription: metaDescription,
+        publishNow: action === 'publish',
+        allowComments: true,
+        sendNewsletter: false,
+        isDraft: action !== 'publish',
+        wordCount: content.split(/\s+/).filter(word => word.length > 0).length,
+        readingTime: Math.ceil(content.split(/\s+/).filter(word => word.length > 0).length / 200) || 1,
+        publisherId: currentUser?.uid,
+        publisherName: currentUser?.companyName || 'Unknown Publisher',
+        templateId: selectedTemplateId,
+        style: templateIdToStyle[selectedTemplateId] || 'classic',
+        templateCredit: templateCredit
+      };
+      
+      if (onSubmit && typeof onSubmit === 'function') {
+        await onSubmit(articleData);
+        setSubmitStatus('success');
+      } else {
+        await submitArticle(action !== 'publish');
+        setSubmitStatus('success');
+      }
+      
+      setFile(null);
+      setUploadProgress(null);
+      setAutofill({ headline: "", byline: "", location: "" });
+      
+      setTimeout(() => {
+        onClose?.();
+      }, 2000);
+      
+    } catch (extractionError) {
+      console.error('Error extracting PDF content:', extractionError);
+      setUploadError("Failed to extract content from PDF. Please try again or use manual entry.");
+    }
+  };
+
   const handleUploadSubmit = async (e, action = 'publish') => {
     e.preventDefault();
     
@@ -407,81 +521,16 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
     setIsSubmitting(true);
 
     try {
-      if (file) {
-        try {
-          const { extractTextFromPDF } = await import('../lib/pdfExtractor');
-          const pdfText = await extractTextFromPDF(file);
-          
-          const lines = pdfText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-          const headline = lines[0] || 'Untitled Article';
-          
-          let byline = '';
-          const bylineIndex = lines.findIndex(line => line.toLowerCase().startsWith('by '));
-          if (bylineIndex !== -1) {
-            byline = lines[bylineIndex].substring(3).trim();
-          }
-          
-          let location = '';
-          const locationMatch = pdfText.match(/\b[A-Z][a-z]+(?: [A-Z][a-z]+)*,\s*(?:[A-Z]{2}|[a-z]+)\b/);
-          if (locationMatch) {
-            location = locationMatch[0];
-          }
-          
-          let contentStartIndex = 1;
-          if (bylineIndex !== -1) {
-            contentStartIndex = Math.max(contentStartIndex, bylineIndex + 1);
-          }
-          
-          const contentLines = lines.slice(contentStartIndex);
-          const content = contentLines.join('\n');
-          const metaDescription = content.substring(0, 160) + (content.length > 160 ? '...' : '');
-          
-          const articleData = {
-            title: headline,
-            subtitle: '',
-            author: byline || currentUser?.companyName || 'Unknown Author',
-            authorTitle: '',
-            category: 'general',
-            tags: [],
-            featuredImage: null,
-            featuredImageUrl: '',
-            content: content,
-            metaDescription: metaDescription,
-            publishNow: action === 'publish',
-            allowComments: true,
-            sendNewsletter: false,
-            isDraft: action !== 'publish',
-            wordCount: content.split(/\s+/).filter(word => word.length > 0).length,
-            readingTime: Math.ceil(content.split(/\s+/).filter(word => word.length > 0).length / 200) || 1,
-            publisherId: currentUser?.uid,
-            publisherName: currentUser?.companyName || 'Unknown Publisher',
-            templateId: selectedTemplateId,
-            style: templateIdToStyle[selectedTemplateId] || 'classic',
-            templateCredit: templateCredit
-          };
-          
-          if (onSubmit && typeof onSubmit === 'function') {
-            await onSubmit(articleData);
-            setSubmitStatus('success');
-          } else {
-            await submitArticle(action !== 'publish');
-            setSubmitStatus('success');
-          }
-          
-          setFile(null);
-          setUploadProgress(null);
-          setAutofill({ headline: "", byline: "", location: "" });
-          
-          setTimeout(() => {
-            onClose?.();
-          }, 2000);
-          
-        } catch (extractionError) {
-          console.error('Error extracting PDF content:', extractionError);
-          setUploadError("Failed to extract content from PDF. Please try again or use manual entry.");
-        }
-      } else {
+      if (!file) {
         setUploadError("Please select a PDF file to upload.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (pdfPublishMode === 'publish-as-is') {
+        await handlePdfAsIsUpload(action);
+      } else {
+        await handleExtractAndPublish(action);
       }
     } catch (error) {
       console.error('Error in PDF upload submit:', error);
@@ -496,10 +545,8 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
   };
 
   const formatText = (command, value = null) => {
-    console.log('🎨 Formatting text with command:', command, value);
     try {
       if (!editorRef.current) {
-        console.error('❌ Editor ref not available');
         return;
       }
 
@@ -515,37 +562,28 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
       
       updateWordCount();
     } catch (error) {
-      console.error('❌ Error formatting text:', error);
+      console.error('Error formatting text:', error);
     }
   };
 
   const handleToolbarClick = (command) => {
-    console.log('🔧 Toolbar button clicked:', command);
     try {
       if (command === 'createLink') {
         const url = prompt('Enter the URL:');
         if (url) formatText(command, url);
       } else if (command === 'insertImage') {
-        const imageUrl = prompt('Enter the image URL:');
-        if (imageUrl) {
-          const imageHtml = `<div class="image-container" style="margin: 20px 0; text-align: center;">
-            <img src="${imageUrl}" alt="Article image" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px;" />
-          </div>`;
-          document.execCommand('insertHTML', false, imageHtml);
-          updateWordCount();
-        }
+        fileInputRef.current?.click();
       } else {
         formatText(command);
       }
     } catch (error) {
-      console.error('❌ Error handling toolbar click:', error);
+      console.error('Error handling toolbar click:', error);
     }
   };
 
   const updateWordCount = () => {
     try {
       if (!editorRef.current) {
-        console.log('⚠️ Editor ref not available for word count');
         return;
       }
       
@@ -553,27 +591,19 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
       const words = text.trim().split(/\s+/).filter(word => word.length > 0).length;
       const readingTimeCalc = Math.ceil(words / 200) || 1;
       
-      console.log('📊 Word count updated:', { words, readingTime: readingTimeCalc });
-      
       setWordCount(words);
       setReadingTime(readingTimeCalc);
       
       const content = editorRef.current.innerHTML;
       setFormData(prev => ({ ...prev, content: content }));
     } catch (error) {
-      console.error('❌ Error updating word count:', error);
+      console.error('Error updating word count:', error);
     }
   };
 
   const handleFileChange = async (e) => {
-    console.log('📁 File input changed');
     try {
       const file = e.target.files[0];
-      console.log('📁 Selected file:', file ? {
-        name: file.name,
-        size: file.size,
-        type: file.type
-      } : 'No file');
 
       if (!file) {
         setFileName('No file chosen');
@@ -588,13 +618,11 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
       }
 
       if (!file.type.startsWith('image/')) {
-        console.error('❌ Invalid file type:', file.type);
         setErrors(prev => ({ ...prev, featuredImage: 'Please select a valid image file' }));
         return;
       }
 
       if (file.size > 5 * 1024 * 1024) {
-        console.error('❌ File too large:', file.size);
         setErrors(prev => ({ ...prev, featuredImage: 'Image size must be less than 5MB' }));
         return;
       }
@@ -608,7 +636,6 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
         const reader = new FileReader();
         reader.onload = function(e) {
           const base64DataUrl = e.target.result;
-          console.log('✅ Image converted to base64:', base64DataUrl.substring(0, 50) + '...');
           
           setFormData(prev => ({ 
             ...prev, 
@@ -628,7 +655,7 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
         reader.readAsDataURL(file);
         
       } catch (uploadError) {
-        console.error('❌ Base64 conversion failed:', uploadError);
+        console.error('Base64 conversion failed:', uploadError);
         setErrors(prev => ({ 
           ...prev, 
           featuredImage: 'Failed to process image: ' + uploadError.message 
@@ -645,7 +672,7 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
       setErrors(prev => ({ ...prev, featuredImage: null }));
 
     } catch (error) {
-      console.error('❌ Error handling file change:', error);
+      console.error('Error handling file change:', error);
       setErrors(prev => ({ ...prev, featuredImage: 'Error processing file' }));
       setIsUploadingImage(false);
     }
@@ -662,7 +689,6 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    console.log('📝 Input changed:', { name, value: type === 'checkbox' ? checked : value });
     
     try {
       setFormData(prev => ({
@@ -678,7 +704,7 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
         setMetaCharCount(value.length);
       }
     } catch (error) {
-      console.error('❌ Error handling input change:', error);
+      console.error('Error handling input change:', error);
     }
   };
 
@@ -707,7 +733,7 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
 
       updateWordCount();
     } catch (error) {
-      console.error('❌ Error handling editor input:', error);
+      console.error('Error handling editor input:', error);
     }
   };
 
@@ -720,67 +746,34 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
   };
 
   const validateForm = () => {
-    console.log('✅ Validating form...');
     const newErrors = {};
 
     if (!formData.title.trim()) {
       newErrors.title = 'Title is required';
-      console.log('❌ Validation error: Missing title');
     }
 
     if (!formData.author.trim()) {
       newErrors.author = 'Author name is required';
-      console.log('❌ Validation error: Missing author');
     }
 
     if (!formData.category) {
       newErrors.category = 'Please select a category';
-      console.log('❌ Validation error: Missing category');
     }
 
     const content = editorRef.current?.innerHTML?.trim();
     if (!content || content === '<br>' || content === '<div><br></div>' || content === '<p><br></p>' || content === '<p></p>') {
       newErrors.content = 'Article content is required';
-      console.log('❌ Validation error: Missing content');
     }
 
     if (!currentUser) {
       newErrors.auth = 'User authentication required';
-      console.log('❌ Validation error: No authenticated user');
     }
-
-    console.log('✅ Validation result:', { 
-      hasErrors: Object.keys(newErrors).length > 0, 
-      errorCount: Object.keys(newErrors).length,
-      errors: Object.keys(newErrors)
-    });
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const getAuthToken = async () => {
-    try {
-      const { auth } = await import('../Firebase/firebase');
-      const currentAuthUser = auth.currentUser;
-      
-      if (!currentAuthUser) {
-        throw new Error('No authenticated user. Please sign in.');
-      }
-      
-      const idToken = await currentAuthUser.getIdToken(true);
-      console.log('✅ Firebase ID token retrieved:', idToken.substring(0, 20) + '...');
-      
-      return idToken;
-    } catch (error) {
-      console.error('❌ Error getting auth token:', error);
-      throw new Error('Authentication failed. Please sign in again.');
-    }
-  };
-
   const submitArticle = async (isDraft = false) => {
-    console.log('📡 Submitting article to API...', { isDraft, currentUser: !!currentUser });
-    
     const authToken = await getAuthToken();
     if (!authToken) {
       throw new Error('Authentication token required');
@@ -790,7 +783,6 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
 
     Object.keys(formData).forEach(key => {
       if (key === 'featuredImage' && formData[key]) {
-        console.log('🖼️ Adding featured image to FormData');
         submitData.append(key, formData[key]);
       } else if (key !== 'featuredImage' && formData[key] !== null && formData[key] !== undefined) {
         submitData.append(key, formData[key]);
@@ -805,12 +797,6 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
 
     const authorName = formData.author || currentUser?.companyName || 'Unknown Author';
     const authorTitle = formData.authorTitle || '';
-    
-    console.log('✍️ Article author details:', {
-      authorName,
-      authorTitle,
-      journalist: formData.author
-    });
 
     submitData.append('author', authorName);
     submitData.append('authorName', authorName);
@@ -819,26 +805,14 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
 
     const publisherId = currentUser.uid;
     const publisherName = currentUser.companyName || 'Unknown Publisher';
-    
-    console.log('🏢 Publisher details:', {
-      publisherId,
-      publisherName
-    });
 
     submitData.append('publisherId', publisherId);
     submitData.append('publisherName', publisherName);
 
-    // Add template information
     const styleString = templateIdToStyle[selectedTemplateId] || 'classic';
     submitData.append('templateId', selectedTemplateId.toString());
     submitData.append('style', styleString); 
     submitData.append('templateCredit', templateCredit);
-
-
-    console.log('🎨 Template details:', {
-      templateId: selectedTemplateId,
-      templateCredit: templateCredit
-    });
 
     if (formData.featuredImageUrl) {
       submitData.append('featuredImageUrl', formData.featuredImageUrl);
@@ -865,23 +839,6 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
     };
 
     const url = `/api/publish-article`;
-    
-    console.log('📡 Making request to:', url);
-    console.log('📦 FormData keys:', [...submitData.keys()]);
-    console.log('📦 Form data summary:', {
-      title: formData.title,
-      author: authorName,
-      authorTitle: authorTitle,
-      category: formData.category,
-      isDraft,
-      contentLength: content.length,
-      hasImage: !!formData.featuredImage,
-      imageUrl: formData.featuredImageUrl ? 'Yes' : 'No',
-      publisherId: publisherId,
-      publisherName: publisherName,
-      templateId: selectedTemplateId,
-      templateCredit: templateCredit
-    });
 
     const response = await fetch(url, {
       method: 'POST',
@@ -889,11 +846,7 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
       body: submitData
     });
 
-    console.log('📡 Response status:', response.status);
-    console.log('📡 Response ok:', response.ok);
-
     const result = await response.json();
-    console.log('📡 Response data:', result);
 
     if (!response.ok) {
       throw new Error(result.error || `HTTP error! status: ${response.status}`);
@@ -913,22 +866,14 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
       return;
     }
 
-    console.log('🚀 Form submission started', { 
-      isDraft, 
-      currentUser: !!currentUser,
-      userId: currentUser?.uid
-    });
-    
     setSubmitStatus(null);
     setErrors({});
     
     if (!isDraft && !validateForm()) {
-      console.log('❌ Validation failed, submission cancelled');
       return;
     }
 
     if (!currentUser) {
-      console.error('❌ No authenticated user');
       setErrors(prev => ({ ...prev, auth: 'Please sign in to publish articles' }));
       return;
     }
@@ -936,12 +881,8 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
     setIsSubmitting(true);
     
     try {
-      console.log('📡 Calling submitArticle...');
-      
       let result;
       if (onSubmit && typeof onSubmit === 'function') {
-        console.log('📡 Using custom onSubmit handler...');
-        
         const submitData = {
           ...formData,
           imageCredit: formData.imageCredit || '',
@@ -959,15 +900,12 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
         
         result = await onSubmit(submitData);
       } else {
-        console.log('📡 Using built-in API call...');
         result = await submitArticle(isDraft);
       }
       
-      console.log('✅ Submit successful:', result);
       setSubmitStatus('success');
       
       if (!isDraft) {
-        console.log('🧹 Clearing form after successful publish...');
         setFormData({
           title: '',
           subtitle: '',
@@ -1002,12 +940,7 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
       }, 2000);
 
     } catch (error) {
-      console.error('💥 Submit error:', error);
-      console.error('💥 Error details:', {
-        message: error.message,
-        stack: error.stack,
-        name: error.name
-      });
+      console.error('Submit error:', error);
       
       setSubmitStatus('error');
       
@@ -1017,17 +950,14 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
       }));
     } finally {
       setIsSubmitting(false);
-      console.log('🏁 Submit process completed');
     }
   };
 
   const handleManualSaveDraft = async (e) => {
-    console.log('💾 Save draft requested');
     const title = formData.title.trim();
     const content = editorRef.current?.innerHTML?.trim();
     
     if (!title && (!content || content === '<br>' || content === '<div><br></div>' || content === '<p><br></p>' || content === '<p></p>')) {
-      console.log('⚠️ Empty draft - showing warning');
       setErrors(prev => ({ 
         ...prev, 
         submit: 'Please add a title or some content before saving as draft.' 
@@ -1088,12 +1018,13 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
   };
 
   return (
-    <div className="flip-card-container w-full max-w-4xl mx-auto px-2 sm:px-4 md:px-6">
+    <div className="w-full max-w-full mx-auto">
       <style jsx>{`
         .flip-card-container {
           perspective: 1000px;
           height: auto;
           min-height: 600px;
+          width: 100%;
         }
         
         .flip-card {
@@ -1151,708 +1082,721 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
         }
       `}</style>
 
-      <div className={`flip-card ${isFlipped ? 'flipped' : ''}`}>
-        {/* Front Side - Upload Form */}
-        <div className="flip-card-front bg-white p-4 sm:p-6 w-full min-w-0">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
-            <h2 className="text-lg sm:text-xl font-bold text-gray-800">Document Upload</h2>
-            <button
-              onClick={() => setIsFlipped(true)}
-              className="flex items-center px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors text-sm"
-            >
-              <Edit3 className="w-4 h-4 mr-1" />
-              Manual Entry
-            </button>
-            <button
-              onClick={() => setShowClassifiedsForm(true)}
-              className="flex items-center px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors text-sm"
-            >
-              <Edit3 className="w-4 h-4 mr-1" />
-              Classifieds Manual entry
-            </button>
+      <div className="flip-card-container">
+        <div className={`flip-card ${isFlipped ? 'flipped' : ''}`}>
+          {/* Front Side - PDF Upload Form */}
+          <div className="flip-card-front bg-white p-6 w-full min-w-0">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-800">Document Upload</h2>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setIsFlipped(true)}
+                  className="flex items-center px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors text-sm"
+                >
+                  <Edit3 className="w-4 h-4 mr-1" />
+                  Manual Entry
+                </button>
+                <button
+                  onClick={() => setShowClassifiedsForm(true)}
+                  className="flex items-center px-3 py-1 bg-purple-500 text-white rounded-md hover:bg-purple-600 transition-colors text-sm"
+                >
+                  <Edit3 className="w-4 h-4 mr-1" />
+                  Classifieds
+                </button>
+              </div>
+            </div>
+
+            <ApprovalStatusBanner />
+
+            <form onSubmit={handleUploadSubmit} className="w-full">
+              <FileUpload
+                setFile={setFile}
+                uploadProgress={uploadProgress}
+                onPreview={handlePreview}
+                onExtract={(data) => setAutofill(data)}
+                pdfPublishMode={pdfPublishMode}
+                setPdfPublishMode={setPdfPublishMode}
+              />
+
+              {uploadError && (
+                <div className="bg-red-50 border border-red-200 rounded-md p-3 mb-4">
+                  <p className="text-sm text-red-600">{uploadError}</p>
+                </div>
+              )}
+
+              {submitStatus === 'success' && (
+                <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-md flex items-center">
+                  <CheckCircle className="w-5 h-5 text-green-500 mr-2" />
+                  <span className="text-green-800">PDF submitted successfully!</span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-3">
+                <input
+                  name="headline"
+                  id="headline"
+                  placeholder="Enter headline..."
+                  defaultValue={autofill.headline}
+                  className="border p-1.5 rounded-md w-full text-xs"
+                />
+                <input
+                  name="byline"
+                  id="byline"
+                  placeholder="Byline Name"
+                  defaultValue={autofill.byline}
+                  className="border p-1.5 rounded-md w-full text-xs"
+                />
+                <input
+                  name="location"
+                  id="location"
+                  placeholder="City/Town"
+                  defaultValue={autofill.location}
+                  className="border p-1.5 rounded-md w-full text-xs"
+                />
+                <select name="section" id="section" className="border p-1.5 rounded-md w-full text-xs">
+                  <option>Select Section</option>
+                  <option>World</option>
+                  <option>Politics</option>
+                  <option>Business</option>
+                  <option>Sports</option>
+                  <option>Education</option>
+                  <option>Entertainment</option>
+                  <option>Health</option>
+                  <option>Government</option>
+                  <option>Environment</option>
+                  <option>Other</option>
+                </select>
+                <select name="edition" id="edition" className="border p-1.5 rounded-md w-full text-xs">
+                  <option>Morning Edition</option>
+                  <option>Evening Edition</option>
+                </select>
+              </div>
+
+              <PrioritySelector priority={priority} setPriority={setPriority} />
+
+              <textarea
+                name="lead"
+                id="lead"
+                placeholder="Write the lead paragraph..."
+                className="w-full border p-1.5 rounded-md mb-2 text-xs"
+                rows="2"
+              />
+              <textarea
+                name="body"
+                id="body"
+                placeholder="Continue with the article body..."
+                className="w-full border p-1.5 rounded-md mb-3 text-xs"
+                rows="2"
+              />
+
+              <div className="flex flex-col sm:flex-row justify-between mb-3 gap-2">
+                <button
+                  type="button"
+                  onClick={handleSaveDraft}
+                  className="bg-blue-900 text-white px-3 py-1.5 rounded-md hover:bg-blue-800 transition-colors text-xs w-full sm:w-auto"
+                  disabled={isSubmitting || !currentUser}
+                >
+                  {isSubmitting ? "Saving..." : "SAVE DRAFT"}
+                </button>
+                
+                <button
+                  type="button"
+                  onClick={(e) => handleUploadSubmit(e, 'review')}
+                  className="bg-yellow-400 text-black font-semibold px-3 py-1.5 rounded-md hover:bg-yellow-500 transition-colors text-xs w-full sm:w-auto"
+                  disabled={isSubmitting || !currentUser}
+                >
+                  {isSubmitting ? "Submitting..." : "SUBMIT FOR REVIEW"}
+                </button>
+                
+                {publisherApproval.canPublish ? (
+                  <button
+                    type="button"
+                    onClick={(e) => handleUploadSubmit(e, 'publish')}
+                    className="bg-red-600 text-white px-3 py-1.5 rounded-md hover:bg-red-700 transition-colors text-xs w-full sm:w-auto"
+                    disabled={isSubmitting || !currentUser}
+                  >
+                    {isSubmitting ? "Publishing..." : "PUBLISH NOW"}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled
+                    className="bg-gray-400 text-white px-3 py-1.5 rounded-md cursor-not-allowed text-xs w-full sm:w-auto"
+                    title={publisherApproval.reason}
+                  >
+                    PUBLISH RESTRICTED
+                  </button>
+                )}
+              </div>
+
+              <PreviewToggle previewStyle={previewStyle} setPreviewStyle={setPreviewStyle} />
+            </form>
+
+            {immediatePreviewUrl && !pdfPreviewUrl && (
+              <div className="mt-3 bg-white rounded-lg shadow-md p-3">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="text-sm font-semibold text-gray-800">PDF Preview (Before Upload)</h3>
+                  <button
+                    onClick={() => {
+                      URL.revokeObjectURL(immediatePreviewUrl);
+                      setImmediatePreviewUrl(null);
+                    }}
+                    className="px-2 py-1 bg-red-600 text-white text-xs rounded-md hover:bg-red-700"
+                  >
+                    Close Preview
+                  </button>
+                </div>
+                <div className="border rounded-md overflow-hidden">
+                  <iframe
+                    src={immediatePreviewUrl}
+                    width="100%"
+                    height="200px"
+                    className="w-full"
+                    title="PDF Preview"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
-          <ApprovalStatusBanner />
+          {/* Back Side - Manual Article Form */}
+          <div className="flip-card-back bg-white p-6 max-h-[90vh] overflow-y-auto w-full min-w-0">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-800">Manual Article Entry</h2>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setIsFlipped(false)}
+                  className="flex items-center px-3 py-1 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors text-sm"
+                >
+                  <RotateCcw className="w-4 h-4 mr-1" />
+                  Back to Upload
+                </button>
+                {onClose && (
+                  <button
+                    onClick={onClose}
+                    className="text-gray-500 hover:text-gray-700 text-2xl"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            </div>
 
-          <form onSubmit={handleUploadSubmit} className="w-full">
-            <FileUpload
-              setFile={setFile}
-              uploadProgress={uploadProgress}
-              onPreview={handlePreview}
-              onExtract={(data) => setAutofill(data)}
-            />
+            <ApprovalStatusBanner />
 
-            {uploadError && (
-              <div className="bg-red-50 border border-red-200 rounded-md p-3 mb-4">
-                <p className="text-sm text-red-600">{uploadError}</p>
+            {currentUser && (
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                <p className="text-sm text-blue-800">
+                  <strong>Publishing as:</strong> {currentUser.companyName || currentUser.displayName || 'Unknown Publisher'}
+                  {currentUser.role && ` (${currentUser.role})`}
+                </p>
+                <p className="text-xs text-blue-600 mt-1">
+                  Publisher ID: {currentUser.uid}
+                </p>
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-3">
-              <input
-                name="headline"
-                id="headline"
-                placeholder="Enter headline..."
-                defaultValue={autofill.headline}
-                className="border p-1.5 rounded-md w-full text-xs"
-              />
-              <input
-                name="byline"
-                id="byline"
-                placeholder="Byline Name"
-                defaultValue={autofill.byline}
-                className="border p-1.5 rounded-md w-full text-xs"
-              />
-              <input
-                name="location"
-                id="location"
-                placeholder="City/Town"
-                defaultValue={autofill.location}
-                className="border p-1.5 rounded-md w-full text-xs"
-              />
-              <select name="section" id="section" className="border p-1.5 rounded-md w-full text-xs">
-                <option>Select Section</option>
-                <option>World</option>
-                <option>Politics</option>
-                <option>Business</option>
-                <option>Sports</option>
-                <option>Education</option>
-                <option>Entertainment</option>
-                <option>Health</option>
-                <option>Government</option>
-                <option>Environment</option>
-                <option>Other</option>
-              </select>
-              <select name="edition" id="edition" className="border p-1.5 rounded-md w-full text-xs">
-                <option>Morning Edition</option>
-                <option>Evening Edition</option>
-              </select>
-            </div>
-
-            <PrioritySelector priority={priority} setPriority={setPriority} />
-
-            <textarea
-              name="lead"
-              id="lead"
-              placeholder="Write the lead paragraph..."
-              className="w-full border p-1.5 rounded-md mb-2 text-xs"
-              rows="2"
-            />
-            <textarea
-              name="body"
-              id="body"
-              placeholder="Continue with the article body..."
-              className="w-full border p-1.5 rounded-md mb-3 text-xs"
-              rows="2"
-            />
-
-            <div className="flex flex-col sm:flex-row justify-between mb-3 gap-2">
-              <button
-                type="button"
-                onClick={handleSaveDraft}
-                className="bg-blue-900 text-white px-3 py-1.5 rounded-md hover:bg-blue-800 transition-colors text-xs w-full sm:w-auto"
-                disabled={isSubmitting || !currentUser}
-              >
-                {isSubmitting ? "Saving..." : "SAVE DRAFT"}
-              </button>
-              
-              <button
-                type="button"
-                onClick={(e) => handleUploadSubmit(e, 'review')}
-                className="bg-yellow-400 text-black font-semibold px-3 py-1.5 rounded-md hover:bg-yellow-500 transition-colors text-xs w-full sm:w-auto"
-                disabled={isSubmitting || !currentUser}
-              >
-                {isSubmitting ? "Submitting..." : "SUBMIT FOR REVIEW"}
-              </button>
-              
-              {publisherApproval.canPublish ? (
-                <button
-                  type="button"
-                  onClick={(e) => handleUploadSubmit(e, 'publish')}
-                  className="bg-red-600 text-white px-3 py-1.5 rounded-md hover:bg-red-700 transition-colors text-xs w-full sm:w-auto"
-                  disabled={isSubmitting || !currentUser}
-                >
-                  {isSubmitting ? "Publishing..." : "PUBLISH NOW"}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  disabled
-                  className="bg-gray-400 text-white px-3 py-1.5 rounded-md cursor-not-allowed text-xs w-full sm:w-auto"
-                  title={publisherApproval.reason}
-                >
-                  PUBLISH RESTRICTED
-                </button>
-              )}
-            </div>
-
-            <PreviewToggle previewStyle={previewStyle} setPreviewStyle={setPreviewStyle} />
-          </form>
-
-          {immediatePreviewUrl && !pdfPreviewUrl && (
-            <div className="mt-3 bg-white rounded-lg shadow-md p-3">
-              <div className="flex justify-between items-center mb-2">
-                <h3 className="text-sm font-semibold text-gray-800">PDF Preview (Before Upload)</h3>
-                <button
-                  onClick={() => {
-                    URL.revokeObjectURL(immediatePreviewUrl);
-                    setImmediatePreviewUrl(null);
-                  }}
-                  className="px-2 py-1 bg-red-600 text-white text-xs rounded-md hover:bg-red-700"
-                >
-                  Close Preview
-                </button>
-              </div>
-              <div className="border rounded-md overflow-hidden">
-                <iframe
-                  src={immediatePreviewUrl}
-                  width="100%"
-                  height="200px"
-                  className="w-full"
-                  title="PDF Preview"
-                />
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Back Side - Manual Article Form */}
-        <div className="flip-card-back bg-white p-6 max-h-[90vh] overflow-y-auto w-full min-w-0">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold text-gray-800">Manual Article Entry</h2>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setIsFlipped(false)}
-                className="flex items-center px-3 py-1 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors text-sm"
-              >
-                <RotateCcw className="w-4 h-4 mr-1" />
-                Back to Upload
-              </button>
-              {onClose && (
-                <button
-                  onClick={onClose}
-                  className="text-gray-500 hover:text-gray-700 text-2xl"
-                >
-                  ×
-                </button>
-              )}
-            </div>
-          </div>
-
-          <ApprovalStatusBanner />
-
-          {currentUser && (
-            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-              <p className="text-sm text-blue-800">
-                <strong>Publishing as:</strong> {currentUser.companyName || currentUser.displayName || 'Unknown Publisher'}
-                {currentUser.role && ` (${currentUser.role})`}
-              </p>
-              <p className="text-xs text-blue-600 mt-1">
-                Publisher ID: {currentUser.uid}
-              </p>
-            </div>
-          )}
-
-          {imagePreview && (
-            <div className="mb-6">
-              <div className="flex items-start gap-4">
-                <div className="w-48 h-32 relative bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg overflow-hidden">
-                  <img
-                    src={imagePreview}
-                    alt="Featured image preview"
-                    className="w-full h-full object-cover"
-                  />
-                  <button
-                    onClick={removeImage}
-                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
-                    type="button"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                  {isUploadingImage && (
-                    <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                      <div className="text-white text-xs">Processing...</div>
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm text-gray-600 mb-1">
-                    <strong>Featured Image:</strong> {fileName}
-                  </p>
-                  {formData.featuredImageUrl && (
-                    <p className="text-xs text-green-600">
-                      ✅ Image processed
+            {imagePreview && (
+              <div className="mb-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-48 h-32 relative bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg overflow-hidden">
+                    <img
+                      src={imagePreview}
+                      alt="Featured image preview"
+                      className="w-full h-full object-cover"
+                    />
+                    <button
+                      onClick={removeImage}
+                      className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                      type="button"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                    {isUploadingImage && (
+                      <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                        <div className="text-white text-xs">Processing...</div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-600 mb-1">
+                      <strong>Featured Image:</strong> {fileName}
                     </p>
-                  )}
-                  {isUploadingImage && (
-                    <p className="text-xs text-blue-600">
-                      ⏳ Processing image...
-                    </p>
-                  )}
+                    {formData.featuredImageUrl && (
+                      <p className="text-xs text-green-600">
+                        ✅ Image processed
+                      </p>
+                    )}
+                    {isUploadingImage && (
+                      <p className="text-xs text-blue-600">
+                        ⏳ Processing image...
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {submitStatus === 'success' && (
-            <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-md flex items-center">
-              <CheckCircle className="w-5 h-5 text-green-500 mr-2" />
-              <span className="text-green-800">Article submitted successfully!</span>
-            </div>
-          )}
-
-          {errors.submit && (
-            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md flex items-center">
-              <AlertCircle className="w-5 h-5 text-red-500 mr-2" />
-              <span className="text-red-800">{errors.submit}</span>
-            </div>
-          )}
-
-          {errors.auth && (
-            <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md flex items-center">
-              <AlertCircle className="w-5 h-5 text-yellow-500 mr-2" />
-              <span className="text-yellow-800">{errors.auth}</span>
-            </div>
-          )}
-
-          <form onSubmit={(e) => handleManualSubmit(e, false)}>
-            {/* Article Title */}
-            <div className="mb-4">
-              <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
-                Article Title <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                id="title"
-                name="title"
-                value={formData.title}
-                onChange={handleInputChange}
-                className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  errors.title ? 'border-red-500' : 'border-gray-300'
-                }`}
-                placeholder="Enter your article title"
-              />
-              {errors.title && <p className="text-red-500 text-sm mt-1">{errors.title}</p>}
-            </div>
-
-            {/* Subtitle */}
-            <div className="mb-4">
-              <label htmlFor="subtitle" className="block text-sm font-medium text-gray-700 mb-2">
-                Subtitle
-              </label>
-              <input
-                type="text"
-                id="subtitle"
-                name="subtitle"
-                value={formData.subtitle}
-                onChange={handleInputChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Enter a subtitle (optional)"
-              />
-            </div>
-
-            {/* Author Information */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <label htmlFor="author" className="block text-sm font-medium text-gray-700 mb-2">
-                  Journalist Name <span className="text-red-500">*</span>
-                  <span className="text-xs text-gray-500 ml-2">(Select from your team)</span>
-                </label>
-                <select
-                  id="author"
-                  name="author"
-                  value={formData.author}
-                  onChange={handleInputChange}
-                  className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    errors.author ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                >
-                  <option value="">Select a journalist</option>
-                  {currentUser?.staff
-                    ?.filter(member => 
-                      member.department === 'Editorial' || 
-                      member.department === 'Journalism' ||
-                      member.position?.toLowerCase().includes('journalist') ||
-                      member.position?.toLowerCase().includes('reporter') ||
-                      member.position?.toLowerCase().includes('editor') ||
-                      member.position?.toLowerCase().includes('writer')
-                    )
-                    .map((journalist, index) => (
-                      <option key={journalist.id || index} value={journalist.name}>
-                        {journalist.name} - {journalist.position}
-                      </option>
-                    ))
-                  }
-                </select>
-                {errors.author && <p className="text-red-500 text-sm mt-1">{errors.author}</p>}
-                
-                {(!currentUser?.staff || currentUser.staff.filter(m => 
-                  m.department === 'Editorial' || m.department === 'Journalism' ||
-                  m.position?.toLowerCase().includes('journalist')
-                ).length === 0) && (
-                  <p className="text-amber-600 text-xs mt-2 flex items-center">
-                    <span className="mr-1">⚠️</span>
-                    No journalists added yet. Please add team members to your profile.
-                  </p>
-                )}
+            {submitStatus === 'success' && (
+              <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-md flex items-center">
+                <CheckCircle className="w-5 h-5 text-green-500 mr-2" />
+                <span className="text-green-800">Article submitted successfully!</span>
               </div>
-              
-              <div>
-                <label htmlFor="authorTitle" className="block text-sm font-medium text-gray-700 mb-2">
-                  Position/Title
-                  <span className="text-xs text-gray-500 ml-2">(Auto-filled)</span>
+            )}
+
+            {errors.submit && (
+              <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md flex items-center">
+                <AlertCircle className="w-5 h-5 text-red-500 mr-2" />
+                <span className="text-red-800">{errors.submit}</span>
+              </div>
+            )}
+
+            {errors.auth && (
+              <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md flex items-center">
+                <AlertCircle className="w-5 h-5 text-yellow-500 mr-2" />
+                <span className="text-yellow-800">{errors.auth}</span>
+              </div>
+            )}
+
+            <form onSubmit={(e) => handleManualSubmit(e, false)}>
+              {/* Article Title */}
+              <div className="mb-4">
+                <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
+                  Article Title <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
-                  id="authorTitle"
-                  name="authorTitle"
-                  value={formData.authorTitle}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50"
-                  placeholder="Position will auto-fill"
-                  readOnly
-                />
-              </div>
-            </div>
-
-            {/* Category and Tags */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
-                  Category <span className="text-red-500">*</span>
-                </label>
-                <select
-                  id="category"
-                  name="category"
-                  value={formData.category}
+                  id="title"
+                  name="title"
+                  value={formData.title}
                   onChange={handleInputChange}
                   className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    errors.category ? 'border-red-500' : 'border-gray-300'
+                    errors.title ? 'border-red-500' : 'border-gray-300'
                   }`}
-                >
-                  {categories.map(cat => (
-                    <option key={cat.value} value={cat.value}>{cat.label}</option>
-                  ))}
-                </select>
-                {errors.category && <p className="text-red-500 text-sm mt-1">{errors.category}</p>}
+                  placeholder="Enter your article title"
+                />
+                {errors.title && <p className="text-red-500 text-sm mt-1">{errors.title}</p>}
               </div>
-              <div>
-                <label htmlFor="tags" className="block text-sm font-medium text-gray-700 mb-2">
-                  Tags (comma separated)
+
+              {/* Subtitle */}
+              <div className="mb-4">
+                <label htmlFor="subtitle" className="block text-sm font-medium text-gray-700 mb-2">
+                  Subtitle
                 </label>
                 <input
                   type="text"
-                  id="tags"
-                  name="tags"
-                  value={formData.tags}
+                  id="subtitle"
+                  name="subtitle"
+                  value={formData.subtitle}
                   onChange={handleInputChange}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="e.g., innovation, AI, future"
+                  placeholder="Enter a subtitle (optional)"
                 />
               </div>
-            </div>
 
-            {/* Template Selector */}
-            <div className="mb-4 p-4 border-2 border-blue-200 rounded-lg bg-blue-50">
-              <label htmlFor="templateId" className="block text-sm font-medium text-gray-700 mb-2">
-                Article Template <span className="text-red-500">*</span>
-              </label>
-              <select
-                id="templateId"
-                value={selectedTemplateId}
-                onChange={handleTemplateChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-3"
-              >
-                {templates.map(template => (
-                  <option key={template.id} value={template.id}>
-                    {template.name} - {template.description}
-                  </option>
-                ))}
-              </select>
-              
-              <div className="mb-2">
-                <div className={`h-12 rounded-md bg-gradient-to-r ${templates.find(t => t.id === selectedTemplateId)?.color} flex items-center justify-center text-white font-bold`}>
-                  {templates.find(t => t.id === selectedTemplateId)?.name}
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="templateCredit" className="flex items-center text-sm font-medium text-gray-700 mb-1">
-                  <Camera className="w-4 h-4 mr-1" />
-                  Designer/Photographer Credit (Optional)
-                </label>
-                <input
-                  type="text"
-                  id="templateCredit"
-                  value={templateCredit}
-                  onChange={(e) => {
-                    setTemplateCredit(e.target.value);
-                    setFormData(prev => ({ ...prev, templateCredit: e.target.value }));
-                  }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="e.g., John Smith Photography"
-                />
-              </div>
-            </div>
-
-            {/* Featured Image Upload */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Featured Image
-              </label>
-              <div className="space-y-3">
-                <div className="flex items-center space-x-4">
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    accept="image/*"
-                    onChange={handleFileChange}
-                    className="hidden"
-                    key={imagePreview ? 'with-image' : 'no-image'}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors flex items-center disabled:opacity-50"
-                    disabled={isUploadingImage}
+              {/* Author Information */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label htmlFor="author" className="block text-sm font-medium text-gray-700 mb-2">
+                    Journalist Name <span className="text-red-500">*</span>
+                    <span className="text-xs text-gray-500 ml-2">(Select from your team)</span>
+                  </label>
+                  <select
+                    id="author"
+                    name="author"
+                    value={formData.author}
+                    onChange={handleInputChange}
+                    className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                      errors.author ? 'border-red-500' : 'border-gray-300'
+                    }`}
                   >
-                    <Upload className="w-4 h-4 mr-2" />
-                    {isUploadingImage ? 'Processing...' : 'Upload Image'}
-                  </button>
-                  {!imagePreview && (
-                    <span className="text-gray-500 text-sm">{fileName}</span>
+                    <option value="">Select a journalist</option>
+                    {currentUser?.staff
+                      ?.filter(member => 
+                        member.department === 'Editorial' || 
+                        member.department === 'Journalism' ||
+                        member.position?.toLowerCase().includes('journalist') ||
+                        member.position?.toLowerCase().includes('reporter') ||
+                        member.position?.toLowerCase().includes('editor') ||
+                        member.position?.toLowerCase().includes('writer')
+                      )
+                      .map((journalist, index) => (
+                        <option key={journalist.id || index} value={journalist.name}>
+                          {journalist.name} - {journalist.position}
+                        </option>
+                      ))
+                    }
+                  </select>
+                  {errors.author && <p className="text-red-500 text-sm mt-1">{errors.author}</p>}
+                  
+                  {(!currentUser?.staff || currentUser.staff.filter(m => 
+                    m.department === 'Editorial' || m.department === 'Journalism' ||
+                    m.position?.toLowerCase().includes('journalist')
+                  ).length === 0) && (
+                    <p className="text-amber-600 text-xs mt-2 flex items-center">
+                      <span className="mr-1">⚠️</span>
+                      No journalists added yet. Please add team members to your profile.
+                    </p>
                   )}
-                  {isUploadingImage && (
-                    <div className="text-blue-600 text-sm flex items-center">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-                      Processing image...
-                    </div>
-                  )}
-                </div>
-
-                {(imagePreview || formData.featuredImageUrl) && (
-                  <div className="space-y-2">
-                    <div>
-                      <label htmlFor="imageCredit" className="block text-sm font-medium text-gray-600 mb-1">
-                        Image Credit (Who took this photo?)
-                      </label>
-                      <input
-                        type="text"
-                        id="imageCredit"
-                        name="imageCredit"
-                        value={formData.imageCredit}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="e.g., John Smith, Reuters, Getty Images"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label htmlFor="imageCaption" className="block text-sm font-medium text-gray-600 mb-1">
-                        Image Caption (Optional)
-                      </label>
-                      <input
-                        type="text"
-                        id="imageCaption"
-                        name="imageCaption"
-                        value={formData.imageCaption}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="Describe what's shown in the image..."
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-              {errors.featuredImage && <p className="text-red-500 text-sm mt-1">{errors.featuredImage}</p>}
-            </div>
-
-            {/* Rich Text Editor */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Article Content <span className="text-red-500">*</span>
-              </label>
-              <div className={`border rounded-md overflow-hidden ${
-                errors.content ? 'border-red-500' : 'border-gray-300'
-              }`}>
-                <div className="flex flex-wrap gap-1 p-2 bg-gray-50 border-b">
-                  <button type="button" onClick={() => handleToolbarClick('bold')} className="p-2 hover:bg-gray-200 rounded transition-colors" title="Bold">
-                    <Bold className="w-4 h-4" />
-                  </button>
-                  <button type="button" onClick={() => handleToolbarClick('italic')} className="p-2 hover:bg-gray-200 rounded transition-colors" title="Italic">
-                    <Italic className="w-4 h-4" />
-                  </button>
-                  <button type="button" onClick={() => handleToolbarClick('underline')} className="p-2 hover:bg-gray-200 rounded transition-colors" title="Underline">
-                    <Underline className="w-4 h-4" />
-                  </button>
-                  <div className="border-r mx-2"></div>
-                  <button type="button" onClick={() => handleToolbarClick('insertUnorderedList')} className="p-2 hover:bg-gray-200 rounded transition-colors" title="Bullet List">
-                    <List className="w-4 h-4" />
-                  </button>
-                  <button type="button" onClick={() => formatText('formatBlock', 'p')} className="p-2 hover:bg-gray-200 rounded transition-colors text-xs font-medium" title="Paragraph">
-                    P
-                  </button>
-                  <button type="button" onClick={() => formatText('formatBlock', 'h3')} className="p-2 hover:bg-gray-200 rounded transition-colors text-xs font-medium" title="Heading">
-                    H3
-                  </button>
-                  <div className="border-r mx-2"></div>
-                  <button type="button" onClick={() => handleToolbarClick('justifyLeft')} className="p-2 hover:bg-gray-200 rounded transition-colors" title="Align Left">
-                    <AlignLeft className="w-4 h-4" />
-                  </button>
-                  <button type="button" onClick={() => handleToolbarClick('justifyCenter')} className="p-2 hover:bg-gray-200 rounded transition-colors" title="Align Center">
-                    <AlignCenter className="w-4 h-4" />
-                  </button>
-                  <button type="button" onClick={() => handleToolbarClick('justifyRight')} className="p-2 hover:bg-gray-200 rounded transition-colors" title="Align Right">
-                    <AlignRight className="w-4 h-4" />
-                  </button>
-                  <div className="border-r mx-2"></div>
-                  <button type="button" onClick={() => handleToolbarClick('createLink')} className="p-2 hover:bg-gray-200 rounded transition-colors" title="Insert Link">
-                    <Link className="w-4 h-4" />
-                  </button>
-                  <button type="button" onClick={() => handleToolbarClick('insertImage')} className="p-2 hover:bg-gray-200 rounded transition-colors" title="Insert Image">
-                    <ImageIcon className="w-4 h-4" />
-                  </button>
                 </div>
                 
-                <div
-                  ref={editorRef}
-                  contentEditable
-                  className="rich-editor min-h-[300px] p-4 focus:outline-none text-left"
-                  onInput={handleEditorInput}
-                  onKeyDown={handleEditorKeyDown}
-                  style={{ 
-                    minHeight: '300px',
-                    wordWrap: 'break-word',
-                    overflowWrap: 'break-word',
-                    whiteSpace: 'pre-wrap',
-                    lineHeight: '1.6'
-                  }}
-                  suppressContentEditableWarning={true}
-                  placeholder="Start writing your article here..."
-                />
-              </div>
-              {errors.content && <p className="text-red-500 text-sm mt-1">{errors.content}</p>}
-            </div>
-
-            <div className="flex justify-between text-sm text-gray-500 mb-4">
-              <span>Words: {wordCount}</span>
-              <span>Reading time: {readingTime} min</span>
-            </div>
-
-            <div className="mb-4">
-              <label htmlFor="metaDescription" className="block text-sm font-medium text-gray-700 mb-2">
-                Meta Description (for SEO)
-              </label>
-              <textarea
-                id="metaDescription"
-                name="metaDescription"
-                value={formData.metaDescription}
-                onChange={handleInputChange}
-                rows="3"
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                placeholder="Enter a brief description for search engines (150-160 characters)"
-                style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}
-              />
-              <div className="flex justify-between mt-1">
-                <span className="text-xs text-gray-500">Recommended: 150-160 characters</span>
-                <span className={`text-xs ${metaCharCount > 160 ? 'text-red-500' : 'text-gray-500'}`}>
-                  {metaCharCount}/160
-                </span>
-              </div>
-            </div>
-
-            <div className="bg-gray-50 rounded-lg p-4 mb-6">
-              <h3 className="font-medium text-gray-800 mb-3">Publishing Options</h3>
-              <div className="space-y-3">
-                <label className="flex items-center">
+                <div>
+                  <label htmlFor="authorTitle" className="block text-sm font-medium text-gray-700 mb-2">
+                    Position/Title
+                    <span className="text-xs text-gray-500 ml-2">(Auto-filled)</span>
+                  </label>
                   <input
-                    type="checkbox"
-                    name="publishNow"
-                    checked={formData.publishNow}
+                    type="text"
+                    id="authorTitle"
+                    name="authorTitle"
+                    value={formData.authorTitle}
                     onChange={handleInputChange}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50"
+                    placeholder="Position will auto-fill"
+                    readOnly
                   />
-                  <span className="ml-2 text-sm text-gray-700">Publish immediately</span>
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    name="allowComments"
-                    checked={formData.allowComments}
-                    onChange={handleInputChange}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <span className="ml-2 text-sm text-gray-700">Allow reader comments</span>
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    name="sendNewsletter"
-                    checked={formData.sendNewsletter}
-                    onChange={handleInputChange}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <span className="ml-2 text-sm text-gray-700">Send notification to subscribers</span>
-                </label>
+                </div>
               </div>
-            </div>
 
-            <div className="flex flex-col sm:flex-row gap-3 pt-4">
-              <button
-                type="button"
-                onClick={() => setShowPreview(true)}
-                disabled={!formData.title && !formData.content}
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center justify-center disabled:opacity-50 w-full sm:w-auto"
-              >
-                <Eye className="w-4 h-4 mr-2" />
-                Preview
-              </button>
-              
-              <button
-                type="button"
-                onClick={handleManualSaveDraft}
-                disabled={isSubmitting || !currentUser}
-                className="flex-1 px-6 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors flex items-center justify-center disabled:opacity-50 w-full sm:w-auto"
-              >
-                <Save className="w-4 h-4 mr-2" />
-                {isSubmitting ? 'Saving...' : 'Save Draft'}
-              </button>
-              
-              {publisherApproval.canPublish ? (
-                <button
-                  type="submit"
-                  disabled={isSubmitting || !currentUser}
-                  className="flex-1 px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center disabled:opacity-50 w-full sm:w-auto"
+              {/* Category and Tags */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
+                    Category <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    id="category"
+                    name="category"
+                    value={formData.category}
+                    onChange={handleInputChange}
+                    className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                      errors.category ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                  >
+                    {categories.map(cat => (
+                      <option key={cat.value} value={cat.value}>{cat.label}</option>
+                    ))}
+                  </select>
+                  {errors.category && <p className="text-red-500 text-sm mt-1">{errors.category}</p>}
+                </div>
+                <div>
+                  <label htmlFor="tags" className="block text-sm font-medium text-gray-700 mb-2">
+                    Tags (comma separated)
+                  </label>
+                  <input
+                    type="text"
+                    id="tags"
+                    name="tags"
+                    value={formData.tags}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="e.g., innovation, AI, future"
+                  />
+                </div>
+              </div>
+
+              {/* Template Selector */}
+              <div className="mb-4 p-4 border-2 border-blue-200 rounded-lg bg-blue-50">
+                <label htmlFor="templateId" className="block text-sm font-medium text-gray-700 mb-2">
+                  Article Template <span className="text-red-500">*</span>
+                </label>
+                <select
+                  id="templateId"
+                  value={selectedTemplateId}
+                  onChange={handleTemplateChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-3"
                 >
-                  <Send className="w-4 h-4 mr-2" />
-                  {isSubmitting ? 'Publishing...' : 'Publish Article'}
-                </button>
-              ) : (
+                  {templates.map(template => (
+                    <option key={template.id} value={template.id}>
+                      {template.name} - {template.description}
+                    </option>
+                  ))}
+                </select>
+                
+                <div className="mb-2">
+                  <div className={`h-12 rounded-md bg-gradient-to-r ${templates.find(t => t.id === selectedTemplateId)?.color} flex items-center justify-center text-white font-bold`}>
+                    {templates.find(t => t.id === selectedTemplateId)?.name}
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="templateCredit" className="flex items-center text-sm font-medium text-gray-700 mb-1">
+                    <Camera className="w-4 h-4 mr-1" />
+                    Designer/Photographer Credit (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    id="templateCredit"
+                    value={templateCredit}
+                    onChange={(e) => {
+                      setTemplateCredit(e.target.value);
+                      setFormData(prev => ({ ...prev, templateCredit: e.target.value }));
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="e.g., John Smith Photography"
+                  />
+                </div>
+              </div>
+
+              {/* Featured Image Upload */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Featured Image
+                </label>
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-4">
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      className="hidden"
+                      key={imagePreview ? 'with-image' : 'no-image'}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors flex items-center disabled:opacity-50"
+                      disabled={isUploadingImage}
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      {isUploadingImage ? 'Processing...' : 'Upload Image'}
+                    </button>
+                    {!imagePreview && (
+                      <span className="text-gray-500 text-sm">{fileName}</span>
+                    )}
+                    {isUploadingImage && (
+                      <div className="text-blue-600 text-sm flex items-center">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                        Processing image...
+                      </div>
+                    )}
+                  </div>
+
+                  {(imagePreview || formData.featuredImageUrl) && (
+                    <div className="space-y-2">
+                      <div>
+                        <label htmlFor="imageCredit" className="block text-sm font-medium text-gray-600 mb-1">
+                          Image Credit (Who took this photo?)
+                        </label>
+                        <input
+                          type="text"
+                          id="imageCredit"
+                          name="imageCredit"
+                          value={formData.imageCredit}
+                          onChange={handleInputChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="e.g., John Smith, Reuters, Getty Images"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label htmlFor="imageCaption" className="block text-sm font-medium text-gray-600 mb-1">
+                          Image Caption (Optional)
+                        </label>
+                        <input
+                          type="text"
+                          id="imageCaption"
+                          name="imageCaption"
+                          value={formData.imageCaption}
+                          onChange={handleInputChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="Describe what's shown in the image..."
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {errors.featuredImage && <p className="text-red-500 text-sm mt-1">{errors.featuredImage}</p>}
+              </div>
+
+              {/* Rich Text Editor */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Article Content <span className="text-red-500">*</span>
+                </label>
+                <div className={`border rounded-md overflow-hidden ${
+                  errors.content ? 'border-red-500' : 'border-gray-300'
+                }`}>
+                  <div className="flex flex-wrap gap-1 p-2 bg-gray-50 border-b">
+                    <button type="button" onClick={() => handleToolbarClick('bold')} className="p-2 hover:bg-gray-200 rounded transition-colors" title="Bold">
+                      <Bold className="w-4 h-4" />
+                    </button>
+                    <button type="button" onClick={() => handleToolbarClick('italic')} className="p-2 hover:bg-gray-200 rounded transition-colors" title="Italic">
+                      <Italic className="w-4 h-4" />
+                    </button>
+                    <button type="button" onClick={() => handleToolbarClick('underline')} className="p-2 hover:bg-gray-200 rounded transition-colors" title="Underline">
+                      <Underline className="w-4 h-4" />
+                    </button>
+                    <div className="border-r mx-2"></div>
+                    <button type="button" onClick={() => handleToolbarClick('insertUnorderedList')} className="p-2 hover:bg-gray-200 rounded transition-colors" title="Bullet List">
+                      <List className="w-4 h-4" />
+                    </button>
+                    <button type="button" onClick={() => formatText('formatBlock', 'p')} className="p-2 hover:bg-gray-200 rounded transition-colors text-xs font-medium" title="Paragraph">
+                      P
+                    </button>
+                    <button type="button" onClick={() => formatText('formatBlock', 'h3')} className="p-2 hover:bg-gray-200 rounded transition-colors text-xs font-medium" title="Heading">
+                      H3
+                    </button>
+                    <div className="border-r mx-2"></div>
+                    <button type="button" onClick={() => handleToolbarClick('justifyLeft')} className="p-2 hover:bg-gray-200 rounded transition-colors" title="Align Left">
+                      <AlignLeft className="w-4 h-4" />
+                    </button>
+                    <button type="button" onClick={() => handleToolbarClick('justifyCenter')} className="p-2 hover:bg-gray-200 rounded transition-colors" title="Align Center">
+                      <AlignCenter className="w-4 h-4" />
+                    </button>
+                    <button type="button" onClick={() => handleToolbarClick('justifyRight')} className="p-2 hover:bg-gray-200 rounded transition-colors" title="Align Right">
+                      <AlignRight className="w-4 h-4" />
+                    </button>
+                    <div className="border-r mx-2"></div>
+                    <button type="button" onClick={() => handleToolbarClick('createLink')} className="p-2 hover:bg-gray-200 rounded transition-colors" title="Insert Link">
+                      <Link className="w-4 h-4" />
+                    </button>
+                    <button type="button" onClick={() => handleToolbarClick('insertImage')} className="p-2 hover:bg-gray-200 rounded transition-colors" title="Insert Image">
+                      <ImageIcon className="w-4 h-4" />
+                    </button>
+                  </div>
+                  
+                  <div
+                    ref={editorRef}
+                    contentEditable
+                    className="rich-editor min-h-[300px] p-4 focus:outline-none text-left"
+                    onInput={handleEditorInput}
+                    onKeyDown={handleEditorKeyDown}
+                    style={{ 
+                      minHeight: '300px',
+                      wordWrap: 'break-word',
+                      overflowWrap: 'break-word',
+                      whiteSpace: 'pre-wrap',
+                      lineHeight: '1.6'
+                    }}
+                    suppressContentEditableWarning={true}
+                    placeholder="Start writing your article here..."
+                  />
+                </div>
+                {errors.content && <p className="text-red-500 text-sm mt-1">{errors.content}</p>}
+              </div>
+
+              <div className="flex justify-between text-sm text-gray-500 mb-4">
+                <span>Words: {wordCount}</span>
+                <span>Reading time: {readingTime} min</span>
+              </div>
+
+              <div className="mb-4">
+                <label htmlFor="metaDescription" className="block text-sm font-medium text-gray-700 mb-2">
+                  Meta Description (for SEO)
+                </label>
+                <textarea
+                  id="metaDescription"
+                  name="metaDescription"
+                  value={formData.metaDescription}
+                  onChange={handleInputChange}
+                  rows="3"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  placeholder="Enter a brief description for search engines (150-160 characters)"
+                  style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}
+                />
+                <div className="flex justify-between mt-1">
+                  <span className="text-xs text-gray-500">Recommended: 150-160 characters</span>
+                  <span className={`text-xs ${metaCharCount > 160 ? 'text-red-500' : 'text-gray-500'}`}>
+                    {metaCharCount}/160
+                  </span>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <h3 className="font-medium text-gray-800 mb-3">Publishing Options</h3>
+                <div className="space-y-3">
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      name="publishNow"
+                      checked={formData.publishNow}
+                      onChange={handleInputChange}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">Publish immediately</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      name="allowComments"
+                      checked={formData.allowComments}
+                      onChange={handleInputChange}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">Allow reader comments</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      name="sendNewsletter"
+                      checked={formData.sendNewsletter}
+                      onChange={handleInputChange}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">Send notification to subscribers</span>
+                  </label>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3 pt-4">
                 <button
                   type="button"
-                  disabled
-                  className="flex-1 px-6 py-2 bg-gray-400 text-white rounded-md cursor-not-allowed flex items-center justify-center w-full sm:w-auto"
-                  title={publisherApproval.reason}
+                  onClick={() => setShowPreview(true)}
+                  disabled={!formData.title && !formData.content}
+                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center justify-center disabled:opacity-50 w-full sm:w-auto"
                 >
-                  <Send className="w-4 h-4 mr-2" />
-                  Publishing Restricted
+                  <Eye className="w-4 h-4 mr-2" />
+                  Preview
                 </button>
-              )}
-            </div>
-
-            {process.env.NODE_ENV === 'development' && currentUser && (
-              <div className="mt-4 p-3 bg-gray-100 rounded-md text-xs">
-                <h4 className="font-medium text-gray-800 mb-2">Debug Info:</h4>
-                <p><strong>User ID:</strong> {currentUser.uid}</p>
-                <p><strong>Company:</strong> {currentUser.companyName || 'Not set'}</p>
-                <p><strong>Can Publish:</strong> {publisherApproval.canPublish ? 'Yes' : 'No'}</p>
-                <p><strong>Restriction Reason:</strong> {publisherApproval.reason || 'None'}</p>
-                <p><strong>Featured Image URL:</strong> {formData.featuredImageUrl || 'Not uploaded'}</p>
-                <p><strong>Template ID:</strong> {selectedTemplateId}</p>
-                <p><strong>Template Name:</strong> {templates.find(t => t.id === selectedTemplateId)?.name}</p>
+                
+                <button
+                  type="button"
+                  onClick={handleManualSaveDraft}
+                  disabled={isSubmitting || !currentUser}
+                  className="flex-1 px-6 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors flex items-center justify-center disabled:opacity-50 w-full sm:w-auto"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  {isSubmitting ? 'Saving...' : 'Save Draft'}
+                </button>
+                
+                {publisherApproval.canPublish ? (
+                  <button
+                    type="submit"
+                    disabled={isSubmitting || !currentUser}
+                    className="flex-1 px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center disabled:opacity-50 w-full sm:w-auto"
+                  >
+                    <Send className="w-4 h-4 mr-2" />
+                    {isSubmitting ? 'Publishing...' : 'Publish Article'}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled
+                    className="flex-1 px-6 py-2 bg-gray-400 text-white rounded-md cursor-not-allowed flex items-center justify-center w-full sm:w-auto"
+                    title={publisherApproval.reason}
+                  >
+                    <Send className="w-4 h-4 mr-2" />
+                    Publishing Restricted
+                  </button>
+                )}
               </div>
-            )}
-          </form>
+
+              {process.env.NODE_ENV === 'development' && currentUser && (
+                <div className="mt-4 p-3 bg-gray-100 rounded-md text-xs">
+                  <h4 className="font-medium text-gray-800 mb-2">Debug Info:</h4>
+                  <p><strong>User ID:</strong> {currentUser.uid}</p>
+                  <p><strong>Company:</strong> {currentUser.companyName || 'Not set'}</p>
+                  <p><strong>Can Publish:</strong> {publisherApproval.canPublish ? 'Yes' : 'No'}</p>
+                  <p><strong>Restriction Reason:</strong> {publisherApproval.reason || 'None'}</p>
+                  <p><strong>Featured Image URL:</strong> {formData.featuredImageUrl || 'Not uploaded'}</p>
+                  <p><strong>Template ID:</strong> {selectedTemplateId}</p>
+                  <p><strong>Template Name:</strong> {templates.find(t => t.id === selectedTemplateId)?.name}</p>
+                </div>
+              )}
+            </form>
+          </div>
         </div>
       </div>
       
