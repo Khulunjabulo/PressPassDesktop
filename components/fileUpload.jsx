@@ -1,4 +1,4 @@
-// components/fileUpload.jsx - MERGED VERSION with PDF Options
+// components/fileUpload.jsx - FIXED VERSION with AI processing and 50MB support
 import React, { useState, useRef } from "react"
 import { FileText, AlertCircle } from 'lucide-react';
 
@@ -8,7 +8,8 @@ export default function FileUpload({
   onPreview, 
   onExtract,
   pdfPublishMode,
-  setPdfPublishMode 
+  setPdfPublishMode,
+  onAiProcess // NEW: AI processing callback
 }) {
   const [selectedFile, setSelectedFile] = useState(null)
   const [error, setError] = useState("")
@@ -29,10 +30,10 @@ export default function FileUpload({
       return;
     }
 
-    // Validate file size (max 10MB)
-    const maxSize = 10 * 1024 * 1024;
+    // ✅ FIXED: Increased to 50MB
+    const maxSize = 50 * 1024 * 1024; // 50MB instead of 10MB
     if (file.size > maxSize) {
-      setError("File size must be less than 10MB");
+      setError("File size must be less than 50MB");
       setSelectedFile(null);
       setFile(null);
       return;
@@ -47,18 +48,37 @@ export default function FileUpload({
       onPreview(previewUrl);
     }
 
-    // Auto-extract if in extract mode
-    if (pdfPublishMode === 'extract' && onExtract) {
-      setIsExtracting(true);
-      try {
-        const { extractTextFromPDF, extractArticleInfo } = await import("../lib/pdfExtractor");
-        const text = await extractTextFromPDF(file);
-        const info = extractArticleInfo ? extractArticleInfo(text) : { headline: "", byline: "", location: "" };
-        onExtract(info);
-      } catch (err) {
-        console.error("PDF extraction failed:", err);
-      } finally {
-        setIsExtracting(false);
+    // ✅ FIXED: Trigger AI processing for extract mode
+    if (pdfPublishMode === 'extract') {
+      console.log('🤖 Triggering AI processing...');
+      
+      if (onAiProcess) {
+        setIsExtracting(true);
+        try {
+          // Call AI processing function
+          await onAiProcess(file);
+        } catch (err) {
+          console.error("AI processing failed:", err);
+          setError("AI processing failed: " + err.message);
+        } finally {
+          setIsExtracting(false);
+        }
+      } else {
+        console.warn('⚠️ onAiProcess callback not provided');
+        // Fallback to basic extraction
+        if (onExtract) {
+          setIsExtracting(true);
+          try {
+            const { extractTextFromPDF, extractArticleInfo } = await import("../lib/pdfExtractor");
+            const text = await extractTextFromPDF(file);
+            const info = extractArticleInfo ? extractArticleInfo(text) : { headline: "", byline: "", location: "" };
+            onExtract(info);
+          } catch (err) {
+            console.error("PDF extraction failed:", err);
+          } finally {
+            setIsExtracting(false);
+          }
+        }
       }
     }
   };
@@ -103,7 +123,7 @@ export default function FileUpload({
 
   return (
     <div className="mb-3">
-      {/* PDF Option Selector - Only show if setPdfPublishMode is provided */}
+      {/* PDF Option Selector */}
       {setPdfPublishMode && (
         <div className="mb-4 p-4 border-2 border-blue-200 rounded-lg bg-blue-50">
           <h3 className="text-sm font-bold text-gray-800 mb-3 flex items-center">
@@ -123,9 +143,9 @@ export default function FileUpload({
                 className="mt-1 mr-3"
               />
               <div>
-                <div className="font-semibold text-sm">✨ Extract & Format</div>
+                <div className="font-semibold text-sm">✨ AI Extract & Format</div>
                 <div className="text-xs text-gray-600 mt-1">
-                  Extract text from PDF and create a formatted article with templates
+                  AI will detect multiple articles, extract images, and format content
                 </div>
               </div>
             </label>
@@ -194,7 +214,7 @@ export default function FileUpload({
             </p>
             {pdfPublishMode && (
               <p className="text-xs text-blue-600 mb-2 font-medium">
-                Mode: {pdfPublishMode === 'extract' ? '✨ Extract Text' : '📄 Publish as PDF'}
+                Mode: {pdfPublishMode === 'extract' ? '✨ AI Extract' : '📄 Publish as PDF'}
               </p>
             )}
             <div className="flex justify-center space-x-2">
@@ -238,7 +258,7 @@ export default function FileUpload({
             {pdfPublishMode && (
               <p className="text-xs text-gray-500 mb-2">
                 {pdfPublishMode === 'extract' 
-                  ? '✨ Text will be extracted and formatted with templates' 
+                  ? '✨ AI will detect multiple articles and extract images' 
                   : '📄 PDF will be published in original format'}
               </p>
             )}
@@ -268,7 +288,7 @@ export default function FileUpload({
         <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
           <div className="flex items-center">
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-            <p className="text-sm text-blue-600">Extracting text from PDF...</p>
+            <p className="text-sm text-blue-600">AI is analyzing your PDF...</p>
           </div>
         </div>
       )}
@@ -290,8 +310,9 @@ export default function FileUpload({
           <div className="flex items-start">
             <AlertCircle className="w-4 h-4 text-blue-600 mt-0.5 mr-2 flex-shrink-0" />
             <div className="text-xs text-blue-800">
-              <strong>Extract Mode:</strong> The PDF text will be extracted and you can format it using 
-              our professional templates. The form fields below will be auto-filled when available.
+              <strong>AI Mode:</strong> The AI will analyze your PDF to detect multiple articles, 
+              extract images, and match them to the correct content. If multiple articles are found, 
+              you'll see a preview to select which ones to publish.
             </div>
           </div>
         </div>
@@ -319,7 +340,7 @@ export default function FileUpload({
       )}
       
       <p className="text-xs text-gray-400 mt-2 text-center">
-        Supported format: PDF • Maximum file size: 10MB
+        Supported format: PDF • Maximum file size: 50MB
       </p>
     </div>
   )

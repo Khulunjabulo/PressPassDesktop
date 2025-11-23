@@ -21,11 +21,15 @@ import {
   Edit3,
   Image as ImageIcon,
   X,
-  Camera
+  Camera,
+  Sparkles
 } from 'lucide-react';
 import FileUpload from "./fileUpload";
 import ClassifiedsUploadForm from "./ClassifiedsUploadForm";
 import { checkPublisherApproval } from '@/lib/publisherAuth';
+import { aiPdfProcessor } from '../lib/aiPdfProcessor';
+import GrammarChecker from './GrammarChecker'; // adjust path as needed
+import MultiStoryPreview from './MultiStoryPreview'; // adjust path as needed
 import { useRouter } from 'next/navigation';
 
 // Import Template Layouts
@@ -75,6 +79,12 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
   const [isFlipped, setIsFlipped] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [showClassifiedsForm, setShowClassifiedsForm] = useState(false);
+
+  const [showMultiStoryPreview, setShowMultiStoryPreview] = useState(false);
+  const [detectedStories, setDetectedStories] = useState([]);
+  const [showGrammarChecker, setShowGrammarChecker] = useState(false);
+  const [isProcessingPdf, setIsProcessingPdf] = useState(false);
+  const [aiProcessingStatus, setAiProcessingStatus] = useState('');
   
   // Upload Form States
   const [priority, setPriority] = useState(null);
@@ -93,6 +103,8 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
   // Template States
   const [selectedTemplateId, setSelectedTemplateId] = useState(3);
   const [templateCredit, setTemplateCredit] = useState('');
+
+  
 
   // Manual Article Form States
   const [formData, setFormData] = useState({
@@ -206,6 +218,253 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
     { value: 'sports', label: 'Sports' },
     { value: 'other', label: 'Other' }
   ];
+
+    // NEW: Handle AI PDF Processing
+  const handleAiPdfProcessing = async (pdfFile) => {
+  console.log('🚀 Starting AI PDF Processing');
+  console.log('📄 File:', pdfFile.name, 'Size:', pdfFile.size);
+  
+  try {
+    setIsProcessingPdf(true);
+    setAiProcessingStatus('Analyzing PDF with AI...');
+    
+    console.log('🤖 Calling aiPdfProcessor.processPDF...');
+    const result = await aiPdfProcessor.processPDF(pdfFile);
+    
+    console.log('✅ AI Result:', result);
+    
+    if (!result.success) {
+      throw new Error(result.error || 'PDF processing failed');
+    }
+    
+    console.log(`📊 Found ${result.storiesCount} article(s)`);
+    setAiProcessingStatus(`Found ${result.storiesCount} article(s)`);
+    
+    if (result.storiesCount > 1) {
+      console.log('📰 Multiple stories detected, showing preview');
+      setDetectedStories(result.stories);
+      setShowMultiStoryPreview(true);
+    } else if (result.stories.length === 1) {
+      console.log('📄 Single story detected, auto-filling form');
+      const story = result.stories[0];
+      await applyStoryToForm(story);
+    }
+    
+    setIsProcessingPdf(false);
+    setAiProcessingStatus('');
+    
+  } catch (error) {
+    console.error('❌ AI processing error:', error);
+    setUploadError('AI processing failed: ' + error.message);
+    setIsProcessingPdf(false);
+    setAiProcessingStatus('');
+  }
+};
+
+// Add/Update this handler in your FlipCardUploadForm component
+// Location: Around line 250, after handleAiPdfProcessing
+
+const handlePublishMultipleStories = async (selectedStories) => {
+  console.log('🚀 Starting to publish multiple stories');
+  console.log('📊 Stories to publish:', selectedStories.length);
+  
+  setIsSubmitting(true);
+  const results = {
+    success: [],
+    failed: []
+  };
+
+  try {
+    // Publish each story separately
+    for (let i = 0; i < selectedStories.length; i++) {
+      const story = selectedStories[i];
+      console.log(`📝 Publishing story ${i + 1}/${selectedStories.length}: ${story.headline}`);
+      
+      try {
+        // Prepare article data for this story
+        const articleData = {
+          title: story.headline || 'Untitled Article',
+          subtitle: '',
+          author: story.byline || currentUser?.companyName || 'Unknown Author',
+          authorTitle: '',
+          category: story.category || 'general',
+          tags: story.tags || [],
+          
+          // Use first image if available
+          featuredImageUrl: story.images?.[0]?.base64 || null,
+          imageCredit: '',
+          imageCaption: '',
+          
+          // Article content
+          content: story.content || '',
+          metaDescription: story.content?.substring(0, 160) || '',
+          
+          // Publishing settings
+          publishNow: true,
+          allowComments: true,
+          sendNewsletter: false,
+          isDraft: false,
+          
+          // Metadata
+          wordCount: story.content?.split(/\s+/).filter(w => w.length > 0).length || 0,
+          readingTime: Math.ceil((story.content?.split(/\s+/).filter(w => w.length > 0).length || 0) / 200) || 1,
+          
+          // Publisher info
+          publisherId: currentUser.uid,
+          publisherName: currentUser.companyName || 'Unknown Publisher',
+          
+          // Template settings
+          templateId: selectedTemplateId,
+          style: templateIdToStyle[selectedTemplateId] || 'classic',
+          templateCredit: templateCredit || ''
+        };
+
+        console.log('💾 Submitting article:', articleData.title);
+        
+        // Use existing submitArticle function
+        const result = await submitArticle(false, articleData);
+        
+        console.log('✅ Story published successfully:', story.headline);
+        results.success.push(story.headline);
+        
+      } catch (error) {
+        console.error('❌ Failed to publish story:', story.headline, error);
+        results.failed.push({
+          headline: story.headline,
+          error: error.message
+        });
+      }
+    }
+
+    // Show results
+    console.log('📊 Publishing complete!');
+    console.log('✅ Success:', results.success.length);
+    console.log('❌ Failed:', results.failed.length);
+    
+    if (results.success.length > 0) {
+      setSubmitStatus('success');
+      
+      // Show success message
+      alert(`Successfully published ${results.success.length} article(s)!\n\n${results.success.join('\n')}`);
+      
+      // Close modal and reset
+      setShowMultiStoryPreview(false);
+      setDetectedStories([]);
+      setFile(null);
+      
+      // Optionally close the entire form
+      setTimeout(() => {
+        onClose?.();
+      }, 2000);
+    }
+    
+    if (results.failed.length > 0) {
+      const failedList = results.failed.map(f => `${f.headline}: ${f.error}`).join('\n');
+      alert(`Failed to publish ${results.failed.length} article(s):\n\n${failedList}`);
+    }
+    
+  } catch (error) {
+    console.error('💥 Error publishing stories:', error);
+    setUploadError('Failed to publish articles: ' + error.message);
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
+// Update the submitArticle function to accept articleData parameter
+// Find your existing submitArticle function and modify it:
+const submitArticle = async (isDraft = false, customArticleData = null) => {
+  const authToken = await getAuthToken();
+  if (!authToken) {
+    throw new Error('Authentication token required');
+  }
+
+  const submitData = new FormData();
+
+  // Use custom data if provided (for multi-story), otherwise use form data
+  const dataToSubmit = customArticleData || {
+    ...formData,
+    content: editorRef.current?.innerHTML?.trim() || '',
+    isDraft,
+    wordCount,
+    readingTime,
+    publisherId: currentUser.uid,
+    publisherName: currentUser.companyName,
+    templateId: selectedTemplateId,
+    style: templateIdToStyle[selectedTemplateId] || 'classic',
+    templateCredit: templateCredit
+  };
+
+  // Build FormData from the data
+  Object.keys(dataToSubmit).forEach(key => {
+    if (key === 'featuredImage' && dataToSubmit[key]) {
+      submitData.append(key, dataToSubmit[key]);
+    } else if (key !== 'featuredImage' && dataToSubmit[key] !== null && dataToSubmit[key] !== undefined) {
+      submitData.append(key, dataToSubmit[key]);
+    }
+  });
+
+  // Add author info
+  const authorName = dataToSubmit.author || currentUser?.companyName || 'Unknown Author';
+  submitData.append('author', authorName);
+  submitData.append('authorName', authorName);
+  submitData.append('journalist', authorName);
+
+  // Add timestamps
+  submitData.append('createdAt', new Date().toISOString());
+  submitData.append('updatedAt', new Date().toISOString());
+
+  // Add engagement metrics
+  submitData.append('views', '0');
+  submitData.append('likes', '0');
+  submitData.append('comments', '0');
+
+  const headers = {
+    'Authorization': `Bearer ${authToken}`
+  };
+
+  const response = await fetch(`/api/publish-article`, {
+    method: 'POST',
+    headers,
+    body: submitData
+  });
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.error || `HTTP error! status: ${response.status}`);
+  }
+
+  return result;
+};
+
+  // NEW: Apply story data to form
+  const applyStoryToForm = async (story) => {
+    setAutofill({
+      headline: story.headline || '',
+      byline: story.byline || '',
+      location: story.location || ''
+    });
+    
+    // Auto-fill form fields
+    document.getElementById('headline').value = story.headline || '';
+    document.getElementById('byline').value = story.byline || '';
+    document.getElementById('location').value = story.location || '';
+    document.getElementById('body').value = story.content || '';
+    
+    if (story.category) {
+      document.getElementById('section').value = story.category;
+    }
+    
+    // If story has images, show first image
+    if (story.images && story.images.length > 0) {
+      setImagePreview(story.images[0].base64);
+      setFormData(prev => ({
+        ...prev,
+        featuredImageUrl: story.images[0].base64
+      }));
+    }
+  };
 
   useEffect(() => {
     if (formData.author && currentUser?.staff) {
@@ -773,87 +1032,7 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
     return Object.keys(newErrors).length === 0;
   };
 
-  const submitArticle = async (isDraft = false) => {
-    const authToken = await getAuthToken();
-    if (!authToken) {
-      throw new Error('Authentication token required');
-    }
 
-    const submitData = new FormData();
-
-    Object.keys(formData).forEach(key => {
-      if (key === 'featuredImage' && formData[key]) {
-        submitData.append(key, formData[key]);
-      } else if (key !== 'featuredImage' && formData[key] !== null && formData[key] !== undefined) {
-        submitData.append(key, formData[key]);
-      }
-    });
-
-    const content = editorRef.current?.innerHTML?.trim() || '';
-    submitData.append('content', content);
-    submitData.append('isDraft', isDraft.toString());
-    submitData.append('wordCount', wordCount.toString());
-    submitData.append('readingTime', readingTime.toString());
-
-    const authorName = formData.author || currentUser?.companyName || 'Unknown Author';
-    const authorTitle = formData.authorTitle || '';
-
-    submitData.append('author', authorName);
-    submitData.append('authorName', authorName);
-    submitData.append('authorTitle', authorTitle);
-    submitData.append('journalist', authorName);
-
-    const publisherId = currentUser.uid;
-    const publisherName = currentUser.companyName || 'Unknown Publisher';
-
-    submitData.append('publisherId', publisherId);
-    submitData.append('publisherName', publisherName);
-
-    const styleString = templateIdToStyle[selectedTemplateId] || 'classic';
-    submitData.append('templateId', selectedTemplateId.toString());
-    submitData.append('style', styleString); 
-    submitData.append('templateCredit', templateCredit);
-
-    if (formData.featuredImageUrl) {
-      submitData.append('featuredImageUrl', formData.featuredImageUrl);
-    }
-
-    if (formData.imageCredit) {
-      submitData.append('imageCredit', formData.imageCredit);
-    }
-    if (formData.imageCaption) {
-      submitData.append('imageCaption', formData.imageCaption);
-    }
-
-    submitData.append('createdAt', new Date().toISOString());
-    submitData.append('updatedAt', new Date().toISOString());
-
-    submitData.append('views', '0');
-    submitData.append('engagement', '0');
-    submitData.append('likes', '0');
-    submitData.append('comments', '0');
-    submitData.append('shares', '0');
-
-    const headers = {
-      'Authorization': `Bearer ${authToken}`
-    };
-
-    const url = `/api/publish-article`;
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers,
-      body: submitData
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.error || `HTTP error! status: ${response.status}`);
-    }
-
-    return result;
-  };
 
   const handleManualSubmit = async (e, isDraft = false) => {
     e.preventDefault();
@@ -1116,13 +1295,110 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
                 onExtract={(data) => setAutofill(data)}
                 pdfPublishMode={pdfPublishMode}
                 setPdfPublishMode={setPdfPublishMode}
+                onAiProcess={handleAiPdfProcessing}
               />
+
+                {/* 👇 ADD TEST BUTTON HERE 👇 */}
+  {file && pdfPublishMode === 'extract' && (
+    <div className="mb-4 p-3 bg-purple-50 border border-purple-200 rounded-md">
+      <button
+        type="button"
+        onClick={async () => {
+          console.log('🧪 Manual test triggered');
+          console.log('📄 File:', file.name, file.size);
+          await handleAiPdfProcessing(file);
+        }}
+        className="w-full px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 flex items-center justify-center"
+        disabled={isProcessingPdf}
+      >
+        <Sparkles className="w-4 h-4 mr-2" />
+        {isProcessingPdf ? 'AI Processing...' : '🧪 Test AI Processing (Click to analyze PDF)'}
+      </button>
+      {aiProcessingStatus && (
+        <p className="text-sm text-purple-700 mt-2 text-center">{aiProcessingStatus}</p>
+      )}
+    </div>
+  )}
+  {/* 👆 END OF TEST BUTTON 👆 */}
+
+  {/* 👇 ADD THIS NEW SECTION 👇 */}
+{/* SHOW DETECTED ARTICLES BUTTON */}
+{detectedStories.length > 0 && !isProcessingPdf && (
+  <div className="mb-4 p-4 bg-green-50 border-2 border-green-300 rounded-lg">
+    <div className="flex items-center justify-between">
+      <div className="flex items-center">
+        <CheckCircle className="w-6 h-6 text-green-600 mr-3" />
+        <div>
+          <p className="text-sm font-bold text-green-800">
+            ✅ {detectedStories.length} Article{detectedStories.length !== 1 ? 's' : ''} Detected!
+          </p>
+          <p className="text-xs text-green-700 mt-1">
+            {detectedStories.length === 1 
+              ? 'Review and publish your article' 
+              : 'Review, edit, and select which articles to publish'}
+          </p>
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={() => {
+          console.log('👀 View articles clicked, showing modal');
+          setShowMultiStoryPreview(true);
+        }}
+        className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold flex items-center shadow-md"
+      >
+        <Eye className="w-5 h-5 mr-2" />
+        View All Articles
+      </button>
+    </div>
+    
+    {/* Quick Preview of Headlines */}
+    <div className="mt-3 pt-3 border-t border-green-200">
+      <p className="text-xs font-medium text-green-700 mb-2">Detected Headlines:</p>
+      <ul className="space-y-1">
+        {detectedStories.slice(0, 5).map((story, idx) => (
+          <li key={idx} className="text-xs text-green-700 flex items-start">
+            <span className="font-bold mr-2">{idx + 1}.</span>
+            <span className="flex-1">{story.headline || 'Untitled'}</span>
+            {story.images && story.images.length > 0 && (
+              <span className="ml-2 px-2 py-0.5 bg-green-200 text-green-800 rounded text-xs">
+                {story.images.length} img
+              </span>
+            )}
+          </li>
+        ))}
+        {detectedStories.length > 5 && (
+          <li className="text-xs text-green-600 italic">
+            + {detectedStories.length - 5} more articles...
+          </li>
+        )}
+      </ul>
+    </div>
+  </div>
+)}
+{/* 👆 END OF NEW SECTION 👆 */}
 
               {uploadError && (
                 <div className="bg-red-50 border border-red-200 rounded-md p-3 mb-4">
                   <p className="text-sm text-red-600">{uploadError}</p>
                 </div>
               )}
+
+              {/* 👇 ADD PROCESSING STATUS HERE 👇 */}
+{isProcessingPdf && (
+  <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
+    <div className="flex items-center">
+      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mr-3"></div>
+      <div>
+        <p className="text-sm font-medium text-blue-800">AI is analyzing your PDF...</p>
+        {aiProcessingStatus && (
+          <p className="text-xs text-blue-600 mt-1">{aiProcessingStatus}</p>
+        )}
+      </div>
+    </div>
+  </div>
+)}
+{/* 👆 END OF PROCESSING STATUS 👆 */}
 
               {submitStatus === 'success' && (
                 <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-md flex items-center">
@@ -1655,6 +1931,20 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
                     <button type="button" onClick={() => handleToolbarClick('insertImage')} className="p-2 hover:bg-gray-200 rounded transition-colors" title="Insert Image">
                       <ImageIcon className="w-4 h-4" />
                     </button>
+                  {/* 👇 ADD GRAMMAR BUTTON HERE 👇 */}
+<div className="border-r mx-2"></div>
+<button 
+  type="button" 
+  onClick={() => {
+    console.log('✍️ Grammar check clicked');
+    setShowGrammarChecker(true);
+  }} 
+  className="p-2 hover:bg-purple-200 rounded transition-colors bg-purple-50" 
+  title="Check Grammar with AI"
+>
+  <Sparkles className="w-4 h-4 text-purple-600" />
+</button>
+{/* 👆 END OF GRAMMAR BUTTON 👆 */}
                   </div>
                   
                   <div
@@ -1815,6 +2105,56 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
           />
         </div>
       )}
+
+            {/* 👇 ADD MULTI-STORY PREVIEW HERE 👇 */}
+{showMultiStoryPreview && (
+  <MultiStoryPreview
+    stories={detectedStories}
+    onPublish={handlePublishMultipleStories}
+    onCancel={() => {
+      console.log('❌ Cancelled multi-story preview');
+      setShowMultiStoryPreview(false);
+    }}
+    onEditStory={(storyIndex, updatedStory) => {
+      console.log('✏️ Editing story:', storyIndex);
+      const updated = [...detectedStories];
+      updated[storyIndex] = updatedStory;
+      setDetectedStories(updated);
+    }}
+  />
+)}
+      {/* 👆 END OF MULTI-STORY PREVIEW 👆 */}
+      
+      {showGrammarChecker && (
+  <GrammarChecker
+    text={editorRef.current?.textContent || ''}
+    onApplyCorrection={(correction) => {
+      const content = editorRef.current.innerHTML;
+      const updated = content.replace(correction.original, correction.corrected);
+      editorRef.current.innerHTML = updated;
+    }}
+    onClose={() => setShowGrammarChecker(false)}
+  />
+)}{showMultiStoryPreview && (
+  <MultiStoryPreview
+    stories={detectedStories}
+    onPublish={async (selectedStories) => {
+      for (const story of selectedStories) {
+        const articleData = {
+          title: story.headline,
+          author: story.byline || currentUser?.companyName,
+          content: story.content,
+          category: story.category || 'general',
+          featuredImageUrl: story.images?.[0]?.base64 || null,
+        };
+        await submitArticle(false, articleData);
+      }
+      setShowMultiStoryPreview(false);
+    }}
+    onCancel={() => setShowMultiStoryPreview(false)}
+  />
+)}
     </div>
   );
 }
+

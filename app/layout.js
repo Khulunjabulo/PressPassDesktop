@@ -22,6 +22,11 @@ export default function RootLayout({ children }) {
         <link rel="icon" type="image/png" sizes="16x16" href="/press-pass.png" />
         <link rel="apple-touch-icon" href="/press-pass.png" />
         <link rel="shortcut icon" href="/press-pass.png" />
+        {/* Add PDF.js library */}
+        <script 
+          src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"
+          async
+        ></script>
       </head>
       <body className="flex flex-col min-h-screen">
         <AuthProvider>

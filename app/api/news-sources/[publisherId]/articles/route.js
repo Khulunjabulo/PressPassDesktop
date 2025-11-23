@@ -44,8 +44,12 @@ export async function GET(request, { params }) {
     articlesSnapshot.forEach((doc) => {
       const articleData = doc.data();
       
-      // 🔍 DEBUG: Log each article's RSS status
-      console.log('📄 Article:', articleData.title?.substring(0, 40), '| isRssFeed:', articleData.isRssFeed, '| rssFeedId:', articleData.rssFeedId);
+      // 🔍 DEBUG: Log each article's type
+      console.log('📄 Article:', articleData.title?.substring(0, 40), {
+        isRssFeed: articleData.isRssFeed,
+        isPdfArticle: articleData.isPdfArticle,
+        hasPdfUrl: !!articleData.pdfUrl
+      });
       
       // Enhanced image URL extraction
       let imageUrl = articleData.featuredImageUrl || 
@@ -87,24 +91,37 @@ export async function GET(request, { params }) {
         style: articleData.style || 'modern',
         allowComments: articleData.allowComments !== false,
         isDraft: false,
-        // ✅ RSS FEED FIELDS - CRITICAL: Check for existence first
-        isRssFeed: articleData.isRssFeed === true, // ← FIXED: Explicit boolean check
+        
+        // RSS FEED FIELDS
+        isRssFeed: articleData.isRssFeed === true,
         rssFeedId: articleData.rssFeedId || null,
         rssFeedName: articleData.rssFeedName || null,
         rssFeedUrl: articleData.rssFeedUrl || null,
-        link: articleData.link || null, // Original RSS article link
-        guid: articleData.guid || null // RSS article unique identifier
+        link: articleData.link || null,
+        guid: articleData.guid || null,
+        
+        // 🆕 PDF ARTICLE FIELDS - CRITICAL FOR PDF VIEWER
+        isPdfArticle: articleData.isPdfArticle === true,
+        pdfUrl: articleData.pdfUrl || null,
+        pdfFileName: articleData.pdfFileName || null,
+        pdfSize: articleData.pdfSize || null,
+        pdfType: articleData.pdfType || null,
+        description: articleData.description || null
       });
     });
     
-    // Process drafts (include them as well for completeness)
+    // Process drafts
     console.log('📊 Processing', draftsSnapshot.size, 'draft articles...');
     
     draftsSnapshot.forEach((doc) => {
       const articleData = doc.data();
       
-      // 🔍 DEBUG: Log each draft's RSS status
-      console.log('📄 Draft:', articleData.title?.substring(0, 40), '| isRssFeed:', articleData.isRssFeed);
+      // 🔍 DEBUG: Log each draft's type
+      console.log('📄 Draft:', articleData.title?.substring(0, 40), {
+        isRssFeed: articleData.isRssFeed,
+        isPdfArticle: articleData.isPdfArticle,
+        hasPdfUrl: !!articleData.pdfUrl
+      });
       
       // Enhanced image URL extraction for drafts too
       let imageUrl = articleData.featuredImageUrl || 
@@ -145,33 +162,47 @@ export async function GET(request, { params }) {
         style: articleData.style || 'modern',
         allowComments: articleData.allowComments !== false,
         isDraft: true,
-        // ✅ RSS FEED FIELDS - CRITICAL: Explicit boolean check
-        isRssFeed: articleData.isRssFeed === true, // ← FIXED
+        
+        // RSS FEED FIELDS
+        isRssFeed: articleData.isRssFeed === true,
         rssFeedId: articleData.rssFeedId || null,
         rssFeedName: articleData.rssFeedName || null,
         rssFeedUrl: articleData.rssFeedUrl || null,
         link: articleData.link || null,
-        guid: articleData.guid || null
+        guid: articleData.guid || null,
+        
+        // 🆕 PDF ARTICLE FIELDS - CRITICAL FOR PDF VIEWER
+        isPdfArticle: articleData.isPdfArticle === true,
+        pdfUrl: articleData.pdfUrl || null,
+        pdfFileName: articleData.pdfFileName || null,
+        pdfSize: articleData.pdfSize || null,
+        pdfType: articleData.pdfType || null,
+        description: articleData.description || null
       });
     });
     
-    // Count RSS articles
+    // Count different article types
     const rssArticlesCount = articles.filter(a => a.isRssFeed === true).length;
+    const pdfArticlesCount = articles.filter(a => a.isPdfArticle === true).length;
     
     console.log('📰 Total articles found:', articles.length);
     console.log('📡 RSS feed articles:', rssArticlesCount);
+    console.log('📄 PDF articles:', pdfArticlesCount);
     console.log('🖼️ Articles with images:', articles.filter(a => a.imageUrl).length);
+    
+    // 🔍 DEBUG: List all PDF articles found
+    if (pdfArticlesCount > 0) {
+      console.log('📄 PDF Articles Details:');
+      articles.filter(a => a.isPdfArticle).forEach((article, idx) => {
+        console.log(`  ${idx + 1}. "${article.title}" - File: ${article.pdfFileName}, Has URL: ${!!article.pdfUrl}`);
+      });
+    }
     
     // 🔍 DEBUG: List all RSS articles found
     if (rssArticlesCount > 0) {
       console.log('📡 RSS Articles Details:');
       articles.filter(a => a.isRssFeed).forEach((article, idx) => {
         console.log(`  ${idx + 1}. "${article.title.substring(0, 50)}" - Feed: ${article.rssFeedName}`);
-      });
-    } else {
-      console.log('⚠️ NO RSS ARTICLES FOUND - Checking why...');
-      articles.forEach((article, idx) => {
-        console.log(`  ${idx + 1}. "${article.title.substring(0, 50)}" - isRssFeed: ${article.isRssFeed}, rssFeedId: ${article.rssFeedId}`);
       });
     }
     
@@ -191,7 +222,8 @@ export async function GET(request, { params }) {
       totalArticles: articles.length,
       publishedArticles: articles.filter(a => !a.isDraft).length,
       drafts: articles.filter(a => a.isDraft).length,
-      rssArticles: rssArticlesCount // ✅ NEW: Count RSS articles
+      rssArticles: rssArticlesCount,
+      pdfArticles: pdfArticlesCount
     });
     
   } catch (error) {

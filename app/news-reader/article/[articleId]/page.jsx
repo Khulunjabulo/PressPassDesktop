@@ -196,7 +196,7 @@ export default function ArticleViewPage() {
     
     try {
       setLoading(true);
-      console.log('Fetching article:', params.articleId, 'from publisher:', publisherId);
+      console.log('🔍 Fetching article:', params.articleId, 'from publisher:', publisherId);
       
       const response = await fetch(`/api/news-sources/${publisherId}/articles`);
       const data = await response.json();
@@ -204,22 +204,28 @@ export default function ArticleViewPage() {
       if (data.success) {
         const foundArticle = data.articles.find(a => a.id === params.articleId);
         if (foundArticle) {
-          console.log('Article found:', {
+          console.log('✅ Article found:', {
             id: foundArticle.id,
+            title: foundArticle.title,
             isPdfArticle: foundArticle.isPdfArticle,
+            hasPdfUrl: !!foundArticle.pdfUrl,
+            pdfFileName: foundArticle.pdfFileName,
             style: foundArticle.style,
             hasStyle: !!foundArticle.style
           });
+          
           setArticle(foundArticle);
           setPublisher(data.publisher);
         } else {
+          console.error('❌ Article not found in list');
           setError('Article not found');
         }
       } else {
+        console.error('❌ API error:', data.error);
         setError(data.error || 'Failed to fetch article');
       }
     } catch (err) {
-      console.error('Error fetching article:', err);
+      console.error('💥 Error fetching article:', err);
       setError('Failed to load article');
     } finally {
       setLoading(false);
@@ -322,6 +328,13 @@ export default function ArticleViewPage() {
     );
   }
 
+  // 🆕 CHECK IF THIS IS A PDF ARTICLE FIRST
+  console.log('🔍 Rendering article:', {
+    isPdfArticle: article.isPdfArticle,
+    hasPdfUrl: !!article.pdfUrl,
+    pdfFileName: article.pdfFileName
+  });
+
   // Map style names to template IDs
   const styleToTemplateId = {
     'fashion': 1,
@@ -398,11 +411,40 @@ export default function ArticleViewPage() {
           />
         </div>
 
-        {/* CHECK IF PDF ARTICLE - RENDER DIFFERENTLY */}
-        {article.isPdfArticle ? (
-          <PdfArticleViewer article={article} />
+        {/* 🆕 CRITICAL: CHECK FOR PDF FIRST, THEN RENDER APPROPRIATE COMPONENT */}
+        {article.isPdfArticle && article.pdfUrl ? (
+          <>
+            <PdfArticleViewer article={article} />
+            
+            {/* Debug info in development */}
+            {process.env.NODE_ENV === 'development' && (
+              <div className="max-w-6xl mx-auto px-8 mb-4">
+                <div className="bg-green-50 border border-green-300 p-4 rounded text-xs">
+                  <strong>✅ PDF Article Detected:</strong>
+                  <div>isPdfArticle: {String(article.isPdfArticle)}</div>
+                  <div>pdfUrl exists: {String(!!article.pdfUrl)}</div>
+                  <div>pdfUrl length: {article.pdfUrl?.length || 0} chars</div>
+                  <div>pdfFileName: {article.pdfFileName}</div>
+                </div>
+              </div>
+            )}
+          </>
         ) : (
-          <TemplateComponent article={article} isPreview={false} />
+          <>
+            <TemplateComponent article={article} isPreview={false} />
+            
+            {/* Debug info in development */}
+            {process.env.NODE_ENV === 'development' && (
+              <div className="max-w-6xl mx-auto px-8 mb-4">
+                <div className="bg-blue-50 border border-blue-300 p-4 rounded text-xs">
+                  <strong>📰 Regular Article Rendered:</strong>
+                  <div>isPdfArticle: {String(article.isPdfArticle)}</div>
+                  <div>Template: {article.style || 'default'}</div>
+                  <div>Template ID: {templateId}</div>
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         <div className="max-w-6xl mx-auto px-8 py-8">
@@ -451,7 +493,7 @@ export default function ArticleViewPage() {
                     Last updated: {formatDate(article.updatedAt)}
                   </p>
                 )}
-                {article.isPdfArticle && (
+                {article.isPdfArticle && article.pdfFileName && (
                   <p className="text-blue-600 mt-1 flex items-center">
                     <FileText className="w-4 h-4 mr-1" />
                     PDF Document: {article.pdfFileName}
