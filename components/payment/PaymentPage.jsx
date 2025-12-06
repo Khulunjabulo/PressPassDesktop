@@ -1,11 +1,11 @@
 // components/payment/PaymentPage.jsx
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { CreditCard, Smartphone, Wallet, ArrowLeft, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function PaymentPage({ 
+function PaymentPageContent({ 
   amount: propAmount,
   currency: propCurrency = 'ZAR',
   description: propDescription,
@@ -395,7 +395,7 @@ export default function PaymentPage({
             <div className="flex-1 flex justify-center">
               {/* LOGO PLACEHOLDER - Replace with actual logo */}
               <div className="w-32 h-12 bg-blue-600 rounded flex items-center justify-center">
-                <span className="text-white font-bold text-xl">Presspass.Africa</span>
+                <span className="text-white font-bold text-xl">LOGO</span>
               </div>
             </div>
             <div className="w-20"></div> {/* Spacer for centering */}
@@ -512,5 +512,21 @@ export default function PaymentPage({
         </div>
       </div>
     </div>
+  );
+}
+
+// Main export with Suspense wrapper
+export default function PaymentPage(props) {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">Loading payment page...</p>
+        </div>
+      </div>
+    }>
+      <PaymentPageContent {...props} />
+    </Suspense>
   );
 }
