@@ -1,4 +1,4 @@
-// components/payment/PaymentPage.jsx
+// app/payment/page.jsx
 'use client';
 
 import { useState, useEffect, useRef, Suspense } from 'react';

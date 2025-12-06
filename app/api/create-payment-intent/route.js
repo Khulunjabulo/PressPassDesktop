@@ -1,12 +1,23 @@
 // app/api/create-payment-intent/route.js
 import { NextResponse } from 'next/server';
-import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2023-10-16',
-});
+// Dynamic import of Stripe to prevent build-time issues
+let stripe = null;
 
-// Pricing logic for ads (can be removed if ads handle their own pricing)
+function getStripe() {
+  if (!stripe) {
+    if (!process.env.STRIPE_SECRET_KEY) {
+      throw new Error('STRIPE_SECRET_KEY is not configured');
+    }
+    const Stripe = require('stripe');
+    stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: '2023-10-16',
+    });
+  }
+  return stripe;
+}
+
+// Pricing logic for ads
 function calculateAdPrice(adType, hours) {
   const isBanner = adType === 'banner';
   const days = Math.ceil(hours / 24);
@@ -97,9 +108,11 @@ export async function POST(request) {
       metadata
     });
     
+    // Get Stripe instance (lazy initialization)
+    const stripeClient = getStripe();
+    
     // Create PaymentIntent with Stripe
-    // Using automatic_payment_methods enables card, Google Pay, Apple Pay automatically
-    const paymentIntent = await stripe.paymentIntents.create({
+    const paymentIntent = await stripeClient.paymentIntents.create({
       amount: amountInCents,
       currency,
       metadata,
@@ -128,3 +141,6 @@ export async function POST(request) {
     }, { status: 500 });
   }
 }
+
+// Mark route as dynamic to prevent static optimization
+export const dynamic = 'force-dynamic';
