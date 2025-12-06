@@ -1,11 +1,11 @@
-// app/payment/page.jsx
+// components/payment/PaymentPage.jsx
 'use client';
 
-import { useState, useEffect, useRef, Suspense } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { CreditCard, Smartphone, Wallet, ArrowLeft, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-function PaymentPageContent({ 
+export default function PaymentPage({ 
   amount: propAmount,
   currency: propCurrency = 'ZAR',
   description: propDescription,
@@ -156,32 +156,6 @@ function PaymentPageContent({
     if (stripe && clientSecret && !elements) {
       console.log('🎨 Initializing Stripe Elements...');
       
-      // Check if device supports Google Pay or Apple Pay
-      const checkWalletAvailability = async () => {
-        try {
-          const pr = await stripe.paymentRequest({
-            country: 'ZA',
-            currency: currency.toLowerCase(),
-            total: {
-              label: description,
-              amount: Math.round(parseFloat(amount) * 100),
-            },
-            requestPayerName: true,
-            requestPayerEmail: true,
-          });
-
-          // Check if Google Pay or Apple Pay is available
-          const result = await pr.canMakePayment();
-          if (result) {
-            console.log('✅ Wallet available:', result.applePay ? 'Apple Pay' : 'Google Pay');
-          }
-        } catch (err) {
-          console.log('ℹ️ Wallet payment not available:', err.message);
-        }
-      };
-
-      checkWalletAvailability();
-      
       const elementsInstance = stripe.elements({
         clientSecret,
         appearance: {
@@ -199,30 +173,20 @@ function PaymentPageContent({
       
       setElements(elementsInstance);
     }
-  }, [stripe, clientSecret, amount, currency, description]);
+  }, [stripe, clientSecret]);
 
   // Mount payment element
   useEffect(() => {
     if (!elements || paymentElementRef.current) return;
     
     try {
-      // Create payment element with wallet options enabled
+      // Create payment element with all payment methods enabled
       const paymentElement = elements.create('payment', {
         layout: {
-          type: 'tabs',
+          type: 'accordion',
           defaultCollapsed: false,
-        },
-        // This enables Google Pay and Apple Pay buttons
-        wallets: {
-          applePay: 'auto', // Shows Apple Pay if available
-          googlePay: 'auto', // Shows Google Pay if available
-        },
-        fields: {
-          billingDetails: {
-            address: {
-              country: 'never', // Simplify for ZAR payments
-            }
-          }
+          radios: true,
+          spacedAccordionItems: true
         }
       });
       
@@ -235,6 +199,7 @@ function PaymentPageContent({
       });
       
       paymentElement.on('change', (event) => {
+        console.log('Payment method changed:', event);
         if (event.error) {
           setErrorMessage(event.error.message);
         } else {
@@ -242,7 +207,7 @@ function PaymentPageContent({
         }
       });
       
-      console.log('✅ Payment element mounted with wallet support');
+      console.log('✅ Payment element mounted with automatic payment methods');
       
     } catch (error) {
       console.error('❌ Error mounting payment element:', error);
@@ -474,6 +439,19 @@ function PaymentPageContent({
               {clientSecret && stripe && elements ? (
                 <div className="mb-6">
                   <div id="payment-element-mount"></div>
+                  
+                  {/* Debug Info */}
+                  {process.env.NODE_ENV === 'development' && (
+                    <div className="mt-4 p-3 bg-gray-100 rounded text-xs">
+                      <p className="font-semibold mb-1">🔍 Payment Debug Info:</p>
+                      <p>• Browser: {navigator.userAgent.includes('Chrome') ? 'Chrome' : navigator.userAgent.includes('Safari') ? 'Safari' : 'Other'}</p>
+                      <p>• Secure: {window.location.protocol === 'https:' ? '✅' : '❌ (needs HTTPS)'}</p>
+                      <p>• Currency: {currency}</p>
+                      <p className="mt-2 text-gray-600">
+                        💡 Google Pay shows in Chrome with saved cards. Apple Pay shows in Safari on Mac/iOS.
+                      </p>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="mb-6 flex items-center justify-center py-8">
@@ -512,21 +490,5 @@ function PaymentPageContent({
         </div>
       </div>
     </div>
-  );
-}
-
-// Main export with Suspense wrapper
-export default function PaymentPage(props) {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Loading payment page...</p>
-        </div>
-      </div>
-    }>
-      <PaymentPageContent {...props} />
-    </Suspense>
   );
 }

@@ -42,7 +42,12 @@ function calculateAdPrice(adType, hours) {
 export async function POST(request) {
   try {
     const body = await request.json();
-    console.log('💰 Creating payment intent:', body);
+    console.log('💰 Creating payment intent:', {
+      type: body.adType || 'direct_amount',
+      amount: body.amount,
+      currency: body.currency || 'ZAR',
+      metadata: body.metadata
+    });
     
     let amountInRands;
     let metadata = body.metadata || {};
@@ -79,18 +84,29 @@ export async function POST(request) {
         totalHours,
       };
       
+      console.log('📊 Ad pricing calculated:', {
+        adType: body.adType,
+        duration: `${body.duration} ${body.durationUnit}`,
+        totalHours,
+        price: `R${amountInRands}`
+      });
+      
     } else if (body.amount) {
       // Direct amount provided (for subscriptions, etc.)
       amountInRands = parseFloat(body.amount);
       
       if (isNaN(amountInRands) || amountInRands <= 0) {
+        console.error('❌ Invalid amount:', body.amount);
         return NextResponse.json({
           success: false,
           error: 'Invalid amount provided',
         }, { status: 400 });
       }
       
+      console.log('💵 Direct payment amount:', `R${amountInRands}`);
+      
     } else {
+      console.error('❌ Missing required fields: amount or ad details');
       return NextResponse.json({
         success: false,
         error: 'Either amount or ad details must be provided',
@@ -102,27 +118,41 @@ export async function POST(request) {
     const amountInCents = Math.round(amountInRands * 100);
     
     console.log('💵 Price calculation:', { 
-      amountInRands, 
-      amountInCents,
-      currency,
+      amountInRands: `R${amountInRands}`,
+      amountInCents: `${amountInCents} cents`,
+      currency: currency.toUpperCase(),
       metadata
     });
     
     // Get Stripe instance (lazy initialization)
     const stripeClient = getStripe();
+    console.log('✅ Stripe client initialized');
     
     // Create PaymentIntent with Stripe
+    // automatic_payment_methods will enable Card, Google Pay, Apple Pay automatically
+    console.log('🔄 Creating Stripe PaymentIntent...');
     const paymentIntent = await stripeClient.paymentIntents.create({
       amount: amountInCents,
       currency,
       metadata,
       automatic_payment_methods: {
         enabled: true,
-        allow_redirects: 'never',
       },
     });
     
-    console.log('✅ Payment intent created:', paymentIntent.id);
+    console.log('✅ Payment intent created successfully:', {
+      id: paymentIntent.id,
+      amount: `${amountInCents} cents`,
+      currency: currency.toUpperCase(),
+      status: paymentIntent.status
+    });
+    
+    console.log('📱 Available payment methods will be determined by Stripe based on:');
+    console.log('   ✓ Customer location and device');
+    console.log('   ✓ Browser capabilities (Chrome = Google Pay, Safari = Apple Pay)');
+    console.log('   ✓ Saved payment methods in user account');
+    console.log('   ✓ Currency support:', currency.toUpperCase());
+    console.log('   ✓ HTTPS requirement (Google Pay & Apple Pay need secure connection)');
     
     return NextResponse.json({
       success: true,
@@ -133,11 +163,20 @@ export async function POST(request) {
     });
     
   } catch (error) {
-    console.error('🚨 Payment intent creation failed:', error);
+    console.error('🚨 Payment intent creation failed:', {
+      error: error.message,
+      type: error.type,
+      code: error.code,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
     
     return NextResponse.json({
       success: false,
       error: error.message,
+      details: process.env.NODE_ENV === 'development' ? {
+        type: error.type,
+        code: error.code
+      } : undefined
     }, { status: 500 });
   }
 }
