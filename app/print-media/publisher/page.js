@@ -4,7 +4,6 @@ import { useState } from 'react';
 import Header from "@/components/UI/header";
 import PublisherSidebar from "@/components/UI/publisherSidebar.jsx";
 import UploadForm from "@/components/uploadForm";
-// import ManualArticleForm from "@/components/ManualArticleForm";
 import usePrintMediaLogic from "@/hooks/PrintMediaLogic";
 import { useCurrentPublisher } from "@/hooks/useCurrentPublisher";
 import PrintMediaFooter from '@/components/UI/PrintMediaFooter';
