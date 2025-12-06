@@ -1,11 +1,11 @@
-// components/payment/PaymentPage.jsx
+// app/payment/page.js
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { CreditCard, Smartphone, Wallet, ArrowLeft, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function PaymentPage({ 
+function PaymentPageContent({ 
   amount: propAmount,
   currency: propCurrency = 'ZAR',
   description: propDescription,
@@ -122,8 +122,6 @@ export default function PaymentPage({
           amount: parseFloat(amount),
           currency: currency.toLowerCase(),
           metadata,
-          // Determine payment method types based on selection
-          paymentMethodTypes: getPaymentMethodTypes()
         }),
       });
       
@@ -143,12 +141,6 @@ export default function PaymentPage({
     } finally {
       setLoading(false);
     }
-  };
-
-  // Get payment method types for Stripe based on selection
-  const getPaymentMethodTypes = () => {
-    const method = paymentMethods.find(m => m.id === selectedMethod);
-    return method?.stripeType || ['card'];
   };
 
   // Initialize Stripe Elements when clientSecret is available
@@ -490,5 +482,21 @@ export default function PaymentPage({
         </div>
       </div>
     </div>
+  );
+}
+
+// Wrap with Suspense boundary to fix Next.js 15 useSearchParams error
+export default function PaymentPage(props) {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">Loading payment page...</p>
+        </div>
+      </div>
+    }>
+      <PaymentPageContent {...props} />
+    </Suspense>
   );
 }
