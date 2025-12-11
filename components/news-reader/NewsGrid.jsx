@@ -1,7 +1,7 @@
 'use client';
 
 import { Heart, X, Upload, ExternalLink, CreditCard } from 'lucide-react';
-import { useState, useEffect, Fragment } from 'react';
+import { useState, useEffect, Fragment, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useFavorites } from '@/hooks/useFavorites';
 import RecommendedOverlayBottom from '@/components/news-reader/Overlay';
@@ -94,6 +94,8 @@ function AdSlot({
   useEffect(() => {
     fetchAds();
   }, []);
+
+  
 
   // Simple rotation every 8 seconds
   useEffect(() => {
@@ -323,7 +325,11 @@ function AdSlot({
 }
 
 // Ad Creation Modal (updated to handle banner ads)
+
+// Updated AdCreationModal with Payment Integration - FIXED HOOKS
+// Updated AdCreationModal - Payment Section Removed
 function AdCreationModal({ isOpen, onClose, adType, dimensions }) {
+  const router = useRouter();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     title: '',
@@ -333,27 +339,75 @@ function AdCreationModal({ isOpen, onClose, adType, dimensions }) {
     desktopImagePreview: '',
     mobileImagePreview: '',
     contactEmail: '',
-    company: ''
+    company: '',
+    duration: 1,
+    durationUnit: 'days',
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [uploadProgress, setUploadProgress] = useState({});
-
-  if (!isOpen) return null;
+  const [pricing, setPricing] = useState({ amount: 0, totalHours: 0 });
 
   const isBannerAd = adType === 'banner';
 
-  // Improved file upload handler
+  useEffect(() => {
+    if (isOpen && step === 3) {
+      calculatePricing();
+    }
+  }, [formData.duration, formData.durationUnit, step, isOpen]);
+
+  if (!isOpen) return null;
+
+  const calculatePricing = () => {
+    const duration = parseInt(formData.duration) || 1;
+    const unit = formData.durationUnit;
+    
+    let totalHours;
+    switch (unit) {
+      case 'hours':
+        totalHours = duration;
+        break;
+      case 'days':
+        totalHours = duration * 24;
+        break;
+      case 'weeks':
+        totalHours = duration * 24 * 7;
+        break;
+      case 'months':
+        totalHours = duration * 24 * 30;
+        break;
+      default:
+        totalHours = duration * 24;
+    }
+    
+    let amount;
+    const days = Math.ceil(totalHours / 24);
+    
+    if (isBannerAd) {
+      if (totalHours <= 12) {
+        amount = 100;
+      } else if (totalHours <= 24) {
+        amount = 150;
+      } else {
+        amount = 150 * days;
+      }
+    } else {
+      if (totalHours <= 12) {
+        amount = 50;
+      } else if (totalHours <= 24) {
+        amount = 100;
+      } else {
+        amount = 100 * days;
+      }
+    }
+    
+    setPricing({ amount, totalHours });
+    return { amount, totalHours };
+  };
+
   const handleFileUpload = async (file, type) => {
     if (!file) return;
 
-    console.log(`📤 Processing ${type} image:`, {
-      name: file.name,
-      size: `${(file.size / 1024 / 1024).toFixed(2)}MB`,
-      type: file.type
-    });
-
-    // Validate file size (5MB limit)
     if (file.size > 5 * 1024 * 1024) {
       setErrors(prev => ({
         ...prev,
@@ -362,7 +416,6 @@ function AdCreationModal({ isOpen, onClose, adType, dimensions }) {
       return;
     }
 
-    // Validate file type
     if (!file.type.startsWith('image/')) {
       setErrors(prev => ({
         ...prev,
@@ -381,7 +434,7 @@ function AdCreationModal({ isOpen, onClose, adType, dimensions }) {
 
     reader.onprogress = (e) => {
       if (e.lengthComputable) {
-        const progress = Math.round((e.loaded / e.total) * 80) + 10; // 10-90%
+        const progress = Math.round((e.loaded / e.total) * 80) + 10;
         setUploadProgress(prev => ({ ...prev, [type]: progress }));
       }
     };
@@ -389,9 +442,7 @@ function AdCreationModal({ isOpen, onClose, adType, dimensions }) {
     reader.onload = (e) => {
       const base64 = e.target.result;
       
-      // Validate the base64 result
       if (!base64 || !base64.startsWith('data:image/')) {
-        console.error('❌ Invalid base64 result:', base64?.substring(0, 50));
         setErrors(prev => ({
           ...prev,
           [`${type}Image`]: 'Failed to process image'
@@ -400,29 +451,20 @@ function AdCreationModal({ isOpen, onClose, adType, dimensions }) {
         return;
       }
 
-      console.log(`✅ ${type} image processed successfully:`, {
-        size: `${(base64.length / 1024 / 1024).toFixed(2)}MB`,
-        format: base64.substring(5, base64.indexOf(';')),
-        isValid: base64.startsWith('data:image/')
-      });
-
-      // Clear any previous errors
       setErrors(prev => {
         const newErrors = { ...prev };
         delete newErrors[`${type}Image`];
         return newErrors;
       });
 
-      // Update form data with the base64 string
       setFormData(prev => ({
         ...prev,
-        [`${type}Image`]: base64, // Store the full base64 data URL
-        [`${type}ImagePreview`]: base64 // Also use for preview
+        [`${type}Image`]: base64,
+        [`${type}ImagePreview`]: base64
       }));
 
       setUploadProgress(prev => ({ ...prev, [type]: 100 }));
 
-      // Clear progress after 2 seconds
       setTimeout(() => {
         setUploadProgress(prev => {
           const newProgress = { ...prev };
@@ -452,11 +494,7 @@ function AdCreationModal({ isOpen, onClose, adType, dimensions }) {
       newErrors.url = 'URL must start with http:// or https://';
     }
     if (!formData.desktopImage) newErrors.desktopImage = 'Desktop image is required';
-    
-    // Validate base64 format
-    if (formData.desktopImage && !formData.desktopImage.startsWith('data:image/')) {
-      newErrors.desktopImage = 'Invalid image format';
-    }
+    if (!formData.mobileImage) newErrors.mobileImage = 'Mobile image is required';
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -466,79 +504,67 @@ function AdCreationModal({ isOpen, onClose, adType, dimensions }) {
     if (step === 1 && validateStep1()) {
       setStep(2);
     } else if (step === 2) {
+      calculatePricing();
       setStep(3);
     }
   };
 
-  const handleSubmit = async () => {
-    try {
-      setLoading(true);
-      
-      // Prepare the ad data
-      const adData = {
-        title: formData.title.trim(),
-        url: formData.url.trim(),
-        desktopImage: formData.desktopImage, // Full base64 data URL
-        mobileImage: formData.mobileImage || formData.desktopImage, // Use desktop as fallback
-        adType,
-        dimensions,
-        contactEmail: formData.contactEmail?.trim() || '',
-        company: formData.company?.trim() || '',
-        status: 'active',
-        approved: true,
-        createdAt: new Date().toISOString()
-      };
-
-      console.log('📤 Submitting ad data:', {
-        title: adData.title,
-        url: adData.url,
-        adType: adData.adType,
-        dimensions: adData.dimensions,
-        hasDesktopImage: !!adData.desktopImage,
-        hasMobileImage: !!adData.mobileImage,
-        company: adData.company,
-        contactEmail: adData.contactEmail
-      });
-
-      const response = await fetch('/api/ads', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(adData),
-      });
-
-      const result = await response.json();
-      
-      if (result.success) {
-        console.log('✅ Ad created successfully with ID:', result.id);
-        alert('Ad created successfully! It will appear on the site shortly.');
-        onClose();
-        // Refresh to show new ad
-        window.location.reload();
-      } else {
-        console.error('❌ API returned error:', result);
-        if (result.errors && Array.isArray(result.errors)) {
-          alert('Error creating ad:\n' + result.errors.join('\n'));
-        } else {
-          alert('Error creating ad: ' + (result.error || 'Unknown error'));
-        }
-      }
-    } catch (error) {
-      console.error('🚨 Error creating ad:', error);
-      alert('Error creating ad: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
+  // NEW: Redirect to payment page
+  const handleProceedToPayment = () => {
+    const { amount, totalHours } = calculatePricing();
+    
+    // Calculate end date
+    const endDate = new Date(Date.now() + totalHours * 60 * 60 * 1000);
+    
+    // Store ad data in sessionStorage for retrieval after payment
+    const adData = {
+      title: formData.title.trim(),
+      url: formData.url.trim(),
+      desktopImage: formData.desktopImage,
+      mobileImage: formData.mobileImage || formData.desktopImage,
+      adType,
+      dimensions,
+      contactEmail: formData.contactEmail?.trim() || '',
+      company: formData.company?.trim() || '',
+      status: 'pending',
+      approved: false,
+      duration: formData.duration,
+      durationUnit: formData.durationUnit,
+      totalHours,
+      endDate: endDate.toISOString(),
+    };
+    
+    sessionStorage.setItem('pendingAdData', JSON.stringify(adData));
+    
+    // Prepare metadata for payment
+    const metadata = {
+      type: 'advertisement',
+      adType,
+      duration: formData.duration,
+      durationUnit: formData.durationUnit,
+      totalHours,
+      company: formData.company || 'N/A',
+    };
+    
+    // Build payment URL
+    const paymentUrl = new URL('/payment', window.location.origin);
+    paymentUrl.searchParams.set('amount', amount);
+    paymentUrl.searchParams.set('currency', 'ZAR');
+    paymentUrl.searchParams.set('description', `${isBannerAd ? 'Banner' : 'Sidebar'} Ad - ${formData.duration} ${formData.durationUnit}`);
+    paymentUrl.searchParams.set('metadata', encodeURIComponent(JSON.stringify(metadata)));
+    paymentUrl.searchParams.set('returnUrl', window.location.origin + '/payment/ad-success');
+    
+    // Redirect to payment page
+    window.location.href = paymentUrl.toString();
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white rounded-lg w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+      <div className="bg-white rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b">
           <h2 className="text-lg font-semibold">
-            Create {isBannerAd ? 'Banner' : 'Advertisement'}
+            Create {isBannerAd ? 'Banner' : 'Advertisement'} - Step {step} of 3
           </h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <X className="w-5 h-5" />
@@ -549,7 +575,7 @@ function AdCreationModal({ isOpen, onClose, adType, dimensions }) {
         {step === 1 && (
           <div className="p-6 space-y-4">
             <div className="text-sm text-gray-600 mb-4">
-              Step 1 of 3: Ad Details {isBannerAd ? '(728×90, Responsive)' : `(${dimensions.width}×${dimensions.height})`}
+              Step 1 of 3: Ad Details
             </div>
 
             <div>
@@ -582,80 +608,71 @@ function AdCreationModal({ isOpen, onClose, adType, dimensions }) {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Desktop Image * {isBannerAd ? '(728×90px recommended)' : `(${dimensions.width}×${dimensions.height}px)`}
+                Desktop Image *
               </label>
               <input
                 type="file"
                 accept="image/*"
                 onChange={(e) => handleFileUpload(e.target.files[0], 'desktop')}
-                className="w-full p-2 border border-gray-300 rounded-md file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                className="w-full p-2 border border-gray-300 rounded-md"
               />
               {uploadProgress.desktop > 0 && uploadProgress.desktop < 100 && (
                 <div className="mt-2">
                   <div className="bg-gray-200 rounded-full h-2">
                     <div 
-                      className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                      className="bg-blue-600 h-2 rounded-full transition-all" 
                       style={{ width: `${uploadProgress.desktop}%` }}
                     ></div>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">Uploading... {uploadProgress.desktop}%</p>
                 </div>
               )}
               {errors.desktopImage && <p className="text-red-500 text-xs mt-1">{errors.desktopImage}</p>}
               {formData.desktopImagePreview && (
-                <div className="mt-2">
-                  <img
-                    src={formData.desktopImagePreview}
-                    alt="Desktop preview"
-                    className="max-w-full h-auto border border-gray-300 rounded"
-                    style={{ maxHeight: '200px' }}
-                  />
-                </div>
+                <img
+                  src={formData.desktopImagePreview}
+                  alt="Desktop preview"
+                  className="mt-2 max-w-full h-auto border rounded"
+                  style={{ maxHeight: '200px' }}
+                />
               )}
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Mobile Image * {isBannerAd ? '(320×50px recommended)' : '(Mobile optimized version)'}
+                Mobile Image *
               </label>
               <input
                 type="file"
                 accept="image/*"
                 onChange={(e) => handleFileUpload(e.target.files[0], 'mobile')}
-                className="w-full p-2 border border-gray-300 rounded-md file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                className="w-full p-2 border border-gray-300 rounded-md"
               />
               {uploadProgress.mobile > 0 && uploadProgress.mobile < 100 && (
                 <div className="mt-2">
                   <div className="bg-gray-200 rounded-full h-2">
                     <div 
-                      className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                      className="bg-blue-600 h-2 rounded-full transition-all" 
                       style={{ width: `${uploadProgress.mobile}%` }}
                     ></div>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">Uploading... {uploadProgress.mobile}%</p>
                 </div>
               )}
               {errors.mobileImage && <p className="text-red-500 text-xs mt-1">{errors.mobileImage}</p>}
               {formData.mobileImagePreview && (
-                <div className="mt-2">
-                  <img
-                    src={formData.mobileImagePreview}
-                    alt="Mobile preview"
-                    className="max-w-full h-auto border border-gray-300 rounded"
-                    style={{ maxHeight: '100px' }}
-                  />
-                </div>
+                <img
+                  src={formData.mobileImagePreview}
+                  alt="Mobile preview"
+                  className="mt-2 max-w-full h-auto border rounded"
+                  style={{ maxHeight: '100px' }}
+                />
               )}
-              <p className="text-xs text-gray-500 mt-1">
-                Upload a mobile-optimized version for better performance on small screens
-              </p>
             </div>
 
             <div className="flex justify-end pt-4">
               <button
                 onClick={handleNext}
-                disabled={!formData.desktopImage || !formData.mobileImage || Object.keys(errors).length > 0}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={!formData.desktopImage || !formData.mobileImage}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
               >
                 Next
               </button>
@@ -673,120 +690,123 @@ function AdCreationModal({ isOpen, onClose, adType, dimensions }) {
             <div className="text-center space-y-4">
               <h3 className="font-medium">{formData.title}</h3>
               
-              {/* Desktop Preview */}
               <div>
                 <h4 className="text-sm font-medium text-gray-700 mb-2">Desktop Preview</h4>
                 <div className="flex justify-center">
-                  <div 
-                    className="border border-gray-300 rounded cursor-pointer hover:shadow-md transition-shadow relative overflow-hidden"
-                    style={{ 
-                      width: isBannerAd ? '100%' : `${Math.min(dimensions.width, 300)}px`, 
-                      maxWidth: isBannerAd ? '728px' : 'none',
-                      height: isBannerAd ? '90px' : `${Math.min(dimensions.height, 200)}px` 
-                    }}
-                    onClick={() => window.open(formData.url, '_blank')}
-                  >
-                    <img
-                      src={formData.desktopImagePreview}
-                      alt="Desktop ad preview"
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute top-1 left-1 text-xs text-white bg-black bg-opacity-50 px-1 rounded">
-                      Ad
-                    </div>
-                  </div>
+                  <img
+                    src={formData.desktopImagePreview}
+                    alt="Desktop preview"
+                    className="border rounded max-w-full"
+                    style={{ maxHeight: '200px' }}
+                  />
                 </div>
               </div>
 
-              {/* Mobile Preview */}
-              {formData.mobileImagePreview && (
-                <div>
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">Mobile Preview</h4>
-                  <div className="flex justify-center">
-                    <div 
-                      className="border border-gray-300 rounded cursor-pointer hover:shadow-md transition-shadow relative overflow-hidden"
-                      style={{ 
-                        width: '320px', 
-                        height: isBannerAd ? '50px' : '100px'
-                      }}
-                      onClick={() => window.open(formData.url, '_blank')}
-                    >
-                      <img
-                        src={formData.mobileImagePreview}
-                        alt="Mobile ad preview"
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute top-1 left-1 text-xs text-white bg-black bg-opacity-50 px-1 rounded">
-                        Ad
-                      </div>
-                    </div>
-                  </div>
+              <div>
+                <h4 className="text-sm font-medium text-gray-700 mb-2">Mobile Preview</h4>
+                <div className="flex justify-center">
+                  <img
+                    src={formData.mobileImagePreview}
+                    alt="Mobile preview"
+                    className="border rounded max-w-full"
+                    style={{ maxHeight: '100px' }}
+                  />
                 </div>
-              )}
-
-              <p className="text-sm text-gray-600">
-                Clicking the ad will redirect to: <br />
-                <span className="text-blue-600 break-all">{formData.url}</span>
-              </p>
+              </div>
             </div>
 
             <div className="flex justify-between pt-4">
               <button
                 onClick={() => setStep(1)}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 border text-gray-700 rounded-md hover:bg-gray-50"
               >
                 Back
               </button>
               <button
                 onClick={handleNext}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
               >
-                Continue to Details
+                Continue
               </button>
             </div>
           </div>
         )}
 
-        {/* Step 3: Final Details */}
+        {/* Step 3: Duration & Pricing */}
         {step === 3 && (
           <div className="p-6 space-y-4">
             <div className="text-sm text-gray-600 mb-4">
-              Step 3 of 3: Final Details
+              Step 3 of 3: Choose Duration & Proceed to Payment
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+              <h3 className="font-semibold text-blue-900 mb-2">
+                {isBannerAd ? 'Banner Ad' : 'Sidebar Ad'} Pricing
+              </h3>
+              <ul className="text-sm text-blue-800 space-y-1">
+                <li>• 12 hours: R{isBannerAd ? '100' : '50'}</li>
+                <li>• 24 hours: R{isBannerAd ? '150' : '100'}</li>
+                <li>• Multiple days: R{isBannerAd ? '150' : '100'}/day</li>
+              </ul>
             </div>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Company Name
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Duration *</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={formData.duration}
+                  onChange={(e) => setFormData(prev => ({ ...prev, duration: e.target.value }))}
+                  className="w-full p-2 border rounded-md"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Duration Unit *</label>
+                <select
+                  value={formData.durationUnit}
+                  onChange={(e) => setFormData(prev => ({ ...prev, durationUnit: e.target.value }))}
+                  className="w-full p-2 border rounded-md"
+                >
+                  <option value="hours">Hours</option>
+                  <option value="days">Days</option>
+                  <option value="weeks">Weeks</option>
+                  <option value="months">Months</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Company Name</label>
                 <input
                   type="text"
                   value={formData.company}
                   onChange={(e) => setFormData(prev => ({ ...prev, company: e.target.value }))}
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full p-2 border rounded-md"
                   placeholder="Your company name"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Contact Email
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Contact Email</label>
                 <input
                   type="email"
                   value={formData.contactEmail}
                   onChange={(e) => setFormData(prev => ({ ...prev, contactEmail: e.target.value }))}
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full p-2 border rounded-md"
                   placeholder="contact@company.com"
                 />
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div className="flex items-center">
-                  <CreditCard className="w-5 h-5 text-blue-600 mr-2" />
-                  <p className="text-sm text-blue-800">
-                    Your ad will be published immediately and will appear on the site within a few minutes.
-                  </p>
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-green-800 font-medium">Total Amount</p>
+                    <p className="text-xs text-green-600 mt-1">
+                      {formData.duration} {formData.durationUnit}
+                    </p>
+                  </div>
+                  <p className="text-2xl font-bold text-green-900">R{pricing.amount}</p>
                 </div>
               </div>
             </div>
@@ -794,28 +814,85 @@ function AdCreationModal({ isOpen, onClose, adType, dimensions }) {
             <div className="flex justify-between pt-4">
               <button
                 onClick={() => setStep(2)}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 border text-gray-700 rounded-md hover:bg-gray-50"
               >
                 Back
               </button>
               <button
-                onClick={handleSubmit}
-                disabled={loading}
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center"
+                onClick={handleProceedToPayment}
+                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center"
               >
-                {loading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
-                    Creating...
-                  </>
-                ) : (
-                  'Publish Ad'
-                )}
+                Proceed to Payment
+                <ArrowRight className="w-4 h-4 ml-2" />
               </button>
             </div>
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// PaymentElement component remains the same
+function PaymentElement({ stripe, elements }) {
+  const [elementReady, setElementReady] = useState(false);
+  const paymentElementRef = useRef(null);
+  const mountPointRef = useRef(null);
+  
+  useEffect(() => {
+    // Guard: Don't create if we don't have elements or already have an element
+    if (!elements || paymentElementRef.current) return;
+    
+    let paymentElement = null;
+    
+    try {
+      // Create the payment element
+      paymentElement = elements.create('payment');
+      paymentElementRef.current = paymentElement;
+      
+      // Mount to the DOM
+      paymentElement.mount('#payment-element-mount');
+      
+      // Set ready state when element is ready
+      paymentElement.on('ready', () => {
+        setElementReady(true);
+      });
+      
+      console.log('✅ Payment element mounted successfully');
+      
+    } catch (error) {
+      console.error('❌ Error creating payment element:', error);
+      paymentElementRef.current = null;
+    }
+    
+    // CRITICAL: Cleanup function
+    return () => {
+      console.log('🧹 Cleaning up payment element...');
+      
+      if (paymentElementRef.current) {
+        try {
+          paymentElementRef.current.unmount();
+          paymentElementRef.current.destroy();
+          console.log('✅ Payment element cleaned up');
+        } catch (error) {
+          console.error('⚠️ Error during cleanup:', error);
+        }
+        paymentElementRef.current = null;
+      }
+      
+      setElementReady(false);
+    };
+  }, [elements]); // Only depend on elements
+  
+  return (
+    <div>
+      <div id="payment-element-mount"></div>
+      {!elementReady && (
+        <div className="text-center py-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent mx-auto"></div>
+          <p className="text-sm text-gray-600 mt-2">Loading payment form...</p>
+        </div>
+      )}
     </div>
   );
 }

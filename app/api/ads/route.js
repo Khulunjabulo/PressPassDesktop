@@ -344,27 +344,44 @@ export async function POST(request) {
       mobile: mobileImageInfo
     });
 
-    const adData = {
-      title: title.trim(),
-      url: url.trim(),
-      desktopImage,
-      mobileImage: mobileImage || desktopImage, // Use desktop as fallback
-      adType: finalAdType,
-      dimensions,
-      contactEmail: contactEmail?.trim() || '',
-      company: company?.trim() || '',
-      status,
-      approved,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-      clicks: 0,
-      impressions: 0,
-      // Store image metadata for debugging
-      imageInfo: {
-        desktop: desktopImageInfo,
-        mobile: mobileImageInfo
-      }
-    };
+    // Add to the adData object in POST function (around line 250)
+const adData = {
+  title: title.trim(),
+  url: url.trim(),
+  desktopImage,
+  mobileImage: mobileImage || desktopImage,
+  adType: finalAdType,
+  dimensions,
+  contactEmail: contactEmail?.trim() || '',
+  company: company?.trim() || '',
+  status,
+  approved,
+  
+  // NEW: Payment and scheduling info
+  paymentInfo: {
+    paymentIntentId: body.paymentIntentId,
+    amount: body.amount,
+    currency: body.currency || 'ZAR',
+    paidAt: serverTimestamp(),
+  },
+  schedule: {
+    duration: body.duration,
+    durationUnit: body.durationUnit,
+    totalHours: body.totalHours,
+    startDate: serverTimestamp(),
+    endDate: body.endDate, // Calculate this on client
+    displayPerDay: body.displayPerDay || 24, // Hours active per day
+  },
+  
+  createdAt: serverTimestamp(),
+  updatedAt: serverTimestamp(),
+  clicks: 0,
+  impressions: 0,
+  imageInfo: {
+    desktop: desktopImageInfo,
+    mobile: mobileImageInfo
+  }
+};
 
     console.log('💾 Saving ad to Firestore...');
     const adsRef = collection(db, COLLECTION_NAME);
