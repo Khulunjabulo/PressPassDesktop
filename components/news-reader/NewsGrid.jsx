@@ -958,7 +958,7 @@ export default function NewsGrid({ articles }) {
         {/* MAIN COLUMN */}
         <div className="space-y-6">
           {/* Banner Ad - Top of Headlines */}
-          <section className="mt-6">
+          <section>
             <AdSlot 
               adType="banner"
               width={728}
@@ -1062,7 +1062,7 @@ export default function NewsGrid({ articles }) {
                             </h4>
                             <p className="text-xs sm:text-sm text-gray-600 mb-2 line-clamp-3">
                               {source.recentStory?.excerpt ||
-                                "President announces comprehensive strategy to address rising unemployment rates among South African youth, focusing on skills development and job creation initiatives."}
+                                "Press Pass is a Media Monetization System with customer onboarding for digital referral services. "}
                             </p>
                             <button
                               onClick={(e) =>
