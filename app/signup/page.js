@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import "../globals.css";
 import GoogleSignUpModal from '@/components/GoogleSignUpModal';
@@ -20,6 +20,8 @@ const MediaHubRegistration = () => {
   const [isPublisher, setIsPublisher] = useState(false);
   const [profilePicPreview, setProfilePicPreview] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
   // Google Sign-up modal states
   const [showFormModal, setShowFormModal] = useState(false);
@@ -332,24 +334,53 @@ const MediaHubRegistration = () => {
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <input 
-                      type="password" 
-                      name="password" 
-                      value={formData.password}
-                      onChange={handleInputChange}
-                      required 
-                      placeholder="Password" 
-                      className="w-full px-4 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition bg-white" 
-                    />
-                    <input 
-                      type="password" 
-                      name="confirmPassword" 
-                      value={formData.confirmPassword}
-                      onChange={handleInputChange}
-                      required 
-                      placeholder="Confirm Password" 
-                      className="w-full px-4 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition bg-white" 
-                    />
+                    <div className="relative">
+                      <input 
+                        type={showPassword ? "text" : "password"}
+                        name="password" 
+                        value={formData.password}
+                        onChange={handleInputChange}
+                        required 
+                        placeholder="Password" 
+                        className="w-full px-4 py-2 pr-12 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition bg-white" 
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                        aria-label={showPassword ? "Hide password" : "Show password"}
+                      >
+                        {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                      </button>
+                    </div>
+                    <div className="relative">
+                      <input 
+                        type={showConfirmPassword ? "text" : "password"}
+                        name="confirmPassword" 
+                        value={formData.confirmPassword}
+                        onChange={handleInputChange}
+                        required 
+                        placeholder="Confirm Password" 
+                        className="w-full px-4 py-2 pr-12 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition bg-white" 
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                        aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                      >
+                        {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="text-xs text-gray-600 bg-white p-3 rounded-lg">
+                    <p className="font-semibold mb-1">Password must contain:</p>
+                    <ul className="list-disc list-inside space-y-1">
+                      <li>At least 8 characters</li>
+                      <li>At least one uppercase letter</li>
+                      <li>At least one number</li>
+                    </ul>
                   </div>
                   
                   <button 
@@ -481,24 +512,53 @@ const MediaHubRegistration = () => {
                       />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                      <input 
-                        type="password" 
-                        name="password" 
-                        value={formData.password}
-                        onChange={handleInputChange}
-                        required 
-                        placeholder="Password" 
-                        className="w-full px-4 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition bg-white" 
-                      />
-                      <input 
-                        type="password" 
-                        name="confirmPassword" 
-                        value={formData.confirmPassword}
-                        onChange={handleInputChange}
-                        required 
-                        placeholder="Confirm Password" 
-                        className="w-full px-4 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition bg-white" 
-                      />
+                      <div className="relative">
+                        <input 
+                          type={showPassword ? "text" : "password"}
+                          name="password" 
+                          value={formData.password}
+                          onChange={handleInputChange}
+                          required 
+                          placeholder="Password" 
+                          className="w-full px-4 py-2 pr-12 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition bg-white" 
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                          aria-label={showPassword ? "Hide password" : "Show password"}
+                        >
+                          {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                        </button>
+                      </div>
+                      <div className="relative">
+                        <input 
+                          type={showConfirmPassword ? "text" : "password"}
+                          name="confirmPassword" 
+                          value={formData.confirmPassword}
+                          onChange={handleInputChange}
+                          required 
+                          placeholder="Confirm Password" 
+                          className="w-full px-4 py-2 pr-12 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition bg-white" 
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                          aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                        >
+                          {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="text-xs text-gray-600 bg-white p-3 rounded-lg mt-4">
+                      <p className="font-semibold mb-1">Password must contain:</p>
+                      <ul className="list-disc list-inside space-y-1">
+                        <li>At least 8 characters</li>
+                        <li>At least one uppercase letter</li>
+                        <li>At least one number</li>
+                      </ul>
                     </div>
                   </div>
                   

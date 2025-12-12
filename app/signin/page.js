@@ -1,7 +1,7 @@
 "use client"
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Newspaper, FilePen, Check, BarChart3, Smartphone, ArrowLeft } from "lucide-react"
+import { Newspaper, FilePen, Check, BarChart3, Smartphone, ArrowLeft, Eye, EyeOff } from "lucide-react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { handleSignIn, initializeGoogleSignIn, handleGoogleSignInCallback, completeGoogleSignIn } from "../../lib/authLogic"
@@ -9,6 +9,7 @@ import { handleSignIn, initializeGoogleSignIn, handleGoogleSignInCallback, compl
 export default function SignIn() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
   const [keepSignedIn, setKeepSignedIn] = useState(false)
   const [role, setRole] = useState("reader")
   const [loading, setLoading] = useState(false)
@@ -50,6 +51,20 @@ export default function SignIn() {
     return () => window.removeEventListener('resize', enforceMobileRole);
   }, []);
 
+  // Handle autofill detection
+  useEffect(() => {
+    const handleAutofill = () => {
+      const passwordInput = document.getElementById('password-input');
+      if (passwordInput && passwordInput.matches(':-webkit-autofill')) {
+        setShowPassword(false);
+      }
+    };
+    
+    // Check after a delay to ensure autofill is complete
+    const timer = setTimeout(handleAutofill, 500);
+    return () => clearTimeout(timer);
+  }, []);
+
   const handleFormSubmit = async (e) => {
     e.preventDefault()
     await handleSignIn(email, password, role, keepSignedIn, router, setError, setLoading)
@@ -64,7 +79,6 @@ export default function SignIn() {
       return;
     }
 
-    // Trigger Google Sign-In prompt
     console.log('🚀 Launching Google Sign-In prompt...');
     window.google.accounts.id.prompt((notification) => {
       if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
@@ -208,14 +222,25 @@ export default function SignIn() {
                   required
                   className="w-full px-4 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition bg-white"
                 />
-                <input
-                  type="password"
-                  placeholder="Password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="w-full px-4 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition bg-white"
-                />
+                <div className="relative">
+                  <input
+                    id="password-input"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="w-full px-4 py-2 pr-12 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition bg-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
 
                 <div className="flex items-center justify-between text-sm">
                   <label className="flex items-center gap-2 text-gray-700">

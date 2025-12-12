@@ -281,7 +281,7 @@ export default function Dashboard() {
   return (
     <>
       <Header publisher={publisher} />
-      <div className="min-h-screen bg-gray-50 flex flex-col pt-16 pb-16">
+      <div className="min-h-screen bg-gray-50 flex flex-col">
         <PublisherSidebar />
         <main className="flex-1 bg-gray-100 p-2 md:p-4 lg:p-6 flex flex-col ml-0 md:ml-64 overflow-y-auto">
           {/* Top Grid */}

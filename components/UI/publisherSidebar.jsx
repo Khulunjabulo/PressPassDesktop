@@ -37,15 +37,6 @@ export default function PublisherSidebar() {
 
   const SidebarContent = (
     <div className="flex flex-col h-full">
-      <div className="mt-6 ml-12">
-        <img
-          src="/press-pass.png"
-          alt="PressPass Logo"
-          width={100}
-          height={50}
-          className="object-contain"
-        />
-      </div>
       <nav className="px-6 mt-6 space-y-2">
         {menuItems.map((item) => {
           const isActive = pathname === item.href
@@ -58,7 +49,7 @@ export default function PublisherSidebar() {
                   ? 'bg-blue-100 text-blue-700 font-semibold'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
-              onClick={() => setOpen(false)} // close sidebar on mobile after click
+              onClick={() => setOpen(false)}
             >
               <span>{item.icon}</span>
               <span>{item.name}</span>
@@ -95,9 +86,9 @@ export default function PublisherSidebar() {
 
   return (
     <>
-      {/* Burger menu button for mobile, fixed top left */}
+      {/* Burger menu button for mobile, positioned below header */}
       <button
-        className="md:hidden absolute top-16 left-1 p-4 z-50"
+        className="md:hidden fixed top-[100px] left-4 p-2 z-40 bg-white rounded-full shadow-lg"
         onClick={() => setOpen(true)}
         aria-label="Open sidebar"
         type="button"
@@ -105,8 +96,8 @@ export default function PublisherSidebar() {
         <Menu size={24} />
       </button>
 
-      {/* Sidebar for desktop */}
-      <aside className="hidden md:flex w-64 bg-white shadow-md h-screen flex-col fixed left-0 top-0 z-30">
+      {/* Sidebar for desktop - positioned below header and above footer */}
+      <aside className="hidden md:flex w-64 bg-white shadow-md flex-col fixed left-0 z-20" style={{ top: '125px', bottom: '95px' }}>
         {SidebarContent}
       </aside>
 
