@@ -1,4 +1,4 @@
-// app/api/upload-ad-media/route.js - UPDATED VERSION
+// app/api/upload-ad-media/route.js - UPDATED with payment status
 import { NextResponse } from 'next/server';
 import { getFirestoreDb } from '../../../lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
@@ -6,7 +6,6 @@ import { Timestamp } from 'firebase-admin/firestore';
 // Utility function to normalize publisher ID
 function normalizePublisherId(publisherId) {
   if (!publisherId) return null;
-  // Remove 'publisher_' prefix if it exists
   return publisherId.replace(/^publisher_/, '');
 }
 
@@ -26,6 +25,8 @@ export async function POST(req) {
     const rawPublisherId = formData.get('publisherId');
     const templateId = formData.get('templateId');
     const deviceType = formData.get('deviceType');
+    const paymentIntentId = formData.get('paymentIntentId'); // New: payment verification
+    const paymentStatus = formData.get('paymentStatus') || 'pending'; // New: payment status
 
     if (!file || !rawPublisherId || !templateId || !deviceType) {
       return NextResponse.json(
@@ -34,17 +35,17 @@ export async function POST(req) {
       );
     }
 
-    // Normalize publisher ID (remove 'publisher_' prefix if present)
     const publisherId = normalizePublisherId(rawPublisherId);
 
     console.log('📁 Processing ad media upload:', {
       fileName: file.name,
       fileSize: file.size,
       fileType: file.type,
-      rawPublisherId,
-      normalizedPublisherId: publisherId,
+      publisherId,
       templateId,
-      deviceType
+      deviceType,
+      paymentIntentId,
+      paymentStatus
     });
 
     // Validate file size (max 10MB)
@@ -85,13 +86,11 @@ export async function POST(req) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     const base64String = buffer.toString('base64');
-    
-    // Create data URL with proper MIME type
     const dataUrl = `data:${file.type};base64,${base64String}`;
 
-    // Prepare document data for Firestore with NORMALIZED publisher ID
+    // Prepare document data
     const adMediaData = {
-      publisherId, // Using normalized ID (without 'publisher_' prefix)
+      publisherId,
       templateId: parseInt(templateId, 10),
       deviceType,
       fileName: file.name,
@@ -99,34 +98,41 @@ export async function POST(req) {
       fileType: file.type,
       imageSrc: dataUrl,
       uploadedAt: Timestamp.now(),
-      status: 'active',
+      status: paymentStatus === 'completed' ? 'active' : 'pending_payment', // NEW: conditional status
+      paymentIntentId: paymentIntentId || null, // NEW: store payment reference
+      paymentStatus: paymentStatus, // NEW: track payment status
       impressions: 0,
-      clicks: 0
+      clicks: 0,
+      activatedAt: paymentStatus === 'completed' ? Timestamp.now() : null // NEW: activation timestamp
     };
 
-    // Save metadata to Firestore
+    // Save to Firestore
     const db = getFirestoreDb();
     const docRef = await db.collection('adUploads').add(adMediaData);
 
     console.log('✅ Ad media uploaded successfully:', {
       docId: docRef.id,
       fileName: file.name,
-      normalizedPublisherId: publisherId,
+      publisherId,
       templateId,
       deviceType,
+      status: adMediaData.status,
       dataUrlLength: dataUrl.length
     });
 
     return NextResponse.json({
       success: true,
-      message: 'Ad media uploaded successfully',
+      message: paymentStatus === 'completed' 
+        ? 'Ad media uploaded and activated successfully' 
+        : 'Ad media uploaded, pending payment',
       data: {
         docId: docRef.id,
         fileName: file.name,
         fileSize: file.size,
-        publisherId, // Return normalized ID
+        publisherId,
         deviceType,
         imageSrc: dataUrl,
+        status: adMediaData.status,
         uploadedAt: adMediaData.uploadedAt.toDate().toISOString()
       }
     });
@@ -143,3 +149,60 @@ export async function POST(req) {
     );
   }
 }
+
+// NEW: Endpoint to activate ad after payment
+export async function PATCH(req) {
+  try {
+    const body = await req.json();
+    const { adId, paymentIntentId } = body;
+
+    if (!adId || !paymentIntentId) {
+      return NextResponse.json(
+        { success: false, error: 'adId and paymentIntentId are required' },
+        { status: 400 }
+      );
+    }
+
+    const db = getFirestoreDb();
+    const adRef = db.collection('adUploads').doc(adId);
+    const adDoc = await adRef.get();
+
+    if (!adDoc.exists) {
+      return NextResponse.json(
+        { success: false, error: 'Ad not found' },
+        { status: 404 }
+      );
+    }
+
+    // Update ad to active status
+    await adRef.update({
+      status: 'active',
+      paymentStatus: 'completed',
+      paymentIntentId,
+      activatedAt: Timestamp.now()
+    });
+
+    console.log('✅ Ad activated after payment:', {
+      adId,
+      paymentIntentId
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: 'Ad activated successfully'
+    });
+
+  } catch (error) {
+    console.error('💥 Error activating ad:', error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Failed to activate ad',
+        details: error.message
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export const dynamic = 'force-dynamic';

@@ -1,13 +1,17 @@
+// Complete NewsGrid.jsx
 'use client';
 
-import { Heart, X, Upload, ExternalLink, CreditCard } from 'lucide-react';
-import { useState, useEffect, Fragment, useRef } from 'react';
+import { Heart, X, Upload, ExternalLink, CreditCard, Monitor, Smartphone } from 'lucide-react';
+import { useState, useEffect, Fragment } from 'react';
 import { useRouter } from 'next/navigation';
 import { useFavorites } from '@/hooks/useFavorites';
 import RecommendedOverlayBottom from '@/components/news-reader/Overlay';
 import { Card, CardContent } from '@/components/UI/newscard';
 import { FileText, Clock, Globe, Building, Users, ArrowRight, Plus } from 'lucide-react';
 import PublisherFavoriteButton from '@/components/PublisherFavoriteButton';
+import TermsAndConditionsModal from '@/components/placeholder/TermsAndConditionsModal';
+import DesktopPreview from '@/components/placeholder/DesktopPreview';
+import MobilePreview from '@/components/placeholder/MobilePreview';
 
 function dedupeArticles(articles = []) {
   const seen = new Set();
@@ -22,37 +26,23 @@ function dedupeArticles(articles = []) {
   return out;
 }
 
-// Helper function to strip HTML tags and clean text
 function stripHtml(html) {
   if (!html) return '';
-  
-  // Create a temporary div element to parse HTML
   const temp = document.createElement('div');
   temp.innerHTML = html;
-  
-  // Get text content and clean it up
   let text = temp.textContent || temp.innerText || '';
-  
-  // Remove extra whitespace and normalize
   text = text.replace(/\s+/g, ' ').trim();
-  
   return text;
 }
 
-// Helper function to truncate text to a specific length
 function truncateText(text, maxLength = 150) {
   if (!text) return '';
-  
   const cleaned = stripHtml(text);
-  
   if (cleaned.length <= maxLength) return cleaned;
-  
   return cleaned.substring(0, maxLength).trim() + '...';
 }
 
-// Updated AdSlot component with proper mobile image support
-
-// Updated AdSlot component with proper mobile image support and publisher page styling
+// AdSlot component
 function AdSlot({ 
   adType, 
   width, 
@@ -66,28 +56,21 @@ function AdSlot({
   const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
 
-  // Check if device is mobile
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
     };
-    
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Device visibility
   const getResponsiveClasses = () => {
-    if (isBanner) {
-      return ''; // Banner shows on all devices
-    }
+    if (isBanner) return '';
     if (adType.includes('sidebar') || adType.includes('rectangle') || adType.includes('skyscraper')) {
       return 'hidden lg:block';
     }
-    if (adType === 'mobile') {
-      return 'block lg:hidden';
-    }
+    if (adType === 'mobile') return 'block lg:hidden';
     return '';
   };
 
@@ -95,9 +78,6 @@ function AdSlot({
     fetchAds();
   }, []);
 
-  
-
-  // Simple rotation every 8 seconds
   useEffect(() => {
     if (ads.length > 0) {
       const interval = setInterval(() => {
@@ -114,16 +94,13 @@ function AdSlot({
       
       if (data.success) {
         const validAds = data.ads.filter(ad => {
-          // Check if has at least desktop image
           const hasDesktopImage = ad.desktopImage && 
             ad.desktopImage.startsWith('data:image/') && 
             ad.status === 'active';
           
-          // For mobile devices, prefer mobile image if available
           if (isMobile && ad.mobileImage && ad.mobileImage.startsWith('data:image/')) {
-            return hasDesktopImage; // Still need desktop as fallback
+            return hasDesktopImage;
           }
-          
           return hasDesktopImage;
         });
         setAds(validAds);
@@ -136,17 +113,9 @@ function AdSlot({
 
   const responsiveClasses = getResponsiveClasses();
 
-  // Get container dimensions based on ad type
   const getContainerStyle = () => {
-    if (isBanner) {
-      return { width: '100%', height: '90px' };
-    }
-    
-    // For mobile vertical ad
-    if (adType === 'mobile') {
-      return { width: '100%', height: '250px', maxWidth: '320px', margin: '0 auto' };
-    }
-    
+    if (isBanner) return { width: '100%', height: '90px' };
+    if (adType === 'mobile') return { width: '100%', height: '250px', maxWidth: '320px', margin: '0 auto' };
     return { width, height };
   };
 
@@ -161,7 +130,6 @@ function AdSlot({
     );
   }
 
-  // Show advertise here if no ads OR on last rotation cycle
   if (ads.length === 0 || currentIndex >= ads.length) {
     return (
       <div 
@@ -169,95 +137,49 @@ function AdSlot({
         style={getContainerStyle()}
         onClick={onAdvertiseClick}
       >
-        {/* Banner Ad Styling */}
         {isBanner && (
           <div className="h-full flex items-center justify-between px-4 sm:px-8">
             <div className="flex flex-col items-center mt-5">
-              <img 
-                src="/Presspass.png" 
-                alt="PressPass Logo" 
-                height={150} 
-                width={150} 
-                className="object-contain" 
-              /> 
+              <img src="/Presspass.png" alt="PressPass Logo" height={150} width={150} className="object-contain" /> 
             </div>
             <div className="flex flex-col justify-center items-center space-y-2 text-center mx-auto">
               <h3 className="text-yellow-400 font-bold text-base sm:text-lg">Advertise Here</h3>
-              <p className="text-white text-xs sm:text-sm flex flex-col items-center space-y-1">
-                <span>Partners@presspass.africa</span>
-              </p>
-              <p className="text-white text-xs sm:text-sm flex flex-col items-center space-y-1">
-                <span>Phone: +27 87 XXX XXX</span>
-              </p>
+              <p className="text-white text-xs sm:text-sm"><span>Partners@presspass.africa</span></p>
+              <p className="text-white text-xs sm:text-sm"><span>Phone: +27 87 XXX XXX</span></p>
             </div>
           </div>
         )}
 
-        {/* Sidebar Square Ad Styling */}
         {(adType.includes('sidebar') || adType.includes('rectangle')) && !adType.includes('skyscraper') && (
           <div className="h-full flex flex-col items-center justify-center p-4 text-center">
-            <div className="mb-3">
-              <img 
-                src="/Presspass.png" 
-                alt="PressPass Logo" 
-                height={80} 
-                width={80} 
-                className="object-contain mx-auto" 
-              /> 
-            </div>
+            <div className="mb-3"><img src="/Presspass.png" alt="PressPass Logo" height={80} width={80} className="object-contain mx-auto" /></div>
             <h3 className="text-yellow-400 font-bold text-lg mb-2">Advertise Here</h3>
             <p className="text-white text-xs mb-1">Partners@presspass.africa</p>
             <p className="text-white text-xs">Phone: +27 87 XXX XXX</p>
-            <div className="mt-2 text-white text-xs opacity-75">
-              {width}×{height}
-            </div>
+            <div className="mt-2 text-white text-xs opacity-75">{width}×{height}</div>
           </div>
         )}
 
-        {/* Skyscraper Ad Styling */}
         {adType.includes('skyscraper') && (
           <div className="h-full flex flex-col items-center justify-center p-4 text-center">
-            <div className="mb-4">
-              <img 
-                src="/Presspass.png" 
-                alt="PressPass Logo" 
-                height={100} 
-                width={100} 
-                className="object-contain mx-auto" 
-              /> 
-            </div>
+            <div className="mb-4"><img src="/Presspass.png" alt="PressPass Logo" height={100} width={100} className="object-contain mx-auto" /></div>
             <h3 className="text-yellow-400 font-bold text-xl mb-3">Advertise Here</h3>
             <div className="space-y-2">
               <p className="text-white text-sm">Partners@presspass.africa</p>
               <p className="text-white text-sm">Phone: +27 87 XXX XXX</p>
             </div>
-            <div className="mt-4 text-white text-xs opacity-75">
-              {width}×{height}
-            </div>
-            <div className="mt-auto mb-4 text-white text-xs">
-              Click to advertise
-            </div>
+            <div className="mt-4 text-white text-xs opacity-75">{width}×{height}</div>
+            <div className="mt-auto mb-4 text-white text-xs">Click to advertise</div>
           </div>
         )}
 
-        {/* Mobile Vertical Ad Styling */}
         {adType === 'mobile' && (
           <div className="h-full flex flex-col items-center justify-center p-4 text-center">
-            <div className="mb-3">
-              <img 
-                src="/Presspass.png" 
-                alt="PressPass Logo" 
-                height={60} 
-                width={60} 
-                className="object-contain mx-auto" 
-              /> 
-            </div>
+            <div className="mb-3"><img src="/Presspass.png" alt="PressPass Logo" height={60} width={60} className="object-contain mx-auto" /></div>
             <h3 className="text-yellow-400 font-bold text-base mb-2">Advertise Here</h3>
             <p className="text-white text-xs mb-1">Partners@presspass.africa</p>
             <p className="text-white text-xs mb-2">Phone: +27 87 XXX XXX</p>
-            <div className="text-white text-xs opacity-75">
-              Mobile Ad Space
-            </div>
+            <div className="text-white text-xs opacity-75">Mobile Ad Space</div>
           </div>
         )}
       </div>
@@ -267,7 +189,6 @@ function AdSlot({
   const ad = ads[currentIndex];
   if (!ad) return null;
 
-  // Choose the right image based on device and availability
   const getImageSrc = () => {
     if (isMobile && ad.mobileImage && ad.mobileImage.startsWith('data:image/')) {
       return ad.mobileImage;
@@ -288,25 +209,17 @@ function AdSlot({
         }}
         onClick={() => ad.url && window.open(ad.url, '_blank')}
       >
-        {/* Ad Image */}
         <img
           src={getImageSrc()}
           alt={ad.title}
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover'
-          }}
+          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
           onError={(e) => {
             console.error('Ad image failed to load:', ad.id);
-            // Try fallback to desktop image if mobile failed
             if (isMobile && ad.mobileImage && e.target.src === ad.mobileImage) {
               e.target.src = ad.desktopImage;
             }
           }}
         />
-        
-        {/* Simple ad label */}
         <div style={{
           position: 'absolute',
           top: '4px',
@@ -316,20 +229,14 @@ function AdSlot({
           padding: '2px 6px',
           borderRadius: '4px',
           fontSize: '10px'
-        }}>
-          Ad
-        </div>
+        }}>Ad</div>
       </div>
     </div>
   );
 }
 
-// Ad Creation Modal (updated to handle banner ads)
-
-// Updated AdCreationModal with Payment Integration - FIXED HOOKS
-// Updated AdCreationModal - Payment Section Removed
+// Ad Creation Modal
 function AdCreationModal({ isOpen, onClose, adType, dimensions }) {
-  const router = useRouter();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     title: '',
@@ -340,87 +247,36 @@ function AdCreationModal({ isOpen, onClose, adType, dimensions }) {
     mobileImagePreview: '',
     contactEmail: '',
     company: '',
-    duration: 1,
-    durationUnit: 'days',
+    duration: '1', // Duration in days
+    customDuration: ''
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [uploadProgress, setUploadProgress] = useState({});
-  const [pricing, setPricing] = useState({ amount: 0, totalHours: 0 });
-
-  const isBannerAd = adType === 'banner';
-
-  useEffect(() => {
-    if (isOpen && step === 3) {
-      calculatePricing();
-    }
-  }, [formData.duration, formData.durationUnit, step, isOpen]);
+  const [showTerms, setShowTerms] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [previewMode, setPreviewMode] = useState('desktop');
 
   if (!isOpen) return null;
 
-  const calculatePricing = () => {
-    const duration = parseInt(formData.duration) || 1;
-    const unit = formData.durationUnit;
-    
-    let totalHours;
-    switch (unit) {
-      case 'hours':
-        totalHours = duration;
-        break;
-      case 'days':
-        totalHours = duration * 24;
-        break;
-      case 'weeks':
-        totalHours = duration * 24 * 7;
-        break;
-      case 'months':
-        totalHours = duration * 24 * 30;
-        break;
-      default:
-        totalHours = duration * 24;
-    }
-    
-    let amount;
-    const days = Math.ceil(totalHours / 24);
-    
-    if (isBannerAd) {
-      if (totalHours <= 12) {
-        amount = 100;
-      } else if (totalHours <= 24) {
-        amount = 150;
-      } else {
-        amount = 150 * days;
-      }
-    } else {
-      if (totalHours <= 12) {
-        amount = 50;
-      } else if (totalHours <= 24) {
-        amount = 100;
-      } else {
-        amount = 100 * days;
-      }
-    }
-    
-    setPricing({ amount, totalHours });
-    return { amount, totalHours };
-  };
+  const isBannerAd = adType === 'banner';
 
   const handleFileUpload = async (file, type) => {
     if (!file) return;
 
+    console.log(`📤 Processing ${type} image:`, {
+      name: file.name,
+      size: `${(file.size / 1024 / 1024).toFixed(2)}MB`,
+      type: file.type
+    });
+
     if (file.size > 5 * 1024 * 1024) {
-      setErrors(prev => ({
-        ...prev,
-        [`${type}Image`]: 'File size must be less than 5MB'
-      }));
+      setErrors(prev => ({ ...prev, [`${type}Image`]: 'File size must be less than 5MB' }));
       return;
     }
 
     if (!file.type.startsWith('image/')) {
-      setErrors(prev => ({
-        ...prev,
-        [`${type}Image`]: 'File must be an image'
-      }));
+      setErrors(prev => ({ ...prev, [`${type}Image`]: 'File must be an image' }));
       return;
     }
 
@@ -443,13 +299,13 @@ function AdCreationModal({ isOpen, onClose, adType, dimensions }) {
       const base64 = e.target.result;
       
       if (!base64 || !base64.startsWith('data:image/')) {
-        setErrors(prev => ({
-          ...prev,
-          [`${type}Image`]: 'Failed to process image'
-        }));
+        console.error('❌ Invalid base64 result:', base64?.substring(0, 50));
+        setErrors(prev => ({ ...prev, [`${type}Image`]: 'Failed to process image' }));
         setUploadProgress(prev => ({ ...prev, [type]: 0 }));
         return;
       }
+
+      console.log(`✅ ${type} image processed successfully`);
 
       setErrors(prev => {
         const newErrors = { ...prev };
@@ -476,10 +332,7 @@ function AdCreationModal({ isOpen, onClose, adType, dimensions }) {
 
     reader.onerror = (error) => {
       console.error('❌ FileReader error:', error);
-      setErrors(prev => ({
-        ...prev,
-        [`${type}Image`]: 'Failed to read file'
-      }));
+      setErrors(prev => ({ ...prev, [`${type}Image`]: 'Failed to read file' }));
       setUploadProgress(prev => ({ ...prev, [type]: 0 }));
     };
 
@@ -496,404 +349,624 @@ function AdCreationModal({ isOpen, onClose, adType, dimensions }) {
     if (!formData.desktopImage) newErrors.desktopImage = 'Desktop image is required';
     if (!formData.mobileImage) newErrors.mobileImage = 'Mobile image is required';
     
+    if (formData.desktopImage && !formData.desktopImage.startsWith('data:image/')) {
+      newErrors.desktopImage = 'Invalid image format';
+    }
+    
+    if (!termsAccepted) {
+      newErrors.terms = 'You must accept the terms and conditions';
+    }
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  const validateStep3 = () => {
+    const newErrors = {};
+    if (!formData.contactEmail?.trim()) {
+      newErrors.contactEmail = 'Contact email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.contactEmail)) {
+      newErrors.contactEmail = 'Please enter a valid email address';
+    }
+    
+    if (!formData.duration && !formData.customDuration) {
+      newErrors.duration = 'Please select ad duration';
+    }
+    
+    if (formData.duration === 'custom' && (!formData.customDuration || parseInt(formData.customDuration) < 1)) {
+      newErrors.customDuration = 'Please enter a valid number of days (minimum 1)';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const calculatePrice = () => {
+    const days = formData.duration === 'custom' 
+      ? parseInt(formData.customDuration) || 0
+      : parseInt(formData.duration) || 0;
+    
+    const pricePerDay = 50; // R50 per day
+    const totalPrice = days * pricePerDay;
+    
+    // Apply discounts for longer durations
+    let discount = 0;
+    if (days >= 30) discount = 0.20; // 20% off for 30+ days
+    else if (days >= 14) discount = 0.15; // 15% off for 14+ days
+    else if (days >= 7) discount = 0.10; // 10% off for 7+ days
+    
+    const discountAmount = totalPrice * discount;
+    const finalPrice = totalPrice - discountAmount;
+    
+    return {
+      days,
+      pricePerDay,
+      subtotal: totalPrice,
+      discount: discountAmount,
+      total: finalPrice,
+      discountPercentage: discount * 100
+    };
   };
 
   const handleNext = () => {
     if (step === 1 && validateStep1()) {
       setStep(2);
     } else if (step === 2) {
-      calculatePricing();
       setStep(3);
     }
   };
 
-  // NEW: Redirect to payment page
-  const handleProceedToPayment = () => {
-    const { amount, totalHours } = calculatePricing();
-    
-    // Calculate end date
-    const endDate = new Date(Date.now() + totalHours * 60 * 60 * 1000);
-    
-    // Store ad data in sessionStorage for retrieval after payment
-    const adData = {
-      title: formData.title.trim(),
-      url: formData.url.trim(),
-      desktopImage: formData.desktopImage,
-      mobileImage: formData.mobileImage || formData.desktopImage,
-      adType,
-      dimensions,
-      contactEmail: formData.contactEmail?.trim() || '',
-      company: formData.company?.trim() || '',
-      status: 'pending',
-      approved: false,
-      duration: formData.duration,
-      durationUnit: formData.durationUnit,
-      totalHours,
-      endDate: endDate.toISOString(),
-    };
-    
-    sessionStorage.setItem('pendingAdData', JSON.stringify(adData));
-    
-    // Prepare metadata for payment
-    const metadata = {
-      type: 'advertisement',
-      adType,
-      duration: formData.duration,
-      durationUnit: formData.durationUnit,
-      totalHours,
-      company: formData.company || 'N/A',
-    };
-    
-    // Build payment URL
-    const paymentUrl = new URL('/payment', window.location.origin);
-    paymentUrl.searchParams.set('amount', amount);
-    paymentUrl.searchParams.set('currency', 'ZAR');
-    paymentUrl.searchParams.set('description', `${isBannerAd ? 'Banner' : 'Sidebar'} Ad - ${formData.duration} ${formData.durationUnit}`);
-    paymentUrl.searchParams.set('metadata', encodeURIComponent(JSON.stringify(metadata)));
-    paymentUrl.searchParams.set('returnUrl', window.location.origin + '/payment/ad-success');
-    
-    // Redirect to payment page
-    window.location.href = paymentUrl.toString();
+  const handleSubmit = async () => {
+    if (!validateStep3()) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const pricing = calculatePrice();
+      
+      // Prepare the ad data to store temporarily
+      const adData = {
+        title: formData.title.trim(),
+        url: formData.url.trim(),
+        desktopImage: formData.desktopImage,
+        mobileImage: formData.mobileImage || formData.desktopImage,
+        adType,
+        dimensions,
+        contactEmail: formData.contactEmail?.trim() || '',
+        company: formData.company?.trim() || '',
+        duration: pricing.days,
+        startDate: new Date().toISOString(),
+        endDate: new Date(Date.now() + pricing.days * 24 * 60 * 60 * 1000).toISOString(),
+        status: 'pending_payment',
+        approved: false,
+        createdAt: new Date().toISOString()
+      };
+
+      console.log('📤 Storing ad data for payment:', {
+        title: adData.title,
+        url: adData.url,
+        adType: adData.adType,
+        dimensions: adData.dimensions,
+        duration: adData.duration,
+        company: adData.company,
+        contactEmail: adData.contactEmail
+      });
+
+      // Store ad data in sessionStorage for after payment
+      sessionStorage.setItem('pendingAdData', JSON.stringify(adData));
+
+      // Prepare payment metadata
+      const metadata = {
+        type: 'ad_space',
+        adType: adType,
+        templateName: `${adType.replace(/_/g, ' ').toUpperCase()}`,
+        deviceType: isBannerAd ? 'Desktop & Mobile' : 'Desktop',
+        dimensions: isBannerAd ? '728×90 / 320×50' : `${dimensions.width}×${dimensions.height}`,
+        duration: `${pricing.days} day${pricing.days > 1 ? 's' : ''}`,
+        company: formData.company || 'N/A',
+        contactEmail: formData.contactEmail
+      };
+
+      // Redirect to payment page with query parameters
+      const paymentUrl = `/payment?${new URLSearchParams({
+        amount: pricing.total.toFixed(2),
+        currency: 'ZAR',
+        description: `Advertisement: ${adType.replace(/_/g, ' ').toUpperCase()} - ${pricing.days} day${pricing.days > 1 ? 's' : ''}`,
+        metadata: JSON.stringify(metadata),
+        returnUrl: window.location.href
+      }).toString()}`;
+
+      console.log('🔄 Redirecting to payment page:', paymentUrl);
+      
+      // Redirect to payment page
+      window.location.href = paymentUrl;
+      
+    } catch (error) {
+      console.error('🚨 Error preparing payment:', error);
+      alert('Error preparing payment: ' + error.message);
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-      <div className="bg-white rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b">
-          <h2 className="text-lg font-semibold">
-            Create {isBannerAd ? 'Banner' : 'Advertisement'} - Step {step} of 3
-          </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Step 1: Ad Details */}
-        {step === 1 && (
-          <div className="p-6 space-y-4">
-            <div className="text-sm text-gray-600 mb-4">
-              Step 1 of 3: Ad Details
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Ad Title *
-              </label>
-              <input
-                type="text"
-                value={formData.title}
-                onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Enter ad title"
-              />
-              {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title}</p>}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Target URL *
-              </label>
-              <input
-                type="url"
-                value={formData.url}
-                onChange={(e) => setFormData(prev => ({ ...prev, url: e.target.value }))}
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="https://your-website.com"
-              />
-              {errors.url && <p className="text-red-500 text-xs mt-1">{errors.url}</p>}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Desktop Image *
-              </label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => handleFileUpload(e.target.files[0], 'desktop')}
-                className="w-full p-2 border border-gray-300 rounded-md"
-              />
-              {uploadProgress.desktop > 0 && uploadProgress.desktop < 100 && (
-                <div className="mt-2">
-                  <div className="bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-blue-600 h-2 rounded-full transition-all" 
-                      style={{ width: `${uploadProgress.desktop}%` }}
-                    ></div>
-                  </div>
-                </div>
-              )}
-              {errors.desktopImage && <p className="text-red-500 text-xs mt-1">{errors.desktopImage}</p>}
-              {formData.desktopImagePreview && (
-                <img
-                  src={formData.desktopImagePreview}
-                  alt="Desktop preview"
-                  className="mt-2 max-w-full h-auto border rounded"
-                  style={{ maxHeight: '200px' }}
-                />
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Mobile Image *
-              </label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => handleFileUpload(e.target.files[0], 'mobile')}
-                className="w-full p-2 border border-gray-300 rounded-md"
-              />
-              {uploadProgress.mobile > 0 && uploadProgress.mobile < 100 && (
-                <div className="mt-2">
-                  <div className="bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-blue-600 h-2 rounded-full transition-all" 
-                      style={{ width: `${uploadProgress.mobile}%` }}
-                    ></div>
-                  </div>
-                </div>
-              )}
-              {errors.mobileImage && <p className="text-red-500 text-xs mt-1">{errors.mobileImage}</p>}
-              {formData.mobileImagePreview && (
-                <img
-                  src={formData.mobileImagePreview}
-                  alt="Mobile preview"
-                  className="mt-2 max-w-full h-auto border rounded"
-                  style={{ maxHeight: '100px' }}
-                />
-              )}
-            </div>
-
-            <div className="flex justify-end pt-4">
-              <button
-                onClick={handleNext}
-                disabled={!formData.desktopImage || !formData.mobileImage}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-              >
-                Next
-              </button>
-            </div>
+    <>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 overflow-y-auto">
+        <div className="bg-white rounded-lg w-full max-w-4xl mx-4 my-8 max-h-[90vh] overflow-y-auto">
+          <div className="flex items-center justify-between p-6 border-b sticky top-0 bg-white z-10">
+            <h2 className="text-lg font-semibold">
+              Create {isBannerAd ? 'Banner' : 'Advertisement'}
+            </h2>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+              <X className="w-5 h-5" />
+            </button>
           </div>
-        )}
 
-        {/* Step 2: Preview */}
-        {step === 2 && (
-          <div className="p-6 space-y-4">
-            <div className="text-sm text-gray-600 mb-4">
-              Step 2 of 3: Preview Your Ad
-            </div>
-
-            <div className="text-center space-y-4">
-              <h3 className="font-medium">{formData.title}</h3>
-              
-              <div>
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Desktop Preview</h4>
-                <div className="flex justify-center">
-                  <img
-                    src={formData.desktopImagePreview}
-                    alt="Desktop preview"
-                    className="border rounded max-w-full"
-                    style={{ maxHeight: '200px' }}
-                  />
-                </div>
+          {/* Step 1: Ad Details + T&Cs */}
+          {step === 1 && (
+            <div className="p-6 space-y-4">
+              <div className="text-sm text-gray-600 mb-4">
+                Step 1 of 3: Ad Details {isBannerAd ? '(728×90, Responsive)' : `(${dimensions.width}×${dimensions.height})`}
               </div>
 
               <div>
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Mobile Preview</h4>
-                <div className="flex justify-center">
-                  <img
-                    src={formData.mobileImagePreview}
-                    alt="Mobile preview"
-                    className="border rounded max-w-full"
-                    style={{ maxHeight: '100px' }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-between pt-4">
-              <button
-                onClick={() => setStep(1)}
-                className="px-4 py-2 border text-gray-700 rounded-md hover:bg-gray-50"
-              >
-                Back
-              </button>
-              <button
-                onClick={handleNext}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-              >
-                Continue
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Step 3: Duration & Pricing */}
-        {step === 3 && (
-          <div className="p-6 space-y-4">
-            <div className="text-sm text-gray-600 mb-4">
-              Step 3 of 3: Choose Duration & Proceed to Payment
-            </div>
-
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-              <h3 className="font-semibold text-blue-900 mb-2">
-                {isBannerAd ? 'Banner Ad' : 'Sidebar Ad'} Pricing
-              </h3>
-              <ul className="text-sm text-blue-800 space-y-1">
-                <li>• 12 hours: R{isBannerAd ? '100' : '50'}</li>
-                <li>• 24 hours: R{isBannerAd ? '150' : '100'}</li>
-                <li>• Multiple days: R{isBannerAd ? '150' : '100'}/day</li>
-              </ul>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Duration *</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={formData.duration}
-                  onChange={(e) => setFormData(prev => ({ ...prev, duration: e.target.value }))}
-                  className="w-full p-2 border rounded-md"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Duration Unit *</label>
-                <select
-                  value={formData.durationUnit}
-                  onChange={(e) => setFormData(prev => ({ ...prev, durationUnit: e.target.value }))}
-                  className="w-full p-2 border rounded-md"
-                >
-                  <option value="hours">Hours</option>
-                  <option value="days">Days</option>
-                  <option value="weeks">Weeks</option>
-                  <option value="months">Months</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Company Name</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Ad Title *</label>
                 <input
                   type="text"
-                  value={formData.company}
-                  onChange={(e) => setFormData(prev => ({ ...prev, company: e.target.value }))}
-                  className="w-full p-2 border rounded-md"
-                  placeholder="Your company name"
+                  value={formData.title}
+                  onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter ad title"
                 />
+                {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title}</p>}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Contact Email</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Target URL *</label>
                 <input
-                  type="email"
-                  value={formData.contactEmail}
-                  onChange={(e) => setFormData(prev => ({ ...prev, contactEmail: e.target.value }))}
-                  className="w-full p-2 border rounded-md"
-                  placeholder="contact@company.com"
+                  type="url"
+                  value={formData.url}
+                  onChange={(e) => setFormData(prev => ({ ...prev, url: e.target.value }))}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="https://your-website.com"
                 />
+                {errors.url && <p className="text-red-500 text-xs mt-1">{errors.url}</p>}
               </div>
 
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-green-800 font-medium">Total Amount</p>
-                    <p className="text-xs text-green-600 mt-1">
-                      {formData.duration} {formData.durationUnit}
-                    </p>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Desktop Image * {isBannerAd ? '(728×90px recommended)' : `(${dimensions.width}×${dimensions.height}px)`}
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleFileUpload(e.target.files[0], 'desktop')}
+                  className="w-full p-2 border border-gray-300 rounded-md file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                />
+                {uploadProgress.desktop > 0 && uploadProgress.desktop < 100 && (
+                  <div className="mt-2">
+                    <div className="bg-gray-200 rounded-full h-2">
+                      <div className="bg-blue-600 h-2 rounded-full transition-all duration-300" style={{ width: `${uploadProgress.desktop}%` }}></div>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">Uploading... {uploadProgress.desktop}%</p>
                   </div>
-                  <p className="text-2xl font-bold text-green-900">R{pricing.amount}</p>
+                )}
+                {errors.desktopImage && <p className="text-red-500 text-xs mt-1">{errors.desktopImage}</p>}
+                {formData.desktopImagePreview && (
+                  <div className="mt-2">
+                    <img src={formData.desktopImagePreview} alt="Desktop preview" className="max-w-full h-auto border border-gray-300 rounded" style={{ maxHeight: '200px' }} />
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Mobile Image * {isBannerAd ? '(320×50px recommended)' : '(Mobile optimized version)'}
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleFileUpload(e.target.files[0], 'mobile')}
+                  className="w-full p-2 border border-gray-300 rounded-md file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                />
+                {uploadProgress.mobile > 0 && uploadProgress.mobile < 100 && (
+                  <div className="mt-2">
+                    <div className="bg-gray-200 rounded-full h-2">
+                      <div className="bg-blue-600 h-2 rounded-full transition-all duration-300" style={{ width: `${uploadProgress.mobile}%` }}></div>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">Uploading... {uploadProgress.mobile}%</p>
+                  </div>
+                )}
+                {errors.mobileImage && <p className="text-red-500 text-xs mt-1">{errors.mobileImage}</p>}
+                {formData.mobileImagePreview && (
+                  <div className="mt-2">
+                    <img src={formData.mobileImagePreview} alt="Mobile preview" className="max-w-full h-auto border border-gray-300 rounded" style={{ maxHeight: '100px' }} />
+                  </div>
+                )}
+                <p className="text-xs text-gray-500 mt-1">Upload a mobile-optimized version for better performance on small screens</p>
+              </div>
+
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div className="flex items-start space-x-3">
+                  <input
+                    type="checkbox"
+                    id="terms-accept"
+                    checked={termsAccepted}
+                    onChange={(e) => setTermsAccepted(e.target.checked)}
+                    className="w-5 h-5 mt-0.5 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                  />
+                  <label htmlFor="terms-accept" className="text-sm text-gray-700 flex-1 cursor-pointer">
+                    I have read and agree to the{' '}
+                    <button
+                      type="button"
+                      onClick={() => setShowTerms(true)}
+                      className="text-blue-600 hover:underline font-medium"
+                    >
+                      Terms and Conditions
+                    </button>
+                    {' '}including adult content policies if applicable. *
+                  </label>
+                </div>
+                {errors.terms && <p className="text-red-500 text-xs mt-2 ml-8">{errors.terms}</p>}
+              </div>
+
+              <div className="flex justify-end pt-4">
+                <button
+                  onClick={handleNext}
+                  disabled={!formData.desktopImage || !formData.mobileImage || !termsAccepted}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next: Preview
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Step 2: Preview with Toggle */}
+          {step === 2 && (
+            <div className="p-6 space-y-4">
+              <div className="text-sm text-gray-600 mb-4">Step 2 of 3: Preview Your Ad</div>
+
+              <div className="flex items-center justify-center space-x-4 mb-6">
+                <button
+                  onClick={() => setPreviewMode('desktop')}
+                  className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-all ${
+                    previewMode === 'desktop' ? 'bg-blue-600 text-white shadow-lg' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  <Monitor className="w-5 h-5" />
+                  <span>Desktop Preview</span>
+                </button>
+                <button
+                  onClick={() => setPreviewMode('mobile')}
+                  className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-all ${
+                    previewMode === 'mobile' ? 'bg-blue-600 text-white shadow-lg' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  <Smartphone className="w-5 h-5" />
+                  <span>Mobile Preview</span>
+                </button>
+              </div>
+
+              <div className="border border-gray-300 rounded-lg overflow-hidden">
+                {previewMode === 'desktop' ? (
+                  <DesktopPreview 
+                    adType={adType} 
+                    adImage={formData.desktopImagePreview} 
+                    adUrl={formData.url} 
+                  />
+                ) : (
+                  <MobilePreview 
+                    adType={adType} 
+                    adImage={formData.mobileImagePreview} 
+                    adUrl={formData.url} 
+                  />
+                )}
+              </div>
+
+              <p className="text-sm text-center text-gray-600 mt-4">
+                Your ad will appear in the highlighted position with a blue border
+              </p>
+
+              <div className="flex justify-between pt-4">
+                <button onClick={() => setStep(1)} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors">Back</button>
+                <button onClick={handleNext} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">Continue to Payment</button>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Duration & Contact Details */}
+          {step === 3 && (
+            <div className="p-6 space-y-6">
+              <div className="text-sm text-gray-600 mb-4">Step 3 of 3: Duration & Contact Details</div>
+
+              {/* Ad Duration Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-3">
+                  How long do you want your ad to run? *
+                </label>
+                <div className="space-y-3">
+                  {/* 1 Day */}
+                  <label className="flex items-center justify-between p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-500 transition-all">
+                    <div className="flex items-center">
+                      <input
+                        type="radio"
+                        name="duration"
+                        value="1"
+                        checked={formData.duration === '1'}
+                        onChange={(e) => setFormData(prev => ({ ...prev, duration: e.target.value, customDuration: '' }))}
+                        className="w-4 h-4 text-blue-600"
+                      />
+                      <div className="ml-3">
+                        <div className="font-medium text-gray-900">1 Day</div>
+                        <div className="text-xs text-gray-500">Perfect for testing or short campaigns</div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-lg font-bold text-blue-600">R 50</div>
+                      <div className="text-xs text-gray-500">R50/day</div>
+                    </div>
+                  </label>
+
+                  {/* 7 Days - Popular */}
+                  <label className="flex items-center justify-between p-4 border-2 border-blue-500 rounded-lg cursor-pointer bg-blue-50 relative">
+                    <div className="absolute -top-2 right-4 bg-blue-600 text-white text-xs font-bold px-2 py-0.5 rounded">
+                      SAVE 10%
+                    </div>
+                    <div className="flex items-center">
+                      <input
+                        type="radio"
+                        name="duration"
+                        value="7"
+                        checked={formData.duration === '7'}
+                        onChange={(e) => setFormData(prev => ({ ...prev, duration: e.target.value, customDuration: '' }))}
+                        className="w-4 h-4 text-blue-600"
+                      />
+                      <div className="ml-3">
+                        <div className="font-medium text-gray-900">7 Days (1 Week)</div>
+                        <div className="text-xs text-gray-500">Most popular choice</div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-lg font-bold text-blue-600">R 315</div>
+                      <div className="text-xs text-gray-500 line-through">R350</div>
+                      <div className="text-xs text-green-600">Save R35</div>
+                    </div>
+                  </label>
+
+                  {/* 14 Days */}
+                  <label className="flex items-center justify-between p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-500 transition-all relative">
+                    <div className="absolute -top-2 right-4 bg-green-600 text-white text-xs font-bold px-2 py-0.5 rounded">
+                      SAVE 15%
+                    </div>
+                    <div className="flex items-center">
+                      <input
+                        type="radio"
+                        name="duration"
+                        value="14"
+                        checked={formData.duration === '14'}
+                        onChange={(e) => setFormData(prev => ({ ...prev, duration: e.target.value, customDuration: '' }))}
+                        className="w-4 h-4 text-blue-600"
+                      />
+                      <div className="ml-3">
+                        <div className="font-medium text-gray-900">14 Days (2 Weeks)</div>
+                        <div className="text-xs text-gray-500">Great value for extended reach</div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-lg font-bold text-blue-600">R 595</div>
+                      <div className="text-xs text-gray-500 line-through">R700</div>
+                      <div className="text-xs text-green-600">Save R105</div>
+                    </div>
+                  </label>
+
+                  {/* 30 Days - Best Value */}
+                  <label className="flex items-center justify-between p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-500 transition-all relative">
+                    <div className="absolute -top-2 right-4 bg-yellow-500 text-white text-xs font-bold px-2 py-0.5 rounded">
+                      BEST VALUE - 20%
+                    </div>
+                    <div className="flex items-center">
+                      <input
+                        type="radio"
+                        name="duration"
+                        value="30"
+                        checked={formData.duration === '30'}
+                        onChange={(e) => setFormData(prev => ({ ...prev, duration: e.target.value, customDuration: '' }))}
+                        className="w-4 h-4 text-blue-600"
+                      />
+                      <div className="ml-3">
+                        <div className="font-medium text-gray-900">30 Days (1 Month)</div>
+                        <div className="text-xs text-gray-500">Maximum exposure & best discount</div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-lg font-bold text-blue-600">R 1,200</div>
+                      <div className="text-xs text-gray-500 line-through">R1,500</div>
+                      <div className="text-xs text-green-600">Save R300</div>
+                    </div>
+                  </label>
+
+                  {/* Custom Duration */}
+                  <label className="flex items-center justify-between p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-500 transition-all">
+                    <div className="flex items-center flex-1">
+                      <input
+                        type="radio"
+                        name="duration"
+                        value="custom"
+                        checked={formData.duration === 'custom'}
+                        onChange={(e) => setFormData(prev => ({ ...prev, duration: e.target.value }))}
+                        className="w-4 h-4 text-blue-600"
+                      />
+                      <div className="ml-3 flex-1">
+                        <div className="font-medium text-gray-900 mb-2">Custom Duration</div>
+                        {formData.duration === 'custom' && (
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="number"
+                              min="1"
+                              max="365"
+                              value={formData.customDuration}
+                              onChange={(e) => setFormData(prev => ({ ...prev, customDuration: e.target.value }))}
+                              placeholder="Enter days"
+                              className="w-32 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            />
+                            <span className="text-sm text-gray-600">days</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {formData.duration === 'custom' && formData.customDuration && (
+                      <div className="text-right ml-4">
+                        <div className="text-lg font-bold text-blue-600">
+                          R {calculatePrice().total.toFixed(0)}
+                        </div>
+                        {calculatePrice().discount > 0 && (
+                          <>
+                            <div className="text-xs text-gray-500 line-through">
+                              R {calculatePrice().subtotal.toFixed(0)}
+                            </div>
+                            <div className="text-xs text-green-600">
+                              Save R {calculatePrice().discount.toFixed(0)} ({calculatePrice().discountPercentage}%)
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </label>
+                </div>
+                {errors.duration && <p className="text-red-500 text-xs mt-1">{errors.duration}</p>}
+                {errors.customDuration && <p className="text-red-500 text-xs mt-1">{errors.customDuration}</p>}
+              </div>
+
+              {/* Pricing Summary */}
+              {(formData.duration || formData.customDuration) && (
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-900 mb-3">Order Summary</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Ad Space:</span>
+                      <span className="font-medium text-gray-900">
+                        {isBannerAd ? 'Banner' : adType.replace(/_/g, ' ').toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Duration:</span>
+                      <span className="font-medium text-gray-900">
+                        {calculatePrice().days} day{calculatePrice().days > 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Rate:</span>
+                      <span className="font-medium text-gray-900">R50 per day</span>
+                    </div>
+                    {calculatePrice().discount > 0 && (
+                      <>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Subtotal:</span>
+                          <span className="text-gray-600 line-through">R {calculatePrice().subtotal.toFixed(0)}</span>
+                        </div>
+                        <div className="flex justify-between text-green-600">
+                          <span className="font-medium">Discount ({calculatePrice().discountPercentage}%):</span>
+                          <span className="font-medium">-R {calculatePrice().discount.toFixed(0)}</span>
+                        </div>
+                      </>
+                    )}
+                    <div className="flex justify-between pt-2 border-t-2 border-blue-300">
+                      <span className="text-lg font-bold text-gray-900">Total:</span>
+                      <span className="text-2xl font-bold text-blue-600">
+                        R {calculatePrice().total.toFixed(0)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Contact Information */}
+              <div className="space-y-4">
+                <h4 className="font-semibold text-gray-900">Contact Information</h4>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Company Name (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.company}
+                    onChange={(e) => setFormData(prev => ({ ...prev, company: e.target.value }))}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Your company name"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Contact Email *
+                  </label>
+                  <input
+                    type="email"
+                    value={formData.contactEmail}
+                    onChange={(e) => setFormData(prev => ({ ...prev, contactEmail: e.target.value }))}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="contact@company.com"
+                    required
+                  />
+                  {errors.contactEmail && <p className="text-red-500 text-xs mt-1">{errors.contactEmail}</p>}
+                  <p className="text-xs text-gray-500 mt-1">
+                    We'll send your receipt and ad details to this email
+                  </p>
                 </div>
               </div>
-            </div>
 
-            <div className="flex justify-between pt-4">
-              <button
-                onClick={() => setStep(2)}
-                className="px-4 py-2 border text-gray-700 rounded-md hover:bg-gray-50"
-              >
-                Back
-              </button>
-              <button
-                onClick={handleProceedToPayment}
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center"
-              >
-                Proceed to Payment
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
+              {/* Important Notice */}
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div className="flex items-start">
+                  <CreditCard className="w-5 h-5 text-yellow-600 mr-3 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="font-semibold text-yellow-800 mb-1">Before You Proceed</h4>
+                    <ul className="text-sm text-yellow-700 space-y-1 list-disc list-inside">
+                      <li>Your ad will go live within 24 hours of payment confirmation</li>
+                      <li>Ad duration starts from the activation date</li>
+                      <li>You'll receive a confirmation email with ad details</li>
+                      <li>Secure payment powered by Stripe</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
 
-// PaymentElement component remains the same
-function PaymentElement({ stripe, elements }) {
-  const [elementReady, setElementReady] = useState(false);
-  const paymentElementRef = useRef(null);
-  const mountPointRef = useRef(null);
-  
-  useEffect(() => {
-    // Guard: Don't create if we don't have elements or already have an element
-    if (!elements || paymentElementRef.current) return;
-    
-    let paymentElement = null;
-    
-    try {
-      // Create the payment element
-      paymentElement = elements.create('payment');
-      paymentElementRef.current = paymentElement;
-      
-      // Mount to the DOM
-      paymentElement.mount('#payment-element-mount');
-      
-      // Set ready state when element is ready
-      paymentElement.on('ready', () => {
-        setElementReady(true);
-      });
-      
-      console.log('✅ Payment element mounted successfully');
-      
-    } catch (error) {
-      console.error('❌ Error creating payment element:', error);
-      paymentElementRef.current = null;
-    }
-    
-    // CRITICAL: Cleanup function
-    return () => {
-      console.log('🧹 Cleaning up payment element...');
-      
-      if (paymentElementRef.current) {
-        try {
-          paymentElementRef.current.unmount();
-          paymentElementRef.current.destroy();
-          console.log('✅ Payment element cleaned up');
-        } catch (error) {
-          console.error('⚠️ Error during cleanup:', error);
-        }
-        paymentElementRef.current = null;
-      }
-      
-      setElementReady(false);
-    };
-  }, [elements]); // Only depend on elements
-  
-  return (
-    <div>
-      <div id="payment-element-mount"></div>
-      {!elementReady && (
-        <div className="text-center py-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent mx-auto"></div>
-          <p className="text-sm text-gray-600 mt-2">Loading payment form...</p>
+              {/* Action Buttons */}
+              <div className="flex justify-between pt-4 border-t border-gray-200">
+                <button 
+                  onClick={() => setStep(2)} 
+                  className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                >
+                  ← Back to Preview
+                </button>
+                <button
+                  onClick={handleSubmit}
+                  disabled={loading || !formData.contactEmail || (!formData.duration && !formData.customDuration)}
+                  className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center font-medium shadow-lg"
+                >
+                  {loading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2"></div>
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      Proceed to Payment
+                      <ArrowRight className="w-5 h-5 ml-2" />
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
-      )}
-    </div>
+      </div>
+
+      <TermsAndConditionsModal isOpen={showTerms} onClose={() => setShowTerms(false)} onAccept={() => { setTermsAccepted(true); setShowTerms(false); }} />
+    </>
   );
 }
 
@@ -906,14 +979,75 @@ export default function NewsGrid({ articles }) {
   const [selectedAdType, setSelectedAdType] = useState('');
   const [selectedDimensions, setSelectedDimensions] = useState({});
   const router = useRouter();
-  const { 
-    isPublisherFavorite, 
-    togglePublisherFavorite, 
-    currentUser,
-    loading: favoritesLoading 
-  } = useFavorites();
+  const { isPublisherFavorite, togglePublisherFavorite, currentUser, loading: favoritesLoading } = useFavorites();
 
-  // Fetch news sources with their recent articles
+  // Check for payment success on page load
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentStatus = urlParams.get('payment');
+    const paymentId = urlParams.get('id');
+
+    if (paymentStatus === 'success' && paymentId) {
+      console.log('✅ Payment successful, activating ad...');
+      handlePaymentSuccess(paymentId);
+      
+      // Clean up URL
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
+
+  const handlePaymentSuccess = async (paymentIntentId) => {
+    try {
+      // Get pending ad data from sessionStorage
+      const pendingAdData = sessionStorage.getItem('pendingAdData');
+      
+      if (!pendingAdData) {
+        console.warn('⚠️ No pending ad data found');
+        alert('Payment successful, but ad data was not found. Please contact support.');
+        return;
+      }
+
+      const adData = JSON.parse(pendingAdData);
+      
+      // Update ad data with payment info
+      adData.status = 'active';
+      adData.approved = true;
+      adData.paymentIntentId = paymentIntentId;
+      adData.paidAt = new Date().toISOString();
+
+      console.log('💳 Creating ad after successful payment:', adData.title);
+
+      // Create the ad
+      const response = await fetch('/api/ads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(adData),
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        console.log('✅ Ad created successfully with ID:', result.id);
+        
+        // Clear pending data
+        sessionStorage.removeItem('pendingAdData');
+        
+        // Show success message
+        alert('🎉 Payment successful! Your ad is now live and will appear on the site shortly.');
+        
+        // Reload page to show new ad
+        window.location.reload();
+      } else {
+        console.error('❌ Failed to create ad:', result.error);
+        alert('Payment successful, but failed to activate ad. Please contact support with payment ID: ' + paymentIntentId);
+      }
+      
+    } catch (error) {
+      console.error('🚨 Error activating ad after payment:', error);
+      alert('Payment successful, but failed to activate ad. Please contact support.');
+    }
+  };
+
   useEffect(() => {
     const fetchNewsSources = async () => {
       try {
@@ -921,34 +1055,23 @@ export default function NewsGrid({ articles }) {
         setSourcesError(null);
         
         const response = await fetch('/api/news-sources');
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         
         const data = await response.json();
         
         if (data.success) {
-          // Fetch recent articles for each publisher
           const sourcesWithArticles = await Promise.all(
             (data.newsources || []).map(async (source) => {
               try {
-                // Fetch recent articles for this publisher
                 const articlesResponse = await fetch(`/api/news-sources/${source.id}/articles`);
                 
                 if (articlesResponse.ok) {
                   const articlesData = await articlesResponse.json();
                   
                   if (articlesData.success && articlesData.articles && articlesData.articles.length > 0) {
-                    // Get the most recent article
                     const recentArticle = articlesData.articles[0];
-                    
-                    // Clean the title and content
                     const cleanTitle = stripHtml(recentArticle.title);
-                    const cleanExcerpt = truncateText(
-                      recentArticle.summary || recentArticle.content,
-                      150
-                    );
+                    const cleanExcerpt = truncateText(recentArticle.summary || recentArticle.content, 150);
                     
                     return {
                       ...source,
@@ -966,19 +1089,10 @@ export default function NewsGrid({ articles }) {
                   }
                 }
                 
-                // Return source with no recent story if fetch fails or no articles
-                return {
-                  ...source,
-                  recentStory: null,
-                  hasArticles: false
-                };
+                return { ...source, recentStory: null, hasArticles: false };
               } catch (articleError) {
                 console.warn(`Failed to fetch articles for ${source.name}:`, articleError);
-                return {
-                  ...source,
-                  recentStory: null,
-                  hasArticles: false
-                };
+                return { ...source, recentStory: null, hasArticles: false };
               }
             })
           );
@@ -990,7 +1104,7 @@ export default function NewsGrid({ articles }) {
       } catch (error) {
         console.error('Error fetching news sources:', error);
         setSourcesError(error.message);
-        setNewsources([]); // Set empty array on error
+        setNewsources([]);
       } finally {
         setLoadingSources(false);
       }
@@ -1000,14 +1114,12 @@ export default function NewsGrid({ articles }) {
   }, []);
 
   const handleSourceClick = (source) => {
-    // Navigate to specific publisher's articles page
     router.push(`/news-reader/publisher/${source.id}`);
   };
 
   const handleReadMoreClick = (e, storyUrl) => {
-    e.stopPropagation(); // Prevent card click
+    e.stopPropagation();
     if (storyUrl && storyUrl !== '#') {
-      // Check if it's an internal link
       if (storyUrl.startsWith('/')) {
         router.push(storyUrl);
       } else {
@@ -1022,42 +1134,22 @@ export default function NewsGrid({ articles }) {
     setShowAdModal(true);
   };
 
-  const retryFetchSources = () => {
-    setSourcesError(null);
-    setLoadingSources(true);
-    // Re-run the effect by changing a dependency
-    window.location.reload(); // Simple reload for now
-  };
-
   return (
     <div className="relative">
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-4 px-4 sm:px-6 pb-10">
-        {/* MAIN COLUMN */}
         <div className="space-y-6">
-          {/* Banner Ad - Top of Headlines */}
           <section>
-            <AdSlot 
-              adType="banner"
-              width={728}
-              height={90}
-              isBanner={true}
-              className="w-full"
-              onAdvertiseClick={() => handleAdvertiseClick('banner', { width: 728, height: 90 })}
-            />
+            <AdSlot adType="banner" width={728} height={90} isBanner={true} className="w-full" onAdvertiseClick={() => handleAdvertiseClick('banner', { width: 728, height: 90 })} />
           </section>
 
-          {/* News Sources Section */}
           <section className="mt-10">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg sm:text-xl font-bold">Top Headlines</h2>
               {!loadingSources && !sourcesError && (
-                <span className="text-sm text-gray-500">
-                  {newsources.length} publisher{newsources.length !== 1 ? 's' : ''}
-                </span>
+                <span className="text-sm text-gray-500">{newsources.length} publisher{newsources.length !== 1 ? 's' : ''}</span>
               )}
             </div>
             
-            {/* Error State */}
             {sourcesError && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
                 <div className="flex items-center justify-between">
@@ -1065,17 +1157,11 @@ export default function NewsGrid({ articles }) {
                     <p className="text-red-800 font-medium">Failed to load news sources</p>
                     <p className="text-red-600 text-sm mt-1">{sourcesError}</p>
                   </div>
-                  <button 
-                    onClick={retryFetchSources}
-                    className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700 transition-colors"
-                  >
-                    Retry
-                  </button>
+                  <button onClick={() => window.location.reload()} className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700 transition-colors">Retry</button>
                 </div>
               </div>
             )}
             
-            {/* Loading State */}
             {loadingSources && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -1095,105 +1181,55 @@ export default function NewsGrid({ articles }) {
               </div>
             )}
             
-            {/* News Sources Grid */}
             {!loadingSources && !sourcesError && newsources.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 {newsources.map((source, idx) => (
                   <Fragment key={source.id}>
-                    <Card 
-                      className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer relative"
-                      onClick={() => handleSourceClick(source)}
-                    >
+                    <Card className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer relative" onClick={() => handleSourceClick(source)}>
                       <CardContent className="p-4">
-                        {/* Publisher Name (centered header) */}
                         <div className="text-center mb-3">
-                          <h1 className="text-base font-bold text-gray-900 truncate">
-                            {stripHtml(source.name)}
-                          </h1>
+                          <h1 className="text-base font-bold text-gray-900 truncate">{stripHtml(source.name)}</h1>
                         </div>
 
-                        {/* Logo + Story */}
                         <div className="flex items-start space-x-3 mb-3">
-                          {/* Logo */}
                           <div className="flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20">
                             {source.logo ? (
-                              <img
-                                src={source.logo}
-                                alt={`${source.name} logo`}
-                                className="w-full h-full rounded-lg object-contain border border-gray-200 bg-white"
-                              />
+                              <img src={source.logo} alt={`${source.name} logo`} className="w-full h-full rounded-lg object-contain border border-gray-200 bg-white" />
                             ) : (
                               <div className="w-full h-full bg-[#329ae1] rounded-lg flex items-center justify-center">
-                                <span className="text-white font-semibold text-lg">
-                                  {stripHtml(source.name).charAt(0)}
-                                </span>
+                                <span className="text-white font-semibold text-lg">{stripHtml(source.name).charAt(0)}</span>
                               </div>
                             )}
                           </div>
 
-                          {/* Story Content */}
                           <div className="flex-1 min-w-0">
                             <h4 className="text-sm sm:text-base font-semibold text-gray-900 mb-1 line-clamp-2">
-                              {source.recentStory?.title ||
-                                "Ramaphosa pledges to tackle youth unemployment in new economic plan"}
+                              {source.recentStory?.title || "Ramaphosa pledges to tackle youth unemployment in new economic plan"}
                             </h4>
                             <p className="text-xs sm:text-sm text-gray-600 mb-2 line-clamp-3">
-                              {source.recentStory?.excerpt ||
-                                "Press Pass is a Media Monetization System with customer onboarding for digital referral services. "}
+                              {source.recentStory?.excerpt || "Press Pass is a Media Monetization System with customer onboarding for digital referral services."}
                             </p>
-                            <button
-                              onClick={(e) =>
-                                handleReadMoreClick(e, source.recentStory?.url || "#")
-                              }
-                              className="text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors"
-                            >
-                              Read more
-                            </button>
+                            <button onClick={(e) => handleReadMoreClick(e, source.recentStory?.url || "#")} className="text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors">Read more</button>
                           </div>
                         </div>
 
-                        {/* Post Info + Favorites aligned in one row */}
                         <div className="flex items-center justify-between text-xs text-gray-500 pt-2">
                           <div className="flex items-center space-x-4">
                             <span>Last Post: {source.lastPosted || "1d ago"}</span>
-                            <a 
-                              href={source.website || "https://www.dailysun.co.za"} 
-                              target="_blank" 
-                              rel="noopener noreferrer" 
-                              className="hidden sm:inline text-gray-500 hover:underline"
-                            >
+                            <a href={source.website || "https://www.dailysun.co.za"} target="_blank" rel="noopener noreferrer" className="hidden sm:inline text-gray-500 hover:underline">
                               {source.website?.replace(/^https?:\/\//, "") || "www.dailysun.co.za"}
                             </a>
                           </div>
-                          <PublisherFavoriteButton
-                            type="button"
-                            publisher={source}
-                              size="default"
-                              showText={false}
-                              className="hidden sm:inline-flex p-2 rounded-full bg-gray-100 hover:bg-red-100 transition-colors"
-                            />
+                          <PublisherFavoriteButton type="button" publisher={source} size="default" showText={false} className="hidden sm:inline-flex p-2 rounded-full bg-gray-100 hover:bg-red-100 transition-colors" />
                         </div>
 
-                        {/* Mobile Favorite Button */}
-                        <PublisherFavoriteButton
-                          publisher={source}
-                          size="default"
-                          showText={false}
-                          className="sm:hidden absolute bottom-4 right-4 p-2 rounded-full bg-gray-100 hover:bg-red-100 transition-colors"
-                        />
+                        <PublisherFavoriteButton publisher={source} size="default" showText={false} className="sm:hidden absolute bottom-4 right-4 p-2 rounded-full bg-gray-100 hover:bg-red-100 transition-colors" />
                       </CardContent>
                     </Card>
                     
-                    {/* Mobile ads between articles (every 5th article, only on small screens) */}
                     {((idx + 1) % 5 === 0) && (
                       <div className="sm:col-span-2 lg:hidden">
-                        <AdSlot 
-                          adType="mobile"
-                          width={320}
-                          height={50}
-                          className="w-full"
-                          onAdvertiseClick={() => handleAdvertiseClick('mobile', { width: 320, height: 50 })}
-                        />
+                        <AdSlot adType="mobile" width={320} height={50} className="w-full" onAdvertiseClick={() => handleAdvertiseClick('mobile', { width: 320, height: 50 })} />
                       </div>
                     )}
                   </Fragment>
@@ -1201,58 +1237,26 @@ export default function NewsGrid({ articles }) {
               </div>
             ) : null}
             
-            {/* Empty State */}
             {!loadingSources && !sourcesError && newsources.length === 0 && (
               <div className="text-center py-8">
                 <Building className="mx-auto h-8 w-8 text-gray-400" />
                 <h3 className="mt-2 text-sm font-medium text-gray-900">No publishers yet</h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  Publisher folders will automatically appear here when they register.
-                </p>
+                <p className="mt-1 text-sm text-gray-500">Publisher folders will automatically appear here when they register.</p>
               </div>
             )}
-
           </section>
         </div>
 
-        {/* RIGHT SIDEBAR (desktop ads only) */}
         <aside className="hidden lg:block space-y-6 lg:sticky lg:top-20 h-fit">
-          {/* Rectangle Ad (300x250) */}
-          <AdSlot 
-            adType="sidebar_rectangle"
-            width={300}
-            height={250}
-            onAdvertiseClick={() => handleAdvertiseClick('sidebar_rectangle', { width: 300, height: 250 })}
-          />
-          
-          {/* Skyscraper Ad (300x600) */}
-          <AdSlot 
-            adType="sidebar_skyscraper"
-            width={300}
-            height={600}
-            onAdvertiseClick={() => handleAdvertiseClick('sidebar_skyscraper', { width: 300, height: 600 })}
-          />
-          
-          {/* Another Rectangle Ad (300x250) */}
-          <AdSlot 
-            adType="sidebar_rectangle2"
-            width={300}
-            height={250}
-            onAdvertiseClick={() => handleAdvertiseClick('sidebar_rectangle2', { width: 300, height: 250 })}
-          />
+          <AdSlot adType="sidebar_rectangle" width={300} height={250} onAdvertiseClick={() => handleAdvertiseClick('sidebar_rectangle', { width: 300, height: 250 })} />
+          <AdSlot adType="sidebar_skyscraper" width={300} height={600} onAdvertiseClick={() => handleAdvertiseClick('sidebar_skyscraper', { width: 300, height: 600 })} />
+          <AdSlot adType="sidebar_rectangle2" width={300} height={250} onAdvertiseClick={() => handleAdvertiseClick('sidebar_rectangle2', { width: 300, height: 250 })} />
         </aside>
 
-        {/* Recommended Articles Section (after main content) */}
         <RecommendedOverlayBottom articles={unique} />
       </div>
 
-      {/* Ad Creation Modal */}
-      <AdCreationModal
-        isOpen={showAdModal}
-        onClose={() => setShowAdModal(false)}
-        adType={selectedAdType}
-        dimensions={selectedDimensions}
-      />
+      <AdCreationModal isOpen={showAdModal} onClose={() => setShowAdModal(false)} adType={selectedAdType} dimensions={selectedDimensions} />
     </div>
   );
 }

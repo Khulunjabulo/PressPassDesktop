@@ -1,4 +1,3 @@
-// app/payment/page.js
 'use client';
 
 import { useState, useEffect, useRef, Suspense } from 'react';
@@ -18,13 +17,11 @@ function PaymentPageContent({
   const router = useRouter();
   const searchParams = useSearchParams();
   
-  // Get data from URL params or props (URL takes precedence)
   const amount = searchParams?.get('amount') || propAmount;
   const currency = searchParams?.get('currency') || propCurrency;
   const description = searchParams?.get('description') || propDescription || 'Payment';
   const returnUrlParam = searchParams?.get('returnUrl') || returnUrl;
   
-  // Parse metadata from URL or use prop
   let metadata = propMetadata || {};
   try {
     const metadataParam = searchParams?.get('metadata');
@@ -37,17 +34,16 @@ function PaymentPageContent({
 
   const [selectedMethod, setSelectedMethod] = useState('card');
   const [loading, setLoading] = useState(false);
-  const [paymentStatus, setPaymentStatus] = useState(null); // 'success', 'error', null
+  const [paymentStatus, setPaymentStatus] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [stripe, setStripe] = useState(null);
   const [elements, setElements] = useState(null);
   const [clientSecret, setClientSecret] = useState(null);
   const [paymentIntentId, setPaymentIntentId] = useState(null);
+  const [activatingAd, setActivatingAd] = useState(false);
   
   const paymentElementRef = useRef(null);
-  const mountPointRef = useRef(null);
 
-  // Payment methods configuration
   const paymentMethods = [
     {
       id: 'card',
@@ -72,14 +68,6 @@ function PaymentPageContent({
       description: 'Pay with Apple devices',
       supported: true,
       stripeType: ['card', 'apple_pay']
-    },
-    {
-      id: 'paypal',
-      name: 'PayPal',
-      icon: Wallet,
-      description: 'Pay with PayPal account',
-      supported: false, // Requires separate Stripe setup
-      comingSoon: true
     }
   ];
 
@@ -90,10 +78,10 @@ function PaymentPageContent({
         const { loadStripe } = await import('@stripe/stripe-js');
         const stripeInstance = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
         setStripe(stripeInstance);
-        console.log('✅ Stripe loaded successfully');
+        console.log('✅ Stripe loaded');
       } catch (error) {
         console.error('❌ Failed to load Stripe:', error);
-        setErrorMessage('Payment system failed to load. Please refresh the page.');
+        setErrorMessage('Payment system failed to load. Please refresh.');
       }
     };
     
@@ -102,14 +90,13 @@ function PaymentPageContent({
     }
   }, []);
 
-  // Create payment intent when component mounts
+  // Create payment intent
   useEffect(() => {
     if (amount && !clientSecret) {
       createPaymentIntent();
     }
   }, [amount]);
 
-  // Create payment intent
   const createPaymentIntent = async () => {
     try {
       setLoading(true);
@@ -143,7 +130,7 @@ function PaymentPageContent({
     }
   };
 
-  // Initialize Stripe Elements when clientSecret is available
+  // Initialize Stripe Elements
   useEffect(() => {
     if (stripe && clientSecret && !elements) {
       console.log('🎨 Initializing Stripe Elements...');
@@ -172,7 +159,6 @@ function PaymentPageContent({
     if (!elements || paymentElementRef.current) return;
     
     try {
-      // Create payment element with all payment methods enabled
       const paymentElement = elements.create('payment', {
         layout: {
           type: 'accordion',
@@ -191,7 +177,6 @@ function PaymentPageContent({
       });
       
       paymentElement.on('change', (event) => {
-        console.log('Payment method changed:', event);
         if (event.error) {
           setErrorMessage(event.error.message);
         } else {
@@ -199,7 +184,7 @@ function PaymentPageContent({
         }
       });
       
-      console.log('✅ Payment element mounted with automatic payment methods');
+      console.log('✅ Payment element mounted');
       
     } catch (error) {
       console.error('❌ Error mounting payment element:', error);
@@ -232,13 +217,11 @@ function PaymentPageContent({
       
       console.log('💳 Processing payment...');
       
-      // Submit elements
       const { error: submitError } = await elements.submit();
       if (submitError) {
         throw new Error(submitError.message);
       }
       
-      // Confirm payment
       const { error, paymentIntent } = await stripe.confirmPayment({
         elements,
         redirect: 'if_required',
@@ -254,7 +237,7 @@ function PaymentPageContent({
       if (paymentIntent.status === 'succeeded') {
         console.log('✅ Payment succeeded!');
         
-        // Verify payment on server
+        // Verify payment
         const verifyResponse = await fetch('/api/verify-payment', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -266,7 +249,11 @@ function PaymentPageContent({
         if (verifyData.success && verifyData.verified) {
           setPaymentStatus('success');
           
-          // Call success callback if provided
+          // If this is an ad payment, activate the ad
+          if (metadata.type === 'ad_space') {
+            await activateAd(paymentIntent.id);
+          }
+          
           if (onSuccess) {
             onSuccess({
               paymentIntentId: paymentIntent.id,
@@ -276,7 +263,7 @@ function PaymentPageContent({
             });
           }
           
-          // Redirect after 2 seconds if returnUrl provided
+          // Redirect after delay
           if (returnUrlParam) {
             setTimeout(() => {
               window.location.href = returnUrlParam + '?payment=success&id=' + paymentIntent.id;
@@ -298,7 +285,49 @@ function PaymentPageContent({
     }
   };
 
-  // Handle back button
+  // Activate ad after successful payment
+  const activateAd = async (paymentIntentId) => {
+    try {
+      setActivatingAd(true);
+      console.log('🔓 Activating ad after payment...');
+      
+      // Get pending upload data from sessionStorage
+      const pendingData = sessionStorage.getItem('pendingAdUpload');
+      if (!pendingData) {
+        console.warn('⚠️ No pending ad upload found');
+        return;
+      }
+
+      const uploadData = JSON.parse(pendingData);
+      
+      const response = await fetch('/api/activate-ad-after-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          paymentIntentId,
+          publisherId: uploadData.publisherId,
+          templateId: uploadData.templateId,
+          deviceType: uploadData.deviceType,
+          fileData: uploadData.previewData
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        console.log('✅ Ad activated successfully:', result.data);
+        sessionStorage.removeItem('pendingAdUpload');
+      } else {
+        console.error('❌ Ad activation failed:', result.error);
+      }
+      
+    } catch (error) {
+      console.error('💥 Error activating ad:', error);
+    } finally {
+      setActivatingAd(false);
+    }
+  };
+
   const handleBack = () => {
     if (onCancel) {
       onCancel();
@@ -321,6 +350,16 @@ function PaymentPageContent({
           <p className="text-gray-600 mb-4">
             Your payment of {currency} {amount} has been processed successfully.
           </p>
+          {metadata.type === 'ad_space' && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+              <p className="text-sm text-blue-800 font-medium mb-2">
+                {activatingAd ? '🔄 Activating your advertisement...' : '✅ Your ad is now live!'}
+              </p>
+              <p className="text-xs text-blue-600">
+                {metadata.templateName} - {metadata.deviceType} ({metadata.dimensions})
+              </p>
+            </div>
+          )}
           <p className="text-sm text-gray-500 mb-6">
             Transaction ID: {paymentIntentId}
           </p>
@@ -337,7 +376,7 @@ function PaymentPageContent({
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-4xl mx-auto">
-        {/* Header with logo */}
+        {/* Header */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <div className="flex items-center justify-between">
             {showBackButton && (
@@ -350,17 +389,16 @@ function PaymentPageContent({
               </button>
             )}
             <div className="flex-1 flex justify-center">
-              {/* LOGO PLACEHOLDER - Replace with actual logo */}
               <div className="w-32 h-12 bg-blue-600 rounded flex items-center justify-center">
-                <span className="text-white font-bold text-xl">LOGO</span>
+                <span className="text-white font-bold text-xl">PressPass</span>
               </div>
             </div>
-            <div className="w-20"></div> {/* Spacer for centering */}
+            <div className="w-20"></div>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Payment Methods Selection */}
+          {/* Payment Methods */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow-md p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment Method</h3>
@@ -383,14 +421,7 @@ function PaymentPageContent({
                       <div className="flex items-center">
                         <Icon className="w-6 h-6 text-gray-700 mr-3" />
                         <div className="text-left flex-1">
-                          <div className="font-medium text-gray-900 flex items-center">
-                            {method.name}
-                            {method.comingSoon && (
-                              <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded">
-                                Soon
-                              </span>
-                            )}
-                          </div>
+                          <div className="font-medium text-gray-900">{method.name}</div>
                           <div className="text-xs text-gray-500">{method.description}</div>
                         </div>
                       </div>
@@ -411,6 +442,13 @@ function PaymentPageContent({
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-gray-600">{description}</span>
                 </div>
+                {metadata.type === 'ad_space' && (
+                  <div className="text-xs text-gray-500 space-y-1 mb-2">
+                    <div>Template: {metadata.templateName}</div>
+                    <div>Device: {metadata.deviceType}</div>
+                    <div>Size: {metadata.dimensions}</div>
+                  </div>
+                )}
                 <div className="flex justify-between items-center pt-2 border-t border-gray-200">
                   <span className="text-lg font-semibold text-gray-900">Total Amount</span>
                   <span className="text-2xl font-bold text-blue-600">
@@ -419,7 +457,6 @@ function PaymentPageContent({
                 </div>
               </div>
 
-              {/* Error Message */}
               {errorMessage && (
                 <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start">
                   <XCircle className="w-5 h-5 text-red-500 mr-2 flex-shrink-0 mt-0.5" />
@@ -431,19 +468,6 @@ function PaymentPageContent({
               {clientSecret && stripe && elements ? (
                 <div className="mb-6">
                   <div id="payment-element-mount"></div>
-                  
-                  {/* Debug Info */}
-                  {process.env.NODE_ENV === 'development' && (
-                    <div className="mt-4 p-3 bg-gray-100 rounded text-xs">
-                      <p className="font-semibold mb-1">🔍 Payment Debug Info:</p>
-                      <p>• Browser: {navigator.userAgent.includes('Chrome') ? 'Chrome' : navigator.userAgent.includes('Safari') ? 'Safari' : 'Other'}</p>
-                      <p>• Secure: {window.location.protocol === 'https:' ? '✅' : '❌ (needs HTTPS)'}</p>
-                      <p>• Currency: {currency}</p>
-                      <p className="mt-2 text-gray-600">
-                        💡 Google Pay shows in Chrome with saved cards. Apple Pay shows in Safari on Mac/iOS.
-                      </p>
-                    </div>
-                  )}
                 </div>
               ) : (
                 <div className="mb-6 flex items-center justify-center py-8">
@@ -485,7 +509,6 @@ function PaymentPageContent({
   );
 }
 
-// Wrap with Suspense boundary to fix Next.js 15 useSearchParams error
 export default function PaymentPage(props) {
   return (
     <Suspense fallback={
