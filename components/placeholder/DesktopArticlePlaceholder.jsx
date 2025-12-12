@@ -1,7 +1,7 @@
 import React from 'react';
-import { Building, Users, Globe, Calendar, Clock } from 'lucide-react';
+import { Building, Users, Globe, Calendar, Clock, ChevronLeft, ChevronRight, RefreshCw, Lock, X } from 'lucide-react';
 
-// Desktop Article Placeholder - Exact replica of publisher article page
+// Desktop Article Placeholder - Wrapped in Chrome Browser Frame
 export default function DesktopArticlePlaceholder({ ads = {}, previewAd = null, highlightTemplate = null, publisherId }) {
   // Get ad to display for a template
   const getAdForTemplate = (templateId) => {
@@ -85,266 +85,346 @@ export default function DesktopArticlePlaceholder({ ads = {}, previewAd = null, 
   };
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Newspaper Header */}
-      <div className="border-b-4 border-black">
-        <div className="max-w-7xl mx-auto px-4 sm:px-8 py-6">
-          {/* Publication Header */}
-          <div className="text-center">
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-wider mb-2" style={{fontFamily: 'Times, "Times New Roman", serif'}}>
-              YOUR PUBLICATION
-            </h1>
-            <div className="border-t border-b border-black py-2 mb-4">
-              <p className="text-sm tracking-widest" style={{fontFamily: 'Times, "Times New Roman", serif'}}>
-                {getCurrentDate()} • News • Preview Mode
-              </p>
+    <div className="min-h-screen bg-gradient-to-br from-gray-200 to-gray-300 p-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Browser Window */}
+        <div className="bg-white rounded-lg shadow-2xl overflow-hidden" style={{ minHeight: '800px' }}>
+          {/* Chrome Header */}
+          <div className="bg-gray-200 border-b border-gray-300">
+            {/* Title Bar */}
+            <div className="flex items-center justify-between px-4 py-2 bg-gray-100">
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 rounded-full bg-red-500 hover:bg-red-600 cursor-pointer"></div>
+                <div className="w-3 h-3 rounded-full bg-yellow-500 hover:bg-yellow-600 cursor-pointer"></div>
+                <div className="w-3 h-3 rounded-full bg-green-500 hover:bg-green-600 cursor-pointer"></div>
+              </div>
+              <div className="text-xs text-gray-600 font-medium">PressPass Publisher Preview</div>
+              <div className="w-16"></div>
             </div>
+
+            {/* Address Bar Area */}
+            <div className="flex items-center space-x-2 px-4 py-2">
+              {/* Navigation Buttons */}
+              <div className="flex items-center space-x-1">
+                <button className="p-1.5 rounded hover:bg-gray-300 transition-colors">
+                  <ChevronLeft className="w-4 h-4 text-gray-600" />
+                </button>
+                <button className="p-1.5 rounded hover:bg-gray-300 transition-colors">
+                  <ChevronRight className="w-4 h-4 text-gray-400" />
+                </button>
+                <button className="p-1.5 rounded hover:bg-gray-300 transition-colors">
+                  <RefreshCw className="w-4 h-4 text-gray-600" />
+                </button>
+              </div>
+
+              {/* Address Bar */}
+              <div className="flex-1 flex items-center bg-white rounded-full px-4 py-2 shadow-sm border border-gray-300">
+                <Lock className="w-4 h-4 text-gray-500 mr-2" />
+                <span className="text-sm text-gray-700">presspass.africa/publisher/preview</span>
+              </div>
+
+              {/* Menu Button */}
+              <button className="p-2 rounded hover:bg-gray-300 transition-colors">
+                <div className="flex flex-col space-y-1">
+                  <div className="w-1 h-1 bg-gray-600 rounded-full"></div>
+                  <div className="w-1 h-1 bg-gray-600 rounded-full"></div>
+                  <div className="w-1 h-1 bg-gray-600 rounded-full"></div>
+                </div>
+              </button>
+            </div>
+
+            {/* Tab Bar */}
+            <div className="flex items-end px-2 bg-gray-200">
+              <div className="bg-white rounded-t-lg px-4 py-2 flex items-center space-x-3 border-t border-l border-r border-gray-300">
+                <img 
+                  src="/Presspass.png" 
+                  alt="PressPass" 
+                  className="w-4 h-4"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                  }}
+                />
+                <span className="text-sm text-gray-700">Publisher Preview</span>
+                <button className="hover:bg-gray-200 rounded p-0.5">
+                  <X className="w-3 h-3 text-gray-500" />
+                </button>
+              </div>
+              <button className="ml-2 p-2 hover:bg-gray-300 rounded-t">
+                <div className="w-4 h-4 text-gray-600 font-bold text-xl leading-none">+</div>
+              </button>
+            </div>
+          </div>
+
+          {/* Browser Content Area */}
+          <div className="bg-white overflow-auto" style={{ maxHeight: 'calc(100vh - 200px)' }}>
             
-            {/* Publisher Details */}
-            <div className="flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-8 text-sm">
-              <div className="flex items-center space-x-2">
-                <Building className="w-4 h-4" />
-                <span>Digital Publication</span>
+            {/* Original Desktop Content Starts Here */}
+            <div className="min-h-screen bg-white">
+              {/* Newspaper Header */}
+              <div className="border-b-4 border-black">
+                <div className="max-w-7xl mx-auto px-4 sm:px-8 py-6">
+                  {/* Publication Header */}
+                  <div className="text-center">
+                    <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-wider mb-2" style={{fontFamily: 'Times, "Times New Roman", serif'}}>
+                      YOUR PUBLICATION
+                    </h1>
+                    <div className="border-t border-b border-black py-2 mb-4">
+                      <p className="text-sm tracking-widest" style={{fontFamily: 'Times, "Times New Roman", serif'}}>
+                        {getCurrentDate()} • News • Preview Mode
+                      </p>
+                    </div>
+                    
+                    {/* Publisher Details */}
+                    <div className="flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-8 text-sm">
+                      <div className="flex items-center space-x-2">
+                        <Building className="w-4 h-4" />
+                        <span>Digital Publication</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Users className="w-4 h-4" />
+                        <span>General Audience</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Globe className="w-4 h-4" />
+                        <span>yourpublication.com</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="flex items-center space-x-2">
-                <Users className="w-4 h-4" />
-                <span>General Audience</span>
+
+              {/* Template 1 - Headline Banner Ad (120px height) */}
+              <div className="max-w-7xl mx-auto px-4 sm:px-8 mt-4">
+                {renderAdSpace(1, 120, 'border border-gray-300')}
               </div>
-              <div className="flex items-center space-x-2">
-                <Globe className="w-4 h-4" />
-                <span>yourpublication.com</span>
+
+              {/* Main Content Layout */}
+              <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4">
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                  {/* Main Articles Column */}
+                  <div className="lg:col-span-3">
+                    {/* Section Header */}
+                    <div className="border-b-2 border-black mb-6 pb-2">
+                      <h2 className="text-3xl font-bold" style={{fontFamily: 'Times, "Times New Roman", serif'}}>
+                        Latest Articles
+                      </h2>
+                    </div>
+
+                    {/* Mock Article 1 */}
+                    <article className="border-b border-gray-300 pb-6 mb-6">
+                      <div className="flex flex-col md:flex-row md:gap-6">
+                        <div className="flex-shrink-0 mb-4 md:mb-0">
+                          <div className="w-full h-48 md:w-28 md:h-30 bg-gray-200 border border-gray-300 rounded-md"></div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="mb-2">
+                            <span className="inline-block bg-black text-white px-2 py-1 text-xs font-bold uppercase tracking-wider">
+                              CATEGORY
+                            </span>
+                          </div>
+                          <h3 className="text-lg md:text-xl lg:text-2xl font-bold leading-tight mb-3" 
+                              style={{fontFamily: 'Times, "Times New Roman", serif'}}>
+                            Breaking News: Sample Article Headline Goes Here
+                          </h3>
+                          <p className="text-sm text-gray-700 mb-3 leading-relaxed">
+                            This is a sample article preview text that would normally contain the first few lines of the article content...
+                          </p>
+                          <div className="flex items-center space-x-4 text-sm text-gray-600">
+                            <div className="flex items-center space-x-1">
+                              <Calendar className="w-4 h-4" />
+                              <span>{getCurrentDate()}</span>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              <Clock className="w-4 h-4" />
+                              <span>5 min read</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </article>
+
+                    {/* Template 2 - Feed Ad (250px height) */}
+                    <div className="my-6">
+                      {renderAdSpace(2, 250, 'border border-gray-300')}
+                    </div>
+
+                    {/* Mock Article 2 */}
+                    <article className="border-b border-gray-300 pb-6 mb-6">
+                      <div className="flex flex-col md:flex-row md:gap-6">
+                        <div className="flex-shrink-0 mb-4 md:mb-0">
+                          <div className="w-full h-48 md:w-28 md:h-30 bg-gray-200 border border-gray-300 rounded-md"></div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="mb-2">
+                            <span className="inline-block bg-black text-white px-2 py-1 text-xs font-bold uppercase tracking-wider">
+                              CATEGORY
+                            </span>
+                          </div>
+                          <h3 className="text-lg md:text-xl lg:text-2xl font-bold leading-tight mb-3" 
+                              style={{fontFamily: 'Times, "Times New Roman", serif'}}>
+                            Another Important Story with Engaging Title
+                          </h3>
+                          <p className="text-sm text-gray-700 mb-3 leading-relaxed">
+                            Sample article preview content that provides readers with a brief overview of the story...
+                          </p>
+                          <div className="flex items-center space-x-4 text-sm text-gray-600">
+                            <div className="flex items-center space-x-1">
+                              <Calendar className="w-4 h-4" />
+                              <span>{getCurrentDate()}</span>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              <Clock className="w-4 h-4" />
+                              <span>3 min read</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </article>
+
+                    {/* Mock Article 3 */}
+                    <article className="border-b border-gray-300 pb-6 mb-6">
+                      <div className="flex flex-col md:flex-row md:gap-6">
+                        <div className="flex-shrink-0 mb-4 md:mb-0">
+                          <div className="w-full h-48 md:w-28 md:h-30 bg-gray-200 border border-gray-300 rounded-md"></div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="mb-2">
+                            <span className="inline-block bg-black text-white px-2 py-1 text-xs font-bold uppercase tracking-wider">
+                              CATEGORY
+                            </span>
+                          </div>
+                          <h3 className="text-lg md:text-xl lg:text-2xl font-bold leading-tight mb-3" 
+                              style={{fontFamily: 'Times, "Times New Roman", serif'}}>
+                            Third Article Headline for Preview Purposes
+                          </h3>
+                          <p className="text-sm text-gray-700 mb-3 leading-relaxed">
+                            This preview text demonstrates how articles appear in the publication layout...
+                          </p>
+                          <div className="flex items-center space-x-4 text-sm text-gray-600">
+                            <div className="flex items-center space-x-1">
+                              <Calendar className="w-4 h-4" />
+                              <span>{getCurrentDate()}</span>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              <Clock className="w-4 h-4" />
+                              <span>4 min read</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </article>
+
+                    {/* Template 3 - Within Article Ad (250px height) */}
+                    <div className="my-6">
+                      {renderAdSpace(3, 250, 'border border-gray-300')}
+                    </div>
+
+                    {/* More mock articles */}
+                    <article className="border-b border-gray-300 pb-6 mb-6">
+                      <div className="flex flex-col md:flex-row md:gap-6">
+                        <div className="flex-shrink-0 mb-4 md:mb-0">
+                          <div className="w-full h-48 md:w-28 md:h-30 bg-gray-200 border border-gray-300 rounded-md"></div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="mb-2">
+                            <span className="inline-block bg-black text-white px-2 py-1 text-xs font-bold uppercase tracking-wider">
+                              CATEGORY
+                            </span>
+                          </div>
+                          <h3 className="text-lg md:text-xl lg:text-2xl font-bold leading-tight mb-3" 
+                              style={{fontFamily: 'Times, "Times New Roman", serif'}}>
+                            More News Content Continues Here
+                          </h3>
+                          <p className="text-sm text-gray-700 mb-3 leading-relaxed">
+                            Additional article content showing the continuous flow of news...
+                          </p>
+                          <div className="flex items-center space-x-4 text-sm text-gray-600">
+                            <div className="flex items-center space-x-1">
+                              <Calendar className="w-4 h-4" />
+                              <span>{getCurrentDate()}</span>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              <Clock className="w-4 h-4" />
+                              <span>6 min read</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </article>
+                  </div>
+
+                  {/* Right Sidebar */}
+                  <div className="lg:col-span-1 space-y-6">
+                    {/* Publisher Info Box */}
+                    <div className="border-2 border-black p-4">
+                      <h3 className="text-lg font-bold mb-4 border-b border-black pb-2" style={{fontFamily: 'Times, "Times New Roman", serif'}}>
+                        About Us
+                      </h3>
+                      <div className="space-y-3 text-sm">
+                        <div className="text-center mb-4">
+                          <div className="w-16 h-16 mx-auto bg-gray-200 rounded border border-gray-400"></div>
+                        </div>
+                        <p className="text-gray-700 italic leading-relaxed">
+                          "Your trusted source for news and information."
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Template 4 - Page Wrap 1 Ad (300px height) */}
+                    {renderAdSpace(4, 300, 'border-2 border-black')}
+
+                    {/* Categories Box */}
+                    <div className="border-2 border-black p-4">
+                      <h3 className="text-lg font-bold mb-4 border-b border-black pb-2" style={{fontFamily: 'Times, "Times New Roman", serif'}}>
+                        Categories
+                      </h3>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between items-center py-2 px-3 border bg-gray-50 border-gray-300">
+                          <span className="font-medium">Politics</span>
+                          <span className="text-xs">12</span>
+                        </div>
+                        <div className="flex justify-between items-center py-2 px-3 border bg-gray-50 border-gray-300">
+                          <span className="font-medium">Business</span>
+                          <span className="text-xs">8</span>
+                        </div>
+                        <div className="flex justify-between items-center py-2 px-3 border bg-gray-50 border-gray-300">
+                          <span className="font-medium">Sports</span>
+                          <span className="text-xs">15</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Template 5 - Page Wrap 2 Ad (400px height) */}
+                    {renderAdSpace(5, 400, 'border-2 border-black')}
+                  </div>
+                </div>
+
+                {/* Bottom Banner Ad - Same as Template 1 */}
+                <div className="mt-8">
+                  {renderAdSpace(1, 120, 'border border-gray-300')}
+                </div>
+
+                {/* Footer */}
+                <div className="border-t-2 border-black mt-8">
+                  <div className="max-w-7xl mx-auto px-4 sm:px-8 py-6">
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center space-x-6">
+                        <span className="font-bold" style={{fontFamily: 'Times, "Times New Roman", serif'}}>
+                          © {new Date().getFullYear()} Your Publication
+                        </span>
+                        <span className="text-gray-600">All rights reserved</span>
+                      </div>
+                      
+                      <div className="flex items-center space-x-4">
+                        <span className="text-gray-600">Edition: Digital</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
+            {/* Original Desktop Content Ends Here */}
 
-      {/* Template 1 - Headline Banner Ad (120px height) */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-8 mt-4">
-        {renderAdSpace(1, 120, 'border border-gray-300')}
-      </div>
-
-      {/* Main Content Layout */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Main Articles Column */}
-          <div className="lg:col-span-3">
-            {/* Section Header */}
-            <div className="border-b-2 border-black mb-6 pb-2">
-              <h2 className="text-3xl font-bold" style={{fontFamily: 'Times, "Times New Roman", serif'}}>
-                Latest Articles
-              </h2>
-            </div>
-
-            {/* Mock Article 1 */}
-            <article className="border-b border-gray-300 pb-6 mb-6">
-              <div className="flex flex-col md:flex-row md:gap-6">
-                <div className="flex-shrink-0 mb-4 md:mb-0">
-                  <div className="w-full h-48 md:w-28 md:h-30 bg-gray-200 border border-gray-300 rounded-md"></div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="mb-2">
-                    <span className="inline-block bg-black text-white px-2 py-1 text-xs font-bold uppercase tracking-wider">
-                      CATEGORY
-                    </span>
-                  </div>
-                  <h3 className="text-lg md:text-xl lg:text-2xl font-bold leading-tight mb-3" 
-                      style={{fontFamily: 'Times, "Times New Roman", serif'}}>
-                    Breaking News: Sample Article Headline Goes Here
-                  </h3>
-                  <p className="text-sm text-gray-700 mb-3 leading-relaxed">
-                    This is a sample article preview text that would normally contain the first few lines of the article content...
-                  </p>
-                  <div className="flex items-center space-x-4 text-sm text-gray-600">
-                    <div className="flex items-center space-x-1">
-                      <Calendar className="w-4 h-4" />
-                      <span>{getCurrentDate()}</span>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <Clock className="w-4 h-4" />
-                      <span>5 min read</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </article>
-
-            {/* Template 2 - Feed Ad (250px height) */}
-            <div className="my-6">
-              {renderAdSpace(2, 250, 'border border-gray-300')}
-            </div>
-
-            {/* Mock Article 2 */}
-            <article className="border-b border-gray-300 pb-6 mb-6">
-              <div className="flex flex-col md:flex-row md:gap-6">
-                <div className="flex-shrink-0 mb-4 md:mb-0">
-                  <div className="w-full h-48 md:w-28 md:h-30 bg-gray-200 border border-gray-300 rounded-md"></div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="mb-2">
-                    <span className="inline-block bg-black text-white px-2 py-1 text-xs font-bold uppercase tracking-wider">
-                      CATEGORY
-                    </span>
-                  </div>
-                  <h3 className="text-lg md:text-xl lg:text-2xl font-bold leading-tight mb-3" 
-                      style={{fontFamily: 'Times, "Times New Roman", serif'}}>
-                    Another Important Story with Engaging Title
-                  </h3>
-                  <p className="text-sm text-gray-700 mb-3 leading-relaxed">
-                    Sample article preview content that provides readers with a brief overview of the story...
-                  </p>
-                  <div className="flex items-center space-x-4 text-sm text-gray-600">
-                    <div className="flex items-center space-x-1">
-                      <Calendar className="w-4 h-4" />
-                      <span>{getCurrentDate()}</span>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <Clock className="w-4 h-4" />
-                      <span>3 min read</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </article>
-
-            {/* Mock Article 3 */}
-            <article className="border-b border-gray-300 pb-6 mb-6">
-              <div className="flex flex-col md:flex-row md:gap-6">
-                <div className="flex-shrink-0 mb-4 md:mb-0">
-                  <div className="w-full h-48 md:w-28 md:h-30 bg-gray-200 border border-gray-300 rounded-md"></div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="mb-2">
-                    <span className="inline-block bg-black text-white px-2 py-1 text-xs font-bold uppercase tracking-wider">
-                      CATEGORY
-                    </span>
-                  </div>
-                  <h3 className="text-lg md:text-xl lg:text-2xl font-bold leading-tight mb-3" 
-                      style={{fontFamily: 'Times, "Times New Roman", serif'}}>
-                    Third Article Headline for Preview Purposes
-                  </h3>
-                  <p className="text-sm text-gray-700 mb-3 leading-relaxed">
-                    This preview text demonstrates how articles appear in the publication layout...
-                  </p>
-                  <div className="flex items-center space-x-4 text-sm text-gray-600">
-                    <div className="flex items-center space-x-1">
-                      <Calendar className="w-4 h-4" />
-                      <span>{getCurrentDate()}</span>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <Clock className="w-4 h-4" />
-                      <span>4 min read</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </article>
-
-            {/* Template 3 - Within Article Ad (250px height) */}
-            <div className="my-6">
-              {renderAdSpace(3, 250, 'border border-gray-300')}
-            </div>
-
-            {/* More mock articles */}
-            <article className="border-b border-gray-300 pb-6 mb-6">
-              <div className="flex flex-col md:flex-row md:gap-6">
-                <div className="flex-shrink-0 mb-4 md:mb-0">
-                  <div className="w-full h-48 md:w-28 md:h-30 bg-gray-200 border border-gray-300 rounded-md"></div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="mb-2">
-                    <span className="inline-block bg-black text-white px-2 py-1 text-xs font-bold uppercase tracking-wider">
-                      CATEGORY
-                    </span>
-                  </div>
-                  <h3 className="text-lg md:text-xl lg:text-2xl font-bold leading-tight mb-3" 
-                      style={{fontFamily: 'Times, "Times New Roman", serif'}}>
-                    More News Content Continues Here
-                  </h3>
-                  <p className="text-sm text-gray-700 mb-3 leading-relaxed">
-                    Additional article content showing the continuous flow of news...
-                  </p>
-                  <div className="flex items-center space-x-4 text-sm text-gray-600">
-                    <div className="flex items-center space-x-1">
-                      <Calendar className="w-4 h-4" />
-                      <span>{getCurrentDate()}</span>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <Clock className="w-4 h-4" />
-                      <span>6 min read</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </article>
-          </div>
-
-          {/* Right Sidebar */}
-          <div className="lg:col-span-1 space-y-6">
-            {/* Publisher Info Box */}
-            <div className="border-2 border-black p-4">
-              <h3 className="text-lg font-bold mb-4 border-b border-black pb-2" style={{fontFamily: 'Times, "Times New Roman", serif'}}>
-                About Us
-              </h3>
-              <div className="space-y-3 text-sm">
-                <div className="text-center mb-4">
-                  <div className="w-16 h-16 mx-auto bg-gray-200 rounded border border-gray-400"></div>
-                </div>
-                <p className="text-gray-700 italic leading-relaxed">
-                  "Your trusted source for news and information."
-                </p>
-              </div>
-            </div>
-
-            {/* Template 4 - Page Wrap 1 Ad (300px height) */}
-            {renderAdSpace(4, 300, 'border-2 border-black')}
-
-            {/* Categories Box */}
-            <div className="border-2 border-black p-4">
-              <h3 className="text-lg font-bold mb-4 border-b border-black pb-2" style={{fontFamily: 'Times, "Times New Roman", serif'}}>
-                Categories
-              </h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between items-center py-2 px-3 border bg-gray-50 border-gray-300">
-                  <span className="font-medium">Politics</span>
-                  <span className="text-xs">12</span>
-                </div>
-                <div className="flex justify-between items-center py-2 px-3 border bg-gray-50 border-gray-300">
-                  <span className="font-medium">Business</span>
-                  <span className="text-xs">8</span>
-                </div>
-                <div className="flex justify-between items-center py-2 px-3 border bg-gray-50 border-gray-300">
-                  <span className="font-medium">Sports</span>
-                  <span className="text-xs">15</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Template 5 - Page Wrap 2 Ad (400px height) */}
-            {renderAdSpace(5, 400, 'border-2 border-black')}
-          </div>
-        </div>
-
-        {/* Bottom Banner Ad - Same as Template 1 */}
-        <div className="mt-8">
-          {renderAdSpace(1, 120, 'border border-gray-300')}
-        </div>
-
-        {/* Footer */}
-        <div className="border-t-2 border-black mt-8">
-          <div className="max-w-7xl mx-auto px-4 sm:px-8 py-6">
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center space-x-6">
-                <span className="font-bold" style={{fontFamily: 'Times, "Times New Roman", serif'}}>
-                  © {new Date().getFullYear()} Your Publication
-                </span>
-                <span className="text-gray-600">All rights reserved</span>
-              </div>
-              
-              <div className="flex items-center space-x-4">
-                <span className="text-gray-600">Edition: Digital</span>
-              </div>
-            </div>
           </div>
         </div>
       </div>
