@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { auth } from '@/Firebase/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { Camera, User, Mail, Calendar, MapPin, Phone, Settings, Save, Edit2, X, Trash2 } from 'lucide-react';
+import { Camera, User, Mail, Calendar, MapPin, Phone, Settings, Save, Edit2, X, Trash2, Star, MessageSquare } from 'lucide-react';
 import Header from '@/components/news-reader/Header';
 
 const ReaderProfile = () => {
@@ -15,6 +15,18 @@ const ReaderProfile = () => {
   const [profilePicPreview, setProfilePicPreview] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  
+  // Review states
+  const [userReview, setUserReview] = useState(null);
+  const [loadingReview, setLoadingReview] = useState(true);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [reviewFormData, setReviewFormData] = useState({
+    rating: 5,
+    reviewText: ''
+  });
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviewError, setReviewError] = useState('');
+  
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -67,6 +79,7 @@ const ReaderProfile = () => {
       if (firebaseUser) {
         console.log('✅ Firebase user is authenticated');
         loadUserProfile();
+        loadUserReview();
       } else {
         console.warn('⚠️ No authenticated Firebase user');
         
@@ -165,6 +178,135 @@ const ReaderProfile = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const loadUserReview = async () => {
+    try {
+      setLoadingReview(true);
+      const currentUser = auth.currentUser;
+      
+      if (!currentUser) return;
+
+      const idToken = await currentUser.getIdToken();
+      const response = await fetch('/api/reviews', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${idToken}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.reviews) {
+          const readerUid = `reader_${currentUser.uid}`;
+          const review = data.reviews.find(r => r.userId === readerUid);
+          
+          if (review) {
+            setUserReview(review);
+            setReviewFormData({
+              rating: review.rating,
+              reviewText: review.reviewText
+            });
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error loading user review:', error);
+    } finally {
+      setLoadingReview(false);
+    }
+  };
+
+  const handleReviewSubmit = async () => {
+    if (!reviewFormData.reviewText.trim()) {
+      setReviewError('Please write a review before submitting');
+      return;
+    }
+
+    if (reviewFormData.reviewText.trim().length < 10) {
+      setReviewError('Review must be at least 10 characters long');
+      return;
+    }
+
+    try {
+      setSubmittingReview(true);
+      setReviewError('');
+      
+      const currentUser = auth.currentUser;
+      const idToken = await currentUser.getIdToken();
+
+      const url = '/api/reviews';
+      const method = userReview ? 'PUT' : 'POST';
+      const body = userReview 
+        ? { reviewId: userReview.id, ...reviewFormData }
+        : reviewFormData;
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Authorization': `Bearer ${idToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setUserReview(data.review);
+        setShowReviewForm(false);
+        alert(userReview ? 'Review updated successfully!' : 'Review submitted successfully!');
+        loadUserReview();
+      } else {
+        setReviewError(data.error || 'Failed to submit review');
+      }
+    } catch (error) {
+      console.error('Error submitting review:', error);
+      setReviewError('An error occurred. Please try again.');
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
+
+  const handleReviewDelete = async () => {
+    if (!confirm('Are you sure you want to delete your review?')) return;
+
+    try {
+      const currentUser = auth.currentUser;
+      const idToken = await currentUser.getIdToken();
+
+      const response = await fetch(`/api/reviews?reviewId=${userReview.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${idToken}`
+        }
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setUserReview(null);
+        setReviewFormData({ rating: 5, reviewText: '' });
+        alert('Review deleted successfully');
+      }
+    } catch (error) {
+      console.error('Error deleting review:', error);
+      alert('Failed to delete review');
+    }
+  };
+
+  const renderStars = (rating, interactive = false, onChange = null) => {
+    return Array.from({ length: 5 }, (_, index) => (
+      <Star
+        key={index}
+        className={`w-6 h-6 ${interactive ? 'cursor-pointer' : ''} ${
+          index < rating
+            ? 'fill-yellow-400 text-yellow-400'
+            : 'text-gray-300'
+        }`}
+        onClick={() => interactive && onChange && onChange(index + 1)}
+      />
+    ));
   };
 
   const handleInputChange = (e) => {
@@ -289,13 +431,8 @@ const ReaderProfile = () => {
 
       console.log('✅ Profile deleted successfully');
       
-      // Clear localStorage
       localStorage.removeItem('currentUser');
-      
-      // Sign out from Firebase (client-side)
       await auth.signOut();
-      
-      // Redirect to home page
       router.push('/');
 
     } catch (error) {
@@ -435,7 +572,7 @@ const ReaderProfile = () => {
 
             {/* Profile Details Section */}
             <div className="lg:col-span-2">
-              <div className="bg-white rounded-lg shadow-md p-6">
+              <div className="bg-white rounded-lg shadow-md p-6 mb-6">
                 <h3 className="text-xl font-semibold text-gray-800 mb-6">Profile Information</h3>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -561,7 +698,7 @@ const ReaderProfile = () => {
               </div>
 
               {/* Preferences Section */}
-              <div className="bg-white rounded-lg shadow-md p-6 mt-6">
+              <div className="bg-white rounded-lg shadow-md p-6 mb-6">
                 <h3 className="text-xl font-semibold text-gray-800 mb-6">
                   <Settings className="w-5 h-5 inline mr-2" />
                   Preferences
@@ -616,6 +753,136 @@ const ReaderProfile = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Review Section */}
+              <div className="bg-white rounded-lg shadow-md p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xl font-semibold text-gray-800">
+                    <MessageSquare className="w-5 h-5 inline mr-2" />
+                    My Review
+                  </h3>
+                  {!loadingReview && !userReview && !showReviewForm && (
+                    <button
+                      onClick={() => setShowReviewForm(true)}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm"
+                    >
+                      Write a Review
+                    </button>
+                  )}
+                </div>
+
+                {loadingReview ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                    <p className="text-gray-600 mt-2">Loading review...</p>
+                  </div>
+                ) : userReview && !showReviewForm ? (
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-1">
+                        {renderStars(userReview.rating)}
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => {
+                            setShowReviewForm(true);
+                            setReviewFormData({
+                              rating: userReview.rating,
+                              reviewText: userReview.reviewText
+                            });
+                          }}
+                          className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={handleReviewDelete}
+                          className="text-red-600 hover:text-red-700 text-sm font-medium"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                    <p className="text-gray-700 mb-2">{userReview.reviewText}</p>
+                    <p className="text-xs text-gray-500">
+                      {userReview.updatedAt !== userReview.createdAt && 'Updated '}
+                      {new Date(userReview.updatedAt || userReview.createdAt).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </p>
+                  </div>
+                ) : showReviewForm ? (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Rating
+                      </label>
+                      <div className="flex items-center gap-1">
+                        {renderStars(reviewFormData.rating, true, (rating) => 
+                          setReviewFormData(prev => ({ ...prev, rating }))
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Your Review
+                      </label>
+                      <textarea
+                        value={reviewFormData.reviewText}
+                        onChange={(e) => setReviewFormData(prev => ({ ...prev, reviewText: e.target.value }))}
+                        rows={4}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Share your experience with Press Pass..."
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Minimum 10 characters
+                      </p>
+                    </div>
+
+                    {reviewError && (
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                        <p className="text-red-600 text-sm">{reviewError}</p>
+                      </div>
+                    )}
+
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => {
+                          setShowReviewForm(false);
+                          setReviewError('');
+                          if (!userReview) {
+                            setReviewFormData({ rating: 5, reviewText: '' });
+                          }
+                        }}
+                        className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleReviewSubmit}
+                        disabled={submittingReview}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+                      >
+                        {submittingReview ? 'Submitting...' : (userReview ? 'Update Review' : 'Submit Review')}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                    <p className="text-gray-600 mb-4">You haven&apos;t written a review yet</p>
+                    <button
+                      onClick={() => setShowReviewForm(true)}
+                      className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                    >
+                      Write Your First Review
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -633,6 +900,7 @@ const ReaderProfile = () => {
                   <li>Permanently delete your account</li>
                   <li>Remove all your personal data</li>
                   <li>Delete your preferences and settings</li>
+                  <li>Delete any reviews you&apos;ve written</li>
                   <li><strong>Cannot be undone or retrieved</strong></li>
                 </ul>
               </div>
