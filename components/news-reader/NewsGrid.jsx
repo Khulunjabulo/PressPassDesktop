@@ -996,57 +996,219 @@ export default function NewsGrid({ articles }) {
     }
   }, []);
 
-  const handlePaymentSuccess = async (paymentIntentId) => {
-    try {
-      // Get pending ad data from sessionStorage
-      const pendingAdData = sessionStorage.getItem('pendingAdData');
-      
-      if (!pendingAdData) {
-        console.warn('⚠️ No pending ad data found');
-        alert('Payment successful, but ad data was not found. Please contact support.');
-        return;
-      }
+  // CORRECTED VERSION - Add this to your NewsGrid.jsx
 
-      const adData = JSON.parse(pendingAdData);
-      
-      // Update ad data with payment info
-      adData.status = 'active';
-      adData.approved = true;
-      adData.paymentIntentId = paymentIntentId;
-      adData.paidAt = new Date().toISOString();
+// FINAL CORRECTED VERSION - Matches your custom URL format
+// Add this to your NewsGrid.jsx
 
-      console.log('💳 Creating ad after successful payment:', adData.title);
+// FINAL CORRECTED VERSION - Matches your custom URL format
+// Add this to your NewsGrid.jsx
 
-      // Create the ad
-      const response = await fetch('/api/ads', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(adData),
-      });
+// FIXED VERSION - Replace your handlePaymentSuccess function with this
 
-      const result = await response.json();
-      
-      if (result.success) {
-        console.log('✅ Ad created successfully with ID:', result.id);
-        
-        // Clear pending data
-        sessionStorage.removeItem('pendingAdData');
-        
-        // Show success message
-        alert('🎉 Payment successful! Your ad is now live and will appear on the site shortly.');
-        
-        // Reload page to show new ad
-        window.location.reload();
-      } else {
-        console.error('❌ Failed to create ad:', result.error);
-        alert('Payment successful, but failed to activate ad. Please contact support with payment ID: ' + paymentIntentId);
-      }
-      
-    } catch (error) {
-      console.error('🚨 Error activating ad after payment:', error);
-      alert('Payment successful, but failed to activate ad. Please contact support.');
+const handlePaymentSuccess = async () => {
+  console.log('✅ [PAYMENT-SUCCESS] Payment successful, activating ad...');
+  
+  try {
+    // 1. GET PAYMENT DETAILS FROM URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentStatus = urlParams.get('payment');
+    const paymentIntentId = urlParams.get('id');
+    
+    console.log('📋 [PAYMENT-SUCCESS] URL Parameters:', {
+      paymentStatus,
+      paymentIntentId,
+      fullURL: window.location.href
+    });
+
+    if (!paymentIntentId) {
+      throw new Error('Missing payment intent ID from URL');
     }
-  };
+
+    if (paymentStatus !== 'success') {
+      throw new Error(`Payment status is ${paymentStatus}, expected 'success'`);
+    }
+
+    // 2. GET USER/PUBLISHER INFO
+    let user = null;
+    let publisherId = null;
+    
+    const possibleKeys = ['user', 'currentUser', 'authUser', 'readerUser'];
+    
+    for (const key of possibleKeys) {
+      try {
+        const userData = localStorage.getItem(key);
+        if (userData) {
+          const parsed = JSON.parse(userData);
+          publisherId = parsed.originalUid || parsed.uid;
+          if (publisherId?.startsWith('reader_')) {
+            publisherId = publisherId.replace('reader_', '');
+          }
+          user = parsed;
+          break;
+        }
+      } catch (e) {
+        console.warn(`⚠️ Failed to parse ${key}:`, e);
+      }
+    }
+
+    if (!publisherId) {
+      throw new Error('No publisher ID found. Please log in again.');
+    }
+
+    // 3. VERIFY PAYMENT WITH SERVER
+    console.log('🔍 [PAYMENT-SUCCESS] Verifying payment...');
+    
+    const verifyResponse = await fetch('/api/verify-payment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paymentIntentId })
+    });
+
+    if (!verifyResponse.ok) {
+      throw new Error(`Verification failed: ${verifyResponse.status}`);
+    }
+
+    const verifyData = await verifyResponse.json();
+
+    if (!verifyData.success || !verifyData.verified) {
+      throw new Error('Payment could not be verified');
+    }
+
+    if (!verifyData.amount || verifyData.amount === 0) {
+      throw new Error('Payment amount is invalid');
+    }
+
+    console.log('✅ [PAYMENT-SUCCESS] Payment verified:', {
+      amount: verifyData.amount,
+      currency: verifyData.currency
+    });
+
+    // 4. GET AD DATA FROM SESSION STORAGE
+    const pendingAdDataStr = sessionStorage.getItem('pendingAdData');
+
+    if (!pendingAdDataStr) {
+      throw new Error('No pending ad data found. Please try uploading again.');
+    }
+
+    const pendingAdData = JSON.parse(pendingAdDataStr);
+
+    // 5. BUILD COMPLETE AD DATA WITH PAYMENT INFO
+    // 🔧 FIX: Add payment fields at ROOT level (not just in paymentInfo object)
+    const adData = {
+      // Spread the pending ad data (title, url, images, etc.)
+      ...pendingAdData,
+      
+      // Set status and approval
+      status: 'active',
+      approved: true,
+      
+      // 🔧 CRITICAL FIX: Add payment fields at ROOT level for API route
+      paymentIntentId: String(paymentIntentId),  // ✅ NOW DEFINED!
+      amount: Number(verifyData.amount),          // ✅ NOW DEFINED!
+      currency: String(verifyData.currency || 'ZAR'), // ✅ NOW DEFINED!
+      
+      // Also keep structured payment info
+      paymentInfo: {
+        paymentIntentId: String(paymentIntentId),
+        amount: Number(verifyData.amount),
+        currency: String(verifyData.currency || 'ZAR'),
+        paidAt: new Date().toISOString(),
+        stripeStatus: String(verifyData.stripeStatus || 'succeeded')
+      },
+      
+      // Metadata
+      metadata: verifyData.metadata || {},
+      
+      // Timestamps
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      
+      // Publisher info
+      publisherId: String(publisherId),
+      publisherEmail: String(user?.email || '')
+    };
+
+    console.log('📤 [PAYMENT-SUCCESS] Sending ad data:', {
+      title: adData.title,
+      paymentIntentId: adData.paymentIntentId,  // ✅ Should be defined now
+      amount: adData.amount,                      // ✅ Should be defined now
+      currency: adData.currency                   // ✅ Should be defined now
+    });
+
+    // 6. SEND TO SERVER
+    const response = await fetch('/api/ads', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(adData)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Server error: ${response.status} - ${errorText}`);
+    }
+
+    const result = await response.json();
+
+    if (result.success) {
+      console.log('✅ [PAYMENT-SUCCESS] Ad created successfully!', result.id);
+      
+      // Clean up
+      sessionStorage.removeItem('pendingAdData');
+      
+      alert(
+        `🎉 Ad Published Successfully!\n\n` +
+        `Amount: ${adData.currency} ${adData.amount}\n` +
+        `Ad ID: ${result.id}\n\n` +
+        `Your ad is now live!`
+      );
+      
+      // Clean URL and reload
+      window.history.replaceState({}, document.title, window.location.pathname);
+      setTimeout(() => window.location.reload(), 1000);
+      
+    } else {
+      throw new Error(result.error || 'Failed to create ad');
+    }
+
+  } catch (error) {
+    console.error('🚨 [PAYMENT-SUCCESS] Error:', error);
+    
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentIntentId = urlParams.get('id');
+    
+    alert(
+      `❌ Failed to Activate Ad\n\n` +
+      `Error: ${error.message}\n\n` +
+      `Your payment was successful (${paymentIntentId}).\n` +
+      `Please contact support with this payment ID.`
+    );
+  }
+};
+
+// USE EFFECT: Detect payment success redirect
+useEffect(() => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const paymentStatus = urlParams.get('payment');  // Your custom format
+  const paymentId = urlParams.get('id');           // Your custom format
+  
+  console.log('🔍 [NEWSGRID-USEEFFECT] Checking for payment redirect...', {
+    hasPaymentId: !!paymentId,
+    paymentStatus,
+    fullURL: window.location.href
+  });
+  
+  // Check for YOUR custom URL format: ?payment=success&id=pi_xxxxx
+  if (paymentId && paymentStatus === 'success') {
+    console.log('✅ [NEWSGRID-USEEFFECT] Payment success detected! Starting activation...');
+    handlePaymentSuccess();
+  } else if (paymentId && paymentStatus !== 'success') {
+    console.error('❌ [NEWSGRID-USEEFFECT] Payment failed:', paymentStatus);
+    alert(`Payment ${paymentStatus}. Please try again.`);
+  } else {
+    console.log('ℹ️ [NEWSGRID-USEEFFECT] No payment redirect detected, normal page load');
+  }
+}, []); // Empty dependency array = run once on mount
 
   useEffect(() => {
     const fetchNewsSources = async () => {

@@ -1,4 +1,4 @@
-// /api/ads/route.js - IMPROVED VERSION WITH BETTER IMAGE HANDLING
+// /app/api/ads/route.js - FINAL FIXED VERSION (handles undefined fields properly)
 import { NextResponse } from 'next/server';
 import { db } from '@/Firebase/firebase'; 
 import { 
@@ -62,6 +62,30 @@ function getImageInfo(base64String) {
     sizeInBytes,
     isValid: true
   };
+}
+
+// 🔧 NEW: Helper to remove undefined fields from objects
+function removeUndefinedFields(obj) {
+  if (obj === null || obj === undefined) return null;
+  
+  if (Array.isArray(obj)) {
+    return obj.map(item => removeUndefinedFields(item)).filter(item => item !== undefined);
+  }
+  
+  if (typeof obj === 'object') {
+    const cleaned = {};
+    for (const [key, value] of Object.entries(obj)) {
+      if (value !== undefined) {
+        const cleanedValue = removeUndefinedFields(value);
+        if (cleanedValue !== undefined) {
+          cleaned[key] = cleanedValue;
+        }
+      }
+    }
+    return Object.keys(cleaned).length > 0 ? cleaned : undefined;
+  }
+  
+  return obj;
 }
 
 // GET /api/ads - Fetch ads with improved error handling
@@ -244,6 +268,7 @@ export async function POST(request) {
   
   try {
     const body = await request.json();
+    
     console.log('📦 Received ad data:', {
       title: body.title,
       url: body.url,
@@ -253,7 +278,12 @@ export async function POST(request) {
       desktopImageSize: body.desktopImage ? `${(body.desktopImage.length / 1024 / 1024).toFixed(2)}MB` : 'none',
       hasMobileImage: !!body.mobileImage,
       company: body.company,
-      contactEmail: body.contactEmail
+      contactEmail: body.contactEmail,
+      paymentIntentId: body.paymentIntentId,
+      amount: body.amount,
+      currency: body.currency,
+      duration: body.duration,
+      hasPaymentInfo: !!body.paymentInfo
     });
     
     const {
@@ -266,7 +296,11 @@ export async function POST(request) {
       contactEmail,
       company,
       status = 'active',
-      approved = true
+      approved = true,
+      paymentIntentId,
+      amount,
+      currency,
+      paymentInfo
     } = body;
 
     // Enhanced validation
@@ -276,6 +310,17 @@ export async function POST(request) {
     if (!url?.trim()) errors.push('URL is required');
     if (!desktopImage) errors.push('Desktop image is required');
     if (!dimensions) errors.push('Dimensions are required');
+    
+    // Validate payment info
+    if (!paymentIntentId) {
+      console.error('❌ Missing paymentIntentId in request body');
+      errors.push('Payment Intent ID is required');
+    }
+    
+    if (!amount || amount === 0) {
+      console.error('❌ Missing or invalid amount in request body');
+      errors.push('Payment amount is required and must be greater than 0');
+    }
     
     if (url && !url.startsWith('http')) {
       errors.push('URL must start with http:// or https://');
@@ -344,48 +389,94 @@ export async function POST(request) {
       mobile: mobileImageInfo
     });
 
-    // Add to the adData object in POST function (around line 250)
-const adData = {
-  title: title.trim(),
-  url: url.trim(),
-  desktopImage,
-  mobileImage: mobileImage || desktopImage,
-  adType: finalAdType,
-  dimensions,
-  contactEmail: contactEmail?.trim() || '',
-  company: company?.trim() || '',
-  status,
-  approved,
-  
-  // NEW: Payment and scheduling info
-  paymentInfo: {
-    paymentIntentId: body.paymentIntentId,
-    amount: body.amount,
-    currency: body.currency || 'ZAR',
-    paidAt: serverTimestamp(),
-  },
-  schedule: {
-    duration: body.duration,
-    durationUnit: body.durationUnit,
-    totalHours: body.totalHours,
-    startDate: serverTimestamp(),
-    endDate: body.endDate, // Calculate this on client
-    displayPerDay: body.displayPerDay || 24, // Hours active per day
-  },
-  
-  createdAt: serverTimestamp(),
-  updatedAt: serverTimestamp(),
-  clicks: 0,
-  impressions: 0,
-  imageInfo: {
-    desktop: desktopImageInfo,
-    mobile: mobileImageInfo
-  }
-};
+    // 🔧 BUILD AD DATA - Only include defined fields
+    const adData = {
+      title: title.trim(),
+      url: url.trim(),
+      desktopImage,
+      mobileImage: mobileImage || desktopImage,
+      adType: finalAdType,
+      dimensions,
+      contactEmail: contactEmail?.trim() || '',
+      company: company?.trim() || '',
+      status,
+      approved,
+      
+      // Payment info - only include defined fields
+      paymentInfo: {
+        paymentIntentId: String(paymentIntentId),
+        amount: Number(amount),
+        currency: String(currency || 'ZAR'),
+        paidAt: serverTimestamp(),
+        stripeStatus: paymentInfo?.stripeStatus || 'succeeded'
+      },
+      
+      // Publisher info
+      publisherId: body.publisherId || '',
+      publisherEmail: body.publisherEmail || contactEmail?.trim() || '',
+      
+      // Metadata
+      metadata: body.metadata || {},
+      
+      // Timestamps
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      
+      // Stats
+      clicks: 0,
+      impressions: 0,
+      
+      // Image info for debugging
+      imageInfo: {
+        desktop: desktopImageInfo,
+        mobile: mobileImageInfo
+      }
+    };
+
+    // 🔧 CRITICAL FIX: Only add schedule if it has valid data
+    if (body.duration) {
+      const scheduleData = {
+        duration: body.duration,
+        durationUnit: body.durationUnit || 'days',
+        startDate: serverTimestamp(),
+        displayPerDay: body.displayPerDay || 24
+      };
+      
+      // Only add optional fields if they're defined
+      if (body.totalHours !== undefined && body.totalHours !== null) {
+        scheduleData.totalHours = body.totalHours;
+      }
+      
+      if (body.endDate !== undefined && body.endDate !== null) {
+        scheduleData.endDate = body.endDate;
+      }
+      
+      adData.schedule = scheduleData;
+    }
+
+    // 🔧 EXTRA SAFETY: Remove any undefined fields (recursive)
+    const cleanedAdData = removeUndefinedFields(adData);
+
+    console.log('🔍 Final adData validation:', {
+      hasPaymentInfo: !!cleanedAdData.paymentInfo,
+      paymentIntentId: cleanedAdData.paymentInfo?.paymentIntentId,
+      amount: cleanedAdData.paymentInfo?.amount,
+      currency: cleanedAdData.paymentInfo?.currency,
+      hasSchedule: !!cleanedAdData.schedule,
+      scheduleFields: cleanedAdData.schedule ? Object.keys(cleanedAdData.schedule) : []
+    });
+
+    if (!cleanedAdData.paymentInfo?.paymentIntentId) {
+      throw new Error('CRITICAL: paymentIntentId is undefined in adData');
+    }
+
+    if (!cleanedAdData.paymentInfo?.amount || cleanedAdData.paymentInfo.amount === 0) {
+      throw new Error('CRITICAL: amount is undefined or zero in adData');
+    }
 
     console.log('💾 Saving ad to Firestore...');
     const adsRef = collection(db, COLLECTION_NAME);
-    const docRef = await addDoc(adsRef, adData);
+    const docRef = await addDoc(adsRef, cleanedAdData);
     
     console.log('✅ Ad saved successfully with ID:', docRef.id);
 
@@ -395,10 +486,15 @@ const adData = {
       message: 'Ad created successfully',
       adData: {
         id: docRef.id,
-        title: adData.title,
-        adType: adData.adType,
-        status: adData.status,
-        imageInfo: adData.imageInfo
+        title: cleanedAdData.title,
+        adType: cleanedAdData.adType,
+        status: cleanedAdData.status,
+        payment: {
+          intentId: cleanedAdData.paymentInfo.paymentIntentId,
+          amount: cleanedAdData.paymentInfo.amount,
+          currency: cleanedAdData.paymentInfo.currency
+        },
+        imageInfo: cleanedAdData.imageInfo
       }
     });
 
@@ -409,13 +505,19 @@ const adData = {
       success: false,
       error: error.message || 'Failed to create ad',
       code: error.code || 'CREATE_ERROR',
-      details: process.env.NODE_ENV === 'development' ? error.stack : null
+      details: process.env.NODE_ENV === 'development' ? {
+        stack: error.stack,
+        name: error.name,
+        message: error.message
+      } : 'An error occurred while creating the ad'
     }, { status: 500 });
   }
 }
 
-// PUT and DELETE methods remain the same...
+// PUT /api/ads - Update existing ad
 export async function PUT(request) {
+  console.log('📝 PUT /api/ads - Updating ad...');
+  
   try {
     const body = await request.json();
     const { id, ...updates } = body;
@@ -427,19 +529,27 @@ export async function PUT(request) {
       }, { status: 400 });
     }
 
+    console.log('📝 Updating ad:', id, 'with updates:', Object.keys(updates));
+
+    // Remove undefined fields from updates
+    const cleanedUpdates = removeUndefinedFields(updates);
+
     const adRef = doc(db, COLLECTION_NAME, id);
     await updateDoc(adRef, {
-      ...updates,
+      ...cleanedUpdates,
       updatedAt: serverTimestamp()
     });
 
+    console.log('✅ Ad updated successfully:', id);
+
     return NextResponse.json({
       success: true,
-      message: 'Ad updated successfully'
+      message: 'Ad updated successfully',
+      id
     });
 
   } catch (error) {
-    console.error('Error updating ad:', error);
+    console.error('🚨 Error updating ad:', error);
     
     if (error.code === 'not-found') {
       return NextResponse.json({
@@ -450,12 +560,16 @@ export async function PUT(request) {
     
     return NextResponse.json({
       success: false,
-      error: error.message || 'Failed to update ad'
+      error: error.message || 'Failed to update ad',
+      code: error.code
     }, { status: 500 });
   }
 }
 
+// DELETE /api/ads - Delete ad
 export async function DELETE(request) {
+  console.log('🗑️ DELETE /api/ads - Deleting ad...');
+  
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -467,16 +581,21 @@ export async function DELETE(request) {
       }, { status: 400 });
     }
 
+    console.log('🗑️ Deleting ad:', id);
+
     const adRef = doc(db, COLLECTION_NAME, id);
     await deleteDoc(adRef);
 
+    console.log('✅ Ad deleted successfully:', id);
+
     return NextResponse.json({
       success: true,
-      message: 'Ad deleted successfully'
+      message: 'Ad deleted successfully',
+      id
     });
 
   } catch (error) {
-    console.error('Error deleting ad:', error);
+    console.error('🚨 Error deleting ad:', error);
     
     if (error.code === 'not-found') {
       return NextResponse.json({
@@ -487,7 +606,8 @@ export async function DELETE(request) {
     
     return NextResponse.json({
       success: false,
-      error: error.message || 'Failed to delete ad'
+      error: error.message || 'Failed to delete ad',
+      code: error.code
     }, { status: 500 });
   }
 }

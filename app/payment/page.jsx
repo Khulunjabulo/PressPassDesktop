@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, Suspense } from 'react';
-import { CreditCard, Smartphone, Wallet, ArrowLeft, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { CreditCard, Smartphone, Wallet, ArrowLeft, CheckCircle, XCircle, Loader2, Mail, Edit2 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 function PaymentPageContent({ 
@@ -41,6 +41,14 @@ function PaymentPageContent({
   const [clientSecret, setClientSecret] = useState(null);
   const [paymentIntentId, setPaymentIntentId] = useState(null);
   const [activatingAd, setActivatingAd] = useState(false);
+  const [activationError, setActivationError] = useState(null);
+  
+  // Email fields
+  const [userEmail, setUserEmail] = useState('');
+  const [invoiceEmail, setInvoiceEmail] = useState('');
+  const [companyName, setCompanyName] = useState('');
+  const [isEditingEmail, setIsEditingEmail] = useState(false);
+  const [sendingInvoice, setSendingInvoice] = useState(false);
   
   const paymentElementRef = useRef(null);
 
@@ -71,6 +79,21 @@ function PaymentPageContent({
     }
   ];
 
+  // Get user email from localStorage (from sign-in)
+  useEffect(() => {
+    try {
+      const userData = localStorage.getItem('user');
+      if (userData) {
+        const user = JSON.parse(userData);
+        setUserEmail(user.email || '');
+        setInvoiceEmail(user.email || '');
+        setCompanyName(user.companyName || user.firstName + ' ' + user.lastName || '');
+      }
+    } catch (error) {
+      console.error('Error loading user data:', error);
+    }
+  }, []);
+
   // Load Stripe
   useEffect(() => {
     const loadStripeInstance = async () => {
@@ -78,9 +101,9 @@ function PaymentPageContent({
         const { loadStripe } = await import('@stripe/stripe-js');
         const stripeInstance = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
         setStripe(stripeInstance);
-        console.log('✅ Stripe loaded');
+        console.log('✅ [PAYMENT-PAGE] Stripe loaded successfully');
       } catch (error) {
-        console.error('❌ Failed to load Stripe:', error);
+        console.error('❌ [PAYMENT-PAGE] Failed to load Stripe:', error);
         setErrorMessage('Payment system failed to load. Please refresh.');
       }
     };
@@ -100,7 +123,11 @@ function PaymentPageContent({
   const createPaymentIntent = async () => {
     try {
       setLoading(true);
-      console.log('💳 Creating payment intent...', { amount, currency, metadata });
+      console.log('💳 [PAYMENT-PAGE] Creating payment intent...', { 
+        amount, 
+        currency, 
+        metadata 
+      });
       
       const response = await fetch('/api/create-payment-intent', {
         method: 'POST',
@@ -114,8 +141,14 @@ function PaymentPageContent({
       
       const data = await response.json();
       
+      console.log('📥 [PAYMENT-PAGE] Payment intent response:', data);
+      
       if (data.success) {
-        console.log('✅ Payment intent created:', data.paymentIntentId);
+        console.log('✅ [PAYMENT-PAGE] Payment intent created:', {
+          paymentIntentId: data.paymentIntentId,
+          amount: data.amount,
+          currency: data.currency
+        });
         setClientSecret(data.clientSecret);
         setPaymentIntentId(data.paymentIntentId);
       } else {
@@ -123,7 +156,7 @@ function PaymentPageContent({
       }
       
     } catch (error) {
-      console.error('🚨 Payment intent creation error:', error);
+      console.error('🚨 [PAYMENT-PAGE] Payment intent creation error:', error);
       setErrorMessage(error.message);
     } finally {
       setLoading(false);
@@ -133,7 +166,7 @@ function PaymentPageContent({
   // Initialize Stripe Elements
   useEffect(() => {
     if (stripe && clientSecret && !elements) {
-      console.log('🎨 Initializing Stripe Elements...');
+      console.log('🎨 [PAYMENT-PAGE] Initializing Stripe Elements...');
       
       const elementsInstance = stripe.elements({
         clientSecret,
@@ -151,6 +184,7 @@ function PaymentPageContent({
       });
       
       setElements(elementsInstance);
+      console.log('✅ [PAYMENT-PAGE] Stripe Elements initialized');
     }
   }, [stripe, clientSecret]);
 
@@ -172,7 +206,7 @@ function PaymentPageContent({
       paymentElement.mount('#payment-element-mount');
       
       paymentElement.on('ready', () => {
-        console.log('✅ Payment element ready');
+        console.log('✅ [PAYMENT-PAGE] Payment element ready');
         setLoading(false);
       });
       
@@ -184,10 +218,10 @@ function PaymentPageContent({
         }
       });
       
-      console.log('✅ Payment element mounted');
+      console.log('✅ [PAYMENT-PAGE] Payment element mounted');
       
     } catch (error) {
-      console.error('❌ Error mounting payment element:', error);
+      console.error('❌ [PAYMENT-PAGE] Error mounting payment element:', error);
       setErrorMessage('Failed to initialize payment form');
     }
     
@@ -197,12 +231,47 @@ function PaymentPageContent({
           paymentElementRef.current.unmount();
           paymentElementRef.current.destroy();
         } catch (e) {
-          console.warn('Cleanup warning:', e);
+          console.warn('[PAYMENT-PAGE] Cleanup warning:', e);
         }
         paymentElementRef.current = null;
       }
     };
   }, [elements]);
+
+  // Send invoice email after successful payment
+  const sendInvoice = async (paymentData) => {
+    try {
+      setSendingInvoice(true);
+      console.log('📧 [PAYMENT-PAGE] Sending invoice email...');
+
+      const response = await fetch('/api/send-invoice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: invoiceEmail,
+          company: companyName,
+          paymentIntentId: paymentData.paymentIntentId,
+          amount: paymentData.amount,
+          currency: paymentData.currency,
+          adDetails: metadata,
+          publisherId: metadata.publisherId
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        console.log('✅ [PAYMENT-PAGE] Invoice sent successfully:', data.invoiceNumber);
+      } else {
+        console.error('❌ [PAYMENT-PAGE] Failed to send invoice:', data.error);
+      }
+      
+    } catch (error) {
+      console.error('🚨 [PAYMENT-PAGE] Error sending invoice:', error);
+    } finally {
+      setSendingInvoice(false);
+    }
+  };
 
   // Handle payment submission
   const handlePayment = async () => {
@@ -210,12 +279,18 @@ function PaymentPageContent({
       setErrorMessage('Payment system not ready. Please try again.');
       return;
     }
+
+    // Validate invoice email
+    if (!invoiceEmail || !invoiceEmail.includes('@')) {
+      setErrorMessage('Please enter a valid email address for the invoice.');
+      return;
+    }
     
     try {
       setLoading(true);
       setErrorMessage('');
       
-      console.log('💳 Processing payment...');
+      console.log('💳 [PAYMENT-PAGE] Processing payment...');
       
       const { error: submitError } = await elements.submit();
       if (submitError) {
@@ -231,13 +306,17 @@ function PaymentPageContent({
       });
       
       if (error) {
+        console.error('❌ [PAYMENT-PAGE] Stripe payment error:', error);
         throw new Error(error.message);
       }
       
+      console.log('📊 [PAYMENT-PAGE] Payment intent status:', paymentIntent.status);
+      
       if (paymentIntent.status === 'succeeded') {
-        console.log('✅ Payment succeeded!');
+        console.log('✅ [PAYMENT-PAGE] Payment succeeded! Payment ID:', paymentIntent.id);
         
         // Verify payment
+        console.log('🔍 [PAYMENT-PAGE] Verifying payment with server...');
         const verifyResponse = await fetch('/api/verify-payment', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -245,12 +324,22 @@ function PaymentPageContent({
         });
         
         const verifyData = await verifyResponse.json();
+        console.log('📥 [PAYMENT-PAGE] Verification response:', verifyData);
         
         if (verifyData.success && verifyData.verified) {
           setPaymentStatus('success');
           
+          // Send invoice email
+          await sendInvoice({
+            paymentIntentId: paymentIntent.id,
+            amount: verifyData.amount,
+            currency: verifyData.currency,
+            metadata: verifyData.metadata
+          });
+          
           // If this is an ad payment, activate the ad
           if (metadata.type === 'ad_space') {
+            console.log('🎯 [PAYMENT-PAGE] This is an ad payment, activating ad...');
             await activateAd(paymentIntent.id);
           }
           
@@ -267,17 +356,17 @@ function PaymentPageContent({
           if (returnUrlParam) {
             setTimeout(() => {
               window.location.href = returnUrlParam + '?payment=success&id=' + paymentIntent.id;
-            }, 2000);
+            }, 3000);
           }
         } else {
           throw new Error('Payment verification failed');
         }
       } else {
-        throw new Error('Payment not completed');
+        throw new Error(`Payment not completed. Status: ${paymentIntent.status}`);
       }
       
     } catch (error) {
-      console.error('🚨 Payment error:', error);
+      console.error('🚨 [PAYMENT-PAGE] Payment error:', error);
       setPaymentStatus('error');
       setErrorMessage(error.message);
     } finally {
@@ -289,16 +378,40 @@ function PaymentPageContent({
   const activateAd = async (paymentIntentId) => {
     try {
       setActivatingAd(true);
-      console.log('🔓 Activating ad after payment...');
+      setActivationError(null);
+      console.log('🔓 [PAYMENT-PAGE] Activating ad after payment...');
       
-      // Get pending upload data from sessionStorage
-      const pendingData = sessionStorage.getItem('pendingAdUpload');
-      if (!pendingData) {
-        console.warn('⚠️ No pending ad upload found');
+      const pendingDataStr = sessionStorage.getItem('pendingAdUpload');
+      console.log('📦 [PAYMENT-PAGE] Pending upload data (raw):', pendingDataStr);
+      
+      if (!pendingDataStr) {
+        const errorMsg = 'No pending ad upload found in session storage';
+        console.error('⚠️ [PAYMENT-PAGE]', errorMsg);
+        setActivationError(errorMsg);
+        setErrorMessage(`Payment successful, but failed to activate ad. Please contact support with payment ID: ${paymentIntentId}.`);
         return;
       }
 
-      const uploadData = JSON.parse(pendingData);
+      let uploadData;
+      try {
+        uploadData = JSON.parse(pendingDataStr);
+      } catch (parseError) {
+        console.error('❌ [PAYMENT-PAGE] Failed to parse pending data:', parseError);
+        setActivationError('Invalid ad data format');
+        setErrorMessage(`Payment successful, but failed to activate ad. Please contact support with payment ID: ${paymentIntentId}.`);
+        return;
+      }
+
+      const requiredFields = ['publisherId', 'templateId', 'deviceType'];
+      const missingFields = requiredFields.filter(field => !uploadData[field]);
+      
+      if (missingFields.length > 0) {
+        const errorMsg = `Missing required fields: ${missingFields.join(', ')}`;
+        console.error('❌ [PAYMENT-PAGE]', errorMsg);
+        setActivationError(errorMsg);
+        setErrorMessage(`Payment successful, but failed to activate ad. Please contact support with payment ID: ${paymentIntentId}.`);
+        return;
+      }
       
       const response = await fetch('/api/activate-ad-after-payment', {
         method: 'POST',
@@ -308,21 +421,26 @@ function PaymentPageContent({
           publisherId: uploadData.publisherId,
           templateId: uploadData.templateId,
           deviceType: uploadData.deviceType,
-          fileData: uploadData.previewData
+          fileData: uploadData.previewData || uploadData.fileData
         }),
       });
 
       const result = await response.json();
       
       if (result.success) {
-        console.log('✅ Ad activated successfully:', result.data);
+        console.log('✅ [PAYMENT-PAGE] Ad activated successfully:', result.data);
         sessionStorage.removeItem('pendingAdUpload');
       } else {
-        console.error('❌ Ad activation failed:', result.error);
+        const errorMsg = result.error || 'Ad activation failed';
+        console.error('❌ [PAYMENT-PAGE] Ad activation failed:', errorMsg);
+        setActivationError(errorMsg);
+        setErrorMessage(`Payment successful, but failed to activate ad. Please contact support with payment ID: ${paymentIntentId}. Error: ${errorMsg}`);
       }
       
     } catch (error) {
-      console.error('💥 Error activating ad:', error);
+      console.error('💥 [PAYMENT-PAGE] Error activating ad:', error);
+      setActivationError(error.message);
+      setErrorMessage(`Payment successful, but failed to activate ad. Please contact support with payment ID: ${paymentIntentId}.`);
     } finally {
       setActivatingAd(false);
     }
@@ -350,23 +468,85 @@ function PaymentPageContent({
           <p className="text-gray-600 mb-4">
             Your payment of {currency} {amount} has been processed successfully.
           </p>
-          {metadata.type === 'ad_space' && (
+          
+          {sendingInvoice && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-              <p className="text-sm text-blue-800 font-medium mb-2">
-                {activatingAd ? '🔄 Activating your advertisement...' : '✅ Your ad is now live!'}
-              </p>
-              <p className="text-xs text-blue-600">
-                {metadata.templateName} - {metadata.deviceType} ({metadata.dimensions})
-              </p>
+              <div className="flex items-center justify-center">
+                <Loader2 className="w-5 h-5 animate-spin mr-2 text-blue-600" />
+                <p className="text-sm text-blue-800 font-medium">
+                  Sending invoice to {invoiceEmail}...
+                </p>
+              </div>
             </div>
           )}
+
+          {!sendingInvoice && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+              <div className="flex items-center justify-center">
+                <Mail className="w-5 h-5 mr-2 text-green-600" />
+                <p className="text-sm text-green-800 font-medium">
+                  ✓ Invoice sent to {invoiceEmail}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {metadata.type === 'ad_space' && (
+            <div className={`border rounded-lg p-4 mb-4 ${
+              activationError 
+                ? 'bg-yellow-50 border-yellow-200' 
+                : 'bg-blue-50 border-blue-200'
+            }`}>
+              {activatingAd ? (
+                <div className="flex items-center justify-center">
+                  <Loader2 className="w-5 h-5 animate-spin mr-2 text-blue-600" />
+                  <p className="text-sm text-blue-800 font-medium">
+                    Activating your advertisement...
+                  </p>
+                </div>
+              ) : activationError ? (
+                <>
+                  <p className="text-sm text-yellow-800 font-medium mb-2">
+                    ⚠️ Payment Successful, but Ad Activation Pending
+                  </p>
+                  <p className="text-xs text-yellow-700 mb-2">
+                    Your payment was successful but we encountered an issue activating your ad.
+                  </p>
+                  <p className="text-xs text-yellow-600 font-mono bg-yellow-100 p-2 rounded">
+                    Payment ID: {paymentIntentId}
+                  </p>
+                  <p className="text-xs text-yellow-600 mt-2">
+                    Please contact support with this payment ID.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-blue-800 font-medium mb-2">
+                    ✅ Your ad is now live!
+                  </p>
+                  <p className="text-xs text-blue-600">
+                    {metadata.templateName} - {metadata.deviceType} ({metadata.dimensions})
+                  </p>
+                </>
+              )}
+            </div>
+          )}
+          
           <p className="text-sm text-gray-500 mb-6">
             Transaction ID: {paymentIntentId}
           </p>
-          {returnUrlParam && (
+          {returnUrlParam && !activationError && (
             <p className="text-sm text-gray-500">
               Redirecting you back...
             </p>
+          )}
+          {activationError && (
+            <button
+              onClick={() => router.push('/')}
+              className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              Return to Home
+            </button>
           )}
         </div>
       </div>
@@ -437,6 +617,74 @@ function PaymentPageContent({
             <div className="bg-white rounded-lg shadow-md p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment Details</h3>
               
+              {/* Invoice Email Section */}
+              <div className="bg-blue-50 rounded-lg p-4 mb-6">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center">
+                    <Mail className="w-5 h-5 text-blue-600 mr-2" />
+                    <h4 className="font-medium text-gray-900">Invoice Email</h4>
+                  </div>
+                  {!isEditingEmail && userEmail && (
+                    <button
+                      onClick={() => setIsEditingEmail(true)}
+                      className="text-blue-600 hover:text-blue-700 flex items-center text-sm font-medium"
+                    >
+                      <Edit2 className="w-4 h-4 mr-1" />
+                      Change
+                    </button>
+                  )}
+                </div>
+                
+                {isEditingEmail || !userEmail ? (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Email Address *
+                      </label>
+                      <input
+                        type="email"
+                        value={invoiceEmail}
+                        onChange={(e) => setInvoiceEmail(e.target.value)}
+                        placeholder="your-email@example.com"
+                        required
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Company Name (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        value={companyName}
+                        onChange={(e) => setCompanyName(e.target.value)}
+                        placeholder="Your Company"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    {userEmail && (
+                      <button
+                        onClick={() => {
+                          setIsEditingEmail(false);
+                          setInvoiceEmail(userEmail);
+                        }}
+                        className="text-sm text-gray-600 hover:text-gray-800"
+                      >
+                        Cancel
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-gray-700 font-medium">{invoiceEmail}</p>
+                    {companyName && <p className="text-sm text-gray-600">{companyName}</p>}
+                    <p className="text-xs text-gray-500 mt-2">
+                      Invoice will be sent to this email after payment
+                    </p>
+                  </div>
+                )}
+              </div>
+
               {/* Order Summary */}
               <div className="bg-gray-50 rounded-lg p-4 mb-6">
                 <div className="flex justify-between items-center mb-2">
@@ -479,7 +727,7 @@ function PaymentPageContent({
               {/* Pay Button */}
               <button
                 onClick={handlePayment}
-                disabled={loading || !stripe || !elements || paymentStatus === 'success'}
+                disabled={loading || !stripe || !elements || paymentStatus === 'success' || !invoiceEmail}
                 className="w-full bg-blue-600 text-white py-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
               >
                 {loading ? (
