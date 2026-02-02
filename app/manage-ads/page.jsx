@@ -8,21 +8,22 @@ import {
   Eye, 
   BarChart3, 
   Clock, 
-  Edit, 
   Trash2, 
   Plus,
   Loader2,
   CheckCircle,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  ArrowLeft
 } from 'lucide-react';
+import Link from 'next/link';
 
 function ManageAdsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const publisherId = searchParams?.get('publisherId');
 
   const [ads, setAds] = useState([]);
+  const [allAds, setAllAds] = useState([]); // Store all ads for debugging
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedAd, setSelectedAd] = useState(null);
@@ -30,16 +31,56 @@ function ManageAdsContent() {
   const [extensionDays, setExtensionDays] = useState(7);
   const [extensionCost, setExtensionCost] = useState(0);
   const [processing, setProcessing] = useState(false);
+  const [publisherId, setPublisherId] = useState('');
+  const [userData, setUserData] = useState(null);
+  const [debugInfo, setDebugInfo] = useState(null);
 
-  // Price per day for extension (you can adjust this)
-  const PRICE_PER_DAY = 10; // ZAR per day
+  const PRICE_PER_DAY = 10;
+
+  // Get user data from localStorage
+  useEffect(() => {
+    try {
+      let userDataStr = localStorage.getItem('user');
+      if (!userDataStr) {
+        userDataStr = localStorage.getItem('currentUser');
+      }
+      
+      console.log('📦 [MANAGE-ADS-DEBUG] Raw localStorage data:', userDataStr);
+      
+      if (!userDataStr) {
+        console.error('❌ [MANAGE-ADS-DEBUG] No user data found');
+        setError('Please sign in to view your ads');
+        setLoading(false);
+        return;
+      }
+
+      const user = JSON.parse(userDataStr);
+      console.log('👤 [MANAGE-ADS-DEBUG] Full user object:', user);
+
+      setUserData(user);
+      
+      const urlPublisherId = searchParams?.get('publisherId');
+      const finalPublisherId = urlPublisherId || user.uid;
+      
+      console.log('🆔 [MANAGE-ADS-DEBUG] Publisher IDs:', {
+        fromUrl: urlPublisherId,
+        fromUser: user.uid,
+        final: finalPublisherId,
+        userKeys: Object.keys(user)
+      });
+      
+      setPublisherId(finalPublisherId);
+
+    } catch (error) {
+      console.error('❌ [MANAGE-ADS-DEBUG] Error:', error);
+      setError('Failed to load user data. Please sign in again.');
+      setLoading(false);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (publisherId) {
       fetchUserAds();
-    } else {
-      setError('Publisher ID not found. Please sign in again.');
-      setLoading(false);
     }
   }, [publisherId]);
 
@@ -50,17 +91,83 @@ function ManageAdsContent() {
   const fetchUserAds = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/ads?publisherId=${publisherId}`);
+      setError('');
+      
+      console.log('📡 [MANAGE-ADS-DEBUG] Fetching ads...');
+      
+      // Fetch ALL ads with debug mode
+      const response = await fetch(`/api/ads?includeInactive=true&debug=true`);
       const data = await response.json();
 
+      console.log('📥 [MANAGE-ADS-DEBUG] Full API response:', data);
+      console.log('📥 [MANAGE-ADS-DEBUG] Total ads in database:', data.totalInDatabase);
+      console.log('📥 [MANAGE-ADS-DEBUG] Ads returned:', data.ads?.length);
+
       if (data.success) {
-        setAds(data.ads || []);
+        setAllAds(data.ads || []);
+        
+        // Log every ad's publisherId
+        (data.ads || []).forEach((ad, index) => {
+          console.log(`🔍 [MANAGE-ADS-DEBUG] Ad ${index + 1}:`, {
+            id: ad.id,
+            title: ad.title,
+            publisherId: ad.publisherId,
+            publisherEmail: ad.publisherEmail,
+            hasPublisherId: !!ad.publisherId,
+            publisherIdType: typeof ad.publisherId,
+            allKeys: Object.keys(ad)
+          });
+        });
+
+        // Try multiple matching strategies
+        const userAds1 = (data.ads || []).filter(ad => ad.publisherId === publisherId);
+        const userAds2 = (data.ads || []).filter(ad => ad.publisherId?.includes(publisherId));
+        const userAds3 = (data.ads || []).filter(ad => publisherId?.includes(ad.publisherId));
+        const userAds4 = (data.ads || []).filter(ad => ad.publisherEmail === userData?.email);
+
+        console.log('🔍 [MANAGE-ADS-DEBUG] Matching attempts:', {
+          currentPublisherId: publisherId,
+          userEmail: userData?.email,
+          exactMatch: userAds1.length,
+          publisherIdIncludes: userAds2.length,
+          userIdIncludes: userAds3.length,
+          emailMatch: userAds4.length
+        });
+
+        // Set debug info
+        setDebugInfo({
+          totalAds: data.ads?.length || 0,
+          publisherId: publisherId,
+          userEmail: userData?.email,
+          allPublisherIds: [...new Set((data.ads || []).map(ad => ad.publisherId))],
+          matchStrategies: {
+            exact: userAds1.length,
+            includes: userAds2.length,
+            reverse: userAds3.length,
+            email: userAds4.length
+          }
+        });
+
+        // Use the best match
+        let userAds = userAds1;
+        if (userAds1.length === 0 && userAds4.length > 0) {
+          console.log('✅ [MANAGE-ADS-DEBUG] Using email match');
+          userAds = userAds4;
+        } else if (userAds1.length === 0 && userAds2.length > 0) {
+          console.log('✅ [MANAGE-ADS-DEBUG] Using includes match');
+          userAds = userAds2;
+        }
+
+        console.log('✅ [MANAGE-ADS-DEBUG] Final user ads:', userAds.length);
+        setAds(userAds);
+        
       } else {
+        console.error('❌ [MANAGE-ADS-DEBUG] API error:', data.error);
         setError(data.error || 'Failed to fetch ads');
       }
     } catch (error) {
-      console.error('Error fetching ads:', error);
-      setError('Failed to load your advertisements');
+      console.error('💥 [MANAGE-ADS-DEBUG] Error:', error);
+      setError('Failed to load your advertisements. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -77,32 +184,36 @@ function ManageAdsContent() {
     try {
       setProcessing(true);
 
-      // Calculate new end date
       const currentEndDate = selectedAd.schedule?.endDate 
         ? new Date(selectedAd.schedule.endDate) 
         : new Date();
       const newEndDate = new Date(currentEndDate);
       newEndDate.setDate(newEndDate.getDate() + extensionDays);
 
-      // Redirect to payment page with extension details
       const paymentUrl = new URL('/payment', window.location.origin);
       paymentUrl.searchParams.set('amount', extensionCost);
       paymentUrl.searchParams.set('currency', 'ZAR');
       paymentUrl.searchParams.set('description', `Extend Ad: ${selectedAd.title} (${extensionDays} days)`);
-      paymentUrl.searchParams.set('metadata', JSON.stringify({
+      
+      const metadata = {
         type: 'ad_extension',
         adId: selectedAd.id,
         extensionDays: extensionDays,
         originalEndDate: currentEndDate.toISOString(),
         newEndDate: newEndDate.toISOString(),
-        publisherId: publisherId
-      }));
-      paymentUrl.searchParams.set('returnUrl', `/manage-ads?publisherId=${publisherId}`);
+        publisherId: publisherId,
+        templateName: selectedAd.title,
+        deviceType: selectedAd.adType,
+        dimensions: selectedAd.dimensions
+      };
+      
+      paymentUrl.searchParams.set('metadata', JSON.stringify(metadata));
+      paymentUrl.searchParams.set('returnUrl', `/manage-ads`);
 
       router.push(paymentUrl.toString());
 
     } catch (error) {
-      console.error('Error processing extension:', error);
+      console.error('💥 [MANAGE-ADS-DEBUG] Error processing extension:', error);
       alert('Failed to process extension. Please try again.');
     } finally {
       setProcessing(false);
@@ -123,12 +234,12 @@ function ManageAdsContent() {
 
       if (data.success) {
         alert('Ad deleted successfully');
-        fetchUserAds(); // Refresh the list
+        fetchUserAds();
       } else {
         alert(data.error || 'Failed to delete ad');
       }
     } catch (error) {
-      console.error('Error deleting ad:', error);
+      console.error('💥 [MANAGE-ADS-DEBUG] Error deleting ad:', error);
       alert('Failed to delete ad');
     }
   };
@@ -147,19 +258,27 @@ function ManageAdsContent() {
 
   const formatDate = (date) => {
     if (!date) return 'N/A';
-    return new Date(date).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
+    try {
+      return new Date(date).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch (error) {
+      return 'N/A';
+    }
   };
 
   const calculateDaysRemaining = (endDate) => {
     if (!endDate) return 'N/A';
-    const end = new Date(endDate);
-    const now = new Date();
-    const diff = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
-    return diff > 0 ? diff : 0;
+    try {
+      const end = new Date(endDate);
+      const now = new Date();
+      const diff = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
+      return diff > 0 ? diff : 0;
+    } catch (error) {
+      return 'N/A';
+    }
   };
 
   if (loading) {
@@ -194,11 +313,81 @@ function ManageAdsContent() {
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-7xl mx-auto">
+        {/* Back Button */}
+        <div className="mb-6">
+          <Link
+            href="/"
+            className="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5 mr-2" />
+            Back to Home
+          </Link>
+        </div>
+
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Manage Your Advertisements</h1>
-          <p className="text-gray-600">Track, extend, and manage all your active advertisements</p>
+          <p className="text-gray-600">
+            Track, extend, and manage all your active advertisements
+            {userData && (
+              <span className="ml-2 text-sm">
+                • Signed in as <strong>{userData.email}</strong>
+              </span>
+            )}
+          </p>
         </div>
+
+        {/* DEBUG INFO */}
+        {debugInfo && (
+          <div className="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-6 mb-6">
+            <h3 className="text-lg font-bold text-yellow-900 mb-4">🔍 Debug Information</h3>
+            <div className="space-y-2 text-sm font-mono">
+              <div><strong>Your Publisher ID:</strong> {debugInfo.publisherId}</div>
+              <div><strong>Your Email:</strong> {debugInfo.userEmail}</div>
+              <div><strong>Total Ads in DB:</strong> {debugInfo.totalAds}</div>
+              <div><strong>All Publisher IDs in DB:</strong></div>
+              <ul className="ml-4 list-disc">
+                {debugInfo.allPublisherIds.map((id, i) => (
+                  <li key={i}>{id || '(empty)'}</li>
+                ))}
+              </ul>
+              <div className="mt-4"><strong>Match Results:</strong></div>
+              <ul className="ml-4">
+                <li>Exact Match: {debugInfo.matchStrategies.exact} ads</li>
+                <li>Includes Match: {debugInfo.matchStrategies.includes} ads</li>
+                <li>Email Match: {debugInfo.matchStrategies.email} ads</li>
+              </ul>
+              <div className="mt-4 p-3 bg-yellow-100 rounded">
+                <strong>💡 Tip:</strong> Check browser console for detailed logs
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Show ALL ads for debugging */}
+        {allAds.length > 0 && ads.length === 0 && (
+          <div className="bg-blue-50 border-2 border-blue-400 rounded-lg p-6 mb-6">
+            <h3 className="text-lg font-bold text-blue-900 mb-4">📢 All Ads in Database</h3>
+            <p className="text-sm text-blue-800 mb-4">
+              There are {allAds.length} ads in the database, but none match your publisherId. 
+              Here they are:
+            </p>
+            <div className="space-y-2">
+              {allAds.map((ad, index) => (
+                <div key={ad.id} className="bg-white p-3 rounded border border-blue-200 text-xs font-mono">
+                  <div><strong>#{index + 1}</strong></div>
+                  <div>ID: {ad.id}</div>
+                  <div>Title: {ad.title}</div>
+                  <div>PublisherId: {ad.publisherId || '(EMPTY!)'}</div>
+                  <div>PublisherEmail: {ad.publisherEmail || '(EMPTY!)'}</div>
+                  <div className={ad.publisherId === publisherId ? 'text-green-600 font-bold' : 'text-red-600'}>
+                    Match: {ad.publisherId === publisherId ? 'YES ✓' : 'NO ✗'}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
@@ -253,8 +442,13 @@ function ManageAdsContent() {
         {ads.length === 0 ? (
           <div className="bg-white rounded-lg shadow p-12 text-center">
             <AlertCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">No Advertisements Yet</h3>
-            <p className="text-gray-600 mb-6">Start advertising on MediaHub to reach millions of readers</p>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">No Matching Advertisements</h3>
+            <p className="text-gray-600 mb-6">
+              {allAds.length > 0 
+                ? `There are ${allAds.length} ads in the database, but none match your account. Check the debug info above.`
+                : 'Start advertising on MediaHub to reach millions of readers'
+              }
+            </p>
             <button
               onClick={() => router.push('/')}
               className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 inline-flex items-center"
@@ -274,7 +468,6 @@ function ManageAdsContent() {
                 <div key={ad.id} className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow">
                   <div className="p-6">
                     <div className="flex flex-col lg:flex-row gap-6">
-                      {/* Ad Preview */}
                       <div className="lg:w-1/4">
                         {ad.desktopImage ? (
                           <img
@@ -289,7 +482,6 @@ function ManageAdsContent() {
                         )}
                       </div>
 
-                      {/* Ad Details */}
                       <div className="lg:w-3/4">
                         <div className="flex items-start justify-between mb-4">
                           <div>
@@ -306,7 +498,6 @@ function ManageAdsContent() {
                           </div>
                         </div>
 
-                        {/* Stats Grid */}
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                           <div className="flex items-center gap-2">
                             <Eye className="w-4 h-4 text-gray-500" />
@@ -337,26 +528,24 @@ function ManageAdsContent() {
                             <div>
                               <p className="text-xs text-gray-600">Paid</p>
                               <p className="text-sm font-semibold text-gray-900">
-                                {ad.paymentInfo?.currency} {ad.paymentInfo?.amount}
+                                {ad.paymentInfo?.currency || 'ZAR'} {ad.paymentInfo?.amount || 'N/A'}
                               </p>
                             </div>
                           </div>
                         </div>
 
-                        {/* Dates */}
                         <div className="flex flex-wrap gap-4 text-sm text-gray-600 mb-4">
                           <div>
-                            <span className="font-medium">Start:</span> {formatDate(ad.schedule?.startDate)}
+                            <span className="font-medium">Start:</span> {formatDate(ad.schedule?.startDate || ad.createdAt)}
                           </div>
                           <div>
                             <span className="font-medium">End:</span> {formatDate(ad.schedule?.endDate)}
                           </div>
                           <div>
-                            <span className="font-medium">Duration:</span> {ad.schedule?.duration} {ad.schedule?.durationUnit}
+                            <span className="font-medium">Duration:</span> {ad.schedule?.duration || 'N/A'} {ad.schedule?.durationUnit || 'days'}
                           </div>
                         </div>
 
-                        {/* Actions */}
                         <div className="flex flex-wrap gap-3">
                           <button
                             onClick={() => handleExtendAd(ad)}
@@ -364,14 +553,6 @@ function ManageAdsContent() {
                           >
                             <Clock className="w-4 h-4" />
                             Extend Duration
-                          </button>
-
-                          <button
-                            onClick={() => router.push(`/ad-analytics?adId=${ad.id}`)}
-                            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 flex items-center gap-2 text-sm font-medium"
-                          >
-                            <BarChart3 className="w-4 h-4" />
-                            View Analytics
                           </button>
 
                           <button
