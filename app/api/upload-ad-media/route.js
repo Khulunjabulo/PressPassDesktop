@@ -1,4 +1,4 @@
-// app/api/upload-ad-media/route.js - UPDATED with payment status
+// app/api/upload-ad-media/route.js - UPDATED with payment status and destination URL
 import { NextResponse } from 'next/server';
 import { getFirestoreDb } from '../../../lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
@@ -25,14 +25,33 @@ export async function POST(req) {
     const rawPublisherId = formData.get('publisherId');
     const templateId = formData.get('templateId');
     const deviceType = formData.get('deviceType');
-    const paymentIntentId = formData.get('paymentIntentId'); // New: payment verification
-    const paymentStatus = formData.get('paymentStatus') || 'pending'; // New: payment status
+    const paymentIntentId = formData.get('paymentIntentId');
+    const paymentStatus = formData.get('paymentStatus') || 'pending';
+    const destinationUrl = formData.get('destinationUrl'); // 🆕 NEW FIELD
 
     if (!file || !rawPublisherId || !templateId || !deviceType) {
       return NextResponse.json(
         { success: false, error: 'File, publisherId, templateId, and deviceType are required' },
         { status: 400 }
       );
+    }
+
+    // 🆕 Validate destination URL if provided
+    if (destinationUrl) {
+      try {
+        new URL(destinationUrl); // Validates URL format
+        if (!destinationUrl.startsWith('http://') && !destinationUrl.startsWith('https://')) {
+          return NextResponse.json(
+            { success: false, error: 'Destination URL must start with http:// or https://' },
+            { status: 400 }
+          );
+        }
+      } catch (err) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid destination URL format' },
+          { status: 400 }
+        );
+      }
     }
 
     const publisherId = normalizePublisherId(rawPublisherId);
@@ -45,7 +64,8 @@ export async function POST(req) {
       templateId,
       deviceType,
       paymentIntentId,
-      paymentStatus
+      paymentStatus,
+      destinationUrl // 🆕 NEW LOG
     });
 
     // Validate file size (max 10MB)
@@ -97,13 +117,14 @@ export async function POST(req) {
       fileSize: file.size,
       fileType: file.type,
       imageSrc: dataUrl,
+      destinationUrl: destinationUrl || null, // 🆕 NEW FIELD
       uploadedAt: Timestamp.now(),
-      status: paymentStatus === 'completed' ? 'active' : 'pending_payment', // NEW: conditional status
-      paymentIntentId: paymentIntentId || null, // NEW: store payment reference
-      paymentStatus: paymentStatus, // NEW: track payment status
+      status: paymentStatus === 'completed' ? 'active' : 'pending_payment',
+      paymentIntentId: paymentIntentId || null,
+      paymentStatus: paymentStatus,
       impressions: 0,
       clicks: 0,
-      activatedAt: paymentStatus === 'completed' ? Timestamp.now() : null // NEW: activation timestamp
+      activatedAt: paymentStatus === 'completed' ? Timestamp.now() : null
     };
 
     // Save to Firestore
@@ -117,6 +138,7 @@ export async function POST(req) {
       templateId,
       deviceType,
       status: adMediaData.status,
+      destinationUrl: adMediaData.destinationUrl, // 🆕 NEW LOG
       dataUrlLength: dataUrl.length
     });
 
@@ -132,6 +154,7 @@ export async function POST(req) {
         publisherId,
         deviceType,
         imageSrc: dataUrl,
+        destinationUrl: adMediaData.destinationUrl, // 🆕 NEW FIELD
         status: adMediaData.status,
         uploadedAt: adMediaData.uploadedAt.toDate().toISOString()
       }
@@ -150,7 +173,7 @@ export async function POST(req) {
   }
 }
 
-// NEW: Endpoint to activate ad after payment
+// Endpoint to activate ad after payment
 export async function PATCH(req) {
   try {
     const body = await req.json();

@@ -39,12 +39,15 @@ const PdfArticleViewer = dynamic(() => import('@/components/PdfArticleViewer'), 
 });
 
 // Publisher Ad Component
+// Updated PublisherAd Component with click tracking
 function PublisherAd({ publisherId, templateId, className = '', height = 120 }) {
   const [ads, setAds] = useState([]);
   const [currentAdIndex, setCurrentAdIndex] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [deviceType, setDeviceType] = useState('desktop');
 
+  // Detect device type
   useEffect(() => {
     const checkDevice = () => {
       const isMobile = window.innerWidth < 768;
@@ -53,9 +56,11 @@ function PublisherAd({ publisherId, templateId, className = '', height = 120 }) 
     
     checkDevice();
     window.addEventListener('resize', checkDevice);
+    
     return () => window.removeEventListener('resize', checkDevice);
   }, []);
 
+  // Fetch ads
   useEffect(() => {
     const fetchAds = async () => {
       if (!publisherId || !templateId) {
@@ -65,18 +70,23 @@ function PublisherAd({ publisherId, templateId, className = '', height = 120 }) 
 
       try {
         setLoading(true);
+        setError(null);
+        
         const apiUrl = `/api/get-ads?publisherId=${publisherId}&templateId=${templateId}&deviceType=${deviceType}`;
+        
         const response = await fetch(apiUrl);
         const result = await response.json();
 
         if (result.success && result.data && result.data.length > 0) {
           setAds(result.data);
           setCurrentAdIndex(0);
+          setError(null);
         } else {
           setAds([]);
         }
       } catch (error) {
-        console.error('Error fetching ads:', error);
+        console.error('❌ Error fetching ads:', error);
+        setError(error.message);
         setAds([]);
       } finally {
         setLoading(false);
@@ -86,13 +96,45 @@ function PublisherAd({ publisherId, templateId, className = '', height = 120 }) 
     fetchAds();
   }, [publisherId, templateId, deviceType]);
 
+  // Rotate ads
   useEffect(() => {
     if (ads.length <= 1) return;
+
     const interval = setInterval(() => {
       setCurrentAdIndex((prevIndex) => (prevIndex + 1) % ads.length);
     }, 10000);
+
     return () => clearInterval(interval);
   }, [ads.length]);
+
+  // 🆕 Handle ad click
+  const handleAdClick = async (ad) => {
+    if (!ad.destinationUrl) {
+      console.log('⚠️ No destination URL for this ad');
+      return;
+    }
+
+    try {
+      // Track the click
+      await fetch('/api/track-ad-click', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          adId: ad.id,
+          publisherId: publisherId
+        })
+      });
+
+      console.log('✅ Click tracked, opening:', ad.destinationUrl);
+      
+      // Open destination URL in new tab
+      window.open(ad.destinationUrl, '_blank', 'noopener,noreferrer');
+    } catch (error) {
+      console.error('❌ Error tracking click:', error);
+      // Still open the URL even if tracking fails
+      window.open(ad.destinationUrl, '_blank', 'noopener,noreferrer');
+    }
+  };
 
   if (loading) {
     return (
@@ -105,6 +147,20 @@ function PublisherAd({ publisherId, templateId, className = '', height = 120 }) 
     );
   }
 
+  if (error) {
+    return (
+      <div 
+        className={`w-full bg-red-50 border border-red-200 flex items-center justify-center rounded-md ${className}`}
+        style={{ height }}
+      >
+        <div className="text-center p-4">
+          <span className="text-sm text-red-600 block">Error loading ad</span>
+          <span className="text-xs text-red-400">{error}</span>
+        </div>
+      </div>
+    );
+  }
+
   if (ads.length === 0) {
     return (
       <div 
@@ -112,7 +168,11 @@ function PublisherAd({ publisherId, templateId, className = '', height = 120 }) 
         style={{ height, backgroundColor: '#3ba6e7' }}
       >
         <div className="w-32 h-32 mb-2">
-          <img src="/Presspass.png" alt="PressPass Logo" className="w-full h-full object-contain" />
+          <img
+            src="/Presspass.png"
+            alt="PressPass Logo"
+            className="w-full h-full object-contain"
+          />
         </div>
         <h3 className="text-yellow-400 font-bold text-sm">Advertise Here</h3>
         <p className="text-white text-xs">Partners@presspass.africa</p>
@@ -124,13 +184,38 @@ function PublisherAd({ publisherId, templateId, className = '', height = 120 }) 
 
   return (
     <div 
-      className={`w-full rounded-md overflow-hidden shadow-sm relative ${className}`}
+      className={`w-full rounded-md overflow-hidden shadow-sm relative ${className} ${
+        currentAd.destinationUrl ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''
+      }`}
       style={{ height }}
+      onClick={() => handleAdClick(currentAd)}
+      role={currentAd.destinationUrl ? "button" : undefined}
+      tabIndex={currentAd.destinationUrl ? 0 : undefined}
+      onKeyDown={(e) => {
+        if (currentAd.destinationUrl && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault();
+          handleAdClick(currentAd);
+        }
+      }}
     >
       {currentAd.fileType?.startsWith('video/') ? (
-        <video src={currentAd.imageSrc} className="w-full h-full object-cover" autoPlay loop muted playsInline />
+        <video
+          src={currentAd.imageSrc}
+          className="w-full h-full object-cover"
+          autoPlay
+          loop
+          muted
+          playsInline
+        />
       ) : (
-        <img src={currentAd.imageSrc} alt={currentAd.fileName} className="w-full h-full object-cover" />
+        <img
+          src={currentAd.imageSrc}
+          alt={currentAd.fileName}
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            e.target.src = '/Presspass.png';
+          }}
+        />
       )}
       
       {ads.length > 1 && (
@@ -149,6 +234,16 @@ function PublisherAd({ publisherId, templateId, className = '', height = 120 }) 
       <div className="absolute top-2 right-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
         Ad {ads.length > 1 ? `${currentAdIndex + 1}/${ads.length}` : ''}
       </div>
+
+      {/* 🆕 Clickable indicator */}
+      {currentAd.destinationUrl && (
+        <div className="absolute bottom-2 right-2 bg-blue-600 bg-opacity-90 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
+          <span>Click to visit</span>
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+          </svg>
+        </div>
+      )}
     </div>
   );
 }

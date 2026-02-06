@@ -209,147 +209,141 @@ export default function MonetizationPage() {
     setIsUploadOverlayOpen(true);
   };
 
-  const handleUploadComplete = async (file) => {
-    try {
-      console.log('📤 Upload complete, creating preview...', {
-        fileName: file.name,
-        fileType: file.type,
-        fileSize: file.size,
-        templateId: selectedTemplateId,
-        deviceType
-      });
+  // In your monetization page, update this function:
 
-      // Create preview from file
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const previewData = {
-          imageSrc: e.target.result,
-          fileName: file.name,
-          fileType: file.type
-        };
-        
-        console.log('✅ Preview data created:', {
-          fileName: previewData.fileName,
-          fileType: previewData.fileType,
-          imageSrcLength: previewData.imageSrc?.length
-        });
-        
-        setPreviewAd(previewData);
-        
-        // Store the complete pending upload data
-        const uploadData = {
-          file: file,
-          fileData: previewData,
-          templateId: selectedTemplateId,
-          deviceType: deviceType,
-          publisherId: currentPublisherId
-        };
-        
-        console.log('💾 Setting pending upload:', {
-          templateId: uploadData.templateId,
-          deviceType: uploadData.deviceType,
-          publisherId: uploadData.publisherId,
-          hasFile: !!uploadData.file
-        });
-        
-        setPendingUpload(uploadData);
-      };
-      reader.readAsDataURL(file);
-
-      // Close upload overlay and show preview
-      setIsUploadOverlayOpen(false);
-      setShowPreview(true);
-      setSelectedTemplate(selectedTemplateId);
-
-      return { success: true };
-    } catch (error) {
-      console.error("❌ Upload preparation failed:", error);
-      throw error;
-    }
-  };
-
-  const handleAcceptTerms = () => {
-    console.log('📋 Terms accepted, proceeding to payment...');
-    console.log('🔍 Checking pending upload:', pendingUpload);
-    console.log('🔍 Checking publisher:', publisher);
-    
-    // Validate we have all required data
-    if (!pendingUpload) {
-      console.error('❌ No pending upload data found');
-      alert('Missing upload information. Please try uploading your ad again.');
-      setShowTerms(false);
-      return;
-    }
-
-    if (!currentPublisherId) {
-      console.error('❌ No publisher ID found');
-      alert('Missing publisher information. Please refresh the page and try again.');
-      setShowTerms(false);
-      return;
-    }
-
-    const spec = TEMPLATE_SPECS[deviceType][pendingUpload.templateId];
-    const templateName = templates.find(t => t.id === pendingUpload.templateId)?.name || `Template ${pendingUpload.templateId}`;
-    
-    // Calculate price based on publisher's ad pricing (default to 500 if not set)
-    const adPrice = publisher?.adPricing?.[`template${pendingUpload.templateId}`] || 500;
-    
-    console.log('💰 Payment details:', {
-      adPrice,
-      templateId: pendingUpload.templateId,
-      templateName,
+const handleUploadComplete = async (file, destinationUrl) => { // 🆕 Added destinationUrl parameter
+  try {
+    console.log('📤 Upload complete, creating preview...', {
+      fileName: file.name,
+      fileType: file.type,
+      fileSize: file.size,
+      templateId: selectedTemplateId,
       deviceType,
-      spec
+      destinationUrl // 🆕 NEW LOG
     });
-    
-    // Navigate to payment page with metadata
-    const metadata = {
-      publisherId: currentPublisherId,
-      templateId: pendingUpload.templateId,
-      templateName,
-      deviceType,
-      fileName: pendingUpload.file.name,
-      dimensions: `${spec.width}x${spec.height}`,
-      type: 'ad_space'
-    };
 
-    console.log('📦 Payment metadata:', metadata);
+    // 🆕 Validate destination URL is provided
+    if (!destinationUrl || destinationUrl.trim() === '') {
+      alert('⚠️ Destination URL is required!');
+      return { success: false, error: 'Destination URL is required' };
+    }
 
-    const paymentUrl = `/payment?amount=${adPrice}&currency=ZAR&description=${encodeURIComponent(`${templateName} - ${deviceType} (${spec.width}x${spec.height}px)`)}&metadata=${encodeURIComponent(JSON.stringify(metadata))}&returnUrl=${encodeURIComponent(window.location.href)}`;
-    
-    console.log('🔗 Payment URL created:', paymentUrl);
-    
-    // Store pending upload in sessionStorage for after payment
-    // Convert file to base64 for storage
+    // Create preview from file
     const reader = new FileReader();
     reader.onload = (e) => {
-      const uploadDataForStorage = {
-        fileData: {
-          name: pendingUpload.file.name,
-          type: pendingUpload.file.type,
-          size: pendingUpload.file.size,
-          imageSrc: e.target.result
-        },
-        templateId: pendingUpload.templateId,
-        deviceType,
-        publisherId: currentPublisherId,
-        previewData: pendingUpload.fileData
+      const previewData = {
+        imageSrc: e.target.result,
+        fileName: file.name,
+        fileType: file.type,
+        destinationUrl: destinationUrl // 🆕 INCLUDE URL
       };
       
-      console.log('💾 Storing in sessionStorage:', {
-        templateId: uploadDataForStorage.templateId,
-        deviceType: uploadDataForStorage.deviceType,
-        publisherId: uploadDataForStorage.publisherId
+      console.log('✅ Preview data created:', {
+        fileName: previewData.fileName,
+        fileType: previewData.fileType,
+        destinationUrl: previewData.destinationUrl, // 🆕 NEW LOG
+        imageSrcLength: previewData.imageSrc?.length
       });
       
-      sessionStorage.setItem('pendingAdUpload', JSON.stringify(uploadDataForStorage));
+      setPreviewAd(previewData);
       
-      console.log('🚀 Navigating to payment page...');
-      router.push(paymentUrl);
+      // Store the complete pending upload data
+      const uploadData = {
+        file: file,
+        fileData: previewData,
+        templateId: selectedTemplateId,
+        deviceType: deviceType,
+        publisherId: currentPublisherId,
+        destinationUrl: destinationUrl // 🆕 STORE URL
+      };
+      
+      console.log('💾 Setting pending upload:', {
+        templateId: uploadData.templateId,
+        deviceType: uploadData.deviceType,
+        publisherId: uploadData.publisherId,
+        destinationUrl: uploadData.destinationUrl, // 🆕 NEW LOG
+        hasFile: !!uploadData.file
+      });
+      
+      setPendingUpload(uploadData);
+    };
+    reader.readAsDataURL(file);
+
+    // Close upload overlay and show preview
+    setIsUploadOverlayOpen(false);
+    setShowPreview(true);
+    setSelectedTemplate(selectedTemplateId);
+
+    return { success: true };
+  } catch (error) {
+    console.error("❌ Upload preparation failed:", error);
+    throw error;
+  }
+};
+
+  const handleAcceptTerms = () => {
+  console.log('📋 Terms accepted, proceeding to payment...');
+  
+  if (!pendingUpload) {
+    alert('Missing upload information. Please try uploading your ad again.');
+    setShowTerms(false);
+    return;
+  }
+
+  // 🆕 Validate destination URL
+  if (!pendingUpload.destinationUrl) {
+    alert('Missing destination URL. Please try uploading your ad again and include the link.');
+    setShowTerms(false);
+    return;
+  }
+
+  if (!currentPublisherId) {
+    alert('Missing publisher information. Please refresh the page and try again.');
+    setShowTerms(false);
+    return;
+  }
+
+  const spec = TEMPLATE_SPECS[deviceType][pendingUpload.templateId];
+  const templateName = templates.find(t => t.id === pendingUpload.templateId)?.name || `Template ${pendingUpload.templateId}`;
+  const adPrice = publisher?.adPricing?.[`template${pendingUpload.templateId}`] || 500;
+  
+  // Navigate to payment page with metadata
+  const metadata = {
+    publisherId: currentPublisherId,
+    templateId: pendingUpload.templateId,
+    templateName,
+    deviceType,
+    fileName: pendingUpload.file.name,
+    dimensions: `${spec.width}x${spec.height}`,
+    destinationUrl: pendingUpload.destinationUrl, // 🆕 INCLUDE URL
+    type: 'ad_space'
+  };
+
+  const paymentUrl = `/payment?amount=${adPrice}&currency=ZAR&description=${encodeURIComponent(`${templateName} - ${deviceType} (${spec.width}x${spec.height}px)`)}&metadata=${encodeURIComponent(JSON.stringify(metadata))}&returnUrl=${encodeURIComponent(window.location.href)}`;
+  
+  // Store pending upload in sessionStorage
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const uploadDataForStorage = {
+      fileData: {
+        name: pendingUpload.file.name,
+        type: pendingUpload.file.type,
+        size: pendingUpload.file.size,
+        imageSrc: e.target.result
+      },
+      templateId: pendingUpload.templateId,
+      deviceType,
+      publisherId: currentPublisherId,
+      destinationUrl: pendingUpload.destinationUrl, // 🆕 STORE URL
+      previewData: pendingUpload.fileData
     };
     
-    reader.readAsDataURL(pendingUpload.file);
+    sessionStorage.setItem('pendingAdUpload', JSON.stringify(uploadDataForStorage));
+    router.push(paymentUrl);
   };
+  
+  reader.readAsDataURL(pendingUpload.file);
+};
 
   const handlePreviewClose = () => {
     setShowPreview(false);
