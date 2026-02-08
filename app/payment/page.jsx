@@ -374,77 +374,61 @@ function PaymentPageContent({
     }
   };
 
-  // Activate ad after successful payment
-  const activateAd = async (paymentIntentId) => {
-    try {
-      setActivatingAd(true);
-      setActivationError(null);
-      console.log('🔓 [PAYMENT-PAGE] Activating ad after payment...');
-      
-      const pendingDataStr = sessionStorage.getItem('pendingAdUpload');
-      console.log('📦 [PAYMENT-PAGE] Pending upload data (raw):', pendingDataStr);
-      
-      if (!pendingDataStr) {
-        const errorMsg = 'No pending ad upload found in session storage';
-        console.error('⚠️ [PAYMENT-PAGE]', errorMsg);
-        setActivationError(errorMsg);
-        setErrorMessage(`Payment successful, but failed to activate ad. Please contact support with payment ID: ${paymentIntentId}.`);
-        return;
-      }
+// Replace the activateAd function in app/payment/page.jsx
 
-      let uploadData;
-      try {
-        uploadData = JSON.parse(pendingDataStr);
-      } catch (parseError) {
-        console.error('❌ [PAYMENT-PAGE] Failed to parse pending data:', parseError);
-        setActivationError('Invalid ad data format');
-        setErrorMessage(`Payment successful, but failed to activate ad. Please contact support with payment ID: ${paymentIntentId}.`);
-        return;
-      }
-
-      const requiredFields = ['publisherId', 'templateId', 'deviceType'];
-      const missingFields = requiredFields.filter(field => !uploadData[field]);
-      
-      if (missingFields.length > 0) {
-        const errorMsg = `Missing required fields: ${missingFields.join(', ')}`;
-        console.error('❌ [PAYMENT-PAGE]', errorMsg);
-        setActivationError(errorMsg);
-        setErrorMessage(`Payment successful, but failed to activate ad. Please contact support with payment ID: ${paymentIntentId}.`);
-        return;
-      }
-      
-      const response = await fetch('/api/activate-ad-after-payment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          paymentIntentId,
-          publisherId: uploadData.publisherId,
-          templateId: uploadData.templateId,
-          deviceType: uploadData.deviceType,
-          fileData: uploadData.previewData || uploadData.fileData
-        }),
-      });
-
-      const result = await response.json();
-      
-      if (result.success) {
-        console.log('✅ [PAYMENT-PAGE] Ad activated successfully:', result.data);
-        sessionStorage.removeItem('pendingAdUpload');
-      } else {
-        const errorMsg = result.error || 'Ad activation failed';
-        console.error('❌ [PAYMENT-PAGE] Ad activation failed:', errorMsg);
-        setActivationError(errorMsg);
-        setErrorMessage(`Payment successful, but failed to activate ad. Please contact support with payment ID: ${paymentIntentId}. Error: ${errorMsg}`);
-      }
-      
-    } catch (error) {
-      console.error('💥 [PAYMENT-PAGE] Error activating ad:', error);
-      setActivationError(error.message);
-      setErrorMessage(`Payment successful, but failed to activate ad. Please contact support with payment ID: ${paymentIntentId}.`);
-    } finally {
-      setActivatingAd(false);
+const activateAd = async (paymentIntentId) => {
+  try {
+    setActivatingAd(true);
+    setActivationError(null);
+    
+    // Get file data from sessionStorage
+    const pendingFileStr = sessionStorage.getItem('pendingAdFile');
+    const pendingPaymentStr = sessionStorage.getItem('pendingAdPayment');
+    
+    let fileData = null;
+    let paymentData = null;
+    
+    if (pendingFileStr) {
+      paymentData = JSON.parse(pendingFileStr);
+      fileData = paymentData.fileData; // base64
+    } else if (pendingPaymentStr) {
+      paymentData = JSON.parse(pendingPaymentStr);
     }
-  };
+    
+    if (!paymentData) {
+      setActivationError('No pending ad data found');
+      return;
+    }
+    
+    const response = await fetch('/api/activate-ad-after-payment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        paymentIntentId,
+        pendingId: paymentData.pendingId,
+        fileData: fileData, // May be null if file was too large
+        publisherId: paymentData.publisherId,
+        templateId: paymentData.templateId,
+        deviceType: paymentData.deviceType,
+        destinationUrl: paymentData.destinationUrl
+      }),
+    });
+
+    const result = await response.json();
+    
+    if (result.success) {
+      sessionStorage.removeItem('pendingAdFile');
+      sessionStorage.removeItem('pendingAdPayment');
+    } else {
+      setActivationError(result.error);
+    }
+    
+  } catch (error) {
+    setActivationError(error.message);
+  } finally {
+    setActivatingAd(false);
+  }
+};
 
   const handleBack = () => {
     if (onCancel) {

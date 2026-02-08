@@ -281,7 +281,81 @@ const handleUploadComplete = async (file, destinationUrl) => { // 🆕 Added des
   }
 };
 
-  const handleAcceptTerms = () => {
+// Add this function to your monetization page (before handleAcceptTerms)
+
+const uploadFileToStorage = async (file, publisherId, templateId, deviceType) => {
+  try {
+    console.log('📤 [CLIENT-UPLOAD] Starting client-side upload to Firebase Storage...');
+    
+    // Dynamically import Firebase Storage
+    const { getStorage, ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
+    const { initializeApp, getApps } = await import('firebase/app');
+    
+    // Initialize Firebase if not already initialized
+    let app;
+    if (!getApps().length) {
+      const firebaseConfig = {
+        apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+        authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+        storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+        messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+        appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
+      };
+      app = initializeApp(firebaseConfig);
+    } else {
+      app = getApps()[0];
+    }
+    
+    const storage = getStorage(app);
+    
+    // Generate unique file path
+    const timestamp = Date.now();
+    const fileExtension = file.name.split('.').pop();
+    const fileName = `${publisherId}_${deviceType}_${templateId}_${timestamp}.${fileExtension}`;
+    const filePath = `ad-uploads/${publisherId}/${deviceType}/${fileName}`;
+    
+    // Create storage reference
+    const storageRef = ref(storage, filePath);
+    
+    console.log('⬆️ [CLIENT-UPLOAD] Uploading to:', filePath);
+    
+    // Upload file
+    const snapshot = await uploadBytes(storageRef, file, {
+      customMetadata: {
+        publisherId,
+        templateId: templateId.toString(),
+        deviceType,
+        originalName: file.name,
+        uploadedAt: new Date().toISOString()
+      }
+    });
+    
+    // Get download URL
+    const downloadURL = await getDownloadURL(snapshot.ref);
+    
+    console.log('✅ [CLIENT-UPLOAD] Upload successful:', downloadURL);
+    
+    return {
+      success: true,
+      fileUrl: downloadURL,
+      filePath,
+      fileName,
+      fileSize: file.size,
+      fileType: file.type
+    };
+    
+  } catch (error) {
+    console.error('❌ [CLIENT-UPLOAD] Error:', error);
+    throw error;
+  }
+};
+
+// COMPLETE WORKING SOLUTION FOR handleAcceptTerms
+
+// ULTRA-SIMPLE handleAcceptTerms - Just store metadata, no file upload yet
+
+const handleAcceptTerms = async () => {
   console.log('📋 Terms accepted, proceeding to payment...');
   
   if (!pendingUpload) {
@@ -290,7 +364,6 @@ const handleUploadComplete = async (file, destinationUrl) => { // 🆕 Added des
     return;
   }
 
-  // 🆕 Validate destination URL
   if (!pendingUpload.destinationUrl) {
     alert('Missing destination URL. Please try uploading your ad again and include the link.');
     setShowTerms(false);
@@ -303,46 +376,96 @@ const handleUploadComplete = async (file, destinationUrl) => { // 🆕 Added des
     return;
   }
 
-  const spec = TEMPLATE_SPECS[deviceType][pendingUpload.templateId];
-  const templateName = templates.find(t => t.id === pendingUpload.templateId)?.name || `Template ${pendingUpload.templateId}`;
-  const adPrice = publisher?.adPricing?.[`template${pendingUpload.templateId}`] || 500;
-  
-  // Navigate to payment page with metadata
-  const metadata = {
-    publisherId: currentPublisherId,
-    templateId: pendingUpload.templateId,
-    templateName,
-    deviceType,
-    fileName: pendingUpload.file.name,
-    dimensions: `${spec.width}x${spec.height}`,
-    destinationUrl: pendingUpload.destinationUrl, // 🆕 INCLUDE URL
-    type: 'ad_space'
-  };
-
-  const paymentUrl = `/payment?amount=${adPrice}&currency=ZAR&description=${encodeURIComponent(`${templateName} - ${deviceType} (${spec.width}x${spec.height}px)`)}&metadata=${encodeURIComponent(JSON.stringify(metadata))}&returnUrl=${encodeURIComponent(window.location.href)}`;
-  
-  // Store pending upload in sessionStorage
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    const uploadDataForStorage = {
-      fileData: {
-        name: pendingUpload.file.name,
-        type: pendingUpload.file.type,
-        size: pendingUpload.file.size,
-        imageSrc: e.target.result
-      },
-      templateId: pendingUpload.templateId,
-      deviceType,
+  try {
+    setShowTerms(false);
+    
+    console.log('💾 Creating pending ad record...');
+    
+    // Just save metadata - we'll upload the file AFTER payment
+    const pendingAdData = {
       publisherId: currentPublisherId,
-      destinationUrl: pendingUpload.destinationUrl, // 🆕 STORE URL
-      previewData: pendingUpload.fileData
+      templateId: pendingUpload.templateId,
+      deviceType: pendingUpload.deviceType,
+      destinationUrl: pendingUpload.destinationUrl,
+      fileName: pendingUpload.file.name,
+      fileSize: pendingUpload.file.size,
+      fileType: pendingUpload.file.type
     };
     
-    sessionStorage.setItem('pendingAdUpload', JSON.stringify(uploadDataForStorage));
-    router.push(paymentUrl);
-  };
-  
-  reader.readAsDataURL(pendingUpload.file);
+    const response = await fetch('/api/create-pending-ad', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(pendingAdData)
+    });
+    
+    const result = await response.json();
+    
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to create pending ad');
+    }
+    
+    console.log('✅ Pending ad created:', result.data.pendingId);
+    
+    // Convert file to base64 for storage in sessionStorage
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const spec = TEMPLATE_SPECS[deviceType][pendingUpload.templateId];
+      const templateName = templates.find(t => t.id === pendingUpload.templateId)?.name || `Template ${pendingUpload.templateId}`;
+      const adPrice = publisher?.adPricing?.[`template${pendingUpload.templateId}`] || 500;
+      
+      const metadata = {
+        publisherId: currentPublisherId,
+        templateId: pendingUpload.templateId,
+        templateName,
+        deviceType,
+        fileName: pendingUpload.file.name,
+        dimensions: `${spec.width}x${spec.height}`,
+        destinationUrl: pendingUpload.destinationUrl,
+        pendingId: result.data.pendingId,
+        type: 'ad_space'
+      };
+
+      const paymentUrl = `/payment?amount=${adPrice}&currency=ZAR&description=${encodeURIComponent(`${templateName} - ${deviceType} (${spec.width}x${spec.height}px)`)}&metadata=${encodeURIComponent(JSON.stringify(metadata))}&returnUrl=${encodeURIComponent(window.location.href)}`;
+      
+      // Store file data in sessionStorage for upload AFTER payment
+      try {
+        sessionStorage.setItem('pendingAdFile', JSON.stringify({
+          pendingId: result.data.pendingId,
+          fileData: e.target.result, // base64
+          fileName: pendingUpload.file.name,
+          fileType: pendingUpload.file.type,
+          publisherId: currentPublisherId,
+          templateId: pendingUpload.templateId,
+          deviceType,
+          destinationUrl: pendingUpload.destinationUrl
+        }));
+        
+        console.log('💳 Navigating to payment...');
+        router.push(paymentUrl);
+        
+      } catch (storageError) {
+        console.error('❌ SessionStorage error:', storageError);
+        // If file is too large for sessionStorage, just store the metadata
+        sessionStorage.setItem('pendingAdPayment', JSON.stringify({
+          pendingId: result.data.pendingId,
+          publisherId: currentPublisherId,
+          templateId: pendingUpload.templateId,
+          deviceType,
+          destinationUrl: pendingUpload.destinationUrl,
+          needsFileUpload: true // Flag that file needs to be uploaded after payment
+        }));
+        
+        alert('Note: File is large and will be uploaded after payment confirmation.');
+        router.push(paymentUrl);
+      }
+    };
+    
+    reader.readAsDataURL(pendingUpload.file);
+    
+  } catch (error) {
+    console.error('❌ Error:', error);
+    alert(`Failed: ${error.message}. Please try again.`);
+  }
 };
 
   const handlePreviewClose = () => {

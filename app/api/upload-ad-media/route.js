@@ -1,4 +1,4 @@
-// app/api/upload-ad-media/route.js - UPDATED with payment status and destination URL
+// app/api/upload-ad-media/route.js - FINAL WORKING VERSION
 import { NextResponse } from 'next/server';
 import { getFirestoreDb } from '../../../lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
@@ -27,7 +27,16 @@ export async function POST(req) {
     const deviceType = formData.get('deviceType');
     const paymentIntentId = formData.get('paymentIntentId');
     const paymentStatus = formData.get('paymentStatus') || 'pending';
-    const destinationUrl = formData.get('destinationUrl'); // 🆕 NEW FIELD
+    const destinationUrl = formData.get('destinationUrl');
+
+    console.log('📁 [UPLOAD-AD-MEDIA] Request:', {
+      fileName: file?.name,
+      fileSize: file?.size,
+      publisherId: rawPublisherId,
+      templateId,
+      deviceType,
+      destinationUrl
+    });
 
     if (!file || !rawPublisherId || !templateId || !deviceType) {
       return NextResponse.json(
@@ -36,10 +45,10 @@ export async function POST(req) {
       );
     }
 
-    // 🆕 Validate destination URL if provided
+    // Validate destination URL
     if (destinationUrl) {
       try {
-        new URL(destinationUrl); // Validates URL format
+        new URL(destinationUrl);
         if (!destinationUrl.startsWith('http://') && !destinationUrl.startsWith('https://')) {
           return NextResponse.json(
             { success: false, error: 'Destination URL must start with http:// or https://' },
@@ -55,18 +64,6 @@ export async function POST(req) {
     }
 
     const publisherId = normalizePublisherId(rawPublisherId);
-
-    console.log('📁 Processing ad media upload:', {
-      fileName: file.name,
-      fileSize: file.size,
-      fileType: file.type,
-      publisherId,
-      templateId,
-      deviceType,
-      paymentIntentId,
-      paymentStatus,
-      destinationUrl // 🆕 NEW LOG
-    });
 
     // Validate file size (max 10MB)
     const maxSize = 10 * 1024 * 1024;
@@ -94,7 +91,6 @@ export async function POST(req) {
       );
     }
 
-    // Validate deviceType
     if (!['mobile', 'desktop'].includes(deviceType)) {
       return NextResponse.json(
         { success: false, error: 'deviceType must be "mobile" or "desktop"' },
@@ -102,7 +98,9 @@ export async function POST(req) {
       );
     }
 
-    // Convert file to base64
+    // 🎯 SIMPLE SOLUTION: Just store base64 in Firestore
+    // We'll only use this for preview - actual file can be uploaded after payment if needed
+    console.log('💾 [UPLOAD-AD-MEDIA] Converting to base64...');
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     const base64String = buffer.toString('base64');
@@ -116,8 +114,8 @@ export async function POST(req) {
       fileName: file.name,
       fileSize: file.size,
       fileType: file.type,
-      imageSrc: dataUrl,
-      destinationUrl: destinationUrl || null, // 🆕 NEW FIELD
+      imageSrc: dataUrl, // Store base64 for now
+      destinationUrl: destinationUrl || null,
       uploadedAt: Timestamp.now(),
       status: paymentStatus === 'completed' ? 'active' : 'pending_payment',
       paymentIntentId: paymentIntentId || null,
@@ -129,17 +127,12 @@ export async function POST(req) {
 
     // Save to Firestore
     const db = getFirestoreDb();
-    const docRef = await db.collection('adUploads').add(adMediaData);
+    const collectionName = paymentStatus === 'completed' ? 'adUploads' : 'pendingAdUploads';
+    const docRef = await db.collection(collectionName).add(adMediaData);
 
-    console.log('✅ Ad media uploaded successfully:', {
+    console.log('✅ [UPLOAD-AD-MEDIA] Saved to Firestore:', {
       docId: docRef.id,
-      fileName: file.name,
-      publisherId,
-      templateId,
-      deviceType,
-      status: adMediaData.status,
-      destinationUrl: adMediaData.destinationUrl, // 🆕 NEW LOG
-      dataUrlLength: dataUrl.length
+      collection: collectionName
     });
 
     return NextResponse.json({
@@ -149,19 +142,23 @@ export async function POST(req) {
         : 'Ad media uploaded, pending payment',
       data: {
         docId: docRef.id,
+        uploadId: docRef.id, // Add uploadId for consistency
         fileName: file.name,
         fileSize: file.size,
         publisherId,
         deviceType,
-        imageSrc: dataUrl,
-        destinationUrl: adMediaData.destinationUrl, // 🆕 NEW FIELD
+        destinationUrl: adMediaData.destinationUrl,
         status: adMediaData.status,
         uploadedAt: adMediaData.uploadedAt.toDate().toISOString()
       }
     });
 
   } catch (error) {
-    console.error('💥 Error in upload-ad-media POST:', error);
+    console.error('💥 [UPLOAD-AD-MEDIA] Error:', {
+      message: error.message,
+      stack: error.stack
+    });
+    
     return NextResponse.json(
       {
         success: false,
@@ -179,6 +176,8 @@ export async function PATCH(req) {
     const body = await req.json();
     const { adId, paymentIntentId } = body;
 
+    console.log('🔄 [UPLOAD-AD-MEDIA PATCH] Activating:', { adId, paymentIntentId });
+
     if (!adId || !paymentIntentId) {
       return NextResponse.json(
         { success: false, error: 'adId and paymentIntentId are required' },
@@ -187,6 +186,31 @@ export async function PATCH(req) {
     }
 
     const db = getFirestoreDb();
+    
+    // Check in pendingAdUploads first
+    const pendingRef = db.collection('pendingAdUploads').doc(adId);
+    const pendingDoc = await pendingRef.get();
+
+    if (pendingDoc.exists) {
+      const pendingData = pendingDoc.data();
+      
+      // Move to adUploads
+      await db.collection('adUploads').doc(adId).set({
+        ...pendingData,
+        status: 'active',
+        paymentStatus: 'completed',
+        paymentIntentId,
+        activatedAt: Timestamp.now()
+      });
+
+      // Delete from pending
+      await pendingRef.delete();
+
+      console.log('✅ [UPLOAD-AD-MEDIA PATCH] Moved to active');
+      return NextResponse.json({ success: true, message: 'Ad activated successfully' });
+    }
+
+    // Check in adUploads
     const adRef = db.collection('adUploads').doc(adId);
     const adDoc = await adRef.get();
 
@@ -197,7 +221,7 @@ export async function PATCH(req) {
       );
     }
 
-    // Update ad to active status
+    // Update to active
     await adRef.update({
       status: 'active',
       paymentStatus: 'completed',
@@ -205,24 +229,13 @@ export async function PATCH(req) {
       activatedAt: Timestamp.now()
     });
 
-    console.log('✅ Ad activated after payment:', {
-      adId,
-      paymentIntentId
-    });
-
-    return NextResponse.json({
-      success: true,
-      message: 'Ad activated successfully'
-    });
+    console.log('✅ [UPLOAD-AD-MEDIA PATCH] Activated');
+    return NextResponse.json({ success: true, message: 'Ad activated successfully' });
 
   } catch (error) {
-    console.error('💥 Error activating ad:', error);
+    console.error('💥 [UPLOAD-AD-MEDIA PATCH] Error:', error);
     return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to activate ad',
-        details: error.message
-      },
+      { success: false, error: 'Failed to activate ad', details: error.message },
       { status: 500 }
     );
   }

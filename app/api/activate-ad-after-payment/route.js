@@ -1,4 +1,4 @@
-// /api/activate-ad-after-payment/route.js - CLIENT SIDE
+// app/api/activate-ad-after-payment/route.js - SIMPLIFIED VERSION
 import { NextResponse } from 'next/server';
 import { getFirestoreDb } from '@/lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
@@ -13,26 +13,26 @@ export async function POST(request) {
     const body = await request.json();
     const { 
       paymentIntentId, 
+      uploadId, // This is the docId from pendingAdUploads
       publisherId, 
       templateId, 
-      deviceType, 
-      fileData 
+      deviceType
     } = body;
 
     console.log('📋 [ACTIVATE-AD] Request data:', {
       paymentIntentId,
+      uploadId,
       publisherId,
       templateId,
-      deviceType,
-      hasFileData: !!fileData
+      deviceType
     });
 
     // Validation
-    if (!paymentIntentId || !publisherId || !templateId || !deviceType) {
+    if (!paymentIntentId || !uploadId) {
       console.error('❌ [ACTIVATE-AD] Missing required fields');
       return NextResponse.json({
         success: false,
-        error: 'Missing required fields: paymentIntentId, publisherId, templateId, deviceType'
+        error: 'Missing required fields: paymentIntentId, uploadId'
       }, { status: 400 });
     }
 
@@ -44,18 +44,6 @@ export async function POST(request) {
 
     if (paymentIntent.status !== 'succeeded') {
       console.error('❌ [ACTIVATE-AD] Payment not successful:', paymentIntent.status);
-      
-      // Log failed activation attempt
-      await db.collection('activation_errors').add({
-        paymentIntentId,
-        publisherId,
-        templateId,
-        deviceType,
-        error: 'Payment not successful',
-        paymentStatus: paymentIntent.status,
-        timestamp: Timestamp.now()
-      });
-
       return NextResponse.json({
         success: false,
         error: 'Payment was not successful',
@@ -69,87 +57,49 @@ export async function POST(request) {
       status: paymentIntent.status
     });
 
-    // 2. Get payment record from Firebase
+    // 2. Use the existing PATCH endpoint to activate the ad
+    console.log('🔄 [ACTIVATE-AD] Calling PATCH to activate ad...');
+    
+    const patchResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/upload-ad-media`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        adId: uploadId,
+        paymentIntentId: paymentIntentId
+      })
+    });
+
+    const patchResult = await patchResponse.json();
+
+    if (!patchResult.success) {
+      throw new Error(patchResult.error || 'Failed to activate ad');
+    }
+
+    console.log('✅ [ACTIVATE-AD] Ad activated via PATCH endpoint');
+
+    // 3. Update payment record if exists
     const paymentsSnapshot = await db.collection('payments')
       .where('paymentIntentId', '==', paymentIntentId)
       .limit(1)
       .get();
 
-    let paymentData = null;
-    let paymentDocId = null;
-
     if (!paymentsSnapshot.empty) {
-      const paymentDoc = paymentsSnapshot.docs[0];
-      paymentData = paymentDoc.data();
-      paymentDocId = paymentDoc.id;
-      console.log('📄 [ACTIVATE-AD] Payment record found:', paymentDocId);
-    } else {
-      console.warn('⚠️ [ACTIVATE-AD] Payment record not found in Firebase');
-    }
-
-    // 3. Create ad upload record
-    console.log('💾 [ACTIVATE-AD] Creating ad upload record...');
-    
-    const adUploadData = {
-      publisherId,
-      templateId: parseInt(templateId, 10),
-      deviceType,
-      imageSrc: fileData || null,
-      status: 'active',
-      paymentStatus: 'completed',
-      paymentIntentId: paymentIntentId,
-      
-      // Payment details
-      paymentInfo: {
-        amount: paymentIntent.amount / 100,
-        amountInCents: paymentIntent.amount,
-        currency: paymentIntent.currency.toUpperCase(),
-        paidAt: Timestamp.now(),
-        stripeStatus: paymentIntent.status,
-        firebasePaymentDocId: paymentDocId
-      },
-      
-      // Metadata from payment
-      metadata: paymentIntent.metadata || {},
-      
-      // Timestamps
-      uploadedAt: Timestamp.now(),
-      activatedAt: Timestamp.now(),
-      
-      // Analytics
-      impressions: 0,
-      clicks: 0
-    };
-
-    const adUploadRef = await db.collection('adUploads').add(adUploadData);
-
-    console.log('✅ [ACTIVATE-AD] Ad upload created:', {
-      docId: adUploadRef.id,
-      publisherId,
-      templateId,
-      deviceType,
-      amount: adUploadData.paymentInfo.amount,
-      currency: adUploadData.paymentInfo.currency
-    });
-
-    // 4. Update payment record with ad reference
-    if (paymentDocId) {
+      const paymentDocId = paymentsSnapshot.docs[0].id;
       await db.collection('payments').doc(paymentDocId).update({
-        adUploadId: adUploadRef.id,
+        adUploadId: uploadId,
         adActivated: true,
         activatedAt: Timestamp.now(),
         updatedAt: Timestamp.now()
       });
-
-      console.log('📝 [ACTIVATE-AD] Payment record updated with ad reference');
+      console.log('📝 [ACTIVATE-AD] Payment record updated');
     }
 
-    // 5. Create activity log
+    // 4. Create activity log
     await db.collection('activity_logs').add({
       type: 'ad_activated',
       paymentIntentId,
-      adUploadId: adUploadRef.id,
-      publisherId,
+      adUploadId: uploadId,
+      publisherId: publisherId || 'unknown',
       amount: paymentIntent.amount / 100,
       currency: paymentIntent.currency.toUpperCase(),
       timestamp: Timestamp.now()
@@ -161,20 +111,17 @@ export async function POST(request) {
       success: true,
       message: 'Ad activated successfully',
       data: {
-        adUploadId: adUploadRef.id,
+        adUploadId: uploadId,
         paymentIntentId: paymentIntentId,
-        amount: adUploadData.paymentInfo.amount,
-        currency: adUploadData.paymentInfo.currency,
-        status: 'active',
-        activatedAt: adUploadData.activatedAt.toDate().toISOString()
+        amount: paymentIntent.amount / 100,
+        currency: paymentIntent.currency.toUpperCase(),
+        status: 'active'
       }
     });
 
   } catch (error) {
     console.error('🚨 [ACTIVATE-AD] Error:', {
       message: error.message,
-      type: error.type,
-      code: error.code,
       stack: error.stack
     });
 
@@ -183,10 +130,8 @@ export async function POST(request) {
       const db = getFirestoreDb();
       await db.collection('activation_errors').add({
         paymentIntentId: body?.paymentIntentId || null,
-        publisherId: body?.publisherId || null,
+        uploadId: body?.uploadId || null,
         errorMessage: error.message,
-        errorType: error.type,
-        errorCode: error.code,
         timestamp: Timestamp.now(),
         requestBody: body
       });
@@ -196,9 +141,7 @@ export async function POST(request) {
 
     return NextResponse.json({
       success: false,
-      error: error.message || 'Failed to activate ad',
-      errorType: error.type,
-      errorCode: error.code
+      error: error.message || 'Failed to activate ad'
     }, { status: 500 });
   }
 }
