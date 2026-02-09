@@ -6,12 +6,12 @@ export default function ServiceWorkerRegister() {
   useEffect(() => {
     // Only register service worker in production and if supported
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
-      console.log('🔧 Registering Service Worker...');
+      ('🔧 Registering Service Worker...');
 
       navigator.serviceWorker
         .register('/sw.js', { scope: '/' })
         .then((registration) => {
-          console.log('✅ Service Worker registered successfully:', registration.scope);
+          ('✅ Service Worker registered successfully:', registration.scope);
 
           // Handle updates
           registration.addEventListener('updatefound', () => {
@@ -20,7 +20,7 @@ export default function ServiceWorkerRegister() {
               newWorker.addEventListener('statechange', () => {
                 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                   // New content is available, notify user
-                  console.log('🔄 New content is available and will be used when all tabs for this page are closed.');
+                  ('🔄 New content is available and will be used when all tabs for this page are closed.');
 
                   // Optional: Show update notification to user
                   if (window.confirm('New version available! Refresh to update?')) {
@@ -34,7 +34,7 @@ export default function ServiceWorkerRegister() {
           // Handle messages from service worker
           navigator.serviceWorker.addEventListener('message', (event) => {
             if (event.data && event.data.type === 'CACHE_STATS') {
-              console.log('📊 Cache stats:', event.data);
+              ('📊 Cache stats:', event.data);
             }
           });
         })
@@ -44,11 +44,11 @@ export default function ServiceWorkerRegister() {
 
       // Handle controller change (when new SW takes control)
       navigator.serviceWorker.addEventListener('controllerchange', () => {
-        console.log('🎯 Service Worker controller changed - page will reload');
+        ('🎯 Service Worker controller changed - page will reload');
         window.location.reload();
       });
     } else {
-      console.log('⚠️ Service Worker not supported or not in production mode');
+      ('⚠️ Service Worker not supported or not in production mode');
     }
   }, []);
 

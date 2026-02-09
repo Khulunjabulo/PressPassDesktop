@@ -6,11 +6,11 @@ export default function MobilePreview({ adType, adImage, adUrl }) {
   const isBanner = adType === 'banner';
   const isMobile = adType === 'mobile';
 
-  console.log('MobilePreview - adType:', adType, 'adImage:', adImage ? 'exists' : 'missing', 'isBanner:', isBanner, 'isMobile:', isMobile);
+  ('MobilePreview - adType:', adType, 'adImage:', adImage ? 'exists' : 'missing', 'isBanner:', isBanner, 'isMobile:', isMobile);
 
   // Ad preview component - shows user's uploaded ad
   const AdPreview = ({ type, image, url, width, height, className = '' }) => {
-    console.log('MobilePreview AdPreview rendering:', { type, hasImage: !!image, width, height });
+    ('MobilePreview AdPreview rendering:', { type, hasImage: !!image, width, height });
     
     return (
       <div className={`relative ${className}`}>

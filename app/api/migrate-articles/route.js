@@ -15,7 +15,7 @@ export async function POST(req) {
       );
     }
 
-    console.log('🔄 Starting migration for publisher:', publisherId);
+    ('🔄 Starting migration for publisher:', publisherId);
 
     const db = getFirestoreDb();
     const publisherRef = db.collection('publishers').doc(publisherId);
@@ -27,14 +27,14 @@ export async function POST(req) {
     let draftsMoved = 0;
     let articlesAlreadyCorrect = 0;
 
-    console.log('📊 Found', articlesSnapshot.size, 'documents in articles collection');
+    ('📊 Found', articlesSnapshot.size, 'documents in articles collection');
 
     // Process each document
     for (const doc of articlesSnapshot.docs) {
       const data = doc.data();
       const docId = doc.id;
       
-      console.log('📄 Processing:', {
+      ('📄 Processing:', {
         id: docId,
         title: data.title,
         status: data.status,
@@ -45,7 +45,7 @@ export async function POST(req) {
       const shouldBeDraft = data.status === 'draft' || data.isDraft === true;
       
       if (shouldBeDraft) {
-        console.log('🔄 Moving to drafts collection:', data.title);
+        ('🔄 Moving to drafts collection:', data.title);
         
         // Prepare draft data (remove published-specific fields)
         const draftData = {
@@ -69,7 +69,7 @@ export async function POST(req) {
         draftsMoved++;
         migratedCount++;
         
-        console.log('✅ Moved to drafts:', data.title);
+        ('✅ Moved to drafts:', data.title);
       } else {
         // This should stay as an article, but ensure correct status
         const shouldBePublished = data.status === 'published' || data.isDraft === false;
@@ -91,9 +91,9 @@ export async function POST(req) {
           await publisherRef.collection('articles').doc(docId).update(publishedData);
           articlesAlreadyCorrect++;
           
-          console.log('✅ Updated published article:', data.title);
+          ('✅ Updated published article:', data.title);
         } else {
-          console.log('⚠️ Unclear status for:', data.title, 'status:', data.status, 'isDraft:', data.isDraft);
+          ('⚠️ Unclear status for:', data.title, 'status:', data.status, 'isDraft:', data.isDraft);
         }
       }
     }
@@ -102,7 +102,7 @@ export async function POST(req) {
     const existingDraftsSnapshot = await publisherRef.collection('drafts').get();
     let existingDraftsCount = existingDraftsSnapshot.size;
 
-    console.log('📊 Existing drafts in drafts collection:', existingDraftsCount);
+    ('📊 Existing drafts in drafts collection:', existingDraftsCount);
 
     // Ensure all existing drafts have correct structure
     if (existingDraftsCount > 0) {
@@ -121,7 +121,7 @@ export async function POST(req) {
         };
 
         await doc.ref.update(updatedDraftData);
-        console.log('✅ Updated existing draft structure:', data.title);
+        ('✅ Updated existing draft structure:', data.title);
       }
     }
 
@@ -139,7 +139,7 @@ export async function POST(req) {
       timestamp: new Date().toISOString()
     };
 
-    console.log('🎉 Migration completed:', summary);
+    ('🎉 Migration completed:', summary);
 
     return NextResponse.json(summary);
 

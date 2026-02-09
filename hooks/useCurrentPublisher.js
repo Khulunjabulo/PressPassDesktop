@@ -39,13 +39,13 @@ export const useCurrentPublisher = () => {
           id: data.uid || data.id || data.publisherId,
         };
         
-        console.log('✅ Publisher loaded with ID:', publisherWithId.id);
+        ('✅ Publisher loaded with ID:', publisherWithId.id);
         setPublisher(publisherWithId);
 
         // FIX: Auto-store publisher ID in localStorage for other components
         if (publisherWithId.id) {
           localStorage.setItem('currentPublisherId', publisherWithId.id);
-          console.log('💾 Publisher ID auto-stored in localStorage:', publisherWithId.id);
+          ('💾 Publisher ID auto-stored in localStorage:', publisherWithId.id);
         }
       } else {
         throw new Error(data.error || 'Failed to fetch profile');

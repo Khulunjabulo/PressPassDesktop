@@ -4,7 +4,7 @@ import { getFirestoreDb, getStorage } from '@/lib/firebase-admin';
 
 export async function POST(request) {
   try {
-    console.log('📨 Send message endpoint hit');
+    ('📨 Send message endpoint hit');
     
     const formData = await request.formData();
     const message = formData.get('message');
@@ -13,7 +13,7 @@ export async function POST(request) {
     const userName = formData.get('userName');
     const file = formData.get('file');
 
-    console.log('📝 Received data:', { message, email, userId, userName, hasFile: !!file });
+    ('📝 Received data:', { message, email, userId, userName, hasFile: !!file });
 
     // Validation
     if (!message && !file) {
@@ -32,13 +32,13 @@ export async function POST(request) {
       );
     }
 
-    console.log('✅ Validation passed');
+    ('✅ Validation passed');
 
     const db = getFirestoreDb();
     
     // Generate ticket ID
     const ticketNumber = `T-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
-    console.log('🎫 Generated ticket ID:', ticketNumber);
+    ('🎫 Generated ticket ID:', ticketNumber);
     
     // Handle file upload if present
     let fileUrl = null;
@@ -46,7 +46,7 @@ export async function POST(request) {
     
     if (file) {
       try {
-        console.log('📎 Processing file upload...');
+        ('📎 Processing file upload...');
         const storage = getStorage();
         const bucket = storage.bucket();
         const fileBuffer = Buffer.from(await file.arrayBuffer());
@@ -62,7 +62,7 @@ export async function POST(request) {
         await fileUpload.makePublic();
         fileUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
         fileName = file.name;
-        console.log('✅ File uploaded:', fileName);
+        ('✅ File uploaded:', fileName);
       } catch (fileError) {
         console.error('❌ File upload error:', fileError);
         // Continue without file if upload fails
@@ -98,13 +98,13 @@ export async function POST(request) {
       ]
     };
 
-    console.log('💾 Saving ticket to Firestore...');
+    ('💾 Saving ticket to Firestore...');
     const ticketRef = await db.collection('support-tickets').add(ticketData);
-    console.log('✅ Ticket saved with ID:', ticketRef.id);
+    ('✅ Ticket saved with ID:', ticketRef.id);
 
     // Send email notification to admin
     try {
-      console.log('📧 Sending email notification...');
+      ('📧 Sending email notification...');
       await db.collection('mail').add({
         to: process.env.ADMIN_EMAIL || 'admin@yourdomain.com',
         message: {
@@ -120,13 +120,13 @@ export async function POST(request) {
           `,
         },
       });
-      console.log('✅ Email queued');
+      ('✅ Email queued');
     } catch (emailError) {
       console.error('⚠️ Email notification failed:', emailError);
       // Don't fail the request if email fails
     }
 
-    console.log('🎉 Request completed successfully');
+    ('🎉 Request completed successfully');
     return NextResponse.json({
       success: true,
       ticketId: ticketNumber,

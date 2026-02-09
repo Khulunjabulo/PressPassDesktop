@@ -6,7 +6,7 @@ export async function GET(request, { params }) {
   try {
     const { publisherId } = await params;
     
-    console.log('🔍 Fetching articles for publisher:', publisherId);
+    ('🔍 Fetching articles for publisher:', publisherId);
     
     const db = getFirestoreDb();
     
@@ -15,7 +15,7 @@ export async function GET(request, { params }) {
     const publisherSnap = await publisherRef.get();
     
     if (!publisherSnap.exists) {
-      console.log('❌ Publisher not found:', publisherId);
+      ('❌ Publisher not found:', publisherId);
       return NextResponse.json(
         { success: false, error: 'Publisher not found' },
         { status: 404 }
@@ -23,7 +23,7 @@ export async function GET(request, { params }) {
     }
     
     const publisherData = publisherSnap.data();
-    console.log('✅ Publisher found:', publisherData.companyName);
+    ('✅ Publisher found:', publisherData.companyName);
     
     // Get articles from BOTH articles and drafts collections
     const articlesSnapshot = await publisherRef
@@ -39,13 +39,13 @@ export async function GET(request, { params }) {
     const articles = [];
     
     // Process published articles
-    console.log('📊 Processing', articlesSnapshot.size, 'published articles...');
+    ('📊 Processing', articlesSnapshot.size, 'published articles...');
     
     articlesSnapshot.forEach((doc) => {
       const articleData = doc.data();
       
       // 🔍 DEBUG: Log each article's type
-      console.log('📄 Article:', articleData.title?.substring(0, 40), {
+      ('📄 Article:', articleData.title?.substring(0, 40), {
         isRssFeed: articleData.isRssFeed,
         isPdfArticle: articleData.isPdfArticle,
         hasPdfUrl: !!articleData.pdfUrl
@@ -111,13 +111,13 @@ export async function GET(request, { params }) {
     });
     
     // Process drafts
-    console.log('📊 Processing', draftsSnapshot.size, 'draft articles...');
+    ('📊 Processing', draftsSnapshot.size, 'draft articles...');
     
     draftsSnapshot.forEach((doc) => {
       const articleData = doc.data();
       
       // 🔍 DEBUG: Log each draft's type
-      console.log('📄 Draft:', articleData.title?.substring(0, 40), {
+      ('📄 Draft:', articleData.title?.substring(0, 40), {
         isRssFeed: articleData.isRssFeed,
         isPdfArticle: articleData.isPdfArticle,
         hasPdfUrl: !!articleData.pdfUrl
@@ -185,24 +185,24 @@ export async function GET(request, { params }) {
     const rssArticlesCount = articles.filter(a => a.isRssFeed === true).length;
     const pdfArticlesCount = articles.filter(a => a.isPdfArticle === true).length;
     
-    console.log('📰 Total articles found:', articles.length);
-    console.log('📡 RSS feed articles:', rssArticlesCount);
-    console.log('📄 PDF articles:', pdfArticlesCount);
-    console.log('🖼️ Articles with images:', articles.filter(a => a.imageUrl).length);
+    ('📰 Total articles found:', articles.length);
+    ('📡 RSS feed articles:', rssArticlesCount);
+    ('📄 PDF articles:', pdfArticlesCount);
+    ('🖼️ Articles with images:', articles.filter(a => a.imageUrl).length);
     
     // 🔍 DEBUG: List all PDF articles found
     if (pdfArticlesCount > 0) {
-      console.log('📄 PDF Articles Details:');
+      ('📄 PDF Articles Details:');
       articles.filter(a => a.isPdfArticle).forEach((article, idx) => {
-        console.log(`  ${idx + 1}. "${article.title}" - File: ${article.pdfFileName}, Has URL: ${!!article.pdfUrl}`);
+        (`  ${idx + 1}. "${article.title}" - File: ${article.pdfFileName}, Has URL: ${!!article.pdfUrl}`);
       });
     }
     
     // 🔍 DEBUG: List all RSS articles found
     if (rssArticlesCount > 0) {
-      console.log('📡 RSS Articles Details:');
+      ('📡 RSS Articles Details:');
       articles.filter(a => a.isRssFeed).forEach((article, idx) => {
-        console.log(`  ${idx + 1}. "${article.title.substring(0, 50)}" - Feed: ${article.rssFeedName}`);
+        (`  ${idx + 1}. "${article.title.substring(0, 50)}" - Feed: ${article.rssFeedName}`);
       });
     }
     

@@ -22,7 +22,7 @@ export async function GET(request) {
       );
     }
 
-    console.log('🔍 Fetching single item:', { publisherId, itemId, collection });
+    ('🔍 Fetching single item:', { publisherId, itemId, collection });
 
     // Validate collection name
     if (!['articles', 'drafts'].includes(collection)) {
@@ -56,7 +56,7 @@ export async function GET(request) {
       collection: collection // Add collection info for reference
     };
 
-    console.log('✅ Single item retrieved successfully from', collection, 'collection');
+    ('✅ Single item retrieved successfully from', collection, 'collection');
 
     return NextResponse.json({
       success: true,

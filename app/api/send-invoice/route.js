@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { sendInvoiceEmail, generateInvoiceNumber } from '@/lib/emailInvoice';
 
 export async function POST(request) {
-  console.log('📧 POST /api/send-invoice - Sending invoice email...');
+  ('📧 POST /api/send-invoice - Sending invoice email...');
   
   try {
     const body = await request.json();
@@ -55,12 +55,12 @@ export async function POST(request) {
       paymentDate
     };
 
-    console.log('📨 Sending invoice to:', email);
+    ('📨 Sending invoice to:', email);
     
     // Send invoice email
     const result = await sendInvoiceEmail(invoiceData);
 
-    console.log('✅ Invoice email sent successfully');
+    ('✅ Invoice email sent successfully');
 
     return NextResponse.json({
       success: true,

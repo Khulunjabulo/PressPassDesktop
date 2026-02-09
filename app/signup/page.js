@@ -52,12 +52,12 @@ const MediaHubRegistration = () => {
 
   const router = useRouter();
 
-  console.log('🔄 Rendering MediaHubRegistration component');
+  ('🔄 Rendering MediaHubRegistration component');
 
   // Initialize Google Sign-In
   useEffect(() => {
     const handleGoogleCallback = (response) => {
-      console.log('📞 Google callback received in signup page');
+      ('📞 Google callback received in signup page');
       handleGoogleSignUp(response, setIsLoading, setShowFormModal, setGoogleUserData);
     };
 
@@ -79,7 +79,7 @@ const MediaHubRegistration = () => {
               shape: 'rectangular'
             }
           );
-          console.log('✅ Reader Google button rendered');
+          ('✅ Reader Google button rendered');
         }
 
         // Render button for publisher section
@@ -95,7 +95,7 @@ const MediaHubRegistration = () => {
               shape: 'rectangular'
             }
           );
-          console.log('✅ Publisher Google button rendered');
+          ('✅ Publisher Google button rendered');
         }
       }
     }, 1000);
@@ -118,7 +118,7 @@ const MediaHubRegistration = () => {
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
-    console.log('🖼️ Image selected:', file ? file.name : 'No file');
+    ('🖼️ Image selected:', file ? file.name : 'No file');
 
     setFormData((prev) => ({
       ...prev,
@@ -127,7 +127,7 @@ const MediaHubRegistration = () => {
 
     const reader = new FileReader();
     reader.onloadend = () => {
-      console.log('🎨 FileReader finished loading image');
+      ('🎨 FileReader finished loading image');
       setProfilePicPreview(reader.result);
     };
     if (file) {
@@ -139,7 +139,7 @@ const MediaHubRegistration = () => {
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    console.log(`📝 Input change: ${name}`);
+    (`📝 Input change: ${name}`);
 
     setFormData((prev) => ({
       ...prev,
@@ -148,7 +148,7 @@ const MediaHubRegistration = () => {
   };
 
   const handleReaderSubmit = async () => {
-    console.log('📝 Reader submit button clicked');
+    ('📝 Reader submit button clicked');
     const errors = validateReaderForm(formData);
     if (errors.length > 0) {
       alert(errors.join('\n'));
@@ -158,7 +158,7 @@ const MediaHubRegistration = () => {
   };
 
   const handlePublisherSubmit = async () => {
-    console.log('🏢 Publisher submit button clicked');
+    ('🏢 Publisher submit button clicked');
     const errors = validatePublisherForm(formData);
     if (errors.length > 0) {
       alert(errors.join('\n'));
@@ -168,7 +168,7 @@ const MediaHubRegistration = () => {
   };
 
   const handleModalClose = () => {
-    console.log('❌ Closing Google sign-up modal');
+    ('❌ Closing Google sign-up modal');
     setShowFormModal(false);
     setGoogleUserData(null);
   };

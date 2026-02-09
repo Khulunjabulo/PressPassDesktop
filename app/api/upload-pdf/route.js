@@ -6,7 +6,7 @@ import { Timestamp } from 'firebase-admin/firestore';
 export async function POST(req) {
   try {
     const contentType = req.headers.get('content-type') || '';
-    console.log('📄 PDF Upload request received');
+    ('📄 PDF Upload request received');
 
     if (!contentType.includes('multipart/form-data')) {
       return NextResponse.json(
@@ -39,7 +39,7 @@ export async function POST(req) {
       );
     }
 
-    console.log('📄 Processing PDF:', {
+    ('📄 Processing PDF:', {
       fileName: pdfFile.name,
       size: pdfFile.size,
       type: pdfFile.type,
@@ -52,7 +52,7 @@ export async function POST(req) {
     const base64Pdf = buffer.toString('base64');
     const pdfDataUrl = `data:${pdfFile.type};base64,${base64Pdf}`;
 
-    console.log('✅ PDF converted to base64, size:', base64Pdf.length);
+    ('✅ PDF converted to base64, size:', base64Pdf.length);
 
     // Create article document with PDF
     const articleData = {
@@ -104,7 +104,7 @@ export async function POST(req) {
     
     const docRef = await publisherRef.collection(collectionName).add(articleData);
 
-    console.log('✅ PDF article saved with ID:', docRef.id);
+    ('✅ PDF article saved with ID:', docRef.id);
 
     return NextResponse.json({
       success: true,

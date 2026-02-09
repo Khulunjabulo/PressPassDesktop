@@ -30,7 +30,7 @@ export async function GET(request) {
     const articleId = searchParams.get('articleId');
     const userId = searchParams.get('userId');
     
-    console.log('📊 GET engagement:', { publisherId, articleId, userId });
+    ('📊 GET engagement:', { publisherId, articleId, userId });
 
     if (!publisherId) {
       return NextResponse.json(
@@ -45,7 +45,7 @@ export async function GET(request) {
       const articleDoc = await getDoc(articleRef);
 
       if (!articleDoc.exists()) {
-        console.log('❌ Article not found:', articleId);
+        ('❌ Article not found:', articleId);
         return NextResponse.json(
           { success: false, error: 'Article not found' },
           { status: 404 }
@@ -64,7 +64,7 @@ export async function GET(request) {
         userHasLiked = engagementDoc.exists() && engagementDoc.data().liked;
       }
 
-      console.log('✅ Engagement data:', { likeCount, userHasLiked });
+      ('✅ Engagement data:', { likeCount, userHasLiked });
 
       return NextResponse.json({
         success: true,
@@ -124,7 +124,7 @@ export async function POST(request) {
     const body = await request.json();
     const { userId, publisherId, articleId, action } = body;
 
-    console.log('💙 POST engagement:', { userId, publisherId, articleId, action });
+    ('💙 POST engagement:', { userId, publisherId, articleId, action });
 
     if (!userId || !publisherId || !articleId || !action) {
       return NextResponse.json(
@@ -169,7 +169,7 @@ export async function POST(request) {
         lastEngagement: serverTimestamp()
       }, { merge: true });
 
-      console.log('✅ Article liked');
+      ('✅ Article liked');
 
       return NextResponse.json({
         success: true,
@@ -187,7 +187,7 @@ export async function POST(request) {
         lastEngagement: serverTimestamp()
       }, { merge: true });
 
-      console.log('✅ Article unliked');
+      ('✅ Article unliked');
 
       return NextResponse.json({
         success: true,

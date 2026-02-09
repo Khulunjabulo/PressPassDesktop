@@ -90,7 +90,7 @@ function removeUndefinedFields(obj) {
 
 // GET /api/ads - Fetch ads with improved error handling
 export async function GET(request) {
-  console.log('🚀 GET /api/ads - Starting request...');
+  ('🚀 GET /api/ads - Starting request...');
   
   try {
     const { searchParams } = new URL(request.url);
@@ -99,13 +99,13 @@ export async function GET(request) {
     const includeInactive = searchParams.get('includeInactive') === 'true';
     const debugMode = searchParams.get('debug') === 'true';
 
-    console.log('📋 Query parameters:', { requestedType, status, includeInactive, debugMode });
+    ('📋 Query parameters:', { requestedType, status, includeInactive, debugMode });
 
     const adsRef = collection(db, COLLECTION_NAME);
     
     // Get all documents
     const allDocsSnapshot = await getDocs(adsRef);
-    console.log(`📊 Found ${allDocsSnapshot.size} total documents in database`);
+    (`📊 Found ${allDocsSnapshot.size} total documents in database`);
     
     const allAds = [];
     const adsWithIssues = [];
@@ -177,18 +177,18 @@ export async function GET(request) {
         const hasValidImage = ad.desktopImage && validateBase64Image(ad.desktopImage);
         
         if (debugMode && !isActive) {
-          console.log(`❌ Ad ${ad.id} filtered out - status: ${ad.status} (needed: ${status})`);
+          (`❌ Ad ${ad.id} filtered out - status: ${ad.status} (needed: ${status})`);
         }
         if (debugMode && !isApproved) {
-          console.log(`❌ Ad ${ad.id} filtered out - approved: ${ad.approved} (needed: true)`);
+          (`❌ Ad ${ad.id} filtered out - approved: ${ad.approved} (needed: true)`);
         }
         if (debugMode && !hasValidImage) {
-          console.log(`❌ Ad ${ad.id} filtered out - invalid image`);
+          (`❌ Ad ${ad.id} filtered out - invalid image`);
         }
         
         return isActive && isApproved && hasValidImage;
       });
-      console.log(`🔍 Status filter: ${beforeCount} → ${filteredAds.length} ads`);
+      (`🔍 Status filter: ${beforeCount} → ${filteredAds.length} ads`);
     }
 
     // Filter by type
@@ -197,11 +197,11 @@ export async function GET(request) {
       filteredAds = filteredAds.filter(ad => {
         const matches = ad.adType === requestedType;
         if (debugMode && !matches) {
-          console.log(`❌ Ad ${ad.id} filtered out - type: ${ad.adType} (needed: ${requestedType})`);
+          (`❌ Ad ${ad.id} filtered out - type: ${ad.adType} (needed: ${requestedType})`);
         }
         return matches;
       });
-      console.log(`🔍 Type filter: ${beforeCount} → ${filteredAds.length} ads`);
+      (`🔍 Type filter: ${beforeCount} → ${filteredAds.length} ads`);
     }
 
     // Sort by creation date (newest first)
@@ -211,7 +211,7 @@ export async function GET(request) {
       return dateB - dateA;
     });
 
-    console.log(`🎉 Returning ${filteredAds.length} ads for type: ${requestedType || 'any'}`);
+    (`🎉 Returning ${filteredAds.length} ads for type: ${requestedType || 'any'}`);
 
     // Enhanced debug info
     if (debugMode) {
@@ -264,12 +264,12 @@ export async function GET(request) {
 
 // POST /api/ads - Create new ad with enhanced validation
 export async function POST(request) {
-  console.log('📝 POST /api/ads - Creating new ad...');
+  ('📝 POST /api/ads - Creating new ad...');
   
   try {
     const body = await request.json();
     
-    console.log('📦 Received ad data:', {
+    ('📦 Received ad data:', {
       title: body.title,
       url: body.url,
       adType: body.adType,
@@ -368,7 +368,7 @@ export async function POST(request) {
       } else {
         finalAdType = 'sidebar_rectangle';
       }
-      console.log(`🔧 Inferred adType: ${finalAdType} from dimensions: ${width}x${height}`);
+      (`🔧 Inferred adType: ${finalAdType} from dimensions: ${width}x${height}`);
     }
 
     // Validate adType
@@ -384,7 +384,7 @@ export async function POST(request) {
     const desktopImageInfo = getImageInfo(desktopImage);
     const mobileImageInfo = mobileImage ? getImageInfo(mobileImage) : null;
     
-    console.log('🖼️ Image info:', {
+    ('🖼️ Image info:', {
       desktop: desktopImageInfo,
       mobile: mobileImageInfo
     });
@@ -457,7 +457,7 @@ export async function POST(request) {
     // 🔧 EXTRA SAFETY: Remove any undefined fields (recursive)
     const cleanedAdData = removeUndefinedFields(adData);
 
-    console.log('🔍 Final adData validation:', {
+    ('🔍 Final adData validation:', {
       hasPaymentInfo: !!cleanedAdData.paymentInfo,
       paymentIntentId: cleanedAdData.paymentInfo?.paymentIntentId,
       amount: cleanedAdData.paymentInfo?.amount,
@@ -474,11 +474,11 @@ export async function POST(request) {
       throw new Error('CRITICAL: amount is undefined or zero in adData');
     }
 
-    console.log('💾 Saving ad to Firestore...');
+    ('💾 Saving ad to Firestore...');
     const adsRef = collection(db, COLLECTION_NAME);
     const docRef = await addDoc(adsRef, cleanedAdData);
     
-    console.log('✅ Ad saved successfully with ID:', docRef.id);
+    ('✅ Ad saved successfully with ID:', docRef.id);
 
     return NextResponse.json({
       success: true,
@@ -516,7 +516,7 @@ export async function POST(request) {
 
 // PUT /api/ads - Update existing ad
 export async function PUT(request) {
-  console.log('📝 PUT /api/ads - Updating ad...');
+  ('📝 PUT /api/ads - Updating ad...');
   
   try {
     const body = await request.json();
@@ -529,7 +529,7 @@ export async function PUT(request) {
       }, { status: 400 });
     }
 
-    console.log('📝 Updating ad:', id, 'with updates:', Object.keys(updates));
+    ('📝 Updating ad:', id, 'with updates:', Object.keys(updates));
 
     // Remove undefined fields from updates
     const cleanedUpdates = removeUndefinedFields(updates);
@@ -540,7 +540,7 @@ export async function PUT(request) {
       updatedAt: serverTimestamp()
     });
 
-    console.log('✅ Ad updated successfully:', id);
+    ('✅ Ad updated successfully:', id);
 
     return NextResponse.json({
       success: true,
@@ -568,7 +568,7 @@ export async function PUT(request) {
 
 // DELETE /api/ads - Delete ad
 export async function DELETE(request) {
-  console.log('🗑️ DELETE /api/ads - Deleting ad...');
+  ('🗑️ DELETE /api/ads - Deleting ad...');
   
   try {
     const { searchParams } = new URL(request.url);
@@ -581,12 +581,12 @@ export async function DELETE(request) {
       }, { status: 400 });
     }
 
-    console.log('🗑️ Deleting ad:', id);
+    ('🗑️ Deleting ad:', id);
 
     const adRef = doc(db, COLLECTION_NAME, id);
     await deleteDoc(adRef);
 
-    console.log('✅ Ad deleted successfully:', id);
+    ('✅ Ad deleted successfully:', id);
 
     return NextResponse.json({
       success: true,

@@ -4,11 +4,11 @@ import { getFirestoreDb, getAuth } from '../../../lib/firebase-admin';
 import jwt from 'jsonwebtoken';
 
 export async function POST(request) {
-  console.log('🔍 Starting Google sign-in check...');
+  ('🔍 Starting Google sign-in check...');
   
   try {
     const { credential } = await request.json();
-    console.log('📥 Received credential check request');
+    ('📥 Received credential check request');
 
     if (!credential) {
       console.error('❌ No Google credential provided');
@@ -16,7 +16,7 @@ export async function POST(request) {
     }
 
     // Decode Google JWT token
-    console.log('🔍 Decoding Google JWT token...');
+    ('🔍 Decoding Google JWT token...');
     const decodedToken = jwt.decode(credential);
     
     if (!decodedToken) {
@@ -25,7 +25,7 @@ export async function POST(request) {
     }
 
     const { email } = decodedToken;
-    console.log('✅ Checking roles for email:', email);
+    ('✅ Checking roles for email:', email);
 
     // Initialize Firebase
     const db = getFirestoreDb();
@@ -35,10 +35,10 @@ export async function POST(request) {
     let firebaseUser;
     try {
       firebaseUser = await auth.getUserByEmail(email);
-      console.log('✅ Firebase user found:', firebaseUser.uid);
+      ('✅ Firebase user found:', firebaseUser.uid);
     } catch (error) {
       if (error.code === 'auth/user-not-found') {
-        console.log('❌ No account found with this email');
+        ('❌ No account found with this email');
         return NextResponse.json({ 
           success: false, 
           error: 'No account found with this email. Please sign up first.' 
@@ -60,23 +60,23 @@ export async function POST(request) {
     
     if (readerDoc.exists && readerDoc.data().isActive) {
       availableRoles.push('reader');
-      console.log('✅ Found active reader account');
+      ('✅ Found active reader account');
     }
     
     if (publisherDoc.exists && publisherDoc.data().isActive) {
       availableRoles.push('publisher');
-      console.log('✅ Found active publisher account');
+      ('✅ Found active publisher account');
     }
 
     if (availableRoles.length === 0) {
-      console.log('❌ No active accounts found');
+      ('❌ No active accounts found');
       return NextResponse.json({ 
         success: false, 
         error: 'No active account found. Please sign up first.' 
       }, { status: 404 });
     }
 
-    console.log('✅ Available roles:', availableRoles);
+    ('✅ Available roles:', availableRoles);
     
     return NextResponse.json({
       success: true,

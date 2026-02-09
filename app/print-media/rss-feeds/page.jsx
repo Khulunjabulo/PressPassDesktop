@@ -20,7 +20,7 @@ export default function RssFeeds() {
 
   // Debug: Log publisher data
   useEffect(() => {
-    console.log('🔍 Publisher Debug:', {
+    ('🔍 Publisher Debug:', {
       hasPublisher: !!publisher,
       publisherId: publisher?.id,
       publisherUid: publisher?.uid,
@@ -45,7 +45,7 @@ export default function RssFeeds() {
     
     try {
       setLoading(true)
-      console.log('Fetching RSS feeds for publisher:', publisherId)
+      ('Fetching RSS feeds for publisher:', publisherId)
       const response = await fetch(`/api/rss-feeds?publisherId=${publisherId}`)
       const data = await response.json()
       
@@ -84,12 +84,12 @@ export default function RssFeeds() {
       return
     }
     
-    console.log('✅ Validation passed. Publisher ID:', publisherId);
-    console.log('✅ Feed URL:', feedUrl.trim());
+    ('✅ Validation passed. Publisher ID:', publisherId);
+    ('✅ Feed URL:', feedUrl.trim());
     
     try {
       setPreviewLoading(true)
-      console.log('Previewing RSS feed:', feedUrl)
+      ('Previewing RSS feed:', feedUrl)
       const response = await fetch('/api/rss-feeds', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -102,7 +102,7 @@ export default function RssFeeds() {
       })
 
       const data = await response.json()
-      console.log('Preview response:', data)
+      ('Preview response:', data)
 
       if (data.success) {
         setPreviewData(data)
@@ -138,12 +138,12 @@ export default function RssFeeds() {
       return
     }
     
-    console.log('✅ Publishing with Publisher ID:', publisherId);
-    console.log('✅ Feed URL:', feedUrl.trim());
+    ('✅ Publishing with Publisher ID:', publisherId);
+    ('✅ Feed URL:', feedUrl.trim());
     
     try {
       setPublishingFeed(true)
-      console.log('Publishing RSS feed for publisher:', publisherId)
+      ('Publishing RSS feed for publisher:', publisherId)
       const response = await fetch('/api/rss-feeds', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -156,7 +156,7 @@ export default function RssFeeds() {
       })
 
       const data = await response.json()
-      console.log('Publish response:', data)
+      ('Publish response:', data)
 
       if (data.success) {
         alert(`RSS feed published! ${data.articlesPublished} articles added.`)
@@ -181,7 +181,7 @@ export default function RssFeeds() {
     if (!publisherId) return
     
     try {
-      console.log('Syncing feed:', feedId, 'for publisher:', publisherId)
+      ('Syncing feed:', feedId, 'for publisher:', publisherId)
       const response = await fetch(`/api/rss-feeds/${feedId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -211,7 +211,7 @@ export default function RssFeeds() {
     if (!confirm('Are you sure? This will delete the RSS feed and all its articles.')) return
     
     try {
-      console.log('Deleting feed:', feedId, 'for publisher:', publisherId)
+      ('Deleting feed:', feedId, 'for publisher:', publisherId)
       const response = await fetch(`/api/rss-feeds/${feedId}?publisherId=${publisherId}`, {
         method: 'DELETE'
       })

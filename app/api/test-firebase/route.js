@@ -12,7 +12,7 @@ export async function GET(req) {
       publisherId = 'test-publisher';
     }
 
-    console.log('🔍 Testing Firebase for publisherId:', publisherId);
+    ('🔍 Testing Firebase for publisherId:', publisherId);
 
     // ✅ Get Firestore instance
     const db = getFirestoreDb();
@@ -46,7 +46,7 @@ export async function POST(req) {
       publisherId = 'test-publisher';
     }
 
-    console.log('🔍 Testing Firebase for publisherId:', publisherId);
+    ('🔍 Testing Firebase for publisherId:', publisherId);
 
     // ✅ Get Firestore instance
     const db = getFirestoreDb();

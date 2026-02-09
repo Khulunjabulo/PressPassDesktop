@@ -196,7 +196,7 @@ export default function ArticleViewPage() {
     
     try {
       setLoading(true);
-      console.log('🔍 Fetching article:', params.articleId, 'from publisher:', publisherId);
+      ('🔍 Fetching article:', params.articleId, 'from publisher:', publisherId);
       
       const response = await fetch(`/api/news-sources/${publisherId}/articles`);
       const data = await response.json();
@@ -204,7 +204,7 @@ export default function ArticleViewPage() {
       if (data.success) {
         const foundArticle = data.articles.find(a => a.id === params.articleId);
         if (foundArticle) {
-          console.log('✅ Article found:', {
+          ('✅ Article found:', {
             id: foundArticle.id,
             title: foundArticle.title,
             isPdfArticle: foundArticle.isPdfArticle,
@@ -329,7 +329,7 @@ export default function ArticleViewPage() {
   }
 
   // 🆕 CHECK IF THIS IS A PDF ARTICLE FIRST
-  console.log('🔍 Rendering article:', {
+  ('🔍 Rendering article:', {
     isPdfArticle: article.isPdfArticle,
     hasPdfUrl: !!article.pdfUrl,
     pdfFileName: article.pdfFileName
@@ -382,11 +382,11 @@ export default function ArticleViewPage() {
                       navigator.share({
                         title: article.title,
                         url: window.location.href
-                      }).catch(err => console.log('Share failed:', err));
+                      }).catch(err => ('Share failed:', err));
                     } else {
                       navigator.clipboard.writeText(window.location.href)
                         .then(() => alert('Link copied to clipboard!'))
-                        .catch(err => console.log('Copy failed:', err));
+                        .catch(err => ('Copy failed:', err));
                     }
                   }
                 }}

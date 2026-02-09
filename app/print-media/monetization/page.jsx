@@ -108,10 +108,10 @@ export default function MonetizationPage() {
   // Initialize publisher ID
   useEffect(() => {
     const initializePublisherId = () => {
-      console.log('🔍 Initializing publisher ID...');
+      ('🔍 Initializing publisher ID...');
       
       let publisherId = localStorage.getItem('currentPublisherId');
-      console.log('📦 From localStorage:', publisherId);
+      ('📦 From localStorage:', publisherId);
 
       if (!publisherId) {
         const userDataStr = localStorage.getItem('currentUser');
@@ -119,11 +119,11 @@ export default function MonetizationPage() {
           try {
             const userData = JSON.parse(userDataStr);
             publisherId = userData.uid || userData.id;
-            console.log('📦 From currentUser:', publisherId);
+            ('📦 From currentUser:', publisherId);
             
             if (publisherId) {
               localStorage.setItem('currentPublisherId', publisherId);
-              console.log('💾 Stored publisher ID for future use');
+              ('💾 Stored publisher ID for future use');
             }
           } catch (e) {
             console.error('❌ Error parsing currentUser:', e);
@@ -134,10 +134,10 @@ export default function MonetizationPage() {
       if (!publisherId && publisher?.id) {
         publisherId = publisher.id;
         localStorage.setItem('currentPublisherId', publisherId);
-        console.log('📦 From publisher hook:', publisherId);
+        ('📦 From publisher hook:', publisherId);
       }
 
-      console.log('✅ Final Publisher ID:', publisherId);
+      ('✅ Final Publisher ID:', publisherId);
       setCurrentPublisherId(publisherId);
       setIsInitializing(false);
     };
@@ -148,7 +148,7 @@ export default function MonetizationPage() {
   // Update publisher ID when publisher hook updates
   useEffect(() => {
     if (publisher?.id && !currentPublisherId) {
-      console.log('🔄 Updating publisher ID from hook:', publisher.id);
+      ('🔄 Updating publisher ID from hook:', publisher.id);
       setCurrentPublisherId(publisher.id);
       localStorage.setItem('currentPublisherId', publisher.id);
     }
@@ -163,7 +163,7 @@ export default function MonetizationPage() {
       }
 
       try {
-        console.log('🔍 Fetching ads for:', { currentPublisherId, deviceType });
+        ('🔍 Fetching ads for:', { currentPublisherId, deviceType });
         
         const response = await fetch(
           `/api/get-ads?publisherId=${currentPublisherId}&deviceType=${deviceType}`
@@ -174,7 +174,7 @@ export default function MonetizationPage() {
         }
 
         const result = await response.json();
-        console.log('📦 API Response:', result);
+        ('📦 API Response:', result);
 
         if (result.success && result.data) {
           const adsMap = {};
@@ -185,7 +185,7 @@ export default function MonetizationPage() {
             adsMap[ad.templateId].push(ad);
           });
           
-          console.log('✅ Grouped ads by template:', adsMap);
+          ('✅ Grouped ads by template:', adsMap);
           setUploadedAds(adsMap);
         } else {
           console.warn('⚠️ No ads found:', result);
@@ -211,7 +211,7 @@ export default function MonetizationPage() {
 
   const handleUploadComplete = async (file) => {
     try {
-      console.log('📤 Upload complete, creating preview...', {
+      ('📤 Upload complete, creating preview...', {
         fileName: file.name,
         fileType: file.type,
         fileSize: file.size,
@@ -228,7 +228,7 @@ export default function MonetizationPage() {
           fileType: file.type
         };
         
-        console.log('✅ Preview data created:', {
+        ('✅ Preview data created:', {
           fileName: previewData.fileName,
           fileType: previewData.fileType,
           imageSrcLength: previewData.imageSrc?.length
@@ -245,7 +245,7 @@ export default function MonetizationPage() {
           publisherId: currentPublisherId
         };
         
-        console.log('💾 Setting pending upload:', {
+        ('💾 Setting pending upload:', {
           templateId: uploadData.templateId,
           deviceType: uploadData.deviceType,
           publisherId: uploadData.publisherId,
@@ -269,9 +269,9 @@ export default function MonetizationPage() {
   };
 
   const handleAcceptTerms = () => {
-    console.log('📋 Terms accepted, proceeding to payment...');
-    console.log('🔍 Checking pending upload:', pendingUpload);
-    console.log('🔍 Checking publisher:', publisher);
+    ('📋 Terms accepted, proceeding to payment...');
+    ('🔍 Checking pending upload:', pendingUpload);
+    ('🔍 Checking publisher:', publisher);
     
     // Validate we have all required data
     if (!pendingUpload) {
@@ -294,7 +294,7 @@ export default function MonetizationPage() {
     // Calculate price based on publisher's ad pricing (default to 500 if not set)
     const adPrice = publisher?.adPricing?.[`template${pendingUpload.templateId}`] || 500;
     
-    console.log('💰 Payment details:', {
+    ('💰 Payment details:', {
       adPrice,
       templateId: pendingUpload.templateId,
       templateName,
@@ -313,11 +313,11 @@ export default function MonetizationPage() {
       type: 'ad_space'
     };
 
-    console.log('📦 Payment metadata:', metadata);
+    ('📦 Payment metadata:', metadata);
 
     const paymentUrl = `/payment?amount=${adPrice}&currency=ZAR&description=${encodeURIComponent(`${templateName} - ${deviceType} (${spec.width}x${spec.height}px)`)}&metadata=${encodeURIComponent(JSON.stringify(metadata))}&returnUrl=${encodeURIComponent(window.location.href)}`;
     
-    console.log('🔗 Payment URL created:', paymentUrl);
+    ('🔗 Payment URL created:', paymentUrl);
     
     // Store pending upload in sessionStorage for after payment
     // Convert file to base64 for storage
@@ -336,7 +336,7 @@ export default function MonetizationPage() {
         previewData: pendingUpload.fileData
       };
       
-      console.log('💾 Storing in sessionStorage:', {
+      ('💾 Storing in sessionStorage:', {
         templateId: uploadDataForStorage.templateId,
         deviceType: uploadDataForStorage.deviceType,
         publisherId: uploadDataForStorage.publisherId
@@ -344,7 +344,7 @@ export default function MonetizationPage() {
       
       sessionStorage.setItem('pendingAdUpload', JSON.stringify(uploadDataForStorage));
       
-      console.log('🚀 Navigating to payment page...');
+      ('🚀 Navigating to payment page...');
       router.push(paymentUrl);
     };
     
@@ -358,7 +358,7 @@ export default function MonetizationPage() {
   };
 
   const handleProceedToPayment = () => {
-    console.log('💳 Proceeding to payment, opening T&C modal...');
+    ('💳 Proceeding to payment, opening T&C modal...');
     setShowTerms(true);
   };
 
@@ -366,7 +366,7 @@ export default function MonetizationPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('payment') === 'success') {
-      console.log('✅ Payment successful detected!');
+      ('✅ Payment successful detected!');
       const uploadData = sessionStorage.getItem('pendingAdUpload');
       if (uploadData) {
         handlePaymentSuccess(JSON.parse(uploadData));
@@ -380,7 +380,7 @@ export default function MonetizationPage() {
 
   const handlePaymentSuccess = async (uploadData) => {
     try {
-      console.log('🎉 Handling payment success, refreshing ads...');
+      ('🎉 Handling payment success, refreshing ads...');
       
       alert('Payment successful! Your ad has been activated.');
       
@@ -401,7 +401,7 @@ export default function MonetizationPage() {
         setUploadedAds(adsMap);
       }
       
-      console.log('✅ Ads refreshed successfully');
+      ('✅ Ads refreshed successfully');
     } catch (error) {
       console.error('❌ Error processing payment success:', error);
     }

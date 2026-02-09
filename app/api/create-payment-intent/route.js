@@ -7,13 +7,13 @@ import { Timestamp } from 'firebase-admin/firestore';
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export async function POST(request) {
-  console.log('💳 [CREATE-PAYMENT-INTENT] Starting...');
+  ('💳 [CREATE-PAYMENT-INTENT] Starting...');
   
   try {
     const body = await request.json();
     const { amount, currency = 'zar', metadata = {} } = body;
 
-    console.log('📋 [CREATE-PAYMENT-INTENT] Request data:', {
+    ('📋 [CREATE-PAYMENT-INTENT] Request data:', {
       amount,
       currency,
       metadata
@@ -31,7 +31,7 @@ export async function POST(request) {
     // Convert amount to cents (Stripe requires smallest currency unit)
     const amountInCents = Math.round(amount * 100);
 
-    console.log('💰 [CREATE-PAYMENT-INTENT] Amount conversion:', {
+    ('💰 [CREATE-PAYMENT-INTENT] Amount conversion:', {
       original: amount,
       inCents: amountInCents,
       currency: currency.toUpperCase()
@@ -51,7 +51,7 @@ export async function POST(request) {
       },
     });
 
-    console.log('✅ [CREATE-PAYMENT-INTENT] Stripe payment intent created:', {
+    ('✅ [CREATE-PAYMENT-INTENT] Stripe payment intent created:', {
       id: paymentIntent.id,
       amount: paymentIntent.amount,
       currency: paymentIntent.currency,
@@ -75,7 +75,7 @@ export async function POST(request) {
 
     const paymentRef = await db.collection('payments').add(paymentRecord);
 
-    console.log('💾 [CREATE-PAYMENT-INTENT] Payment record saved to Firebase:', {
+    ('💾 [CREATE-PAYMENT-INTENT] Payment record saved to Firebase:', {
       docId: paymentRef.id,
       paymentIntentId: paymentIntent.id,
       amount: amount,

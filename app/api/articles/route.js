@@ -7,14 +7,14 @@ const db = getFirestore(app);
 
 export async function GET(request) {
   try {
-    console.log('📚 Fetching all articles from all publishers...');
+    ('📚 Fetching all articles from all publishers...');
     
     const allArticles = [];
 
     // Get all publishers
     const publishersRef = collection(db, 'publishers');
     const publishersSnapshot = await getDocs(publishersRef);
-    console.log(`📊 Found ${publishersSnapshot.size} publishers`);
+    (`📊 Found ${publishersSnapshot.size} publishers`);
 
     // Loop through each publisher and get their articles
     for (const publisherDoc of publishersSnapshot.docs) {
@@ -22,13 +22,13 @@ export async function GET(request) {
         const publisherId = publisherDoc.id;
         const publisherData = publisherDoc.data();
         
-        console.log(`📖 Fetching articles for: ${publisherData.companyName || publisherId}`);
+        (`📖 Fetching articles for: ${publisherData.companyName || publisherId}`);
         
         // Get articles subcollection for this publisher
         const articlesRef = collection(db, 'publishers', publisherId, 'articles');
         const articlesSnapshot = await getDocs(articlesRef);
         
-        console.log(`  ✅ Found ${articlesSnapshot.size} articles`);
+        (`  ✅ Found ${articlesSnapshot.size} articles`);
 
         // Add each article to the list with publisher info
         articlesSnapshot.docs.forEach(articleDoc => {
@@ -63,7 +63,7 @@ export async function GET(request) {
       }
     }
 
-    console.log(`✅ Total articles fetched: ${allArticles.length}`);
+    (`✅ Total articles fetched: ${allArticles.length}`);
 
     // Sort by creation date (newest first)
     allArticles.sort((a, b) => {
@@ -77,7 +77,7 @@ export async function GET(request) {
       title: a.title?.substring(0, 30),
       author: a.author
     }));
-    console.log('📝 Sample article authors:', sampleAuthors);
+    ('📝 Sample article authors:', sampleAuthors);
 
     return NextResponse.json({
       success: true,

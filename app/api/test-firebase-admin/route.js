@@ -4,15 +4,15 @@ import { getFirestoreDb, getAuth } from '@/lib/firebase-admin.js';
 
 export async function GET() {
   try {
-    console.log('🧪 Testing Firebase Admin SDK initialization...');
+    ('🧪 Testing Firebase Admin SDK initialization...');
     
     // Test Firestore initialization
     const db = getFirestoreDb();
-    console.log('✅ Firestore initialized successfully');
+    ('✅ Firestore initialized successfully');
     
     // Test Auth initialization
     const auth = getAuth();
-    console.log('✅ Auth initialized successfully');
+    ('✅ Auth initialized successfully');
     
     // Test basic Firestore operation
     const testRef = db.collection('test').doc('firebase-admin-test');
@@ -20,11 +20,11 @@ export async function GET() {
       test: true,
       timestamp: new Date().toISOString()
     });
-    console.log('✅ Firestore write operation successful');
+    ('✅ Firestore write operation successful');
     
     // Test basic Auth operation
     const users = await auth.listUsers(1);
-    console.log('✅ Auth read operation successful');
+    ('✅ Auth read operation successful');
     
     return NextResponse.json({
       success: true,

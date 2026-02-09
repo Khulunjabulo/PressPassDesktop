@@ -37,7 +37,7 @@ export async function POST(req) {
 
     const publisherId = normalizePublisherId(rawPublisherId);
 
-    console.log('📁 Processing ad media upload:', {
+    ('📁 Processing ad media upload:', {
       fileName: file.name,
       fileSize: file.size,
       fileType: file.type,
@@ -110,7 +110,7 @@ export async function POST(req) {
     const db = getFirestoreDb();
     const docRef = await db.collection('adUploads').add(adMediaData);
 
-    console.log('✅ Ad media uploaded successfully:', {
+    ('✅ Ad media uploaded successfully:', {
       docId: docRef.id,
       fileName: file.name,
       publisherId,
@@ -182,7 +182,7 @@ export async function PATCH(req) {
       activatedAt: Timestamp.now()
     });
 
-    console.log('✅ Ad activated after payment:', {
+    ('✅ Ad activated after payment:', {
       adId,
       paymentIntentId
     });

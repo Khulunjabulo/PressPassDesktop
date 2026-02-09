@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { getFirestoreDb } from '../../../lib/firebase-admin';
 
 export async function POST(request) {
-  console.log('📝 Processing email signup...');
+  ('📝 Processing email signup...');
   
   try {
     const { 
@@ -26,7 +26,7 @@ export async function POST(request) {
       contactName
     } = await request.json();
 
-    console.log('📥 Received signup data:', { 
+    ('📥 Received signup data:', { 
       uid, 
       email, 
       role, 
@@ -43,18 +43,18 @@ export async function POST(request) {
     }
 
     // Initialize Firebase
-    console.log('🔥 Initializing Firestore...');
+    ('🔥 Initializing Firestore...');
     const db = getFirestoreDb();
 
     const roleSpecificUid = `${role}_${uid}`;
     const collectionName = role === 'reader' ? 'readers' : 'publishers';
 
     // Check if user already exists in role-specific collection
-    console.log('🔍 Checking if user already exists...');
+    ('🔍 Checking if user already exists...');
     const existingDoc = await db.collection(collectionName).doc(roleSpecificUid).get();
     
     if (existingDoc.exists) {
-      console.log('⚠️ User already exists in role-specific collection');
+      ('⚠️ User already exists in role-specific collection');
       return NextResponse.json({ 
         success: false, 
         error: `You already have a ${role} account.` 
@@ -90,7 +90,7 @@ export async function POST(request) {
         location: '',
         dateOfBirth: ''
       };
-      console.log('👤 Prepared reader data');
+      ('👤 Prepared reader data');
     } else if (role === 'publisher') {
   userData = {
     ...userData,
@@ -138,15 +138,15 @@ export async function POST(request) {
     proofOfAddress: null,
     bankingDetails: ''
   };
-  console.log('🏢 Prepared publisher data with approval fields');
+  ('🏢 Prepared publisher data with approval fields');
 }
 
     // Save to Firestore
-    console.log('💾 Saving user data to Firestore...');
+    ('💾 Saving user data to Firestore...');
     await db.collection(collectionName).doc(roleSpecificUid).set(userData);
-    console.log('✅ User data saved successfully');
+    ('✅ User data saved successfully');
 
-    console.log('🎉 Email signup process completed successfully');
+    ('🎉 Email signup process completed successfully');
     
     return NextResponse.json({
       success: true,

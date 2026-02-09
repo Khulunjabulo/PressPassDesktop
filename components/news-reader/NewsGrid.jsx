@@ -264,7 +264,7 @@ function AdCreationModal({ isOpen, onClose, adType, dimensions }) {
   const handleFileUpload = async (file, type) => {
     if (!file) return;
 
-    console.log(`📤 Processing ${type} image:`, {
+    (`📤 Processing ${type} image:`, {
       name: file.name,
       size: `${(file.size / 1024 / 1024).toFixed(2)}MB`,
       type: file.type
@@ -305,7 +305,7 @@ function AdCreationModal({ isOpen, onClose, adType, dimensions }) {
         return;
       }
 
-      console.log(`✅ ${type} image processed successfully`);
+      (`✅ ${type} image processed successfully`);
 
       setErrors(prev => {
         const newErrors = { ...prev };
@@ -444,7 +444,7 @@ function AdCreationModal({ isOpen, onClose, adType, dimensions }) {
         createdAt: new Date().toISOString()
       };
 
-      console.log('📤 Storing ad data for payment:', {
+      ('📤 Storing ad data for payment:', {
         title: adData.title,
         url: adData.url,
         adType: adData.adType,
@@ -478,7 +478,7 @@ function AdCreationModal({ isOpen, onClose, adType, dimensions }) {
         returnUrl: window.location.href
       }).toString()}`;
 
-      console.log('🔄 Redirecting to payment page:', paymentUrl);
+      ('🔄 Redirecting to payment page:', paymentUrl);
       
       // Redirect to payment page
       window.location.href = paymentUrl;
@@ -988,7 +988,7 @@ export default function NewsGrid({ articles }) {
     const paymentId = urlParams.get('id');
 
     if (paymentStatus === 'success' && paymentId) {
-      console.log('✅ Payment successful, activating ad...');
+      ('✅ Payment successful, activating ad...');
       handlePaymentSuccess(paymentId);
       
       // Clean up URL
@@ -1007,7 +1007,7 @@ export default function NewsGrid({ articles }) {
 // FIXED VERSION - Replace your handlePaymentSuccess function with this
 
 const handlePaymentSuccess = async () => {
-  console.log('✅ [PAYMENT-SUCCESS] Payment successful, activating ad...');
+  ('✅ [PAYMENT-SUCCESS] Payment successful, activating ad...');
   
   try {
     // 1. GET PAYMENT DETAILS FROM URL
@@ -1015,7 +1015,7 @@ const handlePaymentSuccess = async () => {
     const paymentStatus = urlParams.get('payment');
     const paymentIntentId = urlParams.get('id');
     
-    console.log('📋 [PAYMENT-SUCCESS] URL Parameters:', {
+    ('📋 [PAYMENT-SUCCESS] URL Parameters:', {
       paymentStatus,
       paymentIntentId,
       fullURL: window.location.href
@@ -1057,7 +1057,7 @@ const handlePaymentSuccess = async () => {
     }
 
     // 3. VERIFY PAYMENT WITH SERVER
-    console.log('🔍 [PAYMENT-SUCCESS] Verifying payment...');
+    ('🔍 [PAYMENT-SUCCESS] Verifying payment...');
     
     const verifyResponse = await fetch('/api/verify-payment', {
       method: 'POST',
@@ -1079,7 +1079,7 @@ const handlePaymentSuccess = async () => {
       throw new Error('Payment amount is invalid');
     }
 
-    console.log('✅ [PAYMENT-SUCCESS] Payment verified:', {
+    ('✅ [PAYMENT-SUCCESS] Payment verified:', {
       amount: verifyData.amount,
       currency: verifyData.currency
     });
@@ -1129,7 +1129,7 @@ const handlePaymentSuccess = async () => {
       publisherEmail: String(user?.email || '')
     };
 
-    console.log('📤 [PAYMENT-SUCCESS] Sending ad data:', {
+    ('📤 [PAYMENT-SUCCESS] Sending ad data:', {
       title: adData.title,
       paymentIntentId: adData.paymentIntentId,  // ✅ Should be defined now
       amount: adData.amount,                      // ✅ Should be defined now
@@ -1151,7 +1151,7 @@ const handlePaymentSuccess = async () => {
     const result = await response.json();
 
     if (result.success) {
-      console.log('✅ [PAYMENT-SUCCESS] Ad created successfully!', result.id);
+      ('✅ [PAYMENT-SUCCESS] Ad created successfully!', result.id);
       
       // Clean up
       sessionStorage.removeItem('pendingAdData');
@@ -1192,7 +1192,7 @@ useEffect(() => {
   const paymentStatus = urlParams.get('payment');  // Your custom format
   const paymentId = urlParams.get('id');           // Your custom format
   
-  console.log('🔍 [NEWSGRID-USEEFFECT] Checking for payment redirect...', {
+  ('🔍 [NEWSGRID-USEEFFECT] Checking for payment redirect...', {
     hasPaymentId: !!paymentId,
     paymentStatus,
     fullURL: window.location.href
@@ -1200,13 +1200,13 @@ useEffect(() => {
   
   // Check for YOUR custom URL format: ?payment=success&id=pi_xxxxx
   if (paymentId && paymentStatus === 'success') {
-    console.log('✅ [NEWSGRID-USEEFFECT] Payment success detected! Starting activation...');
+    ('✅ [NEWSGRID-USEEFFECT] Payment success detected! Starting activation...');
     handlePaymentSuccess();
   } else if (paymentId && paymentStatus !== 'success') {
     console.error('❌ [NEWSGRID-USEEFFECT] Payment failed:', paymentStatus);
     alert(`Payment ${paymentStatus}. Please try again.`);
   } else {
-    console.log('ℹ️ [NEWSGRID-USEEFFECT] No payment redirect detected, normal page load');
+    ('ℹ️ [NEWSGRID-USEEFFECT] No payment redirect detected, normal page load');
   }
 }, []); // Empty dependency array = run once on mount
 

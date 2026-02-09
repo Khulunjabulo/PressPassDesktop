@@ -3,13 +3,13 @@ import { NextResponse } from 'next/server';
 import { testEmailConfiguration, sendWelcomeEmail } from '../../../lib/emailService';
 
 export async function GET() {
-  console.log(' Testing email configuration...');
+  (' Testing email configuration...');
   
   try {
     const result = await testEmailConfiguration();
     
     if (result.success) {
-      console.log(' Email configuration test passed');
+      (' Email configuration test passed');
       return NextResponse.json({
         success: true,
         message: 'Email configuration is valid and ready to use.',
@@ -36,7 +36,7 @@ export async function GET() {
 }
 
 export async function POST(request) {
-  console.log(' Testing email sending...');
+  (' Testing email sending...');
   
   try {
     const body = await request.json();
@@ -57,12 +57,12 @@ export async function POST(request) {
       }, { status: 400 });
     }
     
-    console.log(`Sending test welcome email to ${email} as ${role}...`);
+    (`Sending test welcome email to ${email} as ${role}...`);
     
     // Send test welcome email
     const result = await sendWelcomeEmail(email, firstName, role);
     
-    console.log('Test email sent successfully:', result.messageId);
+    ('Test email sent successfully:', result.messageId);
     
     return NextResponse.json({
       success: true,

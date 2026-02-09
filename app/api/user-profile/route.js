@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { getFirestoreDb, getAuth } from '../../../lib/firebase-admin';
 
 export async function GET(request) {
-  console.log('📖 Getting user profile...');
+  ('📖 Getting user profile...');
   
   try {
     // Get authorization header
@@ -16,18 +16,18 @@ export async function GET(request) {
     const idToken = authHeader.split('Bearer ')[1];
     
     // Verify the token
-    console.log('🔍 Verifying ID token...');
+    ('🔍 Verifying ID token...');
     const auth = getAuth();
     const decodedToken = await auth.verifyIdToken(idToken);
     const uid = decodedToken.uid;
     
-    console.log('✅ Token verified for user:', uid);
+    ('✅ Token verified for user:', uid);
 
     // Get user data from Firestore
     const db = getFirestoreDb();
     const readerUid = `reader_${uid}`;
     
-    console.log('📡 Fetching reader data from Firestore...');
+    ('📡 Fetching reader data from Firestore...');
     const readerDoc = await db.collection('readers').doc(readerUid).get();
     
     if (!readerDoc.exists) {
@@ -36,7 +36,7 @@ export async function GET(request) {
     }
 
     const userData = readerDoc.data();
-    console.log('✅ User profile retrieved successfully');
+    ('✅ User profile retrieved successfully');
 
     return NextResponse.json({
       success: true,
@@ -53,7 +53,7 @@ export async function GET(request) {
 }
 
 export async function PUT(request) {
-  console.log('💾 Updating user profile...');
+  ('💾 Updating user profile...');
   
   try {
     // Get authorization header
@@ -66,22 +66,22 @@ export async function PUT(request) {
     const idToken = authHeader.split('Bearer ')[1];
     
     // Verify the token
-    console.log('🔍 Verifying ID token...');
+    ('🔍 Verifying ID token...');
     const auth = getAuth();
     const decodedToken = await auth.verifyIdToken(idToken);
     const uid = decodedToken.uid;
     
-    console.log('✅ Token verified for user:', uid);
+    ('✅ Token verified for user:', uid);
 
     // Parse request body
     const updateData = await request.json();
-    console.log('📥 Update data received:', Object.keys(updateData));
+    ('📥 Update data received:', Object.keys(updateData));
 
     // Get user data from Firestore
     const db = getFirestoreDb();
     const readerUid = `reader_${uid}`;
     
-    console.log('📡 Updating reader data in Firestore...');
+    ('📡 Updating reader data in Firestore...');
     
     // Prepare update data (exclude undefined/null values)
     const cleanUpdateData = {};
@@ -96,7 +96,7 @@ export async function PUT(request) {
 
     // Update the document
     await db.collection('readers').doc(readerUid).update(cleanUpdateData);
-    console.log('✅ User profile updated successfully');
+    ('✅ User profile updated successfully');
 
     // Fetch and return updated data
     const updatedDoc = await db.collection('readers').doc(readerUid).get();
@@ -118,7 +118,7 @@ export async function PUT(request) {
 }
 
 export async function DELETE(request) {
-  console.log('🗑️ Deleting user profile...');
+  ('🗑️ Deleting user profile...');
   
   try {
     // Get authorization header
@@ -131,34 +131,34 @@ export async function DELETE(request) {
     const idToken = authHeader.split('Bearer ')[1];
     
     // Verify the token
-    console.log('🔍 Verifying ID token...');
+    ('🔍 Verifying ID token...');
     const auth = getAuth();
     const decodedToken = await auth.verifyIdToken(idToken);
     const uid = decodedToken.uid;
     
-    console.log('✅ Token verified for user:', uid);
+    ('✅ Token verified for user:', uid);
 
     // Get Firestore database
     const db = getFirestoreDb();
     const readerUid = `reader_${uid}`;
     
     // Check if reader document exists
-    console.log('📡 Checking if reader document exists...');
+    ('📡 Checking if reader document exists...');
     const readerDoc = await db.collection('readers').doc(readerUid).get();
     
     if (!readerDoc.exists) {
       console.warn('⚠️ Reader document not found, but will continue with auth deletion');
     } else {
       // Delete Firestore document
-      console.log('📡 Deleting reader data from Firestore...');
+      ('📡 Deleting reader data from Firestore...');
       await db.collection('readers').doc(readerUid).delete();
-      console.log('✅ Firestore document deleted');
+      ('✅ Firestore document deleted');
     }
 
     // Delete Firebase Auth user
-    console.log('🔥 Deleting Firebase Auth user...');
+    ('🔥 Deleting Firebase Auth user...');
     await auth.deleteUser(uid);
-    console.log('✅ Firebase Auth user deleted');
+    ('✅ Firebase Auth user deleted');
 
     return NextResponse.json({
       success: true,

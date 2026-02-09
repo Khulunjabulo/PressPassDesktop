@@ -15,7 +15,7 @@ export default function useForgotPassword() {
     setError("")
 
     try {
-      console.log(' Submitting forgot password request for:', email)
+      (' Submitting forgot password request for:', email)
       
       const response = await fetch('/api/forgot-password', {
         method: 'POST',
@@ -28,7 +28,7 @@ export default function useForgotPassword() {
       const data = await response.json()
       
       if (data.success) {
-        console.log(' Forgot password request successful')
+        (' Forgot password request successful')
         setSubmitted(true)
       } else {
         console.error(' Forgot password request failed:', data.error)

@@ -17,13 +17,13 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0
 const db = getFirestore(app);
 
 export async function POST(request) {
-  console.log('/api/forgot-password POST route called');
+  ('/api/forgot-password POST route called');
 
   try {
     const body = await request.json();
     const { email } = body;
 
-    console.log('Request body:', { email });
+    ('Request body:', { email });
 
     // Validate required fields
     if (!email) {
@@ -38,7 +38,7 @@ export async function POST(request) {
     }
 
     const normalizedEmail = email.toLowerCase().trim();
-    console.log('🔍 Processing forgot password for:', normalizedEmail);
+    ('🔍 Processing forgot password for:', normalizedEmail);
 
     // Check if user exists in either readers or publishers collection
     let userExists = false;
@@ -57,7 +57,7 @@ export async function POST(request) {
       userRole = 'reader';
       const userData = readersSnapshot.docs[0].data();
       userName = userData.firstName || 'User';
-      console.log('User found in readers collection');
+      ('User found in readers collection');
     }
 
     // Check publishers collection if not found in readers
@@ -73,7 +73,7 @@ export async function POST(request) {
         userRole = 'publisher';
         const userData = publishersSnapshot.docs[0].data();
         userName = userData.firstName || userData.contactName || 'User';
-        console.log(' User found in publishers collection');
+        (' User found in publishers collection');
       }
     }
 
@@ -87,7 +87,7 @@ export async function POST(request) {
       });
     }
 
-    console.log('🔑 Sending custom password reset email...');
+    ('🔑 Sending custom password reset email...');
     
     try {
       // Generate password reset link (in a real implementation, you would use Firebase's link generation)
@@ -96,7 +96,7 @@ export async function POST(request) {
       
       // Send custom password reset email
       const emailResult = await sendForgotPasswordEmail(normalizedEmail, resetLink);
-      console.log('Custom password reset email sent successfully:', emailResult);
+      ('Custom password reset email sent successfully:', emailResult);
 
       return NextResponse.json({
         success: true,

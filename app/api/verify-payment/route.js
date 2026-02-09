@@ -7,7 +7,7 @@ import { Timestamp } from 'firebase-admin/firestore';
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export async function POST(request) {
-  console.log('🔍 [VERIFY-PAYMENT] Starting verification...');
+  ('🔍 [VERIFY-PAYMENT] Starting verification...');
   
   try {
     const body = await request.json();
@@ -21,12 +21,12 @@ export async function POST(request) {
       }, { status: 400 });
     }
 
-    console.log('🔎 [VERIFY-PAYMENT] Retrieving payment from Stripe:', paymentIntentId);
+    ('🔎 [VERIFY-PAYMENT] Retrieving payment from Stripe:', paymentIntentId);
 
     // Retrieve payment intent from Stripe
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
 
-    console.log('📊 [VERIFY-PAYMENT] Stripe payment intent retrieved:', {
+    ('📊 [VERIFY-PAYMENT] Stripe payment intent retrieved:', {
       id: paymentIntent.id,
       status: paymentIntent.status,
       amount: paymentIntent.amount,
@@ -56,7 +56,7 @@ export async function POST(request) {
       const paymentDoc = querySnapshot.docs[0];
       firebaseDocId = paymentDoc.id;
       
-      console.log('📝 [VERIFY-PAYMENT] Updating existing payment record:', firebaseDocId);
+      ('📝 [VERIFY-PAYMENT] Updating existing payment record:', firebaseDocId);
 
       const updateData = {
         status: isSuccessful ? 'successful' : 'failed',
@@ -77,7 +77,7 @@ export async function POST(request) {
       await paymentsRef.doc(firebaseDocId).update(updateData);
       paymentUpdateResult = updateData;
 
-      console.log('✅ [VERIFY-PAYMENT] Payment record updated:', {
+      ('✅ [VERIFY-PAYMENT] Payment record updated:', {
         docId: firebaseDocId,
         status: updateData.status,
         amount: updateData.amount,
@@ -86,7 +86,7 @@ export async function POST(request) {
 
     } else {
       // Create new payment record if it doesn't exist
-      console.log('⚠️ [VERIFY-PAYMENT] Payment record not found, creating new one');
+      ('⚠️ [VERIFY-PAYMENT] Payment record not found, creating new one');
       
       const newPaymentData = {
         paymentIntentId: paymentIntent.id,
@@ -112,7 +112,7 @@ export async function POST(request) {
       firebaseDocId = newPaymentRef.id;
       paymentUpdateResult = newPaymentData;
 
-      console.log('✅ [VERIFY-PAYMENT] New payment record created:', {
+      ('✅ [VERIFY-PAYMENT] New payment record created:', {
         docId: firebaseDocId,
         paymentIntentId: paymentIntent.id
       });
@@ -120,7 +120,7 @@ export async function POST(request) {
 
     // 🆕 Handle ad extension if this is an extension payment
     if (isSuccessful && paymentIntent.metadata?.type === 'ad_extension') {
-      console.log('🔄 [VERIFY-PAYMENT] This is an ad extension payment, processing...');
+      ('🔄 [VERIFY-PAYMENT] This is an ad extension payment, processing...');
       
       const { adId, extensionDays, publisherId } = paymentIntent.metadata;
       
@@ -161,7 +161,7 @@ export async function POST(request) {
 
             await adsRef.doc(adId).update(updateData);
 
-            console.log('✅ [VERIFY-PAYMENT] Ad extended successfully:', {
+            ('✅ [VERIFY-PAYMENT] Ad extended successfully:', {
               adId,
               previousEndDate: currentEndDate.toISOString(),
               newEndDate: newEndDate.toISOString(),
@@ -180,7 +180,7 @@ export async function POST(request) {
     }
 
     // Log detailed result
-    console.log('🎯 [VERIFY-PAYMENT] Final verification result:', {
+    ('🎯 [VERIFY-PAYMENT] Final verification result:', {
       verified: isSuccessful,
       paymentIntentId: paymentIntent.id,
       firebaseDocId: firebaseDocId,

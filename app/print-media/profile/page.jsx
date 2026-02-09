@@ -75,7 +75,7 @@ const PublisherProfile = () => {
 
       // Check if already verified/approved - if so, profile is considered complete
   if (user?.isVerified || user?.isApproved) {
-    console.log('✅ User is verified/approved - profile complete');
+    ('✅ User is verified/approved - profile complete');
     setIsProfileComplete(true);
     setMissingRequirements([]);
     return true;
@@ -95,7 +95,7 @@ const PublisherProfile = () => {
       return !value || value === '';
     });
 
-     console.log('📋 Validation result:', {
+     ('📋 Validation result:', {
     missing: missing,
     isComplete: missing.length === 0,
     isVerified: user?.isVerified,
@@ -163,7 +163,7 @@ const PublisherProfile = () => {
 
 useEffect(() => {
   if (user) {
-    console.log('🔍 Running validation check...', {
+    ('🔍 Running validation check...', {
       hasUser: !!user,
       isVerified: user.isVerified,
       isApproved: user.isApproved,
@@ -175,15 +175,15 @@ useEffect(() => {
 
   // Handle authentication state changes
   useEffect(() => {
-    console.log('🔐 Setting up auth state listener...');
+    ('🔐 Setting up auth state listener...');
     
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      console.log('🔐 Auth state changed:', user ? 'User signed in' : 'User signed out');
+      ('🔐 Auth state changed:', user ? 'User signed in' : 'User signed out');
       setAuthUser(user);
       setAuthLoading(false);
       
       if (user) {
-        console.log('✅ User authenticated:', user.uid);
+        ('✅ User authenticated:', user.uid);
         loadPublisherProfile(user);
       } else {
         console.warn('⚠️ No authenticated user, redirecting to sign in');
@@ -192,7 +192,7 @@ useEffect(() => {
     });
 
     return () => {
-      console.log('🧹 Cleaning up auth listener');
+      ('🧹 Cleaning up auth listener');
       unsubscribe();
     };
   }, [router]);
@@ -207,7 +207,7 @@ useEffect(() => {
       return;
     }
 
-    console.log('📡 Fetching publisher profile from API...');
+    ('📡 Fetching publisher profile from API...');
     const idToken = await userToUse.getIdToken();
     
     const response = await fetch('/api/publisher-profile', {
@@ -224,8 +224,8 @@ useEffect(() => {
     }
 
     const userData = await response.json();
-    console.log('✅ Publisher profile loaded:', userData);
-    console.log('👥 Staff members:', userData.staff?.length || 0);
+    ('✅ Publisher profile loaded:', userData);
+    ('👥 Staff members:', userData.staff?.length || 0);
 
     setUser(userData);
     
@@ -237,7 +237,7 @@ useEffect(() => {
       role: 'publisher' // Ensure role is set
     };
     
-    console.log('💾 Updating localStorage with fresh data...');
+    ('💾 Updating localStorage with fresh data...');
     localStorage.setItem('currentUser', JSON.stringify(updatedUserData));
     
     setFormData({
@@ -279,13 +279,13 @@ useEffect(() => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    console.log(`📝 Input change: ${name} = ${value}`);
+    (`📝 Input change: ${name} = ${value}`);
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleImageChange = (e, type) => {
     const file = e.target.files[0];
-    console.log(`🖼️ ${type} image selected:`, file?.name);
+    (`🖼️ ${type} image selected:`, file?.name);
 
     if (file) {
       // Check file size (limit to 5MB)
@@ -299,11 +299,11 @@ useEffect(() => {
         if (type === 'profile') {
           setFormData(prev => ({ ...prev, profilePicture: file }));
           setProfilePicPreview(reader.result);
-          console.log('👀 Profile pic preview updated');
+          ('👀 Profile pic preview updated');
         } else if (type === 'logo') {
           setFormData(prev => ({ ...prev, companyLogo: file }));
           setCompanyLogoPreview(reader.result);
-          console.log('🏢 Company logo preview updated');
+          ('🏢 Company logo preview updated');
         }
       };
       reader.readAsDataURL(file);
@@ -321,7 +321,7 @@ useEffect(() => {
       return;
     }
 
-    console.log('👥 Adding staff member:', newStaffMember);
+    ('👥 Adding staff member:', newStaffMember);
     setFormData(prev => ({
       ...prev,
       staff: [...prev.staff, { ...newStaffMember, id: Date.now() }]
@@ -330,7 +330,7 @@ useEffect(() => {
   };
 
   const removeStaffMember = (id) => {
-    console.log('🗑️ Removing staff member:', id);
+    ('🗑️ Removing staff member:', id);
     setFormData(prev => ({
       ...prev,
       staff: prev.staff.filter(member => member.id !== id)
@@ -349,12 +349,12 @@ useEffect(() => {
       return;
     }
 
-    console.log('💾 Saving publisher profile...');
+    ('💾 Saving publisher profile...');
     setIsLoading(true);
 
     try {
       const idToken = await authUser.getIdToken();
-      console.log('📤 Sending profile update to API...');
+      ('📤 Sending profile update to API...');
       
       // Prepare data for submission
       const dataToSend = {
@@ -379,7 +379,7 @@ useEffect(() => {
       }
 
       const result = await response.json();
-      console.log('✅ Profile updated successfully:', result);
+      ('✅ Profile updated successfully:', result);
 
       setUser(result.user);
       setIsEditing(false);
@@ -394,7 +394,7 @@ useEffect(() => {
   };
 
   const handleCancelEdit = () => {
-    console.log('❌ Cancelling edit');
+    ('❌ Cancelling edit');
     setIsEditing(false);
     // Reset form data to original values
     setFormData({

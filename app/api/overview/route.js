@@ -20,7 +20,7 @@ export async function GET(request) {
       );
     }
 
-    console.log('📊 Fetching analytics for publisher:', publisherId);
+    ('📊 Fetching analytics for publisher:', publisherId);
 
     // --- Calculate Page Views ---
     const articlesRef = collection(db, 'articles');
@@ -48,7 +48,7 @@ export async function GET(request) {
     });
 
     const pageViewChange = lastMonthPageViews > 0 ? (((totalPageViews - lastMonthPageViews) / lastMonthPageViews) * 100).toFixed(1) : (totalPageViews > 0 ? 100.0 : 0.0);
-    console.log(`👁️ Total Page Views: ${totalPageViews}`);
+    (`👁️ Total Page Views: ${totalPageViews}`);
 
     // --- Calculate RSS Subscribers ---
     // This is a simplified calculation. A real implementation might involve
@@ -77,7 +77,7 @@ export async function GET(request) {
     }
 
     const rssChange = lastMonthRssSubscribers > 0 ? (((totalRssSubscribers - lastMonthRssSubscribers) / lastMonthRssSubscribers) * 100).toFixed(1) : (totalRssSubscribers > 0 ? 100.0 : 0.0);
-    console.log(`📡 Total RSS Subscribers (simulated): ${totalRssSubscribers}`);
+    (`📡 Total RSS Subscribers (simulated): ${totalRssSubscribers}`);
 
     // In a real app, you would calculate the change vs. the last period.
     // For now, we'll return static change values.

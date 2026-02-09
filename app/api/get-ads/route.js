@@ -26,7 +26,7 @@ export async function GET(req) {
     // Normalize the publisher ID (remove 'publisher_' prefix if present)
     const publisherId = normalizePublisherId(rawPublisherId);
 
-    console.log('🔍 Fetching ads with normalized ID:', {
+    ('🔍 Fetching ads with normalized ID:', {
       rawPublisherId,
       normalizedPublisherId: publisherId,
       templateId,
@@ -49,11 +49,11 @@ export async function GET(req) {
     const snapshot = await query.get();
 
     if (snapshot.empty) {
-      console.log('❌ No ads found for:', { publisherId, templateId, deviceType });
+      ('❌ No ads found for:', { publisherId, templateId, deviceType });
       
       // Try searching with 'publisher_' prefix as fallback
       const prefixedId = `publisher_${publisherId}`;
-      console.log('🔄 Trying with prefix:', prefixedId);
+      ('🔄 Trying with prefix:', prefixedId);
       
       let fallbackQuery = db.collection('adUploads')
         .where('publisherId', '==', prefixedId)
@@ -67,7 +67,7 @@ export async function GET(req) {
       const fallbackSnapshot = await fallbackQuery.get();
       
       if (fallbackSnapshot.empty) {
-        console.log('❌ No ads found with prefix either');
+        ('❌ No ads found with prefix either');
         return NextResponse.json({
           success: true,
           data: [],
@@ -77,7 +77,7 @@ export async function GET(req) {
       }
       
       // Found with prefix - use those results
-      console.log('✅ Found ads with prefixed ID');
+      ('✅ Found ads with prefixed ID');
       const ads = [];
       fallbackSnapshot.forEach(doc => {
         const data = doc.data();
@@ -125,7 +125,7 @@ export async function GET(req) {
       });
     });
 
-    console.log('✅ Found ads:', ads.length);
+    ('✅ Found ads:', ads.length);
 
     return NextResponse.json({
       success: true,

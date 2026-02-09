@@ -7,8 +7,6 @@ import Stripe from 'stripe';
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export async function POST(request) {
-  console.log('🚀 [ACTIVATE-AD] Starting ad activation...');
-  
   try {
     const body = await request.json();
     const { 
@@ -19,7 +17,7 @@ export async function POST(request) {
       fileData 
     } = body;
 
-    console.log('📋 [ACTIVATE-AD] Request data:', {
+    ('📋 [ACTIVATE-AD] Request data:', {
       paymentIntentId,
       publisherId,
       templateId,
@@ -29,7 +27,6 @@ export async function POST(request) {
 
     // Validation
     if (!paymentIntentId || !publisherId || !templateId || !deviceType) {
-      console.error('❌ [ACTIVATE-AD] Missing required fields');
       return NextResponse.json({
         success: false,
         error: 'Missing required fields: paymentIntentId, publisherId, templateId, deviceType'
@@ -39,12 +36,9 @@ export async function POST(request) {
     const db = getFirestoreDb();
 
     // 1. Verify payment from Stripe
-    console.log('🔍 [ACTIVATE-AD] Verifying payment with Stripe...');
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
 
     if (paymentIntent.status !== 'succeeded') {
-      console.error('❌ [ACTIVATE-AD] Payment not successful:', paymentIntent.status);
-      
       // Log failed activation attempt
       await db.collection('activation_errors').add({
         paymentIntentId,
@@ -63,7 +57,7 @@ export async function POST(request) {
       }, { status: 400 });
     }
 
-    console.log('✅ [ACTIVATE-AD] Payment verified:', {
+    ('✅ [ACTIVATE-AD] Payment verified:', {
       amount: paymentIntent.amount / 100,
       currency: paymentIntent.currency.toUpperCase(),
       status: paymentIntent.status
@@ -82,13 +76,13 @@ export async function POST(request) {
       const paymentDoc = paymentsSnapshot.docs[0];
       paymentData = paymentDoc.data();
       paymentDocId = paymentDoc.id;
-      console.log('📄 [ACTIVATE-AD] Payment record found:', paymentDocId);
+      ('📄 [ACTIVATE-AD] Payment record found:', paymentDocId);
     } else {
       console.warn('⚠️ [ACTIVATE-AD] Payment record not found in Firebase');
     }
 
     // 3. Create ad upload record
-    console.log('💾 [ACTIVATE-AD] Creating ad upload record...');
+    ('💾 [ACTIVATE-AD] Creating ad upload record...');
     
     const adUploadData = {
       publisherId,
@@ -123,7 +117,7 @@ export async function POST(request) {
 
     const adUploadRef = await db.collection('adUploads').add(adUploadData);
 
-    console.log('✅ [ACTIVATE-AD] Ad upload created:', {
+    ('✅ [ACTIVATE-AD] Ad upload created:', {
       docId: adUploadRef.id,
       publisherId,
       templateId,
@@ -141,7 +135,7 @@ export async function POST(request) {
         updatedAt: Timestamp.now()
       });
 
-      console.log('📝 [ACTIVATE-AD] Payment record updated with ad reference');
+      ('📝 [ACTIVATE-AD] Payment record updated with ad reference');
     }
 
     // 5. Create activity log
@@ -155,7 +149,7 @@ export async function POST(request) {
       timestamp: Timestamp.now()
     });
 
-    console.log('🎉 [ACTIVATE-AD] Ad activation completed successfully!');
+    ('🎉 [ACTIVATE-AD] Ad activation completed successfully!');
 
     return NextResponse.json({
       success: true,

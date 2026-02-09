@@ -35,7 +35,7 @@ const usePublisherContent = (publisherId) => {
   // Fetch all content for publisher with better error handling
   const fetchContent = async () => {
     if (!publisherId) {
-      console.log('⏩ No publisherId provided, skipping fetch');
+      ('⏩ No publisherId provided, skipping fetch');
       setLoading(false);
       return;
     }
@@ -44,14 +44,14 @@ const usePublisherContent = (publisherId) => {
       setLoading(true);
       setError(null);
       
-      console.log('🔄 Fetching content for publisher:', publisherId);
+      ('🔄 Fetching content for publisher:', publisherId);
 
       const url = `/api/publish-article?publisherId=${publisherId}&type=both`;
-      console.log('📡 Making request to:', url);
+      ('📡 Making request to:', url);
 
       const response = await fetch(url);
       
-      console.log('📥 Response status:', response.status);
+      ('📥 Response status:', response.status);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -60,7 +60,7 @@ const usePublisherContent = (publisherId) => {
       }
 
       const responseText = await response.text();
-      console.log('📄 Raw response preview:', responseText.substring(0, 200) + '...');
+      ('📄 Raw response preview:', responseText.substring(0, 200) + '...');
 
       if (!responseText || responseText.trim() === '') {
         throw new Error('Empty response from server');
@@ -74,7 +74,7 @@ const usePublisherContent = (publisherId) => {
         throw new Error(`Invalid JSON response: ${parseError.message}`);
       }
 
-      console.log('📊 Parsed data:', { 
+      ('📊 Parsed data:', { 
         success: data.success, 
         articlesCount: data.articles?.length || 0, 
         draftsCount: data.drafts?.length || 0,
@@ -85,20 +85,20 @@ const usePublisherContent = (publisherId) => {
         // FIXED: Proper status filtering with logging
         const publishedArticles = (data.articles || []).filter(item => {
           const isPublished = item.status === 'published';
-          console.log(`📰 Article "${item.title}": status="${item.status}", isPublished=${isPublished}`);
+          (`📰 Article "${item.title}": status="${item.status}", isPublished=${isPublished}`);
           return isPublished;
         });
         
         const draftArticles = (data.drafts || []).filter(item => {
           const isDraft = item.status === 'draft';
-          console.log(`✏️ Draft "${item.title}": status="${item.status}", isDraft=${isDraft}`);
+          (`✏️ Draft "${item.title}": status="${item.status}", isDraft=${isDraft}`);
           return isDraft;
         });
 
         setArticles(publishedArticles);
         setDrafts(draftArticles);
         
-        console.log('✅ Content categorized:', { 
+        ('✅ Content categorized:', { 
           published: publishedArticles.length, 
           drafts: draftArticles.length 
         });
@@ -126,7 +126,7 @@ const usePublisherContent = (publisherId) => {
     }
 
     try {
-      console.log('📤 Publishing draft:', draftId);
+      ('📤 Publishing draft:', draftId);
 
       const response = await fetch(
         `/api/manage-drafts?publisherId=${publisherId}&draftId=${draftId}&action=publish`,
@@ -148,7 +148,7 @@ const usePublisherContent = (publisherId) => {
       if (result.success) {
         // Refresh content to get updated lists
         await fetchContent();
-        console.log('✅ Draft published successfully');
+        ('✅ Draft published successfully');
         return result;
       } else {
         throw new Error(result.error || 'Failed to publish draft');
@@ -165,7 +165,7 @@ const usePublisherContent = (publisherId) => {
     }
 
     try {
-      console.log('🗑️ Deleting article:', articleId);
+      ('🗑️ Deleting article:', articleId);
 
       const response = await fetch(
         `/api/publish-article?publisherId=${publisherId}&articleId=${articleId}`,
@@ -184,7 +184,7 @@ const usePublisherContent = (publisherId) => {
       if (result.success) {
         // Update local state
         setArticles(prev => prev.filter(article => article.id !== articleId));
-        console.log('✅ Article deleted successfully');
+        ('✅ Article deleted successfully');
         return result;
       } else {
         throw new Error(result.error || 'Failed to delete article');
@@ -201,7 +201,7 @@ const usePublisherContent = (publisherId) => {
     }
 
     try {
-      console.log('🗑️ Deleting draft:', draftId);
+      ('🗑️ Deleting draft:', draftId);
 
       const response = await fetch(
         `/api/manage-drafts?publisherId=${publisherId}&draftId=${draftId}`,
@@ -220,7 +220,7 @@ const usePublisherContent = (publisherId) => {
       if (result.success) {
         // Update local state
         setDrafts(prev => prev.filter(draft => draft.id !== draftId));
-        console.log('✅ Draft deleted successfully');
+        ('✅ Draft deleted successfully');
         return result;
       } else {
         throw new Error(result.error || 'Failed to delete draft');
@@ -273,7 +273,7 @@ const ArticleEditor = ({ item, onSave, onCancel, isNew = false }) => {
 
   const [saving, setSaving] = useState(false);
 
-  console.log('🎯 ArticleEditor initialized:', {
+  ('🎯 ArticleEditor initialized:', {
     isNew,
     itemTitle: item?.title,
     itemStatus: item?.status,
@@ -302,7 +302,7 @@ const ArticleEditor = ({ item, onSave, onCancel, isNew = false }) => {
         articleId: item?.id || null // Add article ID for updates
       };
 
-      console.log('💾 Submitting article data:', {
+      ('💾 Submitting article data:', {
         title: submitData.title,
         status: submitData.status,
         isDraft: submitData.isDraft,
@@ -609,14 +609,14 @@ export default function EnhancedPublisherDashboard() {
       const userData = localStorage.getItem('currentUser');
       if (userData) {
         const user = JSON.parse(userData);
-        console.log('👤 Current user loaded:', { 
+        ('👤 Current user loaded:', { 
           uid: user.uid, 
           role: user.role,
           companyName: user.companyName
         });
         setCurrentUser(user);
       } else {
-        console.log('⚠️ No user data found in localStorage');
+        ('⚠️ No user data found in localStorage');
         setCurrentUser(null);
       }
     } catch (error) {
@@ -641,7 +641,7 @@ export default function EnhancedPublisherDashboard() {
   const stats = getStats();
   
   const handleEdit = (item) => {
-    console.log('✏️ Edit button clicked for:', {
+    ('✏️ Edit button clicked for:', {
       id: item.id,
       title: item.title,
       status: item.status,
@@ -717,7 +717,7 @@ export default function EnhancedPublisherDashboard() {
     }
 
     try {
-      console.log('💾 Saving article:', { 
+      ('💾 Saving article:', { 
         title: data.title, 
         asDraft, 
         articleId: data.articleId,
@@ -751,8 +751,8 @@ export default function EnhancedPublisherDashboard() {
       }
 
       const url = `/api/publish-article?publisherId=${currentUser.uid}`;
-      console.log('📡 Making request to:', url);
-      console.log('📦 Form data summary:', {
+      ('📡 Making request to:', url);
+      ('📦 Form data summary:', {
         title: data.title,
         isDraft: asDraft,
         status: asDraft ? 'draft' : 'published',
@@ -766,7 +766,7 @@ export default function EnhancedPublisherDashboard() {
       });
 
       const result = await response.json();
-      console.log('📡 Response:', result);
+      ('📡 Response:', result);
 
       if (result.success) {
         setNotification({

@@ -51,14 +51,14 @@ const ReaderProfile = () => {
   ];
 
   useEffect(() => {
-    console.log('👤 Setting up auth listener...');
+    ('👤 Setting up auth listener...');
     
     const storedUser = localStorage.getItem('currentUser');
     if (storedUser) {
-      console.log('💾 Found user in localStorage');
+      ('💾 Found user in localStorage');
       try {
         const userData = JSON.parse(storedUser);
-        console.log('✅ User from localStorage:', userData.email);
+        ('✅ User from localStorage:', userData.email);
         
         if (userData.role !== 'reader') {
           console.warn('⚠️ User is not a reader, redirecting...');
@@ -72,12 +72,12 @@ const ReaderProfile = () => {
     }
 
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      console.log('🔄 Auth state changed:', firebaseUser ? firebaseUser.email : 'No user');
+      ('🔄 Auth state changed:', firebaseUser ? firebaseUser.email : 'No user');
       
       setAuthChecked(true);
       
       if (firebaseUser) {
-        console.log('✅ Firebase user is authenticated');
+        ('✅ Firebase user is authenticated');
         loadUserProfile();
         loadUserReview();
       } else {
@@ -85,7 +85,7 @@ const ReaderProfile = () => {
         
         const storedUser = localStorage.getItem('currentUser');
         if (storedUser) {
-          console.log('📱 User session found in storage, attempting to restore...');
+          ('📱 User session found in storage, attempting to restore...');
           router.push('/signin');
         } else {
           router.push('/signin');
@@ -95,7 +95,7 @@ const ReaderProfile = () => {
     });
 
     return () => {
-      console.log('🧹 Cleaning up auth listener');
+      ('🧹 Cleaning up auth listener');
       unsubscribe();
     };
   }, [router]);
@@ -103,13 +103,13 @@ const ReaderProfile = () => {
   const loadUserProfile = async () => {
     try {
       setIsLoading(true);
-      console.log('📡 Loading user profile...');
+      ('📡 Loading user profile...');
       
       let currentUser = auth.currentUser;
       let attempts = 0;
       
       while (!currentUser && attempts < 10) {
-        console.log(`⏳ Waiting for auth user... attempt ${attempts + 1}`);
+        (`⏳ Waiting for auth user... attempt ${attempts + 1}`);
         await new Promise(resolve => setTimeout(resolve, 500));
         currentUser = auth.currentUser;
         attempts++;
@@ -121,13 +121,13 @@ const ReaderProfile = () => {
         return;
       }
 
-      console.log('✅ Auth user found:', currentUser.email);
-      console.log('🎫 Getting ID token...');
+      ('✅ Auth user found:', currentUser.email);
+      ('🎫 Getting ID token...');
       
       const idToken = await currentUser.getIdToken();
-      console.log('✅ ID token obtained');
+      ('✅ ID token obtained');
 
-      console.log('📡 Fetching user profile from API...');
+      ('📡 Fetching user profile from API...');
       const response = await fetch('/api/user-profile', {
         method: 'GET',
         headers: {
@@ -136,7 +136,7 @@ const ReaderProfile = () => {
         }
       });
 
-      console.log('📡 API response status:', response.status);
+      ('📡 API response status:', response.status);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -145,7 +145,7 @@ const ReaderProfile = () => {
       }
 
       const userData = await response.json();
-      console.log('✅ User profile loaded successfully');
+      ('✅ User profile loaded successfully');
 
       setUser(userData);
       setFormData({
@@ -169,7 +169,7 @@ const ReaderProfile = () => {
       console.error('❌ Error loading profile:', error);
       
       if (error.message.includes('Unauthorized') || error.message.includes('401')) {
-        console.log('🔐 Authentication error, redirecting to signin...');
+        ('🔐 Authentication error, redirecting to signin...');
         localStorage.removeItem('currentUser');
         router.push('/signin');
       } else {
@@ -311,7 +311,7 @@ const ReaderProfile = () => {
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    console.log(`📝 Input change: ${name} = ${value}`);
+    (`📝 Input change: ${name} = ${value}`);
 
     if (name.startsWith('preferences.')) {
       const prefKey = name.split('.')[1];
@@ -331,7 +331,7 @@ const ReaderProfile = () => {
   };
 
   const handleCategoryToggle = (category) => {
-    console.log(`🏷️ Toggling category: ${category}`);
+    (`🏷️ Toggling category: ${category}`);
     setFormData(prev => ({
       ...prev,
       preferences: {
@@ -345,21 +345,21 @@ const ReaderProfile = () => {
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
-    console.log('🖼️ Image selected:', file?.name);
+    ('🖼️ Image selected:', file?.name);
 
     if (file) {
       setFormData(prev => ({ ...prev, profilePicture: file }));
       const reader = new FileReader();
       reader.onloadend = () => {
         setProfilePicPreview(reader.result);
-        console.log('👀 Profile pic preview updated');
+        ('👀 Profile pic preview updated');
       };
       reader.readAsDataURL(file);
     }
   };
 
   const handleSaveProfile = async () => {
-    console.log('💾 Saving profile...');
+    ('💾 Saving profile...');
     setIsLoading(true);
 
     try {
@@ -369,7 +369,7 @@ const ReaderProfile = () => {
       }
 
       const idToken = await currentUser.getIdToken();
-      console.log('📤 Sending profile update to API...');
+      ('📤 Sending profile update to API...');
       
       const response = await fetch('/api/user-profile', {
         method: 'PUT',
@@ -389,7 +389,7 @@ const ReaderProfile = () => {
       }
 
       const result = await response.json();
-      console.log('✅ Profile updated successfully:', result);
+      ('✅ Profile updated successfully:', result);
 
       setUser(result.user);
       setIsEditing(false);
@@ -404,7 +404,7 @@ const ReaderProfile = () => {
   };
 
   const handleDeleteProfile = async () => {
-    console.log('🗑️ Starting profile deletion...');
+    ('🗑️ Starting profile deletion...');
     setIsDeleting(true);
 
     try {
@@ -414,7 +414,7 @@ const ReaderProfile = () => {
       }
 
       const idToken = await currentUser.getIdToken();
-      console.log('📤 Sending delete request to API...');
+      ('📤 Sending delete request to API...');
       
       const response = await fetch('/api/user-profile', {
         method: 'DELETE',
@@ -429,7 +429,7 @@ const ReaderProfile = () => {
         throw new Error(errorData.error || 'Failed to delete profile');
       }
 
-      console.log('✅ Profile deleted successfully');
+      ('✅ Profile deleted successfully');
       
       localStorage.removeItem('currentUser');
       await auth.signOut();
@@ -444,7 +444,7 @@ const ReaderProfile = () => {
   };
 
   const handleCancelEdit = () => {
-    console.log('❌ Cancelling edit');
+    ('❌ Cancelling edit');
     setIsEditing(false);
     setFormData({
       firstName: user?.firstName || '',

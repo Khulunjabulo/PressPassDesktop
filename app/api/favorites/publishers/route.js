@@ -20,11 +20,11 @@ const db = getFirestore(app);
 const normalizeReaderId = (userId) => {
   if (!userId) return null;
   if (userId.startsWith('reader_')) {
-    console.log('✅ Reader ID already properly formatted:', userId);
+    ('✅ Reader ID already properly formatted:', userId);
     return userId;
   }
   const readerId = `reader_${userId}`;
-  console.log('🔧 Normalized reader ID from', userId, 'to', readerId);
+  ('🔧 Normalized reader ID from', userId, 'to', readerId);
   return readerId;
 };
 
@@ -34,7 +34,7 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
     
-    console.log('🔍 GET Request - Raw userId from request:', userId);
+    ('🔍 GET Request - Raw userId from request:', userId);
 
     if (!userId) {
       return NextResponse.json(
@@ -44,13 +44,13 @@ export async function GET(request) {
     }
 
     const readerId = normalizeReaderId(userId);
-    console.log('🔍 GET Request - Using normalized readerId:', readerId);
+    ('🔍 GET Request - Using normalized readerId:', readerId);
 
     const publishersRef = collection(db, 'readers', readerId, 'favoritePublishers');
-    console.log('📍 Querying path:', `readers/${readerId}/favoritePublishers`);
+    ('📍 Querying path:', `readers/${readerId}/favoritePublishers`);
     
     const publishersSnapshot = await getDocs(publishersRef);
-    console.log('📊 Found documents:', publishersSnapshot.size);
+    ('📊 Found documents:', publishersSnapshot.size);
     
     const publishers = [];
     publishersSnapshot.forEach((doc) => {
@@ -66,7 +66,7 @@ export async function GET(request) {
       return dateB - dateA;
     });
 
-    console.log('✅ Returning', publishers.length, 'favorite publishers');
+    ('✅ Returning', publishers.length, 'favorite publishers');
 
     return NextResponse.json({
       success: true,
@@ -93,9 +93,9 @@ export async function POST(request) {
   try {
     const { userId, publisher } = await request.json();
 
-    console.log('📝 POST Request received:');
-    console.log('  - Raw userId:', userId);
-    console.log('  - Publisher name:', publisher?.name || publisher?.companyName);
+    ('📝 POST Request received:');
+    ('  - Raw userId:', userId);
+    ('  - Publisher name:', publisher?.name || publisher?.companyName);
 
     if (!userId || !publisher) {
       return NextResponse.json(
@@ -105,13 +105,13 @@ export async function POST(request) {
     }
 
     const readerId = normalizeReaderId(userId);
-    console.log('📝 POST Request - Using normalized readerId:', readerId);
+    ('📝 POST Request - Using normalized readerId:', readerId);
 
     const userDocRef = doc(db, 'readers', readerId);
-    console.log('👤 Checking reader document at:', userDocRef.path);
+    ('👤 Checking reader document at:', userDocRef.path);
     
     const userDocSnap = await getDoc(userDocRef);
-    console.log('👤 Reader document exists:', userDocSnap.exists());
+    ('👤 Reader document exists:', userDocSnap.exists());
 
     if (!userDocSnap.exists()) {
       console.error('❌ Reader document not found at:', userDocRef.path);
@@ -143,12 +143,12 @@ export async function POST(request) {
     };
 
     const publisherRef = doc(db, 'readers', readerId, 'favoritePublishers', publisherData.id);
-    console.log('🔍 Checking if publisher already exists at:', publisherRef.path);
+    ('🔍 Checking if publisher already exists at:', publisherRef.path);
     
     const existingPublisher = await getDoc(publisherRef);
 
     if (existingPublisher.exists()) {
-      console.log('⚠️ Publisher already in favorites');
+      ('⚠️ Publisher already in favorites');
       return NextResponse.json(
         { success: false, error: 'Publisher already in favorites' },
         { status: 409 }
@@ -156,11 +156,11 @@ export async function POST(request) {
     }
 
     // Save to favorites
-    console.log('💾 Saving publisher to favorites:', publisherRef.path);
+    ('💾 Saving publisher to favorites:', publisherRef.path);
     await setDoc(publisherRef, publisherData);
 
     // 🆕 ADD SUBSCRIPTION TRACKING
-    console.log('📊 Adding subscriber tracking...');
+    ('📊 Adding subscriber tracking...');
     const publisherMainRef = doc(db, 'publishers', publisherData.id);
     const subscriberRef = doc(db, 'publishers', publisherData.id, 'subscribers', readerId);
 
@@ -177,7 +177,7 @@ export async function POST(request) {
       lastSubscriberUpdate: serverTimestamp()
     }, { merge: true });
 
-    console.log('✅ Successfully added publisher to favorites and subscribed');
+    ('✅ Successfully added publisher to favorites and subscribed');
 
     return NextResponse.json({
       success: true,
@@ -207,9 +207,9 @@ export async function DELETE(request) {
     const userId = searchParams.get('userId');
     const publisherId = searchParams.get('publisherId');
 
-    console.log('🗑️ DELETE Request:');
-    console.log('  - Raw userId:', userId);
-    console.log('  - PublisherId:', publisherId);
+    ('🗑️ DELETE Request:');
+    ('  - Raw userId:', userId);
+    ('  - PublisherId:', publisherId);
 
     if (!userId || !publisherId) {
       return NextResponse.json(
@@ -219,15 +219,15 @@ export async function DELETE(request) {
     }
 
     const readerId = normalizeReaderId(userId);
-    console.log('🗑️ DELETE Request - Using normalized readerId:', readerId);
+    ('🗑️ DELETE Request - Using normalized readerId:', readerId);
 
     // Remove from favorites
     const publisherRef = doc(db, 'readers', readerId, 'favoritePublishers', publisherId);
-    console.log('🗑️ Deleting from path:', publisherRef.path);
+    ('🗑️ Deleting from path:', publisherRef.path);
     await deleteDoc(publisherRef);
 
     // 🆕 REMOVE SUBSCRIPTION TRACKING
-    console.log('📊 Removing subscriber tracking...');
+    ('📊 Removing subscriber tracking...');
     const subscriberRef = doc(db, 'publishers', publisherId, 'subscribers', readerId);
     await deleteDoc(subscriberRef);
 
@@ -238,7 +238,7 @@ export async function DELETE(request) {
       lastSubscriberUpdate: serverTimestamp()
     }, { merge: true });
 
-    console.log('✅ Successfully removed publisher from favorites and unsubscribed');
+    ('✅ Successfully removed publisher from favorites and unsubscribed');
 
     return NextResponse.json({
       success: true,

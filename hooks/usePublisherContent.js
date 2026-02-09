@@ -8,7 +8,7 @@ const usePublisherContent = (publisherId) => {
   // Fetch all content for publisher with better error handling
   const fetchContent = async () => {
     if (!publisherId) {
-      console.log('⏩ No publisherId provided, skipping fetch');
+      ('⏩ No publisherId provided, skipping fetch');
       setLoading(false);
       return;
     }
@@ -17,14 +17,14 @@ const usePublisherContent = (publisherId) => {
       setLoading(true);
       setError(null);
       
-      console.log('🔄 Fetching content for publisher:', publisherId);
+      ('🔄 Fetching content for publisher:', publisherId);
 
       const url = `/api/publish-article?publisherId=${publisherId}&type=both`;
-      console.log('📡 Making request to:', url);
+      ('📡 Making request to:', url);
 
       const response = await fetch(url);
       
-      console.log('📥 Response status:', response.status);
+      ('📥 Response status:', response.status);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -33,7 +33,7 @@ const usePublisherContent = (publisherId) => {
       }
 
       const responseText = await response.text();
-      console.log('📄 Raw response preview:', responseText.substring(0, 200) + '...');
+      ('📄 Raw response preview:', responseText.substring(0, 200) + '...');
 
       if (!responseText || responseText.trim() === '') {
         throw new Error('Empty response from server');
@@ -47,7 +47,7 @@ const usePublisherContent = (publisherId) => {
         throw new Error(`Invalid JSON response: ${parseError.message}`);
       }
 
-      console.log('📊 Parsed data:', { 
+      ('📊 Parsed data:', { 
         success: data.success, 
         articlesCount: data.articles?.length || 0, 
         draftsCount: data.drafts?.length || 0,
@@ -70,7 +70,7 @@ const usePublisherContent = (publisherId) => {
         setArticles(publishedArticles);
         setDrafts(draftArticles);
         
-        console.log('✅ Content categorized:', { 
+        ('✅ Content categorized:', { 
           published: publishedArticles.length, 
           drafts: draftArticles.length 
         });
@@ -98,7 +98,7 @@ const usePublisherContent = (publisherId) => {
     }
 
     try {
-      console.log('📤 Publishing draft:', draftId);
+      ('📤 Publishing draft:', draftId);
 
       const response = await fetch(
         `/api/manage-drafts?publisherId=${publisherId}&draftId=${draftId}&action=publish`,
@@ -120,7 +120,7 @@ const usePublisherContent = (publisherId) => {
       if (result.success) {
         // Refresh content to get updated lists
         await fetchContent();
-        console.log('✅ Draft published successfully');
+        ('✅ Draft published successfully');
         return result;
       } else {
         throw new Error(result.error || 'Failed to publish draft');
@@ -137,7 +137,7 @@ const usePublisherContent = (publisherId) => {
     }
 
     try {
-      console.log('🗑️ Deleting article:', articleId);
+      ('🗑️ Deleting article:', articleId);
 
       const response = await fetch(
         `/api/publish-article?publisherId=${publisherId}&articleId=${articleId}&collection=articles`,
@@ -156,7 +156,7 @@ const usePublisherContent = (publisherId) => {
       if (result.success) {
         // Update local state
         setArticles(prev => prev.filter(article => article.id !== articleId));
-        console.log('✅ Article deleted successfully');
+        ('✅ Article deleted successfully');
         return result;
       } else {
         throw new Error(result.error || 'Failed to delete article');
@@ -173,7 +173,7 @@ const usePublisherContent = (publisherId) => {
     }
 
     try {
-      console.log('🗑️ Deleting draft:', draftId);
+      ('🗑️ Deleting draft:', draftId);
 
       const response = await fetch(
         `/api/manage-drafts?publisherId=${publisherId}&draftId=${draftId}`,
@@ -192,7 +192,7 @@ const usePublisherContent = (publisherId) => {
       if (result.success) {
         // Update local state
         setDrafts(prev => prev.filter(draft => draft.id !== draftId));
-        console.log('✅ Draft deleted successfully');
+        ('✅ Draft deleted successfully');
         return result;
       } else {
         throw new Error(result.error || 'Failed to delete draft');

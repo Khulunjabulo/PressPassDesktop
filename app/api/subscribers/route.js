@@ -38,7 +38,7 @@ export async function GET(request) {
       );
     }
 
-    console.log('📊 Fetching subscriber data for publisher:', publisherId);
+    ('📊 Fetching subscriber data for publisher:', publisherId);
 
     // Get all subscribers from subcollection
     const subscribersRef = collection(db, 'publishers', publisherId, 'subscribers');
@@ -164,7 +164,7 @@ export async function GET(request) {
       });
     }
 
-    console.log('✅ Subscriber analytics calculated:', {
+    ('✅ Subscriber analytics calculated:', {
       total: activeSubscribers.length,
       newThisMonth,
       churned: churned.length,
@@ -211,7 +211,7 @@ export async function POST(request) {
     }
 
     const readerId = normalizeReaderId(userId);
-    console.log('📝 Subscription action:', action, 'for reader:', readerId, 'publisher:', publisherId);
+    ('📝 Subscription action:', action, 'for reader:', readerId, 'publisher:', publisherId);
 
     const publisherRef = doc(db, 'publishers', publisherId);
     const subscriberRef = doc(db, 'publishers', publisherId, 'subscribers', readerId);
@@ -224,7 +224,7 @@ export async function POST(request) {
         lastSubscriberUpdate: serverTimestamp(),
         createdAt: serverTimestamp()
       });
-      console.log('📝 Initialized publisher document');
+      ('📝 Initialized publisher document');
     }
 
     if (action === 'subscribe') {
@@ -232,7 +232,7 @@ export async function POST(request) {
       const existingSubscriber = await getDoc(subscriberRef);
       
       if (existingSubscriber.exists() && existingSubscriber.data().active) {
-        console.log('⚠️ User already subscribed');
+        ('⚠️ User already subscribed');
         return NextResponse.json({
           success: true,
           message: 'Already subscribed',
@@ -256,7 +256,7 @@ export async function POST(request) {
         }, { merge: true });
       }
 
-      console.log('✅ Subscribed successfully');
+      ('✅ Subscribed successfully');
 
       return NextResponse.json({
         success: true,
@@ -269,7 +269,7 @@ export async function POST(request) {
       const existingSubscriber = await getDoc(subscriberRef);
       
       if (!existingSubscriber.exists()) {
-        console.log('⚠️ Subscriber not found');
+        ('⚠️ Subscriber not found');
         return NextResponse.json({
           success: true,
           message: 'Not subscribed',
@@ -292,7 +292,7 @@ export async function POST(request) {
         lastSubscriberUpdate: serverTimestamp()
       }, { merge: true });
 
-      console.log('✅ Unsubscribed successfully');
+      ('✅ Unsubscribed successfully');
 
       return NextResponse.json({
         success: true,

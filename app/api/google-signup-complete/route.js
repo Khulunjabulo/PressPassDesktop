@@ -3,11 +3,11 @@ import { NextResponse } from 'next/server';
 import { getFirestoreDb, getAuth } from '../../../lib/firebase-admin';
 
 export async function POST(request) {
-  console.log('🚀 Starting Google sign-up completion process...');
+  ('🚀 Starting Google sign-up completion process...');
   
   try {
     const { uid, role, additionalData, tempToken } = await request.json();
-    console.log('📥 Received completion data:', { uid, role, hasAdditionalData: !!additionalData });
+    ('📥 Received completion data:', { uid, role, hasAdditionalData: !!additionalData });
 
     if (!uid || !role || !additionalData) {
       console.error('❌ Missing required fields');
@@ -27,7 +27,7 @@ export async function POST(request) {
     }
 
     // Initialize Firebase
-    console.log('🔥 Initializing Firebase services...');
+    ('🔥 Initializing Firebase services...');
     const db = getFirestoreDb();
     const auth = getAuth();
 
@@ -35,7 +35,7 @@ export async function POST(request) {
     let firebaseUser;
     try {
       firebaseUser = await auth.getUser(uid);
-      console.log('✅ Firebase user verified:', firebaseUser.uid);
+      ('✅ Firebase user verified:', firebaseUser.uid);
     } catch (error) {
       console.error('❌ Firebase user not found:', error);
       return NextResponse.json({ 
@@ -52,7 +52,7 @@ export async function POST(request) {
     const existingDoc = await db.collection(collectionName).doc(roleSpecificUid).get();
     
     if (existingDoc.exists) {
-      console.log('⚠️ User already exists in role-specific collection');
+      ('⚠️ User already exists in role-specific collection');
       return NextResponse.json({ 
         success: false, 
         error: `You already have a ${role} account. Please sign in instead.` 
@@ -85,7 +85,7 @@ export async function POST(request) {
         bookmarks: [],
         following: []
       };
-      console.log('👤 Prepared reader data');
+      ('👤 Prepared reader data');
     } else if (role === 'publisher') {
       userData = {
         ...userData,
@@ -108,23 +108,23 @@ export async function POST(request) {
         subscriptionStatus: 'free',
         lastPosted: null
       };
-      console.log('🏢 Prepared publisher data');
+      ('🏢 Prepared publisher data');
     }
 
     // Save to Firestore
-    console.log('💾 Saving user data to Firestore...');
+    ('💾 Saving user data to Firestore...');
     await db.collection(collectionName).doc(roleSpecificUid).set(userData);
-    console.log('✅ User data saved successfully');
+    ('✅ User data saved successfully');
 
     // Create custom token for authentication
-    console.log('🎫 Creating custom token...');
+    ('🎫 Creating custom token...');
     const customToken = await auth.createCustomToken(firebaseUser.uid, {
       role,
       customUid: roleSpecificUid,
       email: firebaseUser.email
     });
 
-    console.log('🎉 Google sign-up completion process finished successfully');
+    ('🎉 Google sign-up completion process finished successfully');
     
     return NextResponse.json({
       success: true,

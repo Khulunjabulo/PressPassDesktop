@@ -8,7 +8,7 @@ export async function POST(request) {
     const body = await request.json();
     const { type, paymentIntentId, error, stack, timestamp, ...additionalData } = body;
 
-    console.log('📝 [LOG-ERROR] Logging error:', {
+    ('📝 [LOG-ERROR] Logging error:', {
       type,
       paymentIntentId,
       error
@@ -28,7 +28,7 @@ export async function POST(request) {
 
     const docRef = await db.collection('error_logs').add(errorDoc);
 
-    console.log('✅ [LOG-ERROR] Error logged:', docRef.id);
+    ('✅ [LOG-ERROR] Error logged:', docRef.id);
 
     return NextResponse.json({
       success: true,

@@ -160,7 +160,7 @@ export default function ClassifiedsUploadForm({ onSubmit, onClose }) {
       submitData.append('views', '0')
       submitData.append('inquiries', '0')
 
-      console.log('📡 Submitting classified to API...')
+      ('📡 Submitting classified to API...')
 
       // Make API call to classifieds endpoint
       const response = await fetch('/api/classifieds', {
@@ -174,7 +174,7 @@ export default function ClassifiedsUploadForm({ onSubmit, onClose }) {
         throw new Error(result.error || `HTTP error! status: ${response.status}`)
       }
 
-      console.log('✅ Classified submitted successfully:', result)
+      ('✅ Classified submitted successfully:', result)
 
       if (onSubmit && typeof onSubmit === 'function') {
         await onSubmit({

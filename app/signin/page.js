@@ -24,7 +24,7 @@ export default function SignIn() {
 
   // Initialize Google Sign-In when component mounts
   useEffect(() => {
-    console.log('🔧 Initializing Google Sign-In in SignIn component...');
+    ('🔧 Initializing Google Sign-In in SignIn component...');
     const callback = (response) => {
       handleGoogleSignInCallback(
         response, 
@@ -71,7 +71,7 @@ export default function SignIn() {
   }
 
   const handleGoogleSignInClick = async () => {
-    console.log('🔘 Google Sign-In button clicked');
+    ('🔘 Google Sign-In button clicked');
     setError('');
     
     if (!window.google) {
@@ -79,16 +79,16 @@ export default function SignIn() {
       return;
     }
 
-    console.log('🚀 Launching Google Sign-In prompt...');
+    ('🚀 Launching Google Sign-In prompt...');
     window.google.accounts.id.prompt((notification) => {
       if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-        console.log('⚠️ Google prompt was not displayed or was skipped');
+        ('⚠️ Google prompt was not displayed or was skipped');
       }
     });
   }
 
   const handleRoleSelection = async (selectedRole) => {
-    console.log('👤 User selected role:', selectedRole);
+    ('👤 User selected role:', selectedRole);
     setShowRoleSelector(false);
     await completeGoogleSignIn(pendingGoogleCredential, selectedRole, router, setError, setLoading);
   }

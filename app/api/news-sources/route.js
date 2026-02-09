@@ -7,7 +7,7 @@ const db = getFirestore(app);
 
 export async function GET() {
   try {
-    console.log('Fetching news sources...');
+    ('Fetching news sources...');
     
     // Fetch all publishers first (without filtering by isActive to debug)
     const publishersRef = collection(db, 'publishers');
@@ -26,7 +26,7 @@ export async function GET() {
     }
     
     const publishersSnapshot = await getDocs(publishersQuery);
-    console.log(`Found ${publishersSnapshot.size} publishers`);
+    (`Found ${publishersSnapshot.size} publishers`);
     
     if (publishersSnapshot.empty) {
       return NextResponse.json({
@@ -40,11 +40,11 @@ export async function GET() {
     for (const doc of publishersSnapshot.docs) {
       try {
         const publisherData = doc.data();
-        console.log(`Processing publisher: ${publisherData.companyName || doc.id}`);
+        (`Processing publisher: ${publisherData.companyName || doc.id}`);
         
         // Skip if not active (if the field exists)
         if (publisherData.hasOwnProperty('isActive') && !publisherData.isActive) {
-          console.log(`Skipping inactive publisher: ${publisherData.companyName || doc.id}`);
+          (`Skipping inactive publisher: ${publisherData.companyName || doc.id}`);
           continue;
         }
         
@@ -57,7 +57,7 @@ export async function GET() {
           const articlesRef = collection(db, 'publishers', doc.id, 'articles');
           const articlesSnapshot = await getDocs(articlesRef);
           articleCount = articlesSnapshot.size;
-          console.log(`Publisher ${publisherData.companyName || doc.id} has ${articleCount} articles`);
+          (`Publisher ${publisherData.companyName || doc.id} has ${articleCount} articles`);
           
           if (articleCount > 0) {
             // Try to get the latest article
@@ -108,7 +108,7 @@ export async function GET() {
       }
     }
 
-    console.log(`Successfully processed ${publishers.length} publishers`);
+    (`Successfully processed ${publishers.length} publishers`);
 
     // Sort publishers (newest first, handling missing dates)
     publishers.sort((a, b) => {

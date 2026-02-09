@@ -20,7 +20,7 @@ export async function POST(request) {
       );
     }
 
-    console.log(`👁️ Tracking view for article: ${articleId} of publisher: ${publisherId}`);
+    (`👁️ Tracking view for article: ${articleId} of publisher: ${publisherId}`);
 
     // The path to the article could be in 'articles' or 'drafts' but views are usually for published articles.
     const articleRef = doc(db, 'publishers', publisherId, 'articles', articleId);
@@ -39,7 +39,7 @@ export async function POST(request) {
       views: increment(1)
     });
 
-    console.log(`✅ View count incremented for article: ${articleId}`);
+    (`✅ View count incremented for article: ${articleId}`);
 
     return NextResponse.json({ success: true });
 

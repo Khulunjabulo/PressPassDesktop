@@ -11,13 +11,13 @@ export async function GET(req) {
     const publisherId = searchParams.get('publisherId');
     const classifiedId = searchParams.get('classifiedId');
 
-    console.log('📖 GET classifieds request params:', { publisherId, classifiedId });
+    ('📖 GET classifieds request params:', { publisherId, classifiedId });
 
     // Test Firebase connection first
     let db;
     try {
       db = getFirestoreDb();
-      console.log('✅ Firebase connection established');
+      ('✅ Firebase connection established');
     } catch (firebaseError) {
       console.error('❌ Firebase connection failed:', firebaseError);
       return NextResponse.json(
@@ -36,7 +36,7 @@ export async function GET(req) {
           .get();
 
         if (!classifiedDoc.exists) {
-          console.log('❌ Classified not found:', classifiedId);
+          ('❌ Classified not found:', classifiedId);
           return NextResponse.json(
             { success: false, error: 'Classified not found' },
             { status: 404 }
@@ -53,7 +53,7 @@ export async function GET(req) {
           imageUrl: data.imageUrl || data.image || null
         };
 
-        console.log('✅ Single classified retrieved:', classifiedData.title);
+        ('✅ Single classified retrieved:', classifiedData.title);
 
         return NextResponse.json({
           success: true,
@@ -71,7 +71,7 @@ export async function GET(req) {
     // Fetch all classifieds from all publishers
     if (publisherId === 'all') {
       try {
-        console.log('🔍 Fetching all classifieds from all publishers...');
+        ('🔍 Fetching all classifieds from all publishers...');
 
         // Get all publishers
         const publishersSnapshot = await db.collection('publishers').get();
@@ -113,7 +113,7 @@ export async function GET(req) {
         // Sort all classifieds by updatedAt
         allClassifieds.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
 
-        console.log('📰 Total classifieds found:', allClassifieds.length);
+        ('📰 Total classifieds found:', allClassifieds.length);
 
         return NextResponse.json({
           success: true,
@@ -135,7 +135,7 @@ export async function GET(req) {
     // Fetch classifieds for a specific publisher
     if (publisherId && publisherId !== 'all') {
       try {
-        console.log('🔍 Fetching classifieds for publisher:', publisherId);
+        ('🔍 Fetching classifieds for publisher:', publisherId);
 
         const publisherRef = db.collection('publishers').doc(publisherId);
         const classifiedsSnapshot = await publisherRef
@@ -155,7 +155,7 @@ export async function GET(req) {
           };
         });
 
-        console.log('📰 Classifieds found for publisher:', classifieds.length);
+        ('📰 Classifieds found for publisher:', classifieds.length);
 
         return NextResponse.json({
           success: true,
@@ -203,7 +203,7 @@ export async function POST(req) {
     let data = {};
     let publisherId = null;
 
-    console.log('📝 POST classified request received, content-type:', contentType);
+    ('📝 POST classified request received, content-type:', contentType);
 
     // Handle FormData from ClassifiedsUploadForm
     if (contentType.includes('multipart/form-data')) {
@@ -229,8 +229,8 @@ export async function POST(req) {
       );
     }
 
-    console.log('📝 Saving classified for publisherId:', publisherId);
-    console.log('🖼️ Image data received:', {
+    ('📝 Saving classified for publisherId:', publisherId);
+    ('🖼️ Image data received:', {
       imageUrl: data.imageUrl ? 'Present' : 'Missing',
       image: data.image ? 'File present' : 'No file'
     });
@@ -250,7 +250,7 @@ export async function POST(req) {
       inquiries: data.inquiries || 0
     };
 
-    console.log('💾 Final classified data:', {
+    ('💾 Final classified data:', {
       title: classifiedData.title,
       price: classifiedData.price,
       imageUrl: classifiedData.imageUrl,
@@ -279,8 +279,8 @@ export async function POST(req) {
       message = 'Classified created successfully';
     }
 
-    console.log(`✅ ${message}`);
-    console.log('🖼️ Saved with image URL:', classifiedData.imageUrl);
+    (`✅ ${message}`);
+    ('🖼️ Saved with image URL:', classifiedData.imageUrl);
 
     return NextResponse.json({
       success: true,
@@ -313,7 +313,7 @@ export async function DELETE(req) {
       );
     }
 
-    console.log('🗑️ Deleting classified:', classifiedId, 'for publisher:', publisherId);
+    ('🗑️ Deleting classified:', classifiedId, 'for publisher:', publisherId);
 
     const db = getFirestoreDb();
     const publisherRef = db.collection('publishers').doc(publisherId);
@@ -329,7 +329,7 @@ export async function DELETE(req) {
     }
 
     await docRef.delete();
-    console.log('✅ Classified deleted successfully');
+    ('✅ Classified deleted successfully');
 
     return NextResponse.json({
       success: true,

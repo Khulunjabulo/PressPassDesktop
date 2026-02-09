@@ -53,7 +53,7 @@ export default function PaymentPage() {
       currency: "ZAR", // or "NGN" depending on setup
       ref: "AD-" + Math.floor(Math.random() * 1000000000 + 1),
       callback: (response) => {
-        console.log("Payment success:", response);
+        ("Payment success:", response);
         alert("Payment successful! Ref: " + response.reference);
         router.push("/print-media/monetization/dashboard");
       },

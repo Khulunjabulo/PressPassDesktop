@@ -8,7 +8,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
 export async function POST(request) {
-  console.log('🪝 [STRIPE-WEBHOOK] Received webhook event');
+  ('🪝 [STRIPE-WEBHOOK] Received webhook event');
   
   try {
     const body = await request.text();
@@ -26,7 +26,7 @@ export async function POST(request) {
     let event;
     try {
       event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
-      console.log('✅ [STRIPE-WEBHOOK] Signature verified');
+      ('✅ [STRIPE-WEBHOOK] Signature verified');
     } catch (err) {
       console.error('❌ [STRIPE-WEBHOOK] Signature verification failed:', err.message);
       return NextResponse.json(
@@ -35,8 +35,8 @@ export async function POST(request) {
       );
     }
 
-    console.log('📨 [STRIPE-WEBHOOK] Event type:', event.type);
-    console.log('📋 [STRIPE-WEBHOOK] Event data:', {
+    ('📨 [STRIPE-WEBHOOK] Event type:', event.type);
+    ('📋 [STRIPE-WEBHOOK] Event data:', {
       id: event.id,
       type: event.type,
       created: event.created
@@ -71,7 +71,7 @@ export async function POST(request) {
         break;
 
       default:
-        console.log(`ℹ️ [STRIPE-WEBHOOK] Unhandled event type: ${event.type}`);
+        (`ℹ️ [STRIPE-WEBHOOK] Unhandled event type: ${event.type}`);
     }
 
     // Log webhook event
@@ -112,7 +112,7 @@ export async function POST(request) {
 
 // Handle successful payment
 async function handlePaymentSucceeded(paymentIntent, db) {
-  console.log('✅ [WEBHOOK] Payment succeeded:', {
+  ('✅ [WEBHOOK] Payment succeeded:', {
     id: paymentIntent.id,
     amount: paymentIntent.amount / 100,
     currency: paymentIntent.currency.toUpperCase()
@@ -138,18 +138,18 @@ async function handlePaymentSucceeded(paymentIntent, db) {
   if (!querySnapshot.empty) {
     const paymentDoc = querySnapshot.docs[0];
     await paymentsRef.doc(paymentDoc.id).update(paymentData);
-    console.log('📝 [WEBHOOK] Payment record updated:', paymentDoc.id);
+    ('📝 [WEBHOOK] Payment record updated:', paymentDoc.id);
   } else {
     paymentData.paymentIntentId = paymentIntent.id;
     paymentData.createdAt = Timestamp.now();
     const newDoc = await paymentsRef.add(paymentData);
-    console.log('📄 [WEBHOOK] New payment record created:', newDoc.id);
+    ('📄 [WEBHOOK] New payment record created:', newDoc.id);
   }
 }
 
 // Handle failed payment
 async function handlePaymentFailed(paymentIntent, db) {
-  console.log('❌ [WEBHOOK] Payment failed:', {
+  ('❌ [WEBHOOK] Payment failed:', {
     id: paymentIntent.id,
     amount: paymentIntent.amount / 100,
     currency: paymentIntent.currency.toUpperCase(),
@@ -196,18 +196,18 @@ async function handlePaymentFailed(paymentIntent, db) {
   if (!querySnapshot.empty) {
     const paymentDoc = querySnapshot.docs[0];
     await paymentsRef.doc(paymentDoc.id).update(paymentData);
-    console.log('📝 [WEBHOOK] Failed payment record updated:', paymentDoc.id);
+    ('📝 [WEBHOOK] Failed payment record updated:', paymentDoc.id);
   } else {
     paymentData.paymentIntentId = paymentIntent.id;
     paymentData.createdAt = Timestamp.now();
     const newDoc = await paymentsRef.add(paymentData);
-    console.log('📄 [WEBHOOK] New failed payment record created:', newDoc.id);
+    ('📄 [WEBHOOK] New failed payment record created:', newDoc.id);
   }
 }
 
 // Handle canceled payment
 async function handlePaymentCanceled(paymentIntent, db) {
-  console.log('🚫 [WEBHOOK] Payment canceled:', {
+  ('🚫 [WEBHOOK] Payment canceled:', {
     id: paymentIntent.id,
     reason: paymentIntent.cancellation_reason
   });
@@ -229,13 +229,13 @@ async function handlePaymentCanceled(paymentIntent, db) {
   if (!querySnapshot.empty) {
     const paymentDoc = querySnapshot.docs[0];
     await paymentsRef.doc(paymentDoc.id).update(paymentData);
-    console.log('📝 [WEBHOOK] Canceled payment record updated:', paymentDoc.id);
+    ('📝 [WEBHOOK] Canceled payment record updated:', paymentDoc.id);
   }
 }
 
 // Handle payment created
 async function handlePaymentCreated(paymentIntent, db) {
-  console.log('🆕 [WEBHOOK] Payment created:', {
+  ('🆕 [WEBHOOK] Payment created:', {
     id: paymentIntent.id,
     amount: paymentIntent.amount / 100,
     currency: paymentIntent.currency.toUpperCase()
@@ -261,13 +261,13 @@ async function handlePaymentCreated(paymentIntent, db) {
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now()
     });
-    console.log('📄 [WEBHOOK] Payment record created from webhook');
+    ('📄 [WEBHOOK] Payment record created from webhook');
   }
 }
 
 // Handle charge succeeded
 async function handleChargeSucceeded(charge, db) {
-  console.log('💳 [WEBHOOK] Charge succeeded:', {
+  ('💳 [WEBHOOK] Charge succeeded:', {
     id: charge.id,
     amount: charge.amount / 100,
     paymentIntent: charge.payment_intent
@@ -293,7 +293,7 @@ async function handleChargeSucceeded(charge, db) {
 
 // Handle charge failed
 async function handleChargeFailed(charge, db) {
-  console.log('❌ [WEBHOOK] Charge failed:', {
+  ('❌ [WEBHOOK] Charge failed:', {
     id: charge.id,
     paymentIntent: charge.payment_intent,
     failureCode: charge.failure_code,

@@ -38,7 +38,7 @@ const GoogleSignUpModal = ({
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    console.log(`📝 Input change: ${name} = ${type === 'checkbox' ? checked : value}`);
+    (`📝 Input change: ${name} = ${type === 'checkbox' ? checked : value}`);
     
     setFormData(prev => ({
       ...prev,
@@ -48,14 +48,14 @@ const GoogleSignUpModal = ({
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
-    console.log('🖼️ Image selected:', file?.name);
+    ('🖼️ Image selected:', file?.name);
     
     if (file) {
       setFormData(prev => ({ ...prev, profilePic: file }));
       const reader = new FileReader();
       reader.onloadend = () => {
         setProfilePicPreview(reader.result);
-        console.log('👀 Profile pic preview updated');
+        ('👀 Profile pic preview updated');
       };
       reader.readAsDataURL(file);
     }
@@ -63,7 +63,7 @@ const GoogleSignUpModal = ({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('🚀 Submitting Google sign-up form');
+    ('🚀 Submitting Google sign-up form');
     
     if (!selectedRole) {
       alert('Please select a role');
@@ -80,7 +80,7 @@ const GoogleSignUpModal = ({
       role: selectedRole
     };
 
-    console.log('📋 Complete form data:', completeFormData);
+    ('📋 Complete form data:', completeFormData);
     
     try {
       await completeGoogleSignUp(

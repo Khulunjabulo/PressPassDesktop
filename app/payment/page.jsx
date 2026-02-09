@@ -101,7 +101,7 @@ function PaymentPageContent({
         const { loadStripe } = await import('@stripe/stripe-js');
         const stripeInstance = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
         setStripe(stripeInstance);
-        console.log('✅ [PAYMENT-PAGE] Stripe loaded successfully');
+        ('✅ [PAYMENT-PAGE] Stripe loaded successfully');
       } catch (error) {
         console.error('❌ [PAYMENT-PAGE] Failed to load Stripe:', error);
         setErrorMessage('Payment system failed to load. Please refresh.');
@@ -123,7 +123,7 @@ function PaymentPageContent({
   const createPaymentIntent = async () => {
     try {
       setLoading(true);
-      console.log('💳 [PAYMENT-PAGE] Creating payment intent...', { 
+      ('💳 [PAYMENT-PAGE] Creating payment intent...', { 
         amount, 
         currency, 
         metadata 
@@ -141,10 +141,10 @@ function PaymentPageContent({
       
       const data = await response.json();
       
-      console.log('📥 [PAYMENT-PAGE] Payment intent response:', data);
+      ('📥 [PAYMENT-PAGE] Payment intent response:', data);
       
       if (data.success) {
-        console.log('✅ [PAYMENT-PAGE] Payment intent created:', {
+        ('✅ [PAYMENT-PAGE] Payment intent created:', {
           paymentIntentId: data.paymentIntentId,
           amount: data.amount,
           currency: data.currency
@@ -166,7 +166,7 @@ function PaymentPageContent({
   // Initialize Stripe Elements
   useEffect(() => {
     if (stripe && clientSecret && !elements) {
-      console.log('🎨 [PAYMENT-PAGE] Initializing Stripe Elements...');
+      ('🎨 [PAYMENT-PAGE] Initializing Stripe Elements...');
       
       const elementsInstance = stripe.elements({
         clientSecret,
@@ -184,7 +184,7 @@ function PaymentPageContent({
       });
       
       setElements(elementsInstance);
-      console.log('✅ [PAYMENT-PAGE] Stripe Elements initialized');
+      ('✅ [PAYMENT-PAGE] Stripe Elements initialized');
     }
   }, [stripe, clientSecret]);
 
@@ -206,7 +206,7 @@ function PaymentPageContent({
       paymentElement.mount('#payment-element-mount');
       
       paymentElement.on('ready', () => {
-        console.log('✅ [PAYMENT-PAGE] Payment element ready');
+        ('✅ [PAYMENT-PAGE] Payment element ready');
         setLoading(false);
       });
       
@@ -218,7 +218,7 @@ function PaymentPageContent({
         }
       });
       
-      console.log('✅ [PAYMENT-PAGE] Payment element mounted');
+      ('✅ [PAYMENT-PAGE] Payment element mounted');
       
     } catch (error) {
       console.error('❌ [PAYMENT-PAGE] Error mounting payment element:', error);
@@ -242,7 +242,7 @@ function PaymentPageContent({
   const sendInvoice = async (paymentData) => {
     try {
       setSendingInvoice(true);
-      console.log('📧 [PAYMENT-PAGE] Sending invoice email...');
+      ('📧 [PAYMENT-PAGE] Sending invoice email...');
 
       const response = await fetch('/api/send-invoice', {
         method: 'POST',
@@ -261,7 +261,7 @@ function PaymentPageContent({
       const data = await response.json();
       
       if (data.success) {
-        console.log('✅ [PAYMENT-PAGE] Invoice sent successfully:', data.invoiceNumber);
+        ('✅ [PAYMENT-PAGE] Invoice sent successfully:', data.invoiceNumber);
       } else {
         console.error('❌ [PAYMENT-PAGE] Failed to send invoice:', data.error);
       }
@@ -290,7 +290,7 @@ function PaymentPageContent({
       setLoading(true);
       setErrorMessage('');
       
-      console.log('💳 [PAYMENT-PAGE] Processing payment...');
+      ('💳 [PAYMENT-PAGE] Processing payment...');
       
       const { error: submitError } = await elements.submit();
       if (submitError) {
@@ -310,13 +310,13 @@ function PaymentPageContent({
         throw new Error(error.message);
       }
       
-      console.log('📊 [PAYMENT-PAGE] Payment intent status:', paymentIntent.status);
+      ('📊 [PAYMENT-PAGE] Payment intent status:', paymentIntent.status);
       
       if (paymentIntent.status === 'succeeded') {
-        console.log('✅ [PAYMENT-PAGE] Payment succeeded! Payment ID:', paymentIntent.id);
+        ('✅ [PAYMENT-PAGE] Payment succeeded! Payment ID:', paymentIntent.id);
         
         // Verify payment
-        console.log('🔍 [PAYMENT-PAGE] Verifying payment with server...');
+        ('🔍 [PAYMENT-PAGE] Verifying payment with server...');
         const verifyResponse = await fetch('/api/verify-payment', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -324,7 +324,7 @@ function PaymentPageContent({
         });
         
         const verifyData = await verifyResponse.json();
-        console.log('📥 [PAYMENT-PAGE] Verification response:', verifyData);
+        ('📥 [PAYMENT-PAGE] Verification response:', verifyData);
         
         if (verifyData.success && verifyData.verified) {
           setPaymentStatus('success');
@@ -339,7 +339,7 @@ function PaymentPageContent({
           
           // If this is an ad payment, activate the ad
           if (metadata.type === 'ad_space') {
-            console.log('🎯 [PAYMENT-PAGE] This is an ad payment, activating ad...');
+            ('🎯 [PAYMENT-PAGE] This is an ad payment, activating ad...');
             await activateAd(paymentIntent.id);
           }
           
@@ -379,10 +379,10 @@ function PaymentPageContent({
     try {
       setActivatingAd(true);
       setActivationError(null);
-      console.log('🔓 [PAYMENT-PAGE] Activating ad after payment...');
+      ('🔓 [PAYMENT-PAGE] Activating ad after payment...');
       
       const pendingDataStr = sessionStorage.getItem('pendingAdUpload');
-      console.log('📦 [PAYMENT-PAGE] Pending upload data (raw):', pendingDataStr);
+      ('📦 [PAYMENT-PAGE] Pending upload data (raw):', pendingDataStr);
       
       if (!pendingDataStr) {
         const errorMsg = 'No pending ad upload found in session storage';
@@ -428,7 +428,7 @@ function PaymentPageContent({
       const result = await response.json();
       
       if (result.success) {
-        console.log('✅ [PAYMENT-PAGE] Ad activated successfully:', result.data);
+        ('✅ [PAYMENT-PAGE] Ad activated successfully:', result.data);
         sessionStorage.removeItem('pendingAdUpload');
       } else {
         const errorMsg = result.error || 'Ad activation failed';

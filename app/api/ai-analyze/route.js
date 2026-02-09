@@ -5,8 +5,8 @@ export async function POST(req) {
   try {
     const { prompt, maxTokens = 4000 } = await req.json();
 
-    console.log('🤖 AI Proxy: Request received');
-    console.log('📝 Prompt length:', prompt?.length);
+    ('🤖 AI Proxy: Request received');
+    ('📝 Prompt length:', prompt?.length);
 
     if (!prompt) {
       return NextResponse.json(
@@ -25,8 +25,8 @@ export async function POST(req) {
       );
     }
 
-    console.log('🔑 API key found');
-    console.log('📤 Calling Anthropic...');
+    ('🔑 API key found');
+    ('📤 Calling Anthropic...');
 
     // Call Anthropic API with correct format
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -48,7 +48,7 @@ export async function POST(req) {
       })
     });
 
-    console.log('📥 Anthropic response:', response.status);
+    ('📥 Anthropic response:', response.status);
 
     if (!response.ok) {
       const errorData = await response.json();
@@ -65,7 +65,7 @@ export async function POST(req) {
     }
 
     const data = await response.json();
-    console.log('✅ Success! Response received');
+    ('✅ Success! Response received');
     
     return NextResponse.json(data);
 

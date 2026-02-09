@@ -52,12 +52,12 @@ export async function POST(request) {
     const body = await request.json();
     let { publisherId, feedUrl, feedName, action } = body;
 
-    console.log('🔍 RSS Feed Request (BEFORE FIX):', { publisherId, feedUrl, feedName, action });
+    ('🔍 RSS Feed Request (BEFORE FIX):', { publisherId, feedUrl, feedName, action });
 
     // ✅ FIX: Ensure publisher ID has the correct prefix
     publisherId = ensurePublisherPrefix(publisherId);
     
-    console.log('✅ RSS Feed Request (AFTER FIX):', { publisherId, feedUrl, feedName, action });
+    ('✅ RSS Feed Request (AFTER FIX):', { publisherId, feedUrl, feedName, action });
 
     if (!publisherId || !feedUrl) {
       return NextResponse.json(
@@ -79,15 +79,15 @@ export async function POST(request) {
     }
 
     const publisherData = publisherSnap.data();
-    console.log('✅ Publisher found:', publisherData.companyName, '| ID:', publisherId);
+    ('✅ Publisher found:', publisherData.companyName, '| ID:', publisherId);
 
-    console.log(`📡 Fetching RSS feed: ${feedUrl}`);
+    (`📡 Fetching RSS feed: ${feedUrl}`);
 
     // Parse RSS feed
     let feed;
     try {
       feed = await parser.parseURL(feedUrl);
-      console.log('✅ RSS feed parsed successfully:', {
+      ('✅ RSS feed parsed successfully:', {
         title: feed.title,
         itemCount: feed.items?.length || 0,
         firstItem: feed.items?.[0]?.title
@@ -123,7 +123,7 @@ export async function POST(request) {
         guid: item.guid || item.link || `${feed.title}-${item.title}-${Date.now()}`
       };
       
-      console.log('📄 Extracted article:', {
+      ('📄 Extracted article:', {
         title: article.title?.substring(0, 50),
         hasContent: !!article.content,
         hasImage: !!article.imageUrl,
@@ -133,7 +133,7 @@ export async function POST(request) {
       return article;
     });
 
-    console.log(`📊 Total articles extracted: ${articles.length}`);
+    (`📊 Total articles extracted: ${articles.length}`);
 
     // If action is 'preview', just return the articles
     if (action === 'preview') {
@@ -152,8 +152,8 @@ export async function POST(request) {
 
     // If action is 'publish', save to Firestore
     if (action === 'publish') {
-      console.log('📝 Starting to publish RSS feed to Firestore...');
-      console.log(`📍 Using Publisher ID: ${publisherId}`);
+      ('📝 Starting to publish RSS feed to Firestore...');
+      (`📍 Using Publisher ID: ${publisherId}`);
       
       // Save RSS feed metadata
       const rssFeedRef = collection(db, 'publishers', publisherId, 'rssFeeds');
@@ -172,8 +172,8 @@ export async function POST(request) {
         publisherName: publisherData.companyName || 'Unknown Publisher'
       });
 
-      console.log(`✅ RSS feed metadata saved with ID: ${feedDoc.id}`);
-      console.log(`✅ RSS feed path: publishers/${publisherId}/rssFeeds/${feedDoc.id}`);
+      (`✅ RSS feed metadata saved with ID: ${feedDoc.id}`);
+      (`✅ RSS feed path: publishers/${publisherId}/rssFeeds/${feedDoc.id}`);
 
       // Save each article to articles subcollection
       const articlesRef = collection(db, 'publishers', publisherId, 'articles');
@@ -181,8 +181,8 @@ export async function POST(request) {
       let successCount = 0;
       let errorCount = 0;
 
-      console.log(`💾 Starting to save ${articles.length} articles to Firestore...`);
-      console.log(`📍 Articles collection path: publishers/${publisherId}/articles`);
+      (`💾 Starting to save ${articles.length} articles to Firestore...`);
+      (`📍 Articles collection path: publishers/${publisherId}/articles`);
 
       for (const article of articles) {
         try {
@@ -224,8 +224,8 @@ export async function POST(request) {
             updatedAt: serverTimestamp()
           };
 
-          console.log(`  💾 Saving article: "${article.title.substring(0, 50)}..."`);
-          console.log(`  📊 Article data:`, {
+          (`  💾 Saving article: "${article.title.substring(0, 50)}..."`);
+          (`  📊 Article data:`, {
             hasTitle: !!articleData.title,
             hasContent: !!articleData.content,
             hasImage: !!articleData.imageUrl,
@@ -239,8 +239,8 @@ export async function POST(request) {
           
           savedArticles.push({ id: articleDoc.id, ...article });
           successCount++;
-          console.log(`  ✅ Article saved with ID: ${articleDoc.id}`);
-          console.log(`  ✅ Article path: publishers/${publisherId}/articles/${articleDoc.id}`);
+          (`  ✅ Article saved with ID: ${articleDoc.id}`);
+          (`  ✅ Article path: publishers/${publisherId}/articles/${articleDoc.id}`);
         } catch (error) {
           errorCount++;
           console.error(`  ❌ Failed to save article "${article.title}":`, error);
@@ -248,7 +248,7 @@ export async function POST(request) {
         }
       }
 
-      console.log(`📊 Save complete: ${successCount} successful, ${errorCount} failed`);
+      (`📊 Save complete: ${successCount} successful, ${errorCount} failed`);
 
       if (successCount === 0) {
         console.error('❌ No articles were saved, deleting RSS feed metadata...');
@@ -261,7 +261,7 @@ export async function POST(request) {
         );
       }
 
-      console.log(`🎉 RSS feed published successfully! ${successCount} articles added.`);
+      (`🎉 RSS feed published successfully! ${successCount} articles added.`);
 
       return NextResponse.json({
         success: true,
@@ -305,7 +305,7 @@ export async function GET(request) {
 
     // ✅ FIX: Ensure publisher ID has the correct prefix
     publisherId = ensurePublisherPrefix(publisherId);
-    console.log('✅ Fetching RSS feeds for publisher:', publisherId);
+    ('✅ Fetching RSS feeds for publisher:', publisherId);
 
     const rssFeedsRef = collection(db, 'publishers', publisherId, 'rssFeeds');
     const q = query(rssFeedsRef, orderBy('createdAt', 'desc'));
@@ -318,7 +318,7 @@ export async function GET(request) {
       lastFetched: doc.data().lastFetched?.toDate?.() || null
     }));
 
-    console.log(`✅ Found ${feeds.length} RSS feeds for publisher ${publisherId}`);
+    (`✅ Found ${feeds.length} RSS feeds for publisher ${publisherId}`);
 
     return NextResponse.json({
       success: true,

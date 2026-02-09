@@ -18,7 +18,7 @@ export const useFavorites = () => {
   const getReaderId = useCallback((userData) => {
     // First check if originalUid exists (your custom reader ID)
     if (userData?.originalUid) {
-      console.log('🔍 Using originalUid as reader ID:', userData.originalUid);
+      ('🔍 Using originalUid as reader ID:', userData.originalUid);
       return userData.originalUid;
     }
     
@@ -26,12 +26,12 @@ export const useFavorites = () => {
     if (userData?.uid) {
       // Check if UID already starts with "reader_"
       if (userData.uid.startsWith('reader_')) {
-        console.log('🔍 UID already has reader_ prefix:', userData.uid);
+        ('🔍 UID already has reader_ prefix:', userData.uid);
         return userData.uid;
       } else {
         // Construct reader ID by adding "reader_" prefix
         const readerId = `reader_${userData.uid}`;
-        console.log('🔍 Constructed reader ID from UID:', readerId);
+        ('🔍 Constructed reader ID from UID:', readerId);
         return readerId;
       }
     }
@@ -46,7 +46,7 @@ export const useFavorites = () => {
       if (user) {
         // Get user data from localStorage (stored during sign-in)
         const userData = JSON.parse(localStorage.getItem('currentUser') || '{}');
-        console.log('👤 Current user from localStorage:', userData);
+        ('👤 Current user from localStorage:', userData);
         
         // Get the correct reader ID
         const readerId = getReaderId(userData);
@@ -66,7 +66,7 @@ export const useFavorites = () => {
           setFavoritePublishers([]);
         }
       } else {
-        console.log('👤 No authenticated user found');
+        ('👤 No authenticated user found');
         setCurrentUser(null);
         setFavorites([]);
         setFavoritePublishers([]);
@@ -90,12 +90,12 @@ export const useFavorites = () => {
       setLoading(true);
       setError(null);
       
-      console.log('🔍 Fetching favorites for reader:', readerId);
+      ('🔍 Fetching favorites for reader:', readerId);
       const response = await fetch(`/api/favorites?userId=${readerId}`);
       const data = await response.json();
 
       if (data.success) {
-        console.log('✅ Favorites fetched successfully:', data.favorites?.length || 0, 'items');
+        ('✅ Favorites fetched successfully:', data.favorites?.length || 0, 'items');
         setFavorites(data.favorites || []);
       } else {
         console.error('❌ Failed to fetch favorites:', data.error);
@@ -117,12 +117,12 @@ export const useFavorites = () => {
     }
     
     try {
-      console.log('🔍 Fetching favorite publishers for reader:', readerId);
+      ('🔍 Fetching favorite publishers for reader:', readerId);
       const response = await fetch(`/api/favorites/publishers?userId=${readerId}`);
       const data = await response.json();
 
       if (data.success) {
-        console.log('✅ Favorite publishers fetched successfully:', data.publishers?.length || 0, 'items');
+        ('✅ Favorite publishers fetched successfully:', data.publishers?.length || 0, 'items');
         setFavoritePublishers(data.publishers || []);
       } else {
         console.error('❌ Failed to fetch favorite publishers:', data.error);
@@ -135,14 +135,14 @@ export const useFavorites = () => {
   // Check if an article is favorited
   const isFavorite = useCallback((itemId) => {
     const result = favorites.some(fav => fav.id === itemId);
-    console.log('🔍 Checking if item is favorite:', itemId, '→', result);
+    ('🔍 Checking if item is favorite:', itemId, '→', result);
     return result;
   }, [favorites]);
 
   // Check if a publisher is favorited
   const isPublisherFavorite = useCallback((publisherId) => {
     const result = favoritePublishers.some(pub => pub.id === publisherId);
-    console.log('🔍 Checking if publisher is favorite:', publisherId, '→', result);
+    ('🔍 Checking if publisher is favorite:', publisherId, '→', result);
     return result;
   }, [favoritePublishers]);
 
@@ -157,7 +157,7 @@ export const useFavorites = () => {
     }
 
     try {
-      console.log('➕ Adding item to favorites for reader:', readerId, item.title);
+      ('➕ Adding item to favorites for reader:', readerId, item.title);
       const response = await fetch('/api/favorites', {
         method: 'POST',
         headers: {
@@ -172,7 +172,7 @@ export const useFavorites = () => {
       const data = await response.json();
 
       if (data.success) {
-        console.log('✅ Successfully added to favorites');
+        ('✅ Successfully added to favorites');
         setFavorites(prev => [data.favorite, ...prev]);
         return { success: true, message: 'Added to favorites' };
       } else {
@@ -196,7 +196,7 @@ export const useFavorites = () => {
     }
 
     try {
-      console.log('➕ Adding publisher to favorites for reader:', readerId, publisher.name);
+      ('➕ Adding publisher to favorites for reader:', readerId, publisher.name);
       const response = await fetch('/api/favorites/publishers', {
         method: 'POST',
         headers: {
@@ -211,7 +211,7 @@ export const useFavorites = () => {
       const data = await response.json();
 
       if (data.success) {
-        console.log('✅ Successfully added publisher to favorites');
+        ('✅ Successfully added publisher to favorites');
         setFavoritePublishers(prev => [data.publisher, ...prev]);
         return { success: true, message: 'Publisher added to favorites' };
       } else {
@@ -234,7 +234,7 @@ export const useFavorites = () => {
     }
 
     try {
-      console.log('➖ Removing item from favorites for reader:', readerId, itemId);
+      ('➖ Removing item from favorites for reader:', readerId, itemId);
       const response = await fetch(`/api/favorites?userId=${readerId}&itemId=${itemId}`, {
         method: 'DELETE',
       });
@@ -242,7 +242,7 @@ export const useFavorites = () => {
       const data = await response.json();
 
       if (data.success) {
-        console.log('✅ Successfully removed from favorites');
+        ('✅ Successfully removed from favorites');
         setFavorites(prev => prev.filter(fav => fav.id !== itemId));
         return { success: true, message: 'Removed from favorites' };
       } else {
@@ -265,7 +265,7 @@ export const useFavorites = () => {
     }
 
     try {
-      console.log('➖ Removing publisher from favorites for reader:', readerId, publisherId);
+      ('➖ Removing publisher from favorites for reader:', readerId, publisherId);
       const response = await fetch(`/api/favorites/publishers?userId=${readerId}&publisherId=${publisherId}`, {
         method: 'DELETE',
       });
@@ -273,7 +273,7 @@ export const useFavorites = () => {
       const data = await response.json();
 
       if (data.success) {
-        console.log('✅ Successfully removed publisher from favorites');
+        ('✅ Successfully removed publisher from favorites');
         setFavoritePublishers(prev => prev.filter(pub => pub.id !== publisherId));
         return { success: true, message: 'Publisher removed from favorites' };
       } else {
@@ -290,7 +290,7 @@ export const useFavorites = () => {
   const toggleFavorite = useCallback(async (item) => {
     const itemId = item.id || `item_${Date.now()}`;
     
-    console.log('🔄 Toggling favorite status for item:', itemId);
+    ('🔄 Toggling favorite status for item:', itemId);
     
     if (isFavorite(itemId)) {
       return await removeFromFavorites(itemId);
@@ -303,8 +303,8 @@ export const useFavorites = () => {
   const togglePublisherFavorite = useCallback(async (publisher) => {
     const publisherId = publisher.id;
     
-    console.log('🔄 Toggling favorite status for publisher:', publisherId);
-    console.log('🔄 Using reader ID:', currentUser?.readerId);
+    ('🔄 Toggling favorite status for publisher:', publisherId);
+    ('🔄 Using reader ID:', currentUser?.readerId);
     
     if (isPublisherFavorite(publisherId)) {
       return await removePublisherFromFavorites(publisherId);
@@ -355,13 +355,13 @@ export const useFavorites = () => {
       publishers: favoritePublishers.length
     };
     
-    console.log('📊 Favorite stats:', stats);
+    ('📊 Favorite stats:', stats);
     return stats;
   }, [favorites, favoritePublishers]);
 
   // Refresh all favorites
   const refreshFavorites = useCallback(() => {
-    console.log('🔄 Refreshing favorites...');
+    ('🔄 Refreshing favorites...');
     const readerId = currentUser?.readerId;
     if (readerId) {
       fetchFavorites(readerId);

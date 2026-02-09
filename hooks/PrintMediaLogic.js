@@ -8,16 +8,16 @@ export default function usePrintMediaLogic() {
 
   // Load current user on component mount
   useEffect(() => {
-    console.log("🔧 usePrintMediaLogic: Initializing...");
+    ("🔧 usePrintMediaLogic: Initializing...");
     
     if (typeof window !== 'undefined') {
       try {
         const userData = localStorage.getItem('currentUser');
-        console.log("👤 Raw user data from localStorage:", userData);
+        ("👤 Raw user data from localStorage:", userData);
         
         if (userData) {
           const parsedUser = JSON.parse(userData);
-          console.log("👤 Parsed user data:", {
+          ("👤 Parsed user data:", {
             uid: parsedUser.uid,
             email: parsedUser.email,
             companyName: parsedUser.companyName,
@@ -42,13 +42,13 @@ export default function usePrintMediaLogic() {
     
     // Generate auth token (in production, use proper JWT)
     const token = currentUser.uid || `mock_token_${Date.now()}`;
-    console.log("🔑 Generated auth token preview:", token.substring(0, 20) + "...");
+    ("🔑 Generated auth token preview:", token.substring(0, 20) + "...");
     return token;
   };
 
   // Convert form data to FormData for API submission
   const createFormData = (formDataObj) => {
-    console.log("📦 Creating FormData from object:", {
+    ("📦 Creating FormData from object:", {
       title: formDataObj.title,
       author: formDataObj.author,
       category: formDataObj.category,
@@ -62,7 +62,7 @@ export default function usePrintMediaLogic() {
     // Add all text fields
     Object.keys(formDataObj).forEach(key => {
       if (key === 'featuredImage' && formDataObj[key]) {
-        console.log("🖼️ Adding featured image to FormData:", {
+        ("🖼️ Adding featured image to FormData:", {
           name: formDataObj[key].name,
           size: formDataObj[key].size,
           type: formDataObj[key].type
@@ -76,23 +76,23 @@ export default function usePrintMediaLogic() {
     // Add publisher information
     if (currentUser) {
       formData.append('publisherId', currentUser.uid);
-      console.log("👤 Added publisher ID to FormData:", currentUser.uid);
+      ("👤 Added publisher ID to FormData:", currentUser.uid);
       
       if (currentUser.companyName) {
         formData.append('publisherName', currentUser.companyName);
-        console.log("👤 Added publisher name to FormData:", currentUser.companyName);
+        ("👤 Added publisher name to FormData:", currentUser.companyName);
       }
     }
 
     // Log all FormData keys for debugging
-    console.log("📦 FormData keys:", [...formData.keys()]);
+    ("📦 FormData keys:", [...formData.keys()]);
     
     return formData;
   };
 
   const handleFormSubmit = async (formDataObj) => {
-    console.log("🚀 Form submission started");
-    console.log("📝 Form data received:", {
+    ("🚀 Form submission started");
+    ("📝 Form data received:", {
       title: formDataObj.title,
       author: formDataObj.author,
       category: formDataObj.category,
@@ -129,9 +129,9 @@ export default function usePrintMediaLogic() {
       // Create request URL with publisher ID
       const url = `/api/publish-article?publisherId=${encodeURIComponent(currentUser.uid)}`;
       
-      console.log("📡 Making request to:", url);
-      console.log("📡 Request headers:", headers);
-      console.log("📡 Publisher ID:", currentUser.uid);
+      ("📡 Making request to:", url);
+      ("📡 Request headers:", headers);
+      ("📡 Publisher ID:", currentUser.uid);
 
       // Make API call to the correct endpoint
       const response = await fetch(url, {
@@ -140,14 +140,14 @@ export default function usePrintMediaLogic() {
         body: formData
       });
 
-      console.log("📡 Response status:", response.status);
-      console.log("📡 Response ok:", response.ok);
+      ("📡 Response status:", response.status);
+      ("📡 Response ok:", response.ok);
 
       const result = await response.json();
-      console.log("📡 Response data:", result);
+      ("📡 Response data:", result);
 
       if (response.ok) {
-        console.log("✅ Article submission successful:", result);
+        ("✅ Article submission successful:", result);
         setSubmissionStatus({
           type: "success",
           message: result.message || "Article submitted successfully!",
@@ -155,7 +155,7 @@ export default function usePrintMediaLogic() {
         });
 
         // Log success details
-        console.log("✅ Article created:", {
+        ("✅ Article created:", {
           id: result.articleId,
           title: result.article?.title,
           status: result.article?.status,
@@ -193,7 +193,7 @@ export default function usePrintMediaLogic() {
 
   // Test Firebase connection
   const testFirebaseConnection = async () => {
-    console.log("🧪 Testing Firebase connection...");
+    ("🧪 Testing Firebase connection...");
     
     if (!currentUser) {
       console.error("❌ No user for Firebase test");
@@ -209,7 +209,7 @@ export default function usePrintMediaLogic() {
       });
 
       const result = await response.json();
-      console.log("🧪 Firebase test result:", result);
+      ("🧪 Firebase test result:", result);
       
       return result;
     } catch (error) {

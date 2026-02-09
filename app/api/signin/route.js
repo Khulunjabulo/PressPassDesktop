@@ -18,11 +18,11 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 
 export async function POST(request) {
-  console.log('🔐 /api/signin POST route called');
+  ('🔐 /api/signin POST route called');
 
   try {
     const body = await request.json();
-    console.log('📊 Request body:', { email: body.email, role: body.role });
+    ('📊 Request body:', { email: body.email, role: body.role });
 
     const { email, password, role } = body;
 
@@ -50,14 +50,14 @@ export async function POST(request) {
       );
     }
 
-    console.log('🔍 Processing signin for:', email, 'Role:', role);
+    ('🔍 Processing signin for:', email, 'Role:', role);
 
     // First, authenticate with Firebase Auth
     let firebaseUser;
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email.toLowerCase().trim(), password);
       firebaseUser = userCredential.user;
-      console.log('✅ Firebase Auth successful, UID:', firebaseUser.uid);
+      ('✅ Firebase Auth successful, UID:', firebaseUser.uid);
     } catch (authError) {
       console.error('❌ Firebase Auth failed:', authError.code);
       
@@ -87,7 +87,7 @@ export async function POST(request) {
     const collectionName = role === 'reader' ? 'readers' : 'publishers';
     const roleSpecificUid = `${role}_${firebaseUser.uid}`;
     
-    console.log('🔍 Looking up user document:', collectionName, roleSpecificUid);
+    ('🔍 Looking up user document:', collectionName, roleSpecificUid);
     
     const userDocRef = doc(db, collectionName, roleSpecificUid);
     const userDocSnap = await getDoc(userDocRef);
@@ -105,8 +105,8 @@ export async function POST(request) {
 
     const userData = userDocSnap.data();
     
-    console.log('📄 User data retrieved successfully');
-    console.log('🆔 Document UID:', roleSpecificUid);
+    ('📄 User data retrieved successfully');
+    ('🆔 Document UID:', roleSpecificUid);
 
     // Check if account is active
     if (!userData.isActive) {
@@ -126,7 +126,7 @@ export async function POST(request) {
         lastLoginAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
-      console.log('✅ Last login timestamp updated');
+      ('✅ Last login timestamp updated');
     } catch (updateError) {
       console.warn('⚠️ Could not update last login timestamp:', updateError);
       // Don't fail the signin for this
@@ -166,7 +166,7 @@ export async function POST(request) {
       responseUser.following = userData.following || [];
     }
 
-    console.log('🎉 Sign-in completed successfully');
+    ('🎉 Sign-in completed successfully');
 
     return NextResponse.json({ 
       success: true, 

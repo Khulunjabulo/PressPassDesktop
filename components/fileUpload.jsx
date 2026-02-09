@@ -50,7 +50,7 @@ export default function FileUpload({
 
     // ✅ FIXED: Trigger AI processing for extract mode
     if (pdfPublishMode === 'extract') {
-      console.log('🤖 Triggering AI processing...');
+      ('🤖 Triggering AI processing...');
       
       if (onAiProcess) {
         setIsExtracting(true);

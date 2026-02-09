@@ -20,7 +20,7 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
 
-    console.log('🔍 GET Request received with userId:', userId);
+    ('🔍 GET Request received with userId:', userId);
 
     if (!userId) {
       return NextResponse.json(
@@ -31,18 +31,18 @@ export async function GET(request) {
 
     // Debug: Log the exact path being queried
     const publishersPath = `readers/${userId}/favoritePublishers`;
-    console.log('📍 Querying Firestore path:', publishersPath);
+    ('📍 Querying Firestore path:', publishersPath);
 
     // Get user's favorite publishers from the readers collection subcollection
     const publishersRef = collection(db, 'readers', userId, 'favoritePublishers');
-    console.log('📁 Publishers collection reference created');
+    ('📁 Publishers collection reference created');
     
     const publishersSnapshot = await getDocs(publishersRef);
-    console.log('📊 Query executed, snapshot size:', publishersSnapshot.size);
+    ('📊 Query executed, snapshot size:', publishersSnapshot.size);
     
     const publishers = [];
     publishersSnapshot.forEach((doc) => {
-      console.log('📄 Found publisher document:', doc.id, doc.data());
+      ('📄 Found publisher document:', doc.id, doc.data());
       publishers.push({
         id: doc.id,
         ...doc.data()
@@ -56,7 +56,7 @@ export async function GET(request) {
       return dateB - dateA;
     });
 
-    console.log('✅ Final result - Found', publishers.length, 'favorite publishers for user');
+    ('✅ Final result - Found', publishers.length, 'favorite publishers for user');
 
     return NextResponse.json({
       success: true,
@@ -83,9 +83,9 @@ export async function POST(request) {
   try {
     const { userId, publisher } = await request.json();
 
-    console.log('📝 POST Request received:');
-    console.log('  - userId:', userId);
-    console.log('  - publisher:', JSON.stringify(publisher, null, 2));
+    ('📝 POST Request received:');
+    ('  - userId:', userId);
+    ('  - publisher:', JSON.stringify(publisher, null, 2));
 
     if (!userId || !publisher) {
       return NextResponse.json(
@@ -97,18 +97,18 @@ export async function POST(request) {
     // Debug: Log the exact paths being used
     const userPath = `readers/${userId}`;
     const publisherPath = `readers/${userId}/favoritePublishers/${publisher.id || `publisher_${Date.now()}`}`;
-    console.log('📍 User document path:', userPath);
-    console.log('📍 Publisher document path:', publisherPath);
+    ('📍 User document path:', userPath);
+    ('📍 Publisher document path:', publisherPath);
 
     // First, verify that the user exists in the readers collection
     const userDocRef = doc(db, 'readers', userId);
-    console.log('🔍 Checking if user exists at:', userDocRef.path);
+    ('🔍 Checking if user exists at:', userDocRef.path);
     
     const userDocSnap = await getDoc(userDocRef);
-    console.log('👤 User document exists:', userDocSnap.exists());
+    ('👤 User document exists:', userDocSnap.exists());
     
     if (userDocSnap.exists()) {
-      console.log('👤 User document data:', userDocSnap.data());
+      ('👤 User document data:', userDocSnap.data());
     }
 
     if (!userDocSnap.exists()) {
@@ -135,14 +135,14 @@ export async function POST(request) {
       ...publisher
     };
 
-    console.log('📋 Publisher data prepared:', JSON.stringify(publisherData, null, 2));
+    ('📋 Publisher data prepared:', JSON.stringify(publisherData, null, 2));
 
     // Check if already favorited
     const publisherRef = doc(db, 'readers', userId, 'favoritePublishers', publisherData.id);
-    console.log('🔍 Checking if publisher already exists at:', publisherRef.path);
+    ('🔍 Checking if publisher already exists at:', publisherRef.path);
     
     const existingPublisher = await getDoc(publisherRef);
-    console.log('🔍 Publisher already exists:', existingPublisher.exists());
+    ('🔍 Publisher already exists:', existingPublisher.exists());
 
     if (existingPublisher.exists()) {
       return NextResponse.json(
@@ -152,15 +152,15 @@ export async function POST(request) {
     }
 
     // Add to favorite publishers subcollection under the specific reader
-    console.log('💾 Saving publisher to:', publisherRef.path);
+    ('💾 Saving publisher to:', publisherRef.path);
     await setDoc(publisherRef, publisherData);
-    console.log('✅ Publisher saved successfully');
+    ('✅ Publisher saved successfully');
 
     // Verify the save
     const verifyDoc = await getDoc(publisherRef);
-    console.log('✅ Verification - Document exists after save:', verifyDoc.exists());
+    ('✅ Verification - Document exists after save:', verifyDoc.exists());
     if (verifyDoc.exists()) {
-      console.log('✅ Verification - Saved data:', verifyDoc.data());
+      ('✅ Verification - Saved data:', verifyDoc.data());
     }
 
     return NextResponse.json({
@@ -191,9 +191,9 @@ export async function DELETE(request) {
     const userId = searchParams.get('userId');
     const publisherId = searchParams.get('publisherId');
 
-    console.log('🗑️ DELETE Request received:');
-    console.log('  - userId:', userId);
-    console.log('  - publisherId:', publisherId);
+    ('🗑️ DELETE Request received:');
+    ('  - userId:', userId);
+    ('  - publisherId:', publisherId);
 
     if (!userId || !publisherId) {
       return NextResponse.json(
@@ -204,22 +204,22 @@ export async function DELETE(request) {
 
     // Debug: Log the exact path being deleted
     const publisherPath = `readers/${userId}/favoritePublishers/${publisherId}`;
-    console.log('📍 Deleting from path:', publisherPath);
+    ('📍 Deleting from path:', publisherPath);
 
     // Remove from favorite publishers subcollection under the specific reader
     const publisherRef = doc(db, 'readers', userId, 'favoritePublishers', publisherId);
-    console.log('🗑️ Deleting document at:', publisherRef.path);
+    ('🗑️ Deleting document at:', publisherRef.path);
     
     // Check if document exists before deleting
     const existingDoc = await getDoc(publisherRef);
-    console.log('🔍 Document exists before deletion:', existingDoc.exists());
+    ('🔍 Document exists before deletion:', existingDoc.exists());
     
     await deleteDoc(publisherRef);
-    console.log('✅ Delete operation completed');
+    ('✅ Delete operation completed');
 
     // Verify deletion
     const verifyDoc = await getDoc(publisherRef);
-    console.log('✅ Verification - Document exists after deletion:', verifyDoc.exists());
+    ('✅ Verification - Document exists after deletion:', verifyDoc.exists());
 
     return NextResponse.json({
       success: true,

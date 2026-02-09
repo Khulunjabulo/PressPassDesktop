@@ -45,7 +45,7 @@ function ManageAdsContent() {
         userDataStr = localStorage.getItem('currentUser');
       }
       
-      console.log('📦 [MANAGE-ADS-DEBUG] Raw localStorage data:', userDataStr);
+      ('📦 [MANAGE-ADS-DEBUG] Raw localStorage data:', userDataStr);
       
       if (!userDataStr) {
         console.error('❌ [MANAGE-ADS-DEBUG] No user data found');
@@ -55,14 +55,14 @@ function ManageAdsContent() {
       }
 
       const user = JSON.parse(userDataStr);
-      console.log('👤 [MANAGE-ADS-DEBUG] Full user object:', user);
+      ('👤 [MANAGE-ADS-DEBUG] Full user object:', user);
 
       setUserData(user);
       
       const urlPublisherId = searchParams?.get('publisherId');
       const finalPublisherId = urlPublisherId || user.uid;
       
-      console.log('🆔 [MANAGE-ADS-DEBUG] Publisher IDs:', {
+      ('🆔 [MANAGE-ADS-DEBUG] Publisher IDs:', {
         fromUrl: urlPublisherId,
         fromUser: user.uid,
         final: finalPublisherId,
@@ -93,22 +93,22 @@ function ManageAdsContent() {
       setLoading(true);
       setError('');
       
-      console.log('📡 [MANAGE-ADS-DEBUG] Fetching ads...');
+      ('📡 [MANAGE-ADS-DEBUG] Fetching ads...');
       
       // Fetch ALL ads with debug mode
       const response = await fetch(`/api/ads?includeInactive=true&debug=true`);
       const data = await response.json();
 
-      console.log('📥 [MANAGE-ADS-DEBUG] Full API response:', data);
-      console.log('📥 [MANAGE-ADS-DEBUG] Total ads in database:', data.totalInDatabase);
-      console.log('📥 [MANAGE-ADS-DEBUG] Ads returned:', data.ads?.length);
+      ('📥 [MANAGE-ADS-DEBUG] Full API response:', data);
+      ('📥 [MANAGE-ADS-DEBUG] Total ads in database:', data.totalInDatabase);
+      ('📥 [MANAGE-ADS-DEBUG] Ads returned:', data.ads?.length);
 
       if (data.success) {
         setAllAds(data.ads || []);
         
         // Log every ad's publisherId
         (data.ads || []).forEach((ad, index) => {
-          console.log(`🔍 [MANAGE-ADS-DEBUG] Ad ${index + 1}:`, {
+          (`🔍 [MANAGE-ADS-DEBUG] Ad ${index + 1}:`, {
             id: ad.id,
             title: ad.title,
             publisherId: ad.publisherId,
@@ -125,7 +125,7 @@ function ManageAdsContent() {
         const userAds3 = (data.ads || []).filter(ad => publisherId?.includes(ad.publisherId));
         const userAds4 = (data.ads || []).filter(ad => ad.publisherEmail === userData?.email);
 
-        console.log('🔍 [MANAGE-ADS-DEBUG] Matching attempts:', {
+        ('🔍 [MANAGE-ADS-DEBUG] Matching attempts:', {
           currentPublisherId: publisherId,
           userEmail: userData?.email,
           exactMatch: userAds1.length,
@@ -151,14 +151,14 @@ function ManageAdsContent() {
         // Use the best match
         let userAds = userAds1;
         if (userAds1.length === 0 && userAds4.length > 0) {
-          console.log('✅ [MANAGE-ADS-DEBUG] Using email match');
+          ('✅ [MANAGE-ADS-DEBUG] Using email match');
           userAds = userAds4;
         } else if (userAds1.length === 0 && userAds2.length > 0) {
-          console.log('✅ [MANAGE-ADS-DEBUG] Using includes match');
+          ('✅ [MANAGE-ADS-DEBUG] Using includes match');
           userAds = userAds2;
         }
 
-        console.log('✅ [MANAGE-ADS-DEBUG] Final user ads:', userAds.length);
+        ('✅ [MANAGE-ADS-DEBUG] Final user ads:', userAds.length);
         setAds(userAds);
         
       } else {

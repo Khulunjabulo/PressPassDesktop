@@ -12,22 +12,22 @@ export async function GET(req) {
     const type = searchParams.get('type') || 'both';
     const articleId = searchParams.get('articleId');
 
-    console.log('📖 GET request params:', { publisherId, type, articleId });
+    ('📖 GET request params:', { publisherId, type, articleId });
 
     if (!publisherId) {
-      console.log('❌ Missing publisherId');
+      ('❌ Missing publisherId');
       return NextResponse.json(
         { success: false, error: 'Publisher ID is required' },
         { status: 400 }
       );
     }
 
-    console.log('🔄 Fetching content for publisherId:', publisherId, 'type:', type);
+    ('🔄 Fetching content for publisherId:', publisherId, 'type:', type);
 
     let db;
     try {
       db = getFirestoreDb();
-      console.log('✅ Firebase connection established');
+      ('✅ Firebase connection established');
     } catch (firebaseError) {
       console.error('❌ Firebase connection failed:', firebaseError);
       return NextResponse.json(
@@ -57,7 +57,7 @@ export async function GET(req) {
         }
 
         if (!articleDoc.exists) {
-          console.log('❌ Article/Draft not found:', articleId);
+          ('❌ Article/Draft not found:', articleId);
           return NextResponse.json(
             { success: false, error: 'Article not found' },
             { status: 404 }
@@ -89,7 +89,7 @@ export async function GET(req) {
           imageCaption: data.imageCaption || null
         };
 
-        console.log('✅ Single article retrieved:', articleData.title, 'from', collectionType);
+        ('✅ Single article retrieved:', articleData.title, 'from', collectionType);
         
         return NextResponse.json({
           success: true,
@@ -111,7 +111,7 @@ export async function GET(req) {
     try {
       // Get published articles from 'articles' collection
       if (type === 'articles' || type === 'both') {
-        console.log('🔍 Fetching published articles...');
+        ('🔍 Fetching published articles...');
         
         const articlesSnapshot = await publisherRef
           .collection('articles')
@@ -148,12 +148,12 @@ export async function GET(req) {
           };
         });
 
-        console.log('📰 Published articles found:', articles.length);
+        ('📰 Published articles found:', articles.length);
       }
 
       // Get drafts from 'drafts' collection
       if (type === 'drafts' || type === 'both') {
-        console.log('🔍 Fetching drafts...');
+        ('🔍 Fetching drafts...');
         
         const draftsSnapshot = await publisherRef
           .collection('drafts')
@@ -190,7 +190,7 @@ export async function GET(req) {
           };
         });
 
-        console.log('✏️ Drafts found:', drafts.length);
+        ('✏️ Drafts found:', drafts.length);
       }
 
     } catch (queryError) {
@@ -211,7 +211,7 @@ export async function GET(req) {
       publisherId
     };
 
-    console.log('✅ Content retrieved successfully:', { 
+    ('✅ Content retrieved successfully:', { 
       articles: articles.length, 
       drafts: drafts.length,
       total: responseData.total
@@ -241,7 +241,7 @@ export async function POST(req) {
     let data = {};
     let publisherId = null;
 
-    console.log('📝 POST request received, content-type:', contentType);
+    ('📝 POST request received, content-type:', contentType);
 
     if (contentType.includes('multipart/form-data')) {
       const formData = await req.formData();
@@ -264,7 +264,7 @@ export async function POST(req) {
       );
     }
 
-    console.log('📝 Saving article for publisherId:', publisherId);
+    ('📝 Saving article for publisherId:', publisherId);
 
     const isDraft = data.isDraft === 'true' || data.isDraft === true;
     const status = isDraft ? 'draft' : 'published';
@@ -324,7 +324,7 @@ export async function POST(req) {
       articleData.publishedAt = data.articleId ? (data.publishedAt ? Timestamp.fromDate(new Date(data.publishedAt)) : Timestamp.now()) : Timestamp.now();
     }
 
-    console.log('💾 Article data prepared:', {
+    ('💾 Article data prepared:', {
       isPdfArticle: articleData.isPdfArticle,
       hasImage: !!articleData.featuredImageUrl,
       hasPdfUrl: !!articleData.pdfUrl
@@ -347,7 +347,7 @@ export async function POST(req) {
       else if (currentArticleDoc.exists) currentCollection = 'articles';
       
       if (currentCollection && currentCollection !== collectionName) {
-        console.log(`🔄 Moving item from ${currentCollection} to ${collectionName}`);
+        (`🔄 Moving item from ${currentCollection} to ${collectionName}`);
         
         await publisherRef.collection(currentCollection).doc(data.articleId).delete();
         docRef = publisherRef.collection(collectionName).doc(data.articleId);
@@ -369,7 +369,7 @@ export async function POST(req) {
       message = `${isDraft ? 'Draft' : 'Article'} created successfully`;
     }
 
-    console.log(`✅ ${message} in collection: ${collectionName}`);
+    (`✅ ${message} in collection: ${collectionName}`);
 
     return NextResponse.json({
       success: true,
@@ -404,7 +404,7 @@ export async function DELETE(req) {
       );
     }
 
-    console.log('🗑️ Deleting item:', articleId, 'from collection:', collection, 'for publisher:', publisherId);
+    ('🗑️ Deleting item:', articleId, 'from collection:', collection, 'for publisher:', publisherId);
 
     const db = getFirestoreDb();
     const publisherRef = db.collection('publishers').doc(publisherId);
@@ -421,7 +421,7 @@ export async function DELETE(req) {
       }
       
       await docRef.delete();
-      console.log(`✅ ${collection.slice(0, -1)} deleted successfully from ${collection} collection`);
+      (`✅ ${collection.slice(0, -1)} deleted successfully from ${collection} collection`);
     } else {
       let deleted = false;
       
@@ -429,13 +429,13 @@ export async function DELETE(req) {
       if (articleDoc.exists) {
         await publisherRef.collection('articles').doc(articleId).delete();
         deleted = true;
-        console.log('✅ Article deleted successfully from articles collection');
+        ('✅ Article deleted successfully from articles collection');
       } else {
         const draftDoc = await publisherRef.collection('drafts').doc(articleId).get();
         if (draftDoc.exists) {
           await publisherRef.collection('drafts').doc(articleId).delete();
           deleted = true;
-          console.log('✅ Draft deleted successfully from drafts collection');
+          ('✅ Draft deleted successfully from drafts collection');
         }
       }
       

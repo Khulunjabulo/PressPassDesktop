@@ -18,7 +18,7 @@ export function useWallet(publisherId) {
       return
     }
 
-    console.log('Setting up wallet listener for publisher:', publisherId)
+    ('Setting up wallet listener for publisher:', publisherId)
 
     // Real-time listener for wallet data
     const walletRef = doc(db, 'publishers', publisherId, 'wallet', 'data')
@@ -27,7 +27,7 @@ export function useWallet(publisherId) {
       (doc) => {
         if (doc.exists()) {
           const data = doc.data()
-          console.log('Wallet data received:', data)
+          ('Wallet data received:', data)
           
           setWallet({
             availableBalance: data.availableBalance || 0,
@@ -41,7 +41,7 @@ export function useWallet(publisherId) {
             error: null
           })
         } else {
-          console.log('Wallet document does not exist, creating...')
+          ('Wallet document does not exist, creating...')
           // Create wallet if it doesn't exist
           createWalletForPublisher(publisherId)
         }
@@ -57,7 +57,7 @@ export function useWallet(publisherId) {
     )
 
     return () => {
-      console.log('Cleaning up wallet listener')
+      ('Cleaning up wallet listener')
       unsubscribe()
     }
   }, [publisherId])
@@ -68,7 +68,7 @@ export function useWallet(publisherId) {
 // Function to create wallet for new publishers
 async function createWalletForPublisher(publisherId) {
   try {
-    console.log('Creating wallet for publisher:', publisherId)
+    ('Creating wallet for publisher:', publisherId)
     
     const walletRef = doc(db, 'publishers', publisherId, 'wallet', 'data')
     await setDoc(walletRef, {
@@ -79,7 +79,7 @@ async function createWalletForPublisher(publisherId) {
       createdAt: serverTimestamp()
     })
     
-    console.log('Wallet created successfully for publisher:', publisherId)
+    ('Wallet created successfully for publisher:', publisherId)
   } catch (error) {
     console.error('Error creating wallet:', error)
   }

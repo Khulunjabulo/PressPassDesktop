@@ -20,7 +20,7 @@ export async function GET(request) {
       );
     }
 
-    console.log('🚀 Fetching advanced analytics for publisher:', publisherId);
+    ('🚀 Fetching advanced analytics for publisher:', publisherId);
 
     // --- Step 1: Fetch Articles and Subscribers in parallel ---
     const articlesRef = collection(db, 'articles');

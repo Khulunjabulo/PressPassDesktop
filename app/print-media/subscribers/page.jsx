@@ -38,14 +38,14 @@ export default function Subscribers() {
       const userData = localStorage.getItem('currentUser');
       if (userData) {
         const user = JSON.parse(userData);
-        console.log('👤 Current user loaded:', { 
+        ('👤 Current user loaded:', { 
           uid: user.uid, 
           role: user.role,
           companyName: user.companyName
         });
         setCurrentUser(user);
       } else {
-        console.log('⚠️ No user data found in localStorage');
+        ('⚠️ No user data found in localStorage');
         setCurrentUser(null);
       }
     } catch (error) {
@@ -66,12 +66,12 @@ export default function Subscribers() {
         setLoading(true);
         setError(null);
         
-        console.log('📊 Fetching subscriber analytics for publisher:', currentUser.uid);
+        ('📊 Fetching subscriber analytics for publisher:', currentUser.uid);
         
         const response = await fetch(`/api/subscribers?publisherId=${currentUser.uid}&includeDetails=false`);
         const data = await response.json();
         
-        console.log('📥 Subscriber analytics response:', data);
+        ('📥 Subscriber analytics response:', data);
         
         if (data.success) {
           setSubscriberData({
@@ -81,7 +81,7 @@ export default function Subscribers() {
             totalChurned: data.totalChurned || 0,
             growthData: data.growthData || { weekly: [], monthly: [] }
           });
-          console.log('✅ Subscriber data updated');
+          ('✅ Subscriber data updated');
         } else {
           setError(data.error);
         }

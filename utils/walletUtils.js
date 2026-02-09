@@ -12,7 +12,7 @@ export async function addEarnings(publisherId, amount, source, description) {
       throw new Error('Amount must be greater than 0')
     }
 
-    console.log('Adding earnings:', { publisherId, amount, source, description })
+    ('Adding earnings:', { publisherId, amount, source, description })
     
     const walletRef = doc(db, 'publishers', publisherId, 'wallet', 'data')
     
@@ -33,7 +33,7 @@ export async function addEarnings(publisherId, amount, source, description) {
       transactions: arrayUnion(transaction)
     })
 
-    console.log('Earnings added successfully:', transaction)
+    ('Earnings added successfully:', transaction)
     return { success: true, transaction }
   } catch (error) {
     console.error('Error adding earnings:', error)
@@ -52,7 +52,7 @@ export async function processWithdrawal(publisherId, amount, method, details) {
       throw new Error('Amount must be greater than 0')
     }
 
-    console.log('Processing withdrawal:', { publisherId, amount, method, details })
+    ('Processing withdrawal:', { publisherId, amount, method, details })
 
     // For now, let's create a mock withdrawal (you can implement Paystack later)
     const walletRef = doc(db, 'publishers', publisherId, 'wallet', 'data')
@@ -73,7 +73,7 @@ export async function processWithdrawal(publisherId, amount, method, details) {
       transactions: arrayUnion(transaction)
     })
 
-    console.log('Withdrawal processed:', transaction)
+    ('Withdrawal processed:', transaction)
     return { success: true, transaction }
   } catch (error) {
     console.error('Withdrawal error:', error)
@@ -91,7 +91,7 @@ export async function trackAdRevenue(publisherId, adRevenue) {
   )
   
   if (result.success) {
-    console.log('Ad revenue added to wallet:', result.transaction)
+    ('Ad revenue added to wallet:', result.transaction)
   }
   
   return result

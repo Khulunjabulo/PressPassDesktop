@@ -15,8 +15,8 @@ export default function PublisherFavoriteButton({
 
   // Log when the component mounts and props received
   useEffect(() => {
-    console.log('[PublisherFavoriteButton] Mounted');
-    console.log('[PublisherFavoriteButton] Props received:', {
+    ('[PublisherFavoriteButton] Mounted');
+    ('[PublisherFavoriteButton] Props received:', {
       publisher,
       size,
       showText,
@@ -26,7 +26,7 @@ export default function PublisherFavoriteButton({
 
   const handleToggleFavorite = async (e) => {
     e.stopPropagation(); // Prevent parent click events
-    console.log('[PublisherFavoriteButton] Favorite button clicked for:', publisher?.id);
+    ('[PublisherFavoriteButton] Favorite button clicked for:', publisher?.id);
 
     if (!currentUser) {
       console.warn('[PublisherFavoriteButton] No currentUser detected.');
@@ -35,7 +35,7 @@ export default function PublisherFavoriteButton({
     }
 
     setIsLoading(true);
-    console.log('[PublisherFavoriteButton] Loading state set to true');
+    ('[PublisherFavoriteButton] Loading state set to true');
 
     try {
       // Prepare comprehensive publisher data
@@ -55,30 +55,30 @@ export default function PublisherFavoriteButton({
         favoritedAt: new Date().toISOString()
       };
 
-      console.log('[PublisherFavoriteButton] Sending publisherData to togglePublisherFavorite:', publisherData);
+      ('[PublisherFavoriteButton] Sending publisherData to togglePublisherFavorite:', publisherData);
 
       const result = await togglePublisherFavorite(publisherData);
 
-      console.log('[PublisherFavoriteButton] togglePublisherFavorite result:', result);
+      ('[PublisherFavoriteButton] togglePublisherFavorite result:', result);
 
       if (!result.success) {
         console.error('[PublisherFavoriteButton] Failed to update favorites:', result.error);
         alert(result.error || 'Failed to update publisher favorites');
       } else {
-        console.log('[PublisherFavoriteButton] Favorite successfully updated.');
+        ('[PublisherFavoriteButton] Favorite successfully updated.');
       }
     } catch (error) {
       console.error('[PublisherFavoriteButton] Error toggling favorite:', error);
       alert('Failed to update publisher favorites');
     } finally {
       setIsLoading(false);
-      console.log('[PublisherFavoriteButton] Loading state set to false');
+      ('[PublisherFavoriteButton] Loading state set to false');
     }
   };
 
   // Check if current publisher is favorited
   const isPublisherFav = isPublisherFavorite(publisher.id);
-  console.log(`[PublisherFavoriteButton] isPublisherFavorite(${publisher.id}):`, isPublisherFav);
+  (`[PublisherFavoriteButton] isPublisherFavorite(${publisher.id}):`, isPublisherFav);
 
   // Dynamic size configs
   const sizeConfig = {

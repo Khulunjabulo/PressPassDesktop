@@ -17,7 +17,7 @@ export async function GET(request) {
       }, { status: 400 });
     }
 
-    console.log('🔍 [DEBUG] Looking up payment:', paymentIntentId);
+    ('🔍 [DEBUG] Looking up payment:', paymentIntentId);
 
     // Get from Stripe
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);

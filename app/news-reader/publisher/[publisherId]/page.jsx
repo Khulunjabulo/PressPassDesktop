@@ -44,7 +44,7 @@ function truncateText(text, maxLength = 200) {
 function cleanArticleData(article) {
   if (!article) return null;
   
-  console.log('🔍 Cleaning article:', {
+  ('🔍 Cleaning article:', {
     id: article.id,
     title: article.title?.substring(0, 50),
     hasTemplateId: !!article.templateId,
@@ -239,7 +239,7 @@ export default function PublisherArticlesPage() {
   // Debug logging for articles
   useEffect(() => {
     if (rawArticles) {
-      console.log('📰 Raw articles received:', {
+      ('📰 Raw articles received:', {
         count: rawArticles.length,
         articles: rawArticles.map(a => ({
           id: a.id,
@@ -257,21 +257,21 @@ export default function PublisherArticlesPage() {
   // Clean articles data to remove HTML and ensure templateId
   const articles = useMemo(() => {
     if (!rawArticles) {
-      console.log('⚠️ No raw articles available');
+      ('⚠️ No raw articles available');
       return [];
     }
     
-    console.log('🔄 Processing articles:', rawArticles.length);
+    ('🔄 Processing articles:', rawArticles.length);
     const cleaned = rawArticles.map(cleanArticleData).filter(article => {
       // Filter out drafts and unpublished articles
       if (article.isDraft || article.status === 'draft') {
-        console.log('⏭️ Skipping draft article:', article.id);
+        ('⏭️ Skipping draft article:', article.id);
         return false;
       }
       return true;
     });
     
-    console.log('✅ Cleaned articles:', {
+    ('✅ Cleaned articles:', {
       total: cleaned.length,
       withTemplates: cleaned.filter(a => a.templateId).length,
       rssFeeds: cleaned.filter(a => a.isRssFeed).length
@@ -305,7 +305,7 @@ export default function PublisherArticlesPage() {
   }, [articles, selectedCategory]);
 
   const handleArticleClick = (article) => {
-    console.log('🔗 Navigating to article:', {
+    ('🔗 Navigating to article:', {
       id: article.id,
       templateId: article.templateId,
       publisherId: params.publisherId

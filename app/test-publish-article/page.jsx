@@ -6,7 +6,7 @@ export default function TestPublishArticle() {
   const [response, setResponse] = useState(null);
 
   const handleTest = async () => {
-    console.log("🚀 Sending test request to /api/publish-article");
+    ("🚀 Sending test request to /api/publish-article");
 
     try {
       const formData = new FormData();
@@ -39,7 +39,7 @@ export default function TestPublishArticle() {
       });
 
       const data = await res.json();
-      console.log("📡 API Response:", data);
+      ("📡 API Response:", data);
       setResponse(data);
     } catch (error) {
       console.error("❌ Test request failed:", error);

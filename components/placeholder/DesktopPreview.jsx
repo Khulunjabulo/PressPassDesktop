@@ -7,11 +7,11 @@ export default function DesktopPreview({ adType, adImage, adUrl }) {
   const isSidebarRectangle = adType === 'sidebar_rectangle' || adType === 'sidebar_rectangle2';
   const isSidebarSkyscraper = adType === 'sidebar_skyscraper';
 
-  console.log('DesktopPreview - adType:', adType, 'adImage:', adImage ? 'exists' : 'missing');
+  ('DesktopPreview - adType:', adType, 'adImage:', adImage ? 'exists' : 'missing');
 
   // Ad preview component - shows user's uploaded ad
   const AdPreview = ({ type, image, url, width, height, className = '' }) => {
-    console.log('AdPreview rendering:', { type, hasImage: !!image, width, height });
+    ('AdPreview rendering:', { type, hasImage: !!image, width, height });
     
     return (
       <div className={`relative ${className}`}>

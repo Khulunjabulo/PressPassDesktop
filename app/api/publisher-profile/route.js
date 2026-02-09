@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { getFirestoreDb, getAuth } from '../../../lib/firebase-admin';
 
 export async function GET(request) {
-  console.log('🏢 Getting publisher profile...');
+  ('🏢 Getting publisher profile...');
   
   try {
     // Get authorization header
@@ -16,18 +16,18 @@ export async function GET(request) {
     const idToken = authHeader.split('Bearer ')[1];
     
     // Verify the token
-    console.log('🔍 Verifying ID token...');
+    ('🔍 Verifying ID token...');
     const auth = getAuth();
     const decodedToken = await auth.verifyIdToken(idToken);
     const uid = decodedToken.uid;
     
-    console.log('✅ Token verified for user:', uid);
+    ('✅ Token verified for user:', uid);
 
     // Get publisher data from Firestore
     const db = getFirestoreDb();
     const publisherUid = `publisher_${uid}`;
     
-    console.log('📡 Fetching publisher data from Firestore...');
+    ('📡 Fetching publisher data from Firestore...');
     const publisherDoc = await db.collection('publishers').doc(publisherUid).get();
     
     if (!publisherDoc.exists) {
@@ -75,7 +75,7 @@ export async function GET(request) {
       };
       
       await db.collection('publishers').doc(publisherUid).set(defaultProfile);
-      console.log('✅ Default publisher profile created with all required fields');
+      ('✅ Default publisher profile created with all required fields');
       
       return NextResponse.json({
         success: true,
@@ -110,8 +110,8 @@ export async function GET(request) {
       profileComplete: userData.profileComplete || false
     };
 
-    console.log('✅ Publisher profile retrieved successfully');
-    console.log('📊 Required fields status:', {
+    ('✅ Publisher profile retrieved successfully');
+    ('📊 Required fields status:', {
       dateOfBirth: completeUserData.dateOfBirth ? '✅' : '❌',
       idNumber: completeUserData.idNumber ? '✅' : '❌',
       businessRegistrationNumber: completeUserData.businessRegistrationNumber ? '✅' : '❌',
@@ -134,7 +134,7 @@ export async function GET(request) {
 }
 
 export async function PUT(request) {
-  console.log('💾 Updating publisher profile...');
+  ('💾 Updating publisher profile...');
   
   try {
     // Get authorization header
@@ -147,22 +147,22 @@ export async function PUT(request) {
     const idToken = authHeader.split('Bearer ')[1];
     
     // Verify the token
-    console.log('🔍 Verifying ID token...');
+    ('🔍 Verifying ID token...');
     const auth = getAuth();
     const decodedToken = await auth.verifyIdToken(idToken);
     const uid = decodedToken.uid;
     
-    console.log('✅ Token verified for user:', uid);
+    ('✅ Token verified for user:', uid);
 
     // Parse request body
     const updateData = await request.json();
-    console.log('📥 Update data received:', Object.keys(updateData));
+    ('📥 Update data received:', Object.keys(updateData));
 
     // Get publisher data from Firestore
     const db = getFirestoreDb();
     const publisherUid = `publisher_${uid}`;
     
-    console.log('📡 Updating publisher data in Firestore...');
+    ('📡 Updating publisher data in Firestore...');
     
     // Prepare update data (exclude undefined/null values, but allow empty strings)
     const cleanUpdateData = {};
@@ -176,18 +176,18 @@ export async function PUT(request) {
     cleanUpdateData.updatedAt = new Date().toISOString();
 
     // Log what we're updating
-    console.log('📝 Clean update data:', cleanUpdateData);
+    ('📝 Clean update data:', cleanUpdateData);
 
     // Update the document
     await db.collection('publishers').doc(publisherUid).update(cleanUpdateData);
-    console.log('✅ Publisher profile updated successfully');
+    ('✅ Publisher profile updated successfully');
 
     // Fetch and return updated data
     const updatedDoc = await db.collection('publishers').doc(publisherUid).get();
     const updatedUserData = updatedDoc.data();
 
     // Log the updated required fields
-    console.log('📊 Updated required fields status:', {
+    ('📊 Updated required fields status:', {
       dateOfBirth: updatedUserData.dateOfBirth ? '✅' : '❌',
       idNumber: updatedUserData.idNumber ? '✅' : '❌',
       businessRegistrationNumber: updatedUserData.businessRegistrationNumber ? '✅' : '❌',

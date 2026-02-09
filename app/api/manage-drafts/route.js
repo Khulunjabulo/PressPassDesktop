@@ -25,7 +25,7 @@ export async function POST(req) {
       );
     }
 
-    console.log('📤 Publishing draft:', draftId, 'for publisher:', publisherId);
+    ('📤 Publishing draft:', draftId, 'for publisher:', publisherId);
 
     const db = getFirestoreDb();
     const publisherRef = db.collection('publishers').doc(publisherId);
@@ -64,7 +64,7 @@ export async function POST(req) {
     // Delete the draft from drafts collection
     await draftRef.delete();
 
-    console.log('✅ Draft published successfully and moved to articles collection');
+    ('✅ Draft published successfully and moved to articles collection');
 
     return NextResponse.json({
       success: true,
@@ -96,7 +96,7 @@ export async function DELETE(req) {
       );
     }
 
-    console.log('🗑️ Deleting draft:', draftId, 'for publisher:', publisherId);
+    ('🗑️ Deleting draft:', draftId, 'for publisher:', publisherId);
 
     const db = getFirestoreDb();
     const draftRef = db
@@ -118,7 +118,7 @@ export async function DELETE(req) {
     // Delete the draft
     await draftRef.delete();
 
-    console.log('✅ Draft deleted successfully from drafts collection');
+    ('✅ Draft deleted successfully from drafts collection');
 
     return NextResponse.json({
       success: true,

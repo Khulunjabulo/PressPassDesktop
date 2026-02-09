@@ -221,31 +221,31 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
 
     // NEW: Handle AI PDF Processing
   const handleAiPdfProcessing = async (pdfFile) => {
-  console.log('🚀 Starting AI PDF Processing');
-  console.log('📄 File:', pdfFile.name, 'Size:', pdfFile.size);
+  ('🚀 Starting AI PDF Processing');
+  ('📄 File:', pdfFile.name, 'Size:', pdfFile.size);
   
   try {
     setIsProcessingPdf(true);
     setAiProcessingStatus('Analyzing PDF with AI...');
     
-    console.log('🤖 Calling aiPdfProcessor.processPDF...');
+    ('🤖 Calling aiPdfProcessor.processPDF...');
     const result = await aiPdfProcessor.processPDF(pdfFile);
     
-    console.log('✅ AI Result:', result);
+    ('✅ AI Result:', result);
     
     if (!result.success) {
       throw new Error(result.error || 'PDF processing failed');
     }
     
-    console.log(`📊 Found ${result.storiesCount} article(s)`);
+    (`📊 Found ${result.storiesCount} article(s)`);
     setAiProcessingStatus(`Found ${result.storiesCount} article(s)`);
     
     if (result.storiesCount > 1) {
-      console.log('📰 Multiple stories detected, showing preview');
+      ('📰 Multiple stories detected, showing preview');
       setDetectedStories(result.stories);
       setShowMultiStoryPreview(true);
     } else if (result.stories.length === 1) {
-      console.log('📄 Single story detected, auto-filling form');
+      ('📄 Single story detected, auto-filling form');
       const story = result.stories[0];
       await applyStoryToForm(story);
     }
@@ -265,8 +265,8 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
 // Location: Around line 250, after handleAiPdfProcessing
 
 const handlePublishMultipleStories = async (selectedStories) => {
-  console.log('🚀 Starting to publish multiple stories');
-  console.log('📊 Stories to publish:', selectedStories.length);
+  ('🚀 Starting to publish multiple stories');
+  ('📊 Stories to publish:', selectedStories.length);
   
   setIsSubmitting(true);
   const results = {
@@ -278,7 +278,7 @@ const handlePublishMultipleStories = async (selectedStories) => {
     // Publish each story separately
     for (let i = 0; i < selectedStories.length; i++) {
       const story = selectedStories[i];
-      console.log(`📝 Publishing story ${i + 1}/${selectedStories.length}: ${story.headline}`);
+      (`📝 Publishing story ${i + 1}/${selectedStories.length}: ${story.headline}`);
       
       try {
         // Prepare article data for this story
@@ -319,12 +319,12 @@ const handlePublishMultipleStories = async (selectedStories) => {
           templateCredit: templateCredit || ''
         };
 
-        console.log('💾 Submitting article:', articleData.title);
+        ('💾 Submitting article:', articleData.title);
         
         // Use existing submitArticle function
         const result = await submitArticle(false, articleData);
         
-        console.log('✅ Story published successfully:', story.headline);
+        ('✅ Story published successfully:', story.headline);
         results.success.push(story.headline);
         
       } catch (error) {
@@ -337,9 +337,9 @@ const handlePublishMultipleStories = async (selectedStories) => {
     }
 
     // Show results
-    console.log('📊 Publishing complete!');
-    console.log('✅ Success:', results.success.length);
-    console.log('❌ Failed:', results.failed.length);
+    ('📊 Publishing complete!');
+    ('✅ Success:', results.success.length);
+    ('❌ Failed:', results.failed.length);
     
     if (results.success.length > 0) {
       setSubmitStatus('success');
@@ -1304,8 +1304,8 @@ const submitArticle = async (isDraft = false, customArticleData = null) => {
       <button
         type="button"
         onClick={async () => {
-          console.log('🧪 Manual test triggered');
-          console.log('📄 File:', file.name, file.size);
+          ('🧪 Manual test triggered');
+          ('📄 File:', file.name, file.size);
           await handleAiPdfProcessing(file);
         }}
         className="w-full px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 flex items-center justify-center"
@@ -1342,7 +1342,7 @@ const submitArticle = async (isDraft = false, customArticleData = null) => {
       <button
         type="button"
         onClick={() => {
-          console.log('👀 View articles clicked, showing modal');
+          ('👀 View articles clicked, showing modal');
           setShowMultiStoryPreview(true);
         }}
         className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold flex items-center shadow-md"
@@ -1936,7 +1936,7 @@ const submitArticle = async (isDraft = false, customArticleData = null) => {
 <button 
   type="button" 
   onClick={() => {
-    console.log('✍️ Grammar check clicked');
+    ('✍️ Grammar check clicked');
     setShowGrammarChecker(true);
   }} 
   className="p-2 hover:bg-purple-200 rounded transition-colors bg-purple-50" 
@@ -2098,7 +2098,7 @@ const submitArticle = async (isDraft = false, customArticleData = null) => {
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
           <ClassifiedsUploadForm
             onSubmit={async (classifiedData) => {
-              console.log('Classified submitted:', classifiedData);
+              ('Classified submitted:', classifiedData);
               setShowClassifiedsForm(false);
             }}
             onClose={() => setShowClassifiedsForm(false)}
@@ -2112,11 +2112,11 @@ const submitArticle = async (isDraft = false, customArticleData = null) => {
     stories={detectedStories}
     onPublish={handlePublishMultipleStories}
     onCancel={() => {
-      console.log('❌ Cancelled multi-story preview');
+      ('❌ Cancelled multi-story preview');
       setShowMultiStoryPreview(false);
     }}
     onEditStory={(storyIndex, updatedStory) => {
-      console.log('✏️ Editing story:', storyIndex);
+      ('✏️ Editing story:', storyIndex);
       const updated = [...detectedStories];
       updated[storyIndex] = updatedStory;
       setDetectedStories(updated);

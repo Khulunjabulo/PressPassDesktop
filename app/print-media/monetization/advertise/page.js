@@ -55,7 +55,7 @@ export default function Advertise() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log("Form submitted:", formData);
+    ("Form submitted:", formData);
   };
 
   return (

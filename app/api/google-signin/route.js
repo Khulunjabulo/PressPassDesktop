@@ -4,11 +4,11 @@ import { getFirestoreDb, getAuth } from '../../../lib/firebase-admin';
 import jwt from 'jsonwebtoken';
 
 export async function POST(request) {
-  console.log('🚀 Starting Google sign-in process...');
+  ('🚀 Starting Google sign-in process...');
   
   try {
     const { credential, role, keepSignedIn } = await request.json();
-    console.log('📥 Received sign-in data:', { role, hasCredential: !!credential, keepSignedIn });
+    ('📥 Received sign-in data:', { role, hasCredential: !!credential, keepSignedIn });
 
     if (!credential) {
       console.error('❌ No Google credential provided');
@@ -21,7 +21,7 @@ export async function POST(request) {
     }
 
     // Decode Google JWT token
-    console.log('🔍 Decoding Google JWT token...');
+    ('🔍 Decoding Google JWT token...');
     const decodedToken = jwt.decode(credential);
     
     if (!decodedToken) {
@@ -29,7 +29,7 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: 'Invalid Google token' }, { status: 400 });
     }
 
-    console.log('✅ Google token decoded:', {
+    ('✅ Google token decoded:', {
       email: decodedToken.email,
       name: decodedToken.name,
       picture: decodedToken.picture
@@ -38,19 +38,19 @@ export async function POST(request) {
     const { email, name, picture, sub: googleId } = decodedToken;
 
     // Initialize Firebase
-    console.log('🔥 Initializing Firebase services...');
+    ('🔥 Initializing Firebase services...');
     const db = getFirestoreDb();
     const auth = getAuth();
 
     // Get Firebase user by email
     let firebaseUser;
     try {
-      console.log('👤 Checking if user exists in Firebase Auth...');
+      ('👤 Checking if user exists in Firebase Auth...');
       firebaseUser = await auth.getUserByEmail(email);
-      console.log('✅ User found in Firebase Auth:', firebaseUser.uid);
+      ('✅ User found in Firebase Auth:', firebaseUser.uid);
     } catch (error) {
       if (error.code === 'auth/user-not-found') {
-        console.log('❌ User not found in Firebase Auth');
+        ('❌ User not found in Firebase Auth');
         return NextResponse.json({ 
           success: false, 
           error: 'No account found with this email. Please sign up first.' 
@@ -64,12 +64,12 @@ export async function POST(request) {
     const roleSpecificUid = `${role}_${firebaseUser.uid}`;
     const collectionName = role === 'reader' ? 'readers' : 'publishers';
     
-    console.log('🔍 Looking up user in collection:', collectionName, 'with UID:', roleSpecificUid);
+    ('🔍 Looking up user in collection:', collectionName, 'with UID:', roleSpecificUid);
     
     const userDoc = await db.collection(collectionName).doc(roleSpecificUid).get();
     
     if (!userDoc.exists) {
-      console.log('❌ User not found in role-specific collection');
+      ('❌ User not found in role-specific collection');
       return NextResponse.json({ 
         success: false, 
         error: `No ${role} account found with this email. Please check your role selection or sign up as a ${role}.` 
@@ -77,7 +77,7 @@ export async function POST(request) {
     }
 
     const userData = userDoc.data();
-    console.log('✅ User data retrieved from Firestore');
+    ('✅ User data retrieved from Firestore');
 
     // Check if account is active
     if (!userData.isActive) {
@@ -94,14 +94,14 @@ export async function POST(request) {
         lastLoginAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       });
-      console.log('✅ Last login timestamp updated');
+      ('✅ Last login timestamp updated');
     } catch (updateError) {
       console.warn('⚠️ Could not update last login timestamp:', updateError);
       // Don't fail the signin for this
     }
 
     // Create custom token for authentication
-    console.log('🎫 Creating custom token...');
+    ('🎫 Creating custom token...');
     const customToken = await auth.createCustomToken(firebaseUser.uid, {
       role,
       customUid: roleSpecificUid,
@@ -143,7 +143,7 @@ export async function POST(request) {
       responseUser.following = userData.following || [];
     }
 
-    console.log('🎉 Google sign-in process completed successfully');
+    ('🎉 Google sign-in process completed successfully');
     
     return NextResponse.json({
       success: true,

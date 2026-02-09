@@ -4,7 +4,7 @@ import { getFirestoreDb } from '@/lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
 
 export async function POST(request) {
-  console.log('🔄 POST /api/extend-ad - Extending ad duration...');
+  ('🔄 POST /api/extend-ad - Extending ad duration...');
   
   try {
     const body = await request.json();
@@ -26,7 +26,7 @@ export async function POST(request) {
       }, { status: 400 });
     }
 
-    console.log('📝 Extension details:', {
+    ('📝 Extension details:', {
       adId,
       paymentIntentId,
       extensionDays,
@@ -79,7 +79,7 @@ export async function POST(request) {
 
     await adRef.update(updateData);
 
-    console.log('✅ Ad extended successfully:', {
+    ('✅ Ad extended successfully:', {
       adId,
       previousEndDate: currentEndDate.toISOString(),
       newEndDate: newEndDate.toISOString(),

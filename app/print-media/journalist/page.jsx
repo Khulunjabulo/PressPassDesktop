@@ -43,12 +43,12 @@ export default function Journalist() {
       member.position?.toLowerCase().includes('writer')
     );
     
-    console.log('👥 Journalists loaded:', journalistStaff.length);
+    ('👥 Journalists loaded:', journalistStaff.length);
     setJournalists(journalistStaff);
     
     // CRITICAL FIX: Load stats immediately after setting journalists
     if (journalistStaff.length > 0) {
-      console.log('🔄 Auto-loading stats for', journalistStaff.length, 'journalists...');
+      ('🔄 Auto-loading stats for', journalistStaff.length, 'journalists...');
       loadJournalistStats(journalistStaff);
     }
   }
@@ -58,7 +58,7 @@ export default function Journalist() {
 useEffect(() => {
   if (journalists.length > 0) {
     const interval = setInterval(() => {
-      console.log('🔄 Auto-refreshing journalist stats...');
+      ('🔄 Auto-refreshing journalist stats...');
       loadJournalistStats(journalists);
     }, 30000); // 30 seconds
 
@@ -68,7 +68,7 @@ useEffect(() => {
 
   const loadJournalistStats = async (journalistList) => {
   try {
-    console.log('📊 Loading stats for', journalistList.length, 'journalists...');
+    ('📊 Loading stats for', journalistList.length, 'journalists...');
     
     const response = await fetch('/api/articles');
     if (!response.ok) {
@@ -81,11 +81,11 @@ useEffect(() => {
     // Handle response format
     const articles = result.articles || [];
     
-    console.log('📚 Total articles found:', articles.length);
+    ('📚 Total articles found:', articles.length);
     
     // Log all unique authors for debugging
     const uniqueAuthors = [...new Set(articles.map(a => a.author || a.authorName))];
-    console.log('👥 All authors in system:', uniqueAuthors);
+    ('👥 All authors in system:', uniqueAuthors);
     
     const stats = {};
     journalistList.forEach(journalist => {
@@ -96,13 +96,13 @@ useEffect(() => {
         const match = articleAuthor.toLowerCase() === journalistName.toLowerCase();
         
         if (match) {
-          console.log(`✅ Match found: Article "${article.title?.substring(0, 30)}" by "${articleAuthor}"`);
+          (`✅ Match found: Article "${article.title?.substring(0, 30)}" by "${articleAuthor}"`);
         }
         
         return match;
       });
       
-      console.log(`📰 ${journalistName}: ${journalistArticles.length} articles`);
+      (`📰 ${journalistName}: ${journalistArticles.length} articles`);
       
       // Calculate engagement metrics
       const totalViews = journalistArticles.reduce((sum, a) => sum + (parseInt(a.views) || 0), 0);
@@ -122,10 +122,10 @@ useEffect(() => {
       };
       
       // Log individual stats
-      console.log(`  📊 Stats: ${journalistArticles.length} articles, ${totalViews} views, ${avgEngagement}% engagement`);
+      (`  📊 Stats: ${journalistArticles.length} articles, ${totalViews} views, ${avgEngagement}% engagement`);
     });
     
-    console.log('✅ All stats loaded:', stats);
+    ('✅ All stats loaded:', stats);
     setArticlesData(stats);
   } catch (error) {
     console.error('❌ Error loading journalist stats:', error);
@@ -135,7 +135,7 @@ useEffect(() => {
   // MANUAL REFRESH FUNCTION
   const handleRefreshStats = async () => {
     setIsRefreshing(true);
-    console.log('🔄 Manually refreshing stats...');
+    ('🔄 Manually refreshing stats...');
     await loadJournalistStats(journalists);
     setTimeout(() => setIsRefreshing(false), 1000);
   };
@@ -174,9 +174,9 @@ useEffect(() => {
         throw new Error('Please sign in to add journalists');
       }
 
-      console.log('🔑 Getting Firebase ID token...');
+      ('🔑 Getting Firebase ID token...');
       const idToken = await currentAuthUser.getIdToken(true);
-      console.log('✅ ID token obtained');
+      ('✅ ID token obtained');
 
       const updatedStaff = [
         ...(publisher.staff || []),
@@ -188,7 +188,7 @@ useEffect(() => {
         }
       ];
 
-      console.log('📤 Updating profile with new journalist...');
+      ('📤 Updating profile with new journalist...');
       
       const response = await fetch('/api/publisher-profile', {
         method: 'PUT',
@@ -205,7 +205,7 @@ useEffect(() => {
       }
 
       const result = await response.json();
-      console.log('✅ Journalist added successfully');
+      ('✅ Journalist added successfully');
 
       const addedJournalist = updatedStaff[updatedStaff.length - 1];
       setJournalists(prev => [...prev, addedJournalist]);

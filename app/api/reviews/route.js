@@ -4,7 +4,7 @@ import { getFirestoreDb, getAuth } from '../../../lib/firebase-admin';
 
 // GET all reviews (public)
 export async function GET(request) {
-  console.log('📖 Getting reviews...');
+  ('📖 Getting reviews...');
   
   try {
     const db = getFirestoreDb();
@@ -26,7 +26,7 @@ export async function GET(request) {
     const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
     const averageRating = reviews.length > 0 ? (totalRating / reviews.length).toFixed(1) : 0;
 
-    console.log(`✅ Retrieved ${reviews.length} reviews`);
+    (`✅ Retrieved ${reviews.length} reviews`);
 
     return NextResponse.json({
       success: true,
@@ -46,7 +46,7 @@ export async function GET(request) {
 
 // POST - Create new review (authenticated users only)
 export async function POST(request) {
-  console.log('📝 Creating new review...');
+  ('📝 Creating new review...');
   
   try {
     // Get authorization header
@@ -59,12 +59,12 @@ export async function POST(request) {
     const idToken = authHeader.split('Bearer ')[1];
     
     // Verify the token
-    console.log('🔍 Verifying ID token...');
+    ('🔍 Verifying ID token...');
     const auth = getAuth();
     const decodedToken = await auth.verifyIdToken(idToken);
     const uid = decodedToken.uid;
     
-    console.log('✅ Token verified for user:', uid);
+    ('✅ Token verified for user:', uid);
 
     // Parse request body
     const { rating, reviewText } = await request.json();
@@ -88,7 +88,7 @@ export async function POST(request) {
     const readerUid = `reader_${uid}`;
     
     // Get user data for the review
-    console.log('📡 Fetching user data...');
+    ('📡 Fetching user data...');
     const readerDoc = await db.collection('readers').doc(readerUid).get();
     
     if (!readerDoc.exists) {
@@ -126,10 +126,10 @@ export async function POST(request) {
     };
 
     // Save review to Firestore
-    console.log('💾 Saving review to Firestore...');
+    ('💾 Saving review to Firestore...');
     const reviewRef = await db.collection('reviews').add(reviewData);
     
-    console.log('✅ Review created successfully:', reviewRef.id);
+    ('✅ Review created successfully:', reviewRef.id);
 
     return NextResponse.json({
       success: true,
@@ -152,7 +152,7 @@ export async function POST(request) {
 
 // PUT - Update existing review (authenticated users only)
 export async function PUT(request) {
-  console.log('✏️ Updating review...');
+  ('✏️ Updating review...');
   
   try {
     // Get authorization header
@@ -169,7 +169,7 @@ export async function PUT(request) {
     const decodedToken = await auth.verifyIdToken(idToken);
     const uid = decodedToken.uid;
     
-    console.log('✅ Token verified for user:', uid);
+    ('✅ Token verified for user:', uid);
 
     // Parse request body
     const { reviewId, rating, reviewText } = await request.json();
@@ -232,7 +232,7 @@ export async function PUT(request) {
     const updatedDoc = await db.collection('reviews').doc(reviewId).get();
     const updatedReview = updatedDoc.data();
 
-    console.log('✅ Review updated successfully');
+    ('✅ Review updated successfully');
 
     return NextResponse.json({
       success: true,
@@ -254,7 +254,7 @@ export async function PUT(request) {
 
 // DELETE - Delete review (authenticated users only)
 export async function DELETE(request) {
-  console.log('🗑️ Deleting review...');
+  ('🗑️ Deleting review...');
   
   try {
     // Get authorization header
@@ -271,7 +271,7 @@ export async function DELETE(request) {
     const decodedToken = await auth.verifyIdToken(idToken);
     const uid = decodedToken.uid;
     
-    console.log('✅ Token verified for user:', uid);
+    ('✅ Token verified for user:', uid);
 
     // Get reviewId from URL search params
     const { searchParams } = new URL(request.url);
@@ -310,7 +310,7 @@ export async function DELETE(request) {
     // Delete the review
     await db.collection('reviews').doc(reviewId).delete();
     
-    console.log('✅ Review deleted successfully');
+    ('✅ Review deleted successfully');
 
     return NextResponse.json({
       success: true,

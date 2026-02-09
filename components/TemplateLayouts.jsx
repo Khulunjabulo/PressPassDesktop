@@ -59,11 +59,11 @@ const ShareButton = ({ article }) => {
           title: article.title,
           text: article.subtitle || article.metaDescription,
           url: window.location.href
-        }).catch(err => console.log('Share failed:', err));
+        }).catch(err => ('Share failed:', err));
       } else {
         navigator.clipboard.writeText(window.location.href)
           .then(() => alert('Link copied to clipboard!'))
-          .catch(err => console.log('Copy failed:', err));
+          .catch(err => ('Copy failed:', err));
       }
     }
   };
