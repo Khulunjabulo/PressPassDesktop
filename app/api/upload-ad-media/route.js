@@ -1,6 +1,6 @@
-// app/api/upload-ad-media/route.js - FINAL WORKING VERSION
+// app/api/upload-ad-media/route.js - FIXED VERSION WITH PROPER VIDEO HANDLING
 import { NextResponse } from 'next/server';
-import { getFirestoreDb } from '../../../lib/firebase-admin';
+import { getFirestoreDb, getStorageBucket } from '../../../lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
 
 // Utility function to normalize publisher ID
@@ -32,10 +32,12 @@ export async function POST(req) {
     console.log('📁 [UPLOAD-AD-MEDIA] Request:', {
       fileName: file?.name,
       fileSize: file?.size,
+      fileType: file?.type,
       publisherId: rawPublisherId,
       templateId,
       deviceType,
-      destinationUrl
+      destinationUrl,
+      isVideo: file?.type?.startsWith('video/')
     });
 
     if (!file || !rawPublisherId || !templateId || !deviceType) {
@@ -81,12 +83,13 @@ export async function POST(req) {
       'image/gif',
       'video/mp4',
       'video/quicktime',
+      'video/webm',
       'video/avi'
     ];
 
     if (!validTypes.includes(file.type)) {
       return NextResponse.json(
-        { success: false, error: 'Invalid file type. Supported: JPG, PNG, GIF, MP4, MOV, AVI' },
+        { success: false, error: 'Invalid file type. Supported: JPG, PNG, GIF, MP4, MOV, WEBM, AVI' },
         { status: 400 }
       );
     }
@@ -98,13 +101,64 @@ export async function POST(req) {
       );
     }
 
-    // 🎯 SIMPLE SOLUTION: Just store base64 in Firestore
-    // We'll only use this for preview - actual file can be uploaded after payment if needed
-    console.log('💾 [UPLOAD-AD-MEDIA] Converting to base64...');
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    const base64String = buffer.toString('base64');
-    const dataUrl = `data:${file.type};base64,${base64String}`;
+    const isVideo = file.type.startsWith('video/');
+    let imageSrc;
+
+    // 🎥 CRITICAL FIX: Handle videos differently from images
+    if (isVideo) {
+      console.log('🎥 [UPLOAD-AD-MEDIA] Video detected, uploading to Firebase Storage...');
+      
+      try {
+        const bucket = getStorageBucket();
+        const timestamp = Date.now();
+        const fileExtension = file.name.split('.').pop();
+        const fileName = `${publisherId}_${deviceType}_${templateId}_${timestamp}.${fileExtension}`;
+        const filePath = `ad-uploads/${publisherId}/${deviceType}/${fileName}`;
+        
+        // Convert file to buffer
+        const arrayBuffer = await file.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        
+        // Upload to Firebase Storage
+        const fileRef = bucket.file(filePath);
+        await fileRef.save(buffer, {
+          metadata: {
+            contentType: file.type,
+            metadata: {
+              publisherId,
+              templateId: templateId.toString(),
+              deviceType,
+              originalName: file.name,
+              uploadedAt: new Date().toISOString()
+            }
+          }
+        });
+        
+        // Make file publicly accessible
+        await fileRef.makePublic();
+        
+        // Get public URL
+        imageSrc = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
+        
+        console.log('✅ [UPLOAD-AD-MEDIA] Video uploaded to Storage:', imageSrc);
+        
+      } catch (storageError) {
+        console.error('❌ [UPLOAD-AD-MEDIA] Storage upload failed:', storageError);
+        return NextResponse.json(
+          { success: false, error: 'Failed to upload video to storage', details: storageError.message },
+          { status: 500 }
+        );
+      }
+      
+    } else {
+      // 🖼️ Images: Use base64 (they're smaller and work fine)
+      console.log('🖼️ [UPLOAD-AD-MEDIA] Image detected, converting to base64...');
+      const arrayBuffer = await file.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      const base64String = buffer.toString('base64');
+      imageSrc = `data:${file.type};base64,${base64String}`;
+      console.log('✅ [UPLOAD-AD-MEDIA] Image converted, base64 length:', imageSrc.length);
+    }
 
     // Prepare document data
     const adMediaData = {
@@ -114,7 +168,8 @@ export async function POST(req) {
       fileName: file.name,
       fileSize: file.size,
       fileType: file.type,
-      imageSrc: dataUrl, // Store base64 for now
+      imageSrc, // Either storage URL (video) or base64 (image)
+      isVideo, // 🆕 Flag to identify videos
       destinationUrl: destinationUrl || null,
       uploadedAt: Timestamp.now(),
       status: paymentStatus === 'completed' ? 'active' : 'pending_payment',
@@ -132,7 +187,9 @@ export async function POST(req) {
 
     console.log('✅ [UPLOAD-AD-MEDIA] Saved to Firestore:', {
       docId: docRef.id,
-      collection: collectionName
+      collection: collectionName,
+      isVideo,
+      imageSrcType: isVideo ? 'storage_url' : 'base64'
     });
 
     return NextResponse.json({
@@ -142,9 +199,11 @@ export async function POST(req) {
         : 'Ad media uploaded, pending payment',
       data: {
         docId: docRef.id,
-        uploadId: docRef.id, // Add uploadId for consistency
+        uploadId: docRef.id,
         fileName: file.name,
         fileSize: file.size,
+        fileType: file.type,
+        isVideo,
         publisherId,
         deviceType,
         destinationUrl: adMediaData.destinationUrl,
