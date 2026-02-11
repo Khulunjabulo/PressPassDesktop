@@ -1,6 +1,7 @@
-// app/api/activate-ad-after-payment/route.js - FULLY DEBUGGED
+// app/api/activate-ad-after-payment/route.js - CLOUDINARY VERSION
 import { NextResponse } from 'next/server';
 import { getFirestoreDb } from '@/lib/firebase-admin';
+import { uploadToCloudinary } from '@/lib/cloudinary';
 import { Timestamp } from 'firebase-admin/firestore';
 import Stripe from 'stripe';
 
@@ -98,10 +99,65 @@ export async function POST(request) {
           uploadedAt: pendingData.createdAt || Timestamp.now()
         };
 
-        // Add file data if provided
+        // 🎥 CLOUDINARY: Upload file data if provided
         if (fileData) {
-          console.log('📎 [ACTIVATE-AD] File data provided, length:', fileData.length);
-          adData.imageSrc = fileData;
+          console.log('📎 [ACTIVATE-AD] File data provided, uploading to Cloudinary...');
+          
+          try {
+            // Check if fileData is base64 or already a URL
+            if (fileData.startsWith('http://') || fileData.startsWith('https://')) {
+              console.log('✅ [ACTIVATE-AD] File data is already a URL, skipping upload');
+              adData.imageSrc = fileData;
+            } else {
+              // It's base64, upload to Cloudinary
+              console.log('🎥 [ACTIVATE-AD] Converting base64 to buffer and uploading...');
+              
+              // Remove data:image/...;base64, prefix if present
+              const base64Data = fileData.includes('base64,') 
+                ? fileData.split('base64,')[1] 
+                : fileData;
+              
+              const buffer = Buffer.from(base64Data, 'base64');
+              
+              // Determine if it's a video or image
+              const isVideo = pendingData.fileType?.startsWith('video/');
+              
+              // Create unique public ID
+              const timestamp = Date.now();
+              const publicId = `${pendingData.publisherId}_${pendingData.deviceType}_${pendingData.templateId}_${timestamp}`;
+              
+              // Upload to Cloudinary
+              const uploadResult = await uploadToCloudinary(buffer, {
+                folder: `ad-uploads/${pendingData.publisherId}/${pendingData.deviceType}`,
+                public_id: publicId,
+                resource_type: isVideo ? 'video' : 'image',
+                ...(isVideo && {
+                  eager: [{ format: 'mp4', video_codec: 'h264' }],
+                  eager_async: true,
+                }),
+                ...(!isVideo && {
+                  quality: 'auto',
+                  fetch_format: 'auto',
+                })
+              });
+              
+              adData.imageSrc = uploadResult.secure_url;
+              adData.cloudinaryPublicId = uploadResult.public_id;
+              adData.isVideo = isVideo;
+              
+              console.log('✅ [ACTIVATE-AD] Uploaded to Cloudinary:', {
+                url: uploadResult.secure_url,
+                publicId: uploadResult.public_id
+              });
+            }
+          } catch (cloudinaryError) {
+            console.error('❌ [ACTIVATE-AD] Cloudinary upload failed:', cloudinaryError);
+            return NextResponse.json({
+              success: false,
+              error: 'Failed to upload file to Cloudinary',
+              details: cloudinaryError.message
+            }, { status: 500 });
+          }
         }
 
         // Create active ad
@@ -149,6 +205,50 @@ export async function POST(request) {
         console.log('✅ [ACTIVATE-AD] Found in pendingAdUploads collection');
         const pendingData = pendingDoc.data();
         
+        // Check if imageSrc needs to be uploaded to Cloudinary
+        if (pendingData.imageSrc && !pendingData.imageSrc.startsWith('http')) {
+          console.log('🎥 [ACTIVATE-AD] Converting stored base64 to Cloudinary...');
+          
+          try {
+            const base64Data = pendingData.imageSrc.includes('base64,') 
+              ? pendingData.imageSrc.split('base64,')[1] 
+              : pendingData.imageSrc;
+            
+            const buffer = Buffer.from(base64Data, 'base64');
+            const isVideo = pendingData.fileType?.startsWith('video/') || pendingData.isVideo;
+            
+            const timestamp = Date.now();
+            const publicId = `${pendingData.publisherId}_${pendingData.deviceType}_${pendingData.templateId}_${timestamp}`;
+            
+            const uploadResult = await uploadToCloudinary(buffer, {
+              folder: `ad-uploads/${pendingData.publisherId}/${pendingData.deviceType}`,
+              public_id: publicId,
+              resource_type: isVideo ? 'video' : 'image',
+              ...(isVideo && {
+                eager: [{ format: 'mp4', video_codec: 'h264' }],
+                eager_async: true,
+              }),
+              ...(!isVideo && {
+                quality: 'auto',
+                fetch_format: 'auto',
+              })
+            });
+            
+            pendingData.imageSrc = uploadResult.secure_url;
+            pendingData.cloudinaryPublicId = uploadResult.public_id;
+            pendingData.isVideo = isVideo;
+            
+            console.log('✅ [ACTIVATE-AD] Uploaded to Cloudinary:', uploadResult.secure_url);
+          } catch (cloudinaryError) {
+            console.error('❌ [ACTIVATE-AD] Cloudinary upload failed:', cloudinaryError);
+            return NextResponse.json({
+              success: false,
+              error: 'Failed to upload file to Cloudinary',
+              details: cloudinaryError.message
+            }, { status: 500 });
+          }
+        }
+        
         // Move to adUploads
         const activatedData = {
           ...pendingData,
@@ -192,9 +292,44 @@ export async function POST(request) {
         uploadedAt: Timestamp.now()
       };
 
+      // 🎥 CLOUDINARY: Upload file data if provided
       if (fileData) {
-        console.log('📎 [ACTIVATE-AD] Adding file data');
-        adData.imageSrc = fileData;
+        console.log('📎 [ACTIVATE-AD] Uploading file data to Cloudinary...');
+        
+        try {
+          // Check if fileData is already a URL
+          if (fileData.startsWith('http://') || fileData.startsWith('https://')) {
+            adData.imageSrc = fileData;
+          } else {
+            // It's base64, upload to Cloudinary
+            const base64Data = fileData.includes('base64,') 
+              ? fileData.split('base64,')[1] 
+              : fileData;
+            
+            const buffer = Buffer.from(base64Data, 'base64');
+            
+            const timestamp = Date.now();
+            const publicId = `${publisherId}_${deviceType}_${templateId}_${timestamp}`;
+            
+            const uploadResult = await uploadToCloudinary(buffer, {
+              folder: `ad-uploads/${publisherId}/${deviceType}`,
+              public_id: publicId,
+              resource_type: 'auto' // Auto-detect
+            });
+            
+            adData.imageSrc = uploadResult.secure_url;
+            adData.cloudinaryPublicId = uploadResult.public_id;
+            
+            console.log('✅ [ACTIVATE-AD] Uploaded to Cloudinary:', uploadResult.secure_url);
+          }
+        } catch (cloudinaryError) {
+          console.error('❌ [ACTIVATE-AD] Cloudinary upload failed:', cloudinaryError);
+          return NextResponse.json({
+            success: false,
+            error: 'Failed to upload file to Cloudinary',
+            details: cloudinaryError.message
+          }, { status: 500 });
+        }
       }
 
       const adRef = await db.collection('adUploads').add(adData);
