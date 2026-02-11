@@ -1,6 +1,7 @@
 // app/api/support/send-message/route.js
 import { NextResponse } from 'next/server';
-import { getFirestoreDb, getStorage } from '@/lib/firebase-admin';
+import { getFirestoreDb } from '@/lib/firebase-admin';
+import { uploadToCloudinary } from '@/lib/cloudinary';
 
 export async function POST(request) {
   try {
@@ -43,26 +44,31 @@ export async function POST(request) {
     // Handle file upload if present
     let fileUrl = null;
     let fileName = null;
+    let cloudinaryPublicId = null;
     
     if (file) {
       try {
-        console.log('📎 Processing file upload...');
-        const storage = getStorage();
-        const bucket = storage.bucket();
-        const fileBuffer = Buffer.from(await file.arrayBuffer());
-        const filePath = `support-files/${userId}/${Date.now()}-${file.name}`;
+        console.log('📎 Processing file upload to Cloudinary...');
         
-        const fileUpload = bucket.file(filePath);
-        await fileUpload.save(fileBuffer, {
-          metadata: {
-            contentType: file.type,
-          },
+        // Convert file to buffer
+        const fileBuffer = Buffer.from(await file.arrayBuffer());
+        
+        // Create unique public ID
+        const timestamp = Date.now();
+        const publicId = `support_${userId}_${timestamp}`;
+        
+        // Upload to Cloudinary
+        const uploadResult = await uploadToCloudinary(fileBuffer, {
+          folder: `support-files/${userId}`,
+          public_id: publicId,
+          resource_type: 'auto', // Automatically detect file type
         });
         
-        await fileUpload.makePublic();
-        fileUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
+        fileUrl = uploadResult.secure_url;
         fileName = file.name;
-        console.log('✅ File uploaded:', fileName);
+        cloudinaryPublicId = uploadResult.public_id;
+        
+        console.log('✅ File uploaded to Cloudinary:', fileName);
       } catch (fileError) {
         console.error('❌ File upload error:', fileError);
         // Continue without file if upload fails
@@ -94,6 +100,7 @@ export async function POST(request) {
           senderEmail: email,
           fileUrl: fileUrl,
           fileName: fileName,
+          cloudinaryPublicId: cloudinaryPublicId, // Store for potential deletion later
         }
       ]
     };
@@ -115,7 +122,7 @@ export async function POST(request) {
             <p><strong>From:</strong> ${userName} (${email})</p>
             <p><strong>Message:</strong></p>
             <p>${message || 'File attachment only'}</p>
-            ${fileName ? `<p><strong>Attachment:</strong> ${fileName}</p>` : ''}
+            ${fileName ? `<p><strong>Attachment:</strong> <a href="${fileUrl}">${fileName}</a></p>` : ''}
             <p><a href="${process.env.ADMIN_DASHBOARD_URL || 'http://localhost:3000'}/support-tickets">View Ticket</a></p>
           `,
         },
