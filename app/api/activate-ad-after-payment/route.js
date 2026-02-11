@@ -1,4 +1,4 @@
-// app/api/activate-ad-after-payment/route.js - SIMPLIFIED VERSION
+// app/api/activate-ad-after-payment/route.js - FULLY DEBUGGED
 import { NextResponse } from 'next/server';
 import { getFirestoreDb } from '@/lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
@@ -7,131 +7,230 @@ import Stripe from 'stripe';
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export async function POST(request) {
-  console.log('🚀 [ACTIVATE-AD] Starting ad activation...');
+  console.log('🚀 [ACTIVATE-AD] ========== STARTING AD ACTIVATION ==========');
   
   try {
     const body = await request.json();
+    console.log('📦 [ACTIVATE-AD] Request body:', JSON.stringify(body, null, 2));
+    
     const { 
       paymentIntentId, 
-      uploadId, // This is the docId from pendingAdUploads
+      pendingId,
+      fileData,
       publisherId, 
       templateId, 
-      deviceType
+      deviceType,
+      destinationUrl
     } = body;
 
-    console.log('📋 [ACTIVATE-AD] Request data:', {
-      paymentIntentId,
-      uploadId,
-      publisherId,
-      templateId,
-      deviceType
-    });
-
     // Validation
-    if (!paymentIntentId || !uploadId) {
-      console.error('❌ [ACTIVATE-AD] Missing required fields');
+    if (!paymentIntentId) {
+      console.error('❌ [ACTIVATE-AD] Missing paymentIntentId');
       return NextResponse.json({
         success: false,
-        error: 'Missing required fields: paymentIntentId, uploadId'
+        error: 'Missing paymentIntentId'
+      }, { status: 400 });
+    }
+
+    if (!pendingId && !publisherId) {
+      console.error('❌ [ACTIVATE-AD] Missing both pendingId and publisherId');
+      return NextResponse.json({
+        success: false,
+        error: 'Missing pendingId or publisherId'
       }, { status: 400 });
     }
 
     const db = getFirestoreDb();
 
-    // 1. Verify payment from Stripe
-    console.log('🔍 [ACTIVATE-AD] Verifying payment with Stripe...');
+    // 1. Verify payment with Stripe
+    console.log('🔍 [ACTIVATE-AD] Verifying payment with Stripe:', paymentIntentId);
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    console.log('📊 [ACTIVATE-AD] Payment status:', paymentIntent.status);
 
     if (paymentIntent.status !== 'succeeded') {
       console.error('❌ [ACTIVATE-AD] Payment not successful:', paymentIntent.status);
       return NextResponse.json({
         success: false,
-        error: 'Payment was not successful',
+        error: 'Payment not successful',
         paymentStatus: paymentIntent.status
       }, { status: 400 });
     }
 
-    console.log('✅ [ACTIVATE-AD] Payment verified:', {
-      amount: paymentIntent.amount / 100,
-      currency: paymentIntent.currency.toUpperCase(),
-      status: paymentIntent.status
-    });
+    console.log('✅ [ACTIVATE-AD] Payment verified successfully');
 
-    // 2. Use the existing PATCH endpoint to activate the ad
-    console.log('🔄 [ACTIVATE-AD] Calling PATCH to activate ad...');
-    
-    const patchResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/upload-ad-media`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        adId: uploadId,
-        paymentIntentId: paymentIntentId
-      })
-    });
-
-    const patchResult = await patchResponse.json();
-
-    if (!patchResult.success) {
-      throw new Error(patchResult.error || 'Failed to activate ad');
-    }
-
-    console.log('✅ [ACTIVATE-AD] Ad activated via PATCH endpoint');
-
-    // 3. Update payment record if exists
-    const paymentsSnapshot = await db.collection('payments')
-      .where('paymentIntentId', '==', paymentIntentId)
-      .limit(1)
-      .get();
-
-    if (!paymentsSnapshot.empty) {
-      const paymentDocId = paymentsSnapshot.docs[0].id;
-      await db.collection('payments').doc(paymentDocId).update({
-        adUploadId: uploadId,
-        adActivated: true,
-        activatedAt: Timestamp.now(),
-        updatedAt: Timestamp.now()
-      });
-      console.log('📝 [ACTIVATE-AD] Payment record updated');
-    }
-
-    // 4. Create activity log
-    await db.collection('activity_logs').add({
-      type: 'ad_activated',
-      paymentIntentId,
-      adUploadId: uploadId,
-      publisherId: publisherId || 'unknown',
-      amount: paymentIntent.amount / 100,
-      currency: paymentIntent.currency.toUpperCase(),
-      timestamp: Timestamp.now()
-    });
-
-    console.log('🎉 [ACTIVATE-AD] Ad activation completed successfully!');
-
-    return NextResponse.json({
-      success: true,
-      message: 'Ad activated successfully',
-      data: {
-        adUploadId: uploadId,
-        paymentIntentId: paymentIntentId,
+    let adData = {
+      status: 'active',
+      paymentStatus: 'completed',
+      paymentIntentId: paymentIntentId,
+      paymentInfo: {
         amount: paymentIntent.amount / 100,
+        amountInCents: paymentIntent.amount,
         currency: paymentIntent.currency.toUpperCase(),
-        status: 'active'
+        paidAt: Timestamp.now(),
+        stripeStatus: paymentIntent.status
+      },
+      activatedAt: Timestamp.now(),
+      impressions: 0,
+      clicks: 0
+    };
+
+    // 2. Try to get pending ad record
+    if (pendingId) {
+      console.log('📄 [ACTIVATE-AD] Looking for pending ad:', pendingId);
+      
+      // Check in pendingAds collection
+      let pendingRef = db.collection('pendingAds').doc(pendingId);
+      let pendingDoc = await pendingRef.get();
+
+      if (pendingDoc.exists) {
+        console.log('✅ [ACTIVATE-AD] Found in pendingAds collection');
+        const pendingData = pendingDoc.data();
+        
+        adData = {
+          ...adData,
+          publisherId: pendingData.publisherId,
+          templateId: pendingData.templateId,
+          deviceType: pendingData.deviceType,
+          destinationUrl: pendingData.destinationUrl,
+          fileName: pendingData.fileName,
+          fileSize: pendingData.fileSize,
+          fileType: pendingData.fileType,
+          uploadedAt: pendingData.createdAt || Timestamp.now()
+        };
+
+        // Add file data if provided
+        if (fileData) {
+          console.log('📎 [ACTIVATE-AD] File data provided, length:', fileData.length);
+          adData.imageSrc = fileData;
+        }
+
+        // Create active ad
+        const adRef = await db.collection('adUploads').add(adData);
+        console.log('✅ [ACTIVATE-AD] Created ad in adUploads:', adRef.id);
+
+        // Delete pending ad
+        await pendingRef.delete();
+        console.log('🗑️ [ACTIVATE-AD] Deleted pending ad');
+
+        // Update payment record
+        const paymentsSnapshot = await db.collection('payments')
+          .where('paymentIntentId', '==', paymentIntentId)
+          .limit(1)
+          .get();
+
+        if (!paymentsSnapshot.empty) {
+          await paymentsSnapshot.docs[0].ref.update({
+            adUploadId: adRef.id,
+            adActivated: true,
+            activatedAt: Timestamp.now()
+          });
+          console.log('✅ [ACTIVATE-AD] Updated payment record');
+        }
+
+        console.log('🎉 [ACTIVATE-AD] ========== ACTIVATION COMPLETE ==========');
+
+        return NextResponse.json({
+          success: true,
+          message: 'Ad activated successfully',
+          data: {
+            adUploadId: adRef.id,
+            paymentIntentId,
+            status: 'active',
+            collection: 'adUploads'
+          }
+        });
       }
-    });
+
+      // Check in pendingAdUploads collection
+      pendingRef = db.collection('pendingAdUploads').doc(pendingId);
+      pendingDoc = await pendingRef.get();
+
+      if (pendingDoc.exists) {
+        console.log('✅ [ACTIVATE-AD] Found in pendingAdUploads collection');
+        const pendingData = pendingDoc.data();
+        
+        // Move to adUploads
+        const activatedData = {
+          ...pendingData,
+          ...adData
+        };
+
+        const adRef = await db.collection('adUploads').add(activatedData);
+        console.log('✅ [ACTIVATE-AD] Created ad in adUploads:', adRef.id);
+
+        // Delete pending
+        await pendingRef.delete();
+        console.log('🗑️ [ACTIVATE-AD] Deleted from pendingAdUploads');
+
+        console.log('🎉 [ACTIVATE-AD] ========== ACTIVATION COMPLETE ==========');
+
+        return NextResponse.json({
+          success: true,
+          message: 'Ad activated successfully',
+          data: {
+            adUploadId: adRef.id,
+            paymentIntentId,
+            status: 'active',
+            collection: 'adUploads'
+          }
+        });
+      }
+
+      console.warn('⚠️ [ACTIVATE-AD] Pending ad not found in either collection');
+    }
+
+    // 3. If no pending record found, create new ad from provided data
+    if (publisherId && templateId && deviceType) {
+      console.log('📝 [ACTIVATE-AD] Creating ad from provided data');
+      
+      adData = {
+        ...adData,
+        publisherId,
+        templateId: parseInt(templateId, 10),
+        deviceType,
+        destinationUrl: destinationUrl || null,
+        uploadedAt: Timestamp.now()
+      };
+
+      if (fileData) {
+        console.log('📎 [ACTIVATE-AD] Adding file data');
+        adData.imageSrc = fileData;
+      }
+
+      const adRef = await db.collection('adUploads').add(adData);
+      console.log('✅ [ACTIVATE-AD] Created new ad:', adRef.id);
+
+      console.log('🎉 [ACTIVATE-AD] ========== ACTIVATION COMPLETE ==========');
+
+      return NextResponse.json({
+        success: true,
+        message: 'Ad activated successfully',
+        data: {
+          adUploadId: adRef.id,
+          paymentIntentId,
+          status: 'active',
+          collection: 'adUploads'
+        }
+      });
+    }
+
+    console.error('❌ [ACTIVATE-AD] Insufficient data to create ad');
+    return NextResponse.json({
+      success: false,
+      error: 'Could not find pending ad and insufficient data to create new ad'
+    }, { status: 404 });
 
   } catch (error) {
-    console.error('🚨 [ACTIVATE-AD] Error:', {
-      message: error.message,
-      stack: error.stack
-    });
-
-    // Log activation error
+    console.error('🚨 [ACTIVATE-AD] ========== ERROR ==========');
+    console.error('🚨 [ACTIVATE-AD] Error message:', error.message);
+    console.error('🚨 [ACTIVATE-AD] Error stack:', error.stack);
+    
+    // Log error to Firestore
     try {
       const db = getFirestoreDb();
       await db.collection('activation_errors').add({
-        paymentIntentId: body?.paymentIntentId || null,
-        uploadId: body?.uploadId || null,
-        errorMessage: error.message,
+        error: error.message,
+        stack: error.stack,
         timestamp: Timestamp.now(),
         requestBody: body
       });
