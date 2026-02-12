@@ -1,4 +1,4 @@
-// app/api/upload-ad-media/route.js - CLOUDINARY VERSION
+// app/api/upload-ad-media/route.js - UPDATED WITH DURATION SUPPORT
 import { NextResponse } from 'next/server';
 import { getFirestoreDb } from '../../../lib/firebase-admin';
 import { uploadToCloudinary, deleteFromCloudinary } from '../../../lib/cloudinary';
@@ -29,6 +29,10 @@ export async function POST(req) {
     const paymentIntentId = formData.get('paymentIntentId');
     const paymentStatus = formData.get('paymentStatus') || 'pending';
     const destinationUrl = formData.get('destinationUrl');
+    
+    // NEW: Duration data
+    const durationJson = formData.get('duration');
+    const notes = formData.get('notes');
 
     console.log('📁 [UPLOAD-AD-MEDIA] Request:', {
       fileName: file?.name,
@@ -38,6 +42,7 @@ export async function POST(req) {
       templateId,
       deviceType,
       destinationUrl,
+      hasDuration: !!durationJson,
       isVideo: file?.type?.startsWith('video/')
     });
 
@@ -100,6 +105,17 @@ export async function POST(req) {
         { success: false, error: 'deviceType must be "mobile" or "desktop"' },
         { status: 400 }
       );
+    }
+
+    // Parse duration data
+    let duration = null;
+    if (durationJson) {
+      try {
+        duration = JSON.parse(durationJson);
+        console.log('📅 [UPLOAD-AD-MEDIA] Duration data:', duration);
+      } catch (err) {
+        console.error('❌ [UPLOAD-AD-MEDIA] Failed to parse duration:', err);
+      }
     }
 
     const isVideo = file.type.startsWith('video/');
@@ -177,7 +193,18 @@ export async function POST(req) {
       paymentStatus: paymentStatus,
       impressions: 0,
       clicks: 0,
-      activatedAt: paymentStatus === 'completed' ? Timestamp.now() : null
+      activatedAt: paymentStatus === 'completed' ? Timestamp.now() : null,
+      
+      // NEW: Duration data
+      duration: duration ? {
+        type: duration.type,
+        quantity: parseInt(duration.quantity, 10),
+        startDate: duration.startDate,
+        endDate: duration.endDate
+      } : null,
+      
+      // NEW: Notes
+      notes: notes || null
     };
 
     // Save to Firestore
@@ -189,7 +216,8 @@ export async function POST(req) {
       docId: docRef.id,
       collection: collectionName,
       isVideo,
-      cloudinaryUrl: imageSrc
+      cloudinaryUrl: imageSrc,
+      hasDuration: !!duration
     });
 
     return NextResponse.json({
@@ -209,7 +237,8 @@ export async function POST(req) {
         destinationUrl: adMediaData.destinationUrl,
         status: adMediaData.status,
         uploadedAt: adMediaData.uploadedAt.toDate().toISOString(),
-        mediaUrl: imageSrc
+        mediaUrl: imageSrc,
+        duration: adMediaData.duration
       }
     });
 
@@ -234,9 +263,9 @@ export async function POST(req) {
 export async function PATCH(req) {
   try {
     const body = await req.json();
-    const { adId, paymentIntentId } = body;
+    const { adId, paymentIntentId, paymentAmount } = body;
 
-    console.log('🔄 [UPLOAD-AD-MEDIA PATCH] Activating:', { adId, paymentIntentId });
+    console.log('🔄 [UPLOAD-AD-MEDIA PATCH] Activating:', { adId, paymentIntentId, paymentAmount });
 
     if (!adId || !paymentIntentId) {
       return NextResponse.json(
@@ -260,6 +289,7 @@ export async function PATCH(req) {
         status: 'active',
         paymentStatus: 'completed',
         paymentIntentId,
+        paymentAmount: paymentAmount || null,
         activatedAt: Timestamp.now()
       });
 
@@ -286,6 +316,7 @@ export async function PATCH(req) {
       status: 'active',
       paymentStatus: 'completed',
       paymentIntentId,
+      paymentAmount: paymentAmount || null,
       activatedAt: Timestamp.now()
     });
 

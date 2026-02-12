@@ -19,6 +19,7 @@ const MobilePlaceholder = dynamic(() => import('@/components/placeholder/MobileA
 
 const AdUploadOverlay = dynamic(() => import('@/components/AdUploadOverlay'));
 const TermsAndConditionsModal = dynamic(() => import('@/components/placeholder/TermsAndConditionsModal'));
+const AdPaymentForm = dynamic(() => import('@/components/AdPaymentForm'));
 
 export default function MonetizationPage() {
   const router = useRouter();
@@ -34,6 +35,11 @@ export default function MonetizationPage() {
   const [previewAd, setPreviewAd] = useState(null);
   const [pendingUpload, setPendingUpload] = useState(null);
   const [showTerms, setShowTerms] = useState(false);
+  
+  // NEW: Payment form states
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [paymentFormData, setPaymentFormData] = useState(null);
+  const [isEditingForm, setIsEditingForm] = useState(false);
 
   // Get publisher data from hook
   const { publisher, loading: publisherLoading } = useCurrentPublisher();
@@ -63,8 +69,7 @@ export default function MonetizationPage() {
       name: "Headline",
       dimension: deviceType === 'desktop' ? "728w x 90h(px)" : "320w x 50h(px)",
       fileSize: deviceType === 'desktop' ? "200kb (JPEG, PNG, GIF)" : "100kb (JPEG, PNG, GIF)",
-      price: "Publisher to Quote",
-      link: "Payment Link",
+      price: "R500",
       upload: "Upload",
     },
     {
@@ -72,8 +77,7 @@ export default function MonetizationPage() {
       name: "Feed",
       dimension: "300w x 250h(px)",
       fileSize: "150kb (JPEG, PNG, GIF)",
-      price: "Publisher to Quote",
-      link: "Payment Link",
+      price: "R500",
       upload: "Upload",
     },
     {
@@ -81,8 +85,7 @@ export default function MonetizationPage() {
       name: "Within Article",
       dimension: "300w x 250h(px)",
       fileSize: "150kb (JPEG, PNG, GIF)",
-      price: "Publisher to Quote",
-      link: "Payment Link",
+      price: "R500",
       upload: "Upload",
     },
     {
@@ -90,8 +93,7 @@ export default function MonetizationPage() {
       name: "Page Wrap 1",
       dimension: deviceType === 'desktop' ? "160w x 600h(px)" : "300w x 600h(px)",
       fileSize: "200kb (JPEG, PNG, GIF)",
-      price: "Publisher to Quote",
-      link: "Payment Link",
+      price: "R500",
       upload: "Upload",
     },
     {
@@ -99,8 +101,7 @@ export default function MonetizationPage() {
       name: "Page Wrap 2",
       dimension: deviceType === 'desktop' ? "160w x 600h(px)" : "300w x 600h(px)",
       fileSize: "200kb (JPEG, PNG, GIF)",
-      price: "Publisher to Quote",
-      link: "Payment Link",
+      price: "R500",
       upload: "Upload",
     },
   ];
@@ -200,258 +201,277 @@ export default function MonetizationPage() {
     fetchUploadedAds();
   }, [currentPublisherId, deviceType]);
 
-  const handleOpenUploadOverlay = (templateId) => {
+  // NEW FLOW: Upload button clicked → Show payment form
+  const handleOpenUploadForm = (templateId) => {
     if (!currentPublisherId) {
       alert('Please wait while we load your publisher profile...');
       return;
     }
+    
+    console.log('📝 Opening payment form for template:', templateId);
     setSelectedTemplateId(templateId);
+    setIsEditingForm(false);
+    setShowPaymentForm(true);
+  };
+
+  // NEW: Payment form submitted → Open file upload
+  const handlePaymentFormSubmit = (formData) => {
+    console.log('✅ Payment form submitted:', formData);
+    setPaymentFormData(formData);
+    setShowPaymentForm(false);
     setIsUploadOverlayOpen(true);
   };
 
-  // In your monetization page, update this function:
+  // NEW: User wants to edit form from preview
+  const handleEditForm = () => {
+    console.log('✏️ Editing payment form');
+    setShowPreview(false);
+    setIsEditingForm(true);
+    setShowPaymentForm(true);
+  };
 
-const handleUploadComplete = async (file, destinationUrl) => { // 🆕 Added destinationUrl parameter
-  try {
-    console.log('📤 Upload complete, creating preview...', {
-      fileName: file.name,
-      fileType: file.type,
-      fileSize: file.size,
-      templateId: selectedTemplateId,
-      deviceType,
-      destinationUrl // 🆕 NEW LOG
-    });
-
-    // 🆕 Validate destination URL is provided
-    if (!destinationUrl || destinationUrl.trim() === '') {
-      alert('⚠️ Destination URL is required!');
-      return { success: false, error: 'Destination URL is required' };
-    }
-
-    // Create preview from file
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const previewData = {
-        imageSrc: e.target.result,
+  // File upload complete → Create preview
+  const handleUploadComplete = async (file, destinationUrl) => {
+    try {
+      console.log('📤 Upload complete, creating preview...', {
         fileName: file.name,
         fileType: file.type,
-        destinationUrl: destinationUrl // 🆕 INCLUDE URL
-      };
-      
-      console.log('✅ Preview data created:', {
-        fileName: previewData.fileName,
-        fileType: previewData.fileType,
-        destinationUrl: previewData.destinationUrl, // 🆕 NEW LOG
-        imageSrcLength: previewData.imageSrc?.length
-      });
-      
-      setPreviewAd(previewData);
-      
-      // Store the complete pending upload data
-      const uploadData = {
-        file: file,
-        fileData: previewData,
+        fileSize: file.size,
         templateId: selectedTemplateId,
-        deviceType: deviceType,
-        publisherId: currentPublisherId,
-        destinationUrl: destinationUrl // 🆕 STORE URL
+        deviceType,
+        destinationUrl
+      });
+
+      if (!destinationUrl || destinationUrl.trim() === '') {
+        alert('⚠️ Destination URL is required!');
+        return { success: false, error: 'Destination URL is required' };
+      }
+
+      // Create preview from file
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const previewData = {
+          imageSrc: e.target.result,
+          fileName: file.name,
+          fileType: file.type,
+          destinationUrl: destinationUrl
+        };
+        
+        console.log('✅ Preview data created');
+        
+        setPreviewAd(previewData);
+        
+        // Store the complete pending upload data
+        const uploadData = {
+          file: file,
+          fileData: previewData,
+          templateId: selectedTemplateId,
+          deviceType: deviceType,
+          publisherId: currentPublisherId,
+          destinationUrl: destinationUrl,
+          paymentFormData: paymentFormData // Include form data
+        };
+        
+        setPendingUpload(uploadData);
       };
+      reader.readAsDataURL(file);
+
+      // Close upload overlay and show preview
+      setIsUploadOverlayOpen(false);
+      setShowPreview(true);
+      setSelectedTemplate(selectedTemplateId);
+
+      return { success: true };
+    } catch (error) {
+      console.error("❌ Upload preparation failed:", error);
+      throw error;
+    }
+  };
+
+  const uploadFileToStorage = async (file, publisherId, templateId, deviceType) => {
+    try {
+      console.log('📤 [CLIENT-UPLOAD] Starting client-side upload to Firebase Storage...');
       
-      console.log('💾 Setting pending upload:', {
-        templateId: uploadData.templateId,
-        deviceType: uploadData.deviceType,
-        publisherId: uploadData.publisherId,
-        destinationUrl: uploadData.destinationUrl, // 🆕 NEW LOG
-        hasFile: !!uploadData.file
+      const { getStorage, ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
+      const { initializeApp, getApps } = await import('firebase/app');
+      
+      let app;
+      if (!getApps().length) {
+        const firebaseConfig = {
+          apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+          authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+          projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+          storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+          messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+          appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
+        };
+        app = initializeApp(firebaseConfig);
+      } else {
+        app = getApps()[0];
+      }
+      
+      const storage = getStorage(app);
+      
+      const timestamp = Date.now();
+      const fileExtension = file.name.split('.').pop();
+      const fileName = `${publisherId}_${deviceType}_${templateId}_${timestamp}.${fileExtension}`;
+      const filePath = `ad-uploads/${publisherId}/${deviceType}/${fileName}`;
+      
+      const storageRef = ref(storage, filePath);
+      
+      console.log('⬆️ [CLIENT-UPLOAD] Uploading to:', filePath);
+      
+      const snapshot = await uploadBytes(storageRef, file, {
+        customMetadata: {
+          publisherId,
+          templateId: templateId.toString(),
+          deviceType,
+          originalName: file.name,
+          uploadedAt: new Date().toISOString()
+        }
       });
       
-      setPendingUpload(uploadData);
-    };
-    reader.readAsDataURL(file);
-
-    // Close upload overlay and show preview
-    setIsUploadOverlayOpen(false);
-    setShowPreview(true);
-    setSelectedTemplate(selectedTemplateId);
-
-    return { success: true };
-  } catch (error) {
-    console.error("❌ Upload preparation failed:", error);
-    throw error;
-  }
-};
-
-// Add this function to your monetization page (before handleAcceptTerms)
-
-const uploadFileToStorage = async (file, publisherId, templateId, deviceType) => {
-  try {
-    console.log('📤 [CLIENT-UPLOAD] Starting client-side upload to Firebase Storage...');
-    
-    // Dynamically import Firebase Storage
-    const { getStorage, ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
-    const { initializeApp, getApps } = await import('firebase/app');
-    
-    // Initialize Firebase if not already initialized
-    let app;
-    if (!getApps().length) {
-      const firebaseConfig = {
-        apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-        authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-        storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-        messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-        appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
+      const downloadURL = await getDownloadURL(snapshot.ref);
+      
+      console.log('✅ [CLIENT-UPLOAD] Upload successful:', downloadURL);
+      
+      return {
+        success: true,
+        fileUrl: downloadURL,
+        filePath,
+        fileName,
+        fileSize: file.size,
+        fileType: file.type
       };
-      app = initializeApp(firebaseConfig);
-    } else {
-      app = getApps()[0];
+      
+    } catch (error) {
+      console.error('❌ [CLIENT-UPLOAD] Error:', error);
+      throw error;
     }
-    
-    const storage = getStorage(app);
-    
-    // Generate unique file path
-    const timestamp = Date.now();
-    const fileExtension = file.name.split('.').pop();
-    const fileName = `${publisherId}_${deviceType}_${templateId}_${timestamp}.${fileExtension}`;
-    const filePath = `ad-uploads/${publisherId}/${deviceType}/${fileName}`;
-    
-    // Create storage reference
-    const storageRef = ref(storage, filePath);
-    
-    console.log('⬆️ [CLIENT-UPLOAD] Uploading to:', filePath);
-    
-    // Upload file
-    const snapshot = await uploadBytes(storageRef, file, {
-      customMetadata: {
-        publisherId,
-        templateId: templateId.toString(),
-        deviceType,
-        originalName: file.name,
-        uploadedAt: new Date().toISOString()
-      }
-    });
-    
-    // Get download URL
-    const downloadURL = await getDownloadURL(snapshot.ref);
-    
-    console.log('✅ [CLIENT-UPLOAD] Upload successful:', downloadURL);
-    
-    return {
-      success: true,
-      fileUrl: downloadURL,
-      filePath,
-      fileName,
-      fileSize: file.size,
-      fileType: file.type
-    };
-    
-  } catch (error) {
-    console.error('❌ [CLIENT-UPLOAD] Error:', error);
-    throw error;
-  }
-};
+  };
 
-const handleAcceptTerms = async () => {
-  console.log('📋 Terms accepted, proceeding to payment...');
-  
-  if (!pendingUpload) {
-    alert('Missing upload information. Please try uploading your ad again.');
-    setShowTerms(false);
-    return;
-  }
-
-  if (!pendingUpload.destinationUrl) {
-    alert('Missing destination URL. Please try uploading your ad again and include the link.');
-    setShowTerms(false);
-    return;
-  }
-
-  if (!currentPublisherId) {
-    alert('Missing publisher information. Please refresh the page and try again.');
-    setShowTerms(false);
-    return;
-  }
-
-  try {
-    setShowTerms(false);
+  const handleAcceptTerms = async () => {
+    console.log('📋 Terms accepted, proceeding to payment...');
     
-    console.log('💾 Creating pending ad record and uploading file...');
-    
-    // 🎥 CRITICAL FIX: Upload file to Cloudinary FIRST (especially for videos)
-    const isVideo = pendingUpload.file.type.startsWith('video/');
-    
-    console.log(`${isVideo ? '🎥' : '🖼️'} Uploading ${isVideo ? 'video' : 'image'} to Cloudinary...`);
-    
-    // Prepare FormData for file upload
-    const formData = new FormData();
-    formData.append('file', pendingUpload.file);
-    formData.append('publisherId', currentPublisherId);
-    formData.append('templateId', pendingUpload.templateId);
-    formData.append('deviceType', pendingUpload.deviceType);
-    formData.append('destinationUrl', pendingUpload.destinationUrl);
-    formData.append('paymentStatus', 'pending'); // Mark as pending payment
-    
-    // Upload to Cloudinary via your API
-    const uploadResponse = await fetch('/api/upload-ad-media', {
-      method: 'POST',
-      body: formData
-    });
-    
-    const uploadResult = await uploadResponse.json();
-    
-    if (!uploadResult.success) {
-      throw new Error(uploadResult.error || 'Failed to upload file');
+    if (!pendingUpload) {
+      alert('Missing upload information. Please try uploading your ad again.');
+      setShowTerms(false);
+      return;
     }
-    
-    console.log('✅ File uploaded to Cloudinary:', {
-      uploadId: uploadResult.data.uploadId,
-      mediaUrl: uploadResult.data.mediaUrl,
-      isVideo: uploadResult.data.isVideo
-    });
-    
-    // Now create the payment with the upload ID
-    const spec = TEMPLATE_SPECS[deviceType][pendingUpload.templateId];
-    const templateName = templates.find(t => t.id === pendingUpload.templateId)?.name || `Template ${pendingUpload.templateId}`;
-    const adPrice = publisher?.adPricing?.[`template${pendingUpload.templateId}`] || 500;
-    
-    const metadata = {
-      publisherId: currentPublisherId,
-      templateId: pendingUpload.templateId,
-      templateName,
-      deviceType,
-      fileName: pendingUpload.file.name,
-      dimensions: `${spec.width}x${spec.height}`,
-      destinationUrl: pendingUpload.destinationUrl,
-      uploadId: uploadResult.data.uploadId, // Reference to the uploaded file
-      type: 'ad_space'
-    };
 
-    const paymentUrl = `/payment?amount=${adPrice}&currency=ZAR&description=${encodeURIComponent(`${templateName} - ${deviceType} (${spec.width}x${spec.height}px)`)}&metadata=${encodeURIComponent(JSON.stringify(metadata))}&returnUrl=${encodeURIComponent(window.location.href)}`;
-    
-    // Store minimal data in sessionStorage (just the upload ID, not the file)
+    if (!pendingUpload.destinationUrl) {
+      alert('Missing destination URL. Please try uploading your ad again and include the link.');
+      setShowTerms(false);
+      return;
+    }
+
+    if (!currentPublisherId) {
+      alert('Missing publisher information. Please refresh the page and try again.');
+      setShowTerms(false);
+      return;
+    }
+
+    if (!paymentFormData) {
+      alert('Missing payment form data. Please start over.');
+      setShowTerms(false);
+      return;
+    }
+
     try {
-      sessionStorage.setItem('pendingAdPayment', JSON.stringify({
+      setShowTerms(false);
+      
+      console.log('💾 Creating pending ad record and uploading file...');
+      
+      const isVideo = pendingUpload.file.type.startsWith('video/');
+      
+      console.log(`${isVideo ? '🎥' : '🖼️'} Uploading ${isVideo ? 'video' : 'image'} to Cloudinary...`);
+      
+      const formData = new FormData();
+      formData.append('file', pendingUpload.file);
+      formData.append('publisherId', currentPublisherId);
+      formData.append('templateId', pendingUpload.templateId);
+      formData.append('deviceType', pendingUpload.deviceType);
+      formData.append('destinationUrl', pendingUpload.destinationUrl);
+      formData.append('paymentStatus', 'pending');
+      
+      // Add payment form data
+      formData.append('duration', JSON.stringify({
+        type: paymentFormData.durationType,
+        quantity: paymentFormData.customDuration,
+        startDate: paymentFormData.startDate,
+        endDate: paymentFormData.endDate,
+      }));
+      formData.append('notes', paymentFormData.notes || '');
+      
+      const uploadResponse = await fetch('/api/upload-ad-media', {
+        method: 'POST',
+        body: formData
+      });
+      
+      const uploadResult = await uploadResponse.json();
+      
+      if (!uploadResult.success) {
+        throw new Error(uploadResult.error || 'Failed to upload file');
+      }
+      
+      console.log('✅ File uploaded to Cloudinary:', {
         uploadId: uploadResult.data.uploadId,
+        mediaUrl: uploadResult.data.mediaUrl,
+        isVideo: uploadResult.data.isVideo
+      });
+      
+      // Create payment with form data
+      const spec = TEMPLATE_SPECS[deviceType][pendingUpload.templateId];
+      const templateName = templates.find(t => t.id === pendingUpload.templateId)?.name || `Template ${pendingUpload.templateId}`;
+      const adPrice = paymentFormData.totalPrice; // Use calculated price from form
+      
+      const metadata = {
         publisherId: currentPublisherId,
         templateId: pendingUpload.templateId,
+        templateName,
         deviceType,
-        destinationUrl: pendingUpload.destinationUrl
-      }));
+        fileName: pendingUpload.file.name,
+        dimensions: `${spec.width}x${spec.height}`,
+        destinationUrl: pendingUpload.destinationUrl,
+        uploadId: uploadResult.data.uploadId,
+        duration: {
+          type: paymentFormData.durationType,
+          quantity: paymentFormData.customDuration,
+          startDate: paymentFormData.startDate.toISOString(),
+          endDate: paymentFormData.endDate.toISOString(),
+        },
+        type: 'ad_space'
+      };
+
+      const paymentUrl = `/payment?amount=${adPrice}&currency=ZAR&description=${encodeURIComponent(`${templateName} - ${deviceType} (${spec.width}x${spec.height}px) - ${paymentFormData.customDuration} ${paymentFormData.durationType}(s)`)}&metadata=${encodeURIComponent(JSON.stringify(metadata))}&returnUrl=${encodeURIComponent(window.location.href)}`;
       
-      console.log('💳 Navigating to payment...');
-      router.push(paymentUrl);
+      try {
+        sessionStorage.setItem('pendingAdPayment', JSON.stringify({
+          uploadId: uploadResult.data.uploadId,
+          publisherId: currentPublisherId,
+          templateId: pendingUpload.templateId,
+          deviceType,
+          destinationUrl: pendingUpload.destinationUrl,
+          duration: metadata.duration
+        }));
+        
+        // Clear form data from localStorage after successful submission
+        const storageKey = `adForm_${pendingUpload.templateId}_${deviceType}`;
+        localStorage.removeItem(storageKey);
+        
+        console.log('💳 Navigating to payment...');
+        router.push(paymentUrl);
+        
+      } catch (storageError) {
+        console.error('❌ SessionStorage error:', storageError);
+        router.push(paymentUrl);
+      }
       
-    } catch (storageError) {
-      console.error('❌ SessionStorage error:', storageError);
-      // Even if sessionStorage fails, we can still proceed since we have the uploadId in metadata
-      router.push(paymentUrl);
+    } catch (error) {
+      console.error('❌ Error:', error);
+      alert(`Failed: ${error.message}. Please try again.`);
     }
-    
-  } catch (error) {
-    console.error('❌ Error:', error);
-    alert(`Failed: ${error.message}. Please try again.`);
-  }
-};
+  };
 
   const handlePreviewClose = () => {
     setShowPreview(false);
@@ -474,7 +494,6 @@ const handleAcceptTerms = async () => {
         handlePaymentSuccess(JSON.parse(uploadData));
         sessionStorage.removeItem('pendingAdUpload');
         
-        // Clean URL
         window.history.replaceState({}, '', window.location.pathname);
       }
     }
@@ -486,7 +505,6 @@ const handleAcceptTerms = async () => {
       
       alert('Payment successful! Your ad has been activated.');
       
-      // Refresh the ads list
       const response = await fetch(
         `/api/get-ads?publisherId=${currentPublisherId}&deviceType=${deviceType}`
       );
@@ -507,12 +525,6 @@ const handleAcceptTerms = async () => {
     } catch (error) {
       console.error('❌ Error processing payment success:', error);
     }
-  };
-
-  const handleArticleClick = (template) => {
-    router.push(
-      `/print-media/monetization/advertise/ad-demo-article?templateId=${template.id}`
-    );
   };
 
   // Show loading while initializing
@@ -597,7 +609,7 @@ const handleAcceptTerms = async () => {
       </div>
 
       <h1 className="text-center text-lg sm:text-xl font-bold my-4 px-2">
-        Click on any of the templates to see where to place your ad!
+        Click Upload to start your ad campaign!
       </h1>
 
       {/* Mobile menu button */}
@@ -731,10 +743,10 @@ const handleAcceptTerms = async () => {
                   <th className="text-left p-4 font-medium text-gray-700">Banner</th>
                   <th className="text-left p-4 font-medium text-gray-700">Dimension</th>
                   <th className="text-left p-4 font-medium text-gray-700">File Size</th>
+                  <th className="text-left p-4 font-medium text-gray-700">Base Price</th>
                   <th className="text-left p-4 font-medium text-gray-700">Uploaded Ads</th>
                   <th className="text-left p-4 font-medium text-gray-700">Upload</th>
                   <th className="text-left p-4 font-medium text-gray-700">Preview</th>
-                  <th className="text-left p-4 font-medium text-gray-700">Link</th>
                 </tr>
               </thead>
               <tbody>
@@ -747,6 +759,7 @@ const handleAcceptTerms = async () => {
                       <td className="p-4">{template.name}</td>
                       <td className="p-4 text-sm text-gray-600">{template.dimension}</td>
                       <td className="p-4 text-sm text-gray-600">{template.fileSize}</td>
+                      <td className="p-4 text-sm font-semibold text-green-600">{template.price}/day</td>
                       <td className="p-4">
                         {adsForTemplate.length > 0 ? (
                           <span className="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded">
@@ -757,10 +770,10 @@ const handleAcceptTerms = async () => {
                         )}
                       </td>
                       <td
-                        className="p-4 text-blue-600 underline cursor-pointer hover:text-blue-800"
+                        className="p-4 text-blue-600 underline cursor-pointer hover:text-blue-800 font-medium"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleOpenUploadOverlay(template.id);
+                          handleOpenUploadForm(template.id);
                         }}
                       >
                         {template.upload}
@@ -777,11 +790,6 @@ const handleAcceptTerms = async () => {
                           <Eye size={14} />
                           Preview
                         </button>
-                      </td>
-                      <td className="p-4 text-blue-600 underline cursor-pointer hover:text-blue-800">
-                        <Link href={`/print-media/monetization/payment/${template.id}`}>
-                          {template.link}
-                        </Link>
                       </td>
                     </tr>
                   );
@@ -806,10 +814,31 @@ const handleAcceptTerms = async () => {
         </main>
       </div>
 
+      {/* Payment Form Modal */}
+      {showPaymentForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 p-4 overflow-y-auto">
+          <div className="w-full max-w-2xl my-8">
+            <AdPaymentForm
+              templateId={selectedTemplateId}
+              templateName={templates.find(t => t.id === selectedTemplateId)?.name}
+              dimension={templates.find(t => t.id === selectedTemplateId)?.dimension}
+              deviceType={deviceType}
+              onSubmit={handlePaymentFormSubmit}
+              onCancel={() => {
+                setShowPaymentForm(false);
+                setIsEditingForm(false);
+              }}
+              initialData={isEditingForm ? paymentFormData : null}
+              isEditing={isEditingForm}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Preview Modal */}
       {showPreview && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 p-4 overflow-y-auto">
-          <div className="bg-white rounded-lg max-w-7xl w-full p-6 my-8">
+          <div className="bg-white rounded-lg max-w-7xl w-full p-6 my-8 relative">
             <div className="flex justify-between items-center mb-6">
               <div>
                 <h2 className="text-2xl font-bold">Ad Preview</h2>
@@ -844,24 +873,33 @@ const handleAcceptTerms = async () => {
               )}
             </div>
 
-            {/* Action buttons */}
-            {previewAd && (
-              <div className="flex justify-between items-center pt-4 border-t">
-                <button
-                  onClick={handlePreviewClose}
-                  className="px-6 py-3 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleProceedToPayment}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2"
-                >
-                  <CreditCard className="w-5 h-5" />
-                  Proceed to Payment
-                </button>
-              </div>
-            )}
+            {/* Action buttons at the bottom */}
+            <div className="flex justify-between items-center pt-4 border-t gap-4">
+              <button
+                onClick={handlePreviewClose}
+                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
+              >
+                Close Preview
+              </button>
+              
+              {previewAd && paymentFormData && (
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleEditForm}
+                    className="px-6 py-3 border border-blue-600 text-blue-600 rounded-md hover:bg-blue-50"
+                  >
+                    Edit Campaign Details
+                  </button>
+                  <button
+                    onClick={handleProceedToPayment}
+                    className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2"
+                  >
+                    <CreditCard className="w-5 h-5" />
+                    Proceed to Payment
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
