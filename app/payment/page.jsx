@@ -374,10 +374,6 @@ function PaymentPageContent({
     }
   };
 
-// Replace the activateAd function in app/payment/page.jsx
-
-// Replace the activateAd function in app/payment/page.jsx
-
 const activateAd = async (paymentIntentId) => {
   try {
     setActivatingAd(true);
@@ -385,91 +381,21 @@ const activateAd = async (paymentIntentId) => {
     console.log('🔓 [PAYMENT-PAGE] ========== STARTING ACTIVATION ==========');
     console.log('🔓 [PAYMENT-PAGE] Payment Intent ID:', paymentIntentId);
     
-    // Get data from sessionStorage
-    let pendingFileStr = null;
-    let pendingPaymentStr = null;
-    
-    try {
-      pendingFileStr = sessionStorage.getItem('pendingAdFile');
-      pendingPaymentStr = sessionStorage.getItem('pendingAdPayment');
-    } catch (storageError) {
-      console.warn('⚠️ [PAYMENT-PAGE] SessionStorage read error:', storageError);
-    }
-    
-    console.log('📦 [PAYMENT-PAGE] SessionStorage data:', {
-      hasPendingFile: !!pendingFileStr,
-      hasPendingPayment: !!pendingPaymentStr
-    });
-    
-    let activationData = {
-      paymentIntentId: paymentIntentId
-    };
-    
-    // Try to get file data
-    if (pendingFileStr) {
-      try {
-        const fileData = JSON.parse(pendingFileStr);
-        console.log('📄 [PAYMENT-PAGE] Parsed file data:', {
-          pendingId: fileData.pendingId,
-          hasFileData: !!fileData.fileData,
-          fileName: fileData.fileName,
-          publisherId: fileData.publisherId,
-          templateId: fileData.templateId,
-          deviceType: fileData.deviceType
-        });
-        
-        activationData = {
-          ...activationData,
-          pendingId: fileData.pendingId,
-          fileData: fileData.fileData,
-          publisherId: fileData.publisherId,
-          templateId: fileData.templateId,
-          deviceType: fileData.deviceType,
-          destinationUrl: fileData.destinationUrl
-        };
-      } catch (parseError) {
-        console.error('❌ [PAYMENT-PAGE] Failed to parse pendingAdFile:', parseError);
-      }
-    } 
-    
-    // Try pendingAdPayment if no file data
-    if (!activationData.pendingId && pendingPaymentStr) {
-      try {
-        const paymentData = JSON.parse(pendingPaymentStr);
-        console.log('📄 [PAYMENT-PAGE] Parsed payment data:', {
-          pendingId: paymentData.pendingId,
-          publisherId: paymentData.publisherId,
-          templateId: paymentData.templateId,
-          deviceType: paymentData.deviceType,
-          needsFileUpload: paymentData.needsFileUpload
-        });
-        
-        activationData = {
-          ...activationData,
-          pendingId: paymentData.pendingId,
-          publisherId: paymentData.publisherId,
-          templateId: paymentData.templateId,
-          deviceType: paymentData.deviceType,
-          destinationUrl: paymentData.destinationUrl
-        };
-      } catch (parseError) {
-        console.error('❌ [PAYMENT-PAGE] Failed to parse pendingAdPayment:', parseError);
-      }
-    }
+    // Get uploadId from metadata (stored during payment creation)
+    const uploadId = metadata.uploadId;
     
     console.log('📤 [PAYMENT-PAGE] Sending activation request:', {
-      paymentIntentId: activationData.paymentIntentId,
-      pendingId: activationData.pendingId,
-      hasFileData: !!activationData.fileData,
-      publisherId: activationData.publisherId,
-      templateId: activationData.templateId,
-      deviceType: activationData.deviceType
+      paymentIntentId,
+      uploadId
     });
     
     const response = await fetch('/api/activate-ad-after-payment', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(activationData),
+      body: JSON.stringify({
+        paymentIntentId,
+        uploadId
+      }),
     });
 
     console.log('📥 [PAYMENT-PAGE] Response status:', response.status);
@@ -482,7 +408,6 @@ const activateAd = async (paymentIntentId) => {
       
       // Clean up sessionStorage
       try {
-        sessionStorage.removeItem('pendingAdFile');
         sessionStorage.removeItem('pendingAdPayment');
         console.log('🧹 [PAYMENT-PAGE] Cleaned up sessionStorage');
       } catch (cleanupError) {
