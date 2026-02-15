@@ -14,7 +14,8 @@ export default function SignIn() {
   const [role, setRole] = useState("reader")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-  const [isGoogleSignInActive, setIsGoogleSignInActive] = useState(false) // NEW: Prevent double-clicks
+  const [isGoogleSignInActive, setIsGoogleSignInActive] = useState(false)
+  const [googleInitialized, setGoogleInitialized] = useState(false) // NEW: Track initialization
   
   // Role selector states for Google Sign-In
   const [showRoleSelector, setShowRoleSelector] = useState(false)
@@ -26,18 +27,34 @@ export default function SignIn() {
   // Initialize Google Sign-In when component mounts
   useEffect(() => {
     console.log('🔧 Initializing Google Sign-In in SignIn component...');
+    let mounted = true;
+    
     const callback = (response) => {
-      handleGoogleSignInCallback(
-        response, 
-        router, 
-        setError, 
-        setLoading,
-        setShowRoleSelector,
-        setAvailableRoles,
-        setPendingGoogleCredential
-      );
+      if (mounted) {
+        handleGoogleSignInCallback(
+          response, 
+          router, 
+          setError, 
+          setLoading,
+          setShowRoleSelector,
+          setAvailableRoles,
+          setPendingGoogleCredential
+        );
+      }
     };
-    initializeGoogleSignIn(callback);
+    
+    // Initialize with a delay to ensure DOM is ready
+    const timer = setTimeout(() => {
+      if (mounted) {
+        initializeGoogleSignIn(callback);
+        setGoogleInitialized(true);
+      }
+    }, 100);
+
+    return () => {
+      mounted = false;
+      clearTimeout(timer);
+    };
   }, [router]);
 
   // Enforce reader-only on mobile screens
@@ -72,38 +89,55 @@ export default function SignIn() {
   }
 
   const handleGoogleSignInClick = async () => {
-    // UPDATED: Prevent multiple simultaneous sign-in attempts
+    // Prevent multiple simultaneous sign-in attempts
     if (isGoogleSignInActive) {
       console.log('⚠️ Google Sign-In already in progress');
       return;
     }
 
-    console.log('🔘 Google Sign-In button clicked');
-    setError('');
-    setIsGoogleSignInActive(true); // Set flag to true
-    
-    if (!window.google) {
-      setError('Google Sign-In is not available. Please refresh the page.');
-      setIsGoogleSignInActive(false); // Reset flag
+    // Check if Google is initialized
+    if (!googleInitialized || !window.google) {
+      console.error('❌ Google Sign-In not initialized');
+      setError('Google Sign-In is still loading. Please wait a moment and try again.');
       return;
     }
 
-    console.log('🚀 Launching Google Sign-In prompt...');
-    window.google.accounts.id.prompt((notification) => {
-      if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-        console.log('⚠️ Google prompt was not displayed or was skipped');
-      }
-      // Reset the flag after prompt completes/closes
-      setTimeout(() => {
-        setIsGoogleSignInActive(false);
-      }, 1000);
-    });
+    console.log('🔘 Google Sign-In button clicked');
+    setError('');
+    setIsGoogleSignInActive(true);
+
+    try {
+      console.log('🚀 Launching Google Sign-In prompt...');
+      
+      // Use a more reliable approach with error handling
+      window.google.accounts.id.prompt((notification) => {
+        console.log('📢 Notification:', notification);
+        
+        if (notification.isNotDisplayed()) {
+          console.log('⚠️ Google prompt was not displayed');
+          setError('Google Sign-In popup was blocked. Please enable popups for this site.');
+          setIsGoogleSignInActive(false);
+        } else if (notification.isSkippedMoment()) {
+          console.log('⚠️ Google prompt was skipped');
+          setIsGoogleSignInActive(false);
+        } else {
+          // Reset flag after a delay if prompt was shown
+          setTimeout(() => {
+            setIsGoogleSignInActive(false);
+          }, 1000);
+        }
+      });
+    } catch (error) {
+      console.error('❌ Error launching Google Sign-In:', error);
+      setError('Failed to launch Google Sign-In. Please try again.');
+      setIsGoogleSignInActive(false);
+    }
   }
 
   const handleRoleSelection = async (selectedRole) => {
     console.log('👤 User selected role:', selectedRole);
     setShowRoleSelector(false);
-    setIsGoogleSignInActive(false); // Reset flag when role is selected
+    setIsGoogleSignInActive(false);
     await completeGoogleSignIn(pendingGoogleCredential, selectedRole, router, setError, setLoading);
   }
 
@@ -193,7 +227,7 @@ export default function SignIn() {
               <div className="mb-6">
                 <button
                   onClick={handleGoogleSignInClick}
-                  disabled={loading || isGoogleSignInActive} // UPDATED: Disable when active
+                  disabled={loading || isGoogleSignInActive || !googleInitialized}
                   className="w-full bg-white text-gray-700 font-semibold py-2.5 md:py-3 px-4 rounded-lg border border-gray-300 hover:bg-gray-50 transition duration-300 flex items-center justify-center shadow-md disabled:opacity-50 disabled:cursor-not-allowed text-sm md:text-base"
                 >
                   <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
@@ -214,7 +248,7 @@ export default function SignIn() {
                       d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                     />
                   </svg>
-                  {loading || isGoogleSignInActive ? "Signing in..." : "Sign in with Google"}
+                  {!googleInitialized ? "Loading..." : (loading || isGoogleSignInActive ? "Signing in..." : "Sign in with Google")}
                 </button>
               </div>
 
@@ -234,6 +268,7 @@ export default function SignIn() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  autoComplete="email"
                   className="w-full px-4 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition bg-white"
                 />
                 <div className="relative">
@@ -244,6 +279,7 @@ export default function SignIn() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
+                    autoComplete="current-password"
                     className="w-full px-4 py-2 pr-12 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition bg-white"
                   />
                   <button
@@ -329,7 +365,7 @@ export default function SignIn() {
               setShowRoleSelector(false);
               setPendingGoogleCredential(null);
               setLoading(false);
-              setIsGoogleSignInActive(false); // UPDATED: Reset flag on cancel
+              setIsGoogleSignInActive(false);
             }}
             className="w-full mt-4 text-gray-600 hover:text-gray-800 font-medium py-2"
           >
