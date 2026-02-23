@@ -1,6 +1,7 @@
-// app/api/upload-ad-media/route.js - FINAL WORKING VERSION
+// app/api/upload-ad-media/route.js - UPDATED WITH DURATION SUPPORT
 import { NextResponse } from 'next/server';
 import { getFirestoreDb } from '../../../lib/firebase-admin';
+import { uploadToCloudinary, deleteFromCloudinary } from '../../../lib/cloudinary';
 import { Timestamp } from 'firebase-admin/firestore';
 
 // Utility function to normalize publisher ID
@@ -28,14 +29,21 @@ export async function POST(req) {
     const paymentIntentId = formData.get('paymentIntentId');
     const paymentStatus = formData.get('paymentStatus') || 'pending';
     const destinationUrl = formData.get('destinationUrl');
+    
+    // NEW: Duration data
+    const durationJson = formData.get('duration');
+    const notes = formData.get('notes');
 
     console.log('📁 [UPLOAD-AD-MEDIA] Request:', {
       fileName: file?.name,
       fileSize: file?.size,
+      fileType: file?.type,
       publisherId: rawPublisherId,
       templateId,
       deviceType,
-      destinationUrl
+      destinationUrl,
+      hasDuration: !!durationJson,
+      isVideo: file?.type?.startsWith('video/')
     });
 
     if (!file || !rawPublisherId || !templateId || !deviceType) {
@@ -81,12 +89,13 @@ export async function POST(req) {
       'image/gif',
       'video/mp4',
       'video/quicktime',
+      'video/webm',
       'video/avi'
     ];
 
     if (!validTypes.includes(file.type)) {
       return NextResponse.json(
-        { success: false, error: 'Invalid file type. Supported: JPG, PNG, GIF, MP4, MOV, AVI' },
+        { success: false, error: 'Invalid file type. Supported: JPG, PNG, GIF, MP4, MOV, WEBM, AVI' },
         { status: 400 }
       );
     }
@@ -98,13 +107,73 @@ export async function POST(req) {
       );
     }
 
-    // 🎯 SIMPLE SOLUTION: Just store base64 in Firestore
-    // We'll only use this for preview - actual file can be uploaded after payment if needed
-    console.log('💾 [UPLOAD-AD-MEDIA] Converting to base64...');
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    const base64String = buffer.toString('base64');
-    const dataUrl = `data:${file.type};base64,${base64String}`;
+    // Parse duration data
+    let duration = null;
+    if (durationJson) {
+      try {
+        duration = JSON.parse(durationJson);
+        console.log('📅 [UPLOAD-AD-MEDIA] Duration data:', duration);
+      } catch (err) {
+        console.error('❌ [UPLOAD-AD-MEDIA] Failed to parse duration:', err);
+      }
+    }
+
+    const isVideo = file.type.startsWith('video/');
+    let imageSrc;
+    let cloudinaryPublicId = null;
+
+    // 🎥 CLOUDINARY: Handle both videos and images
+    console.log(`${isVideo ? '🎥' : '🖼️'} [UPLOAD-AD-MEDIA] Uploading to Cloudinary...`);
+    
+    try {
+      // Convert file to buffer
+      const arrayBuffer = await file.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      
+      // Create unique public ID
+      const timestamp = Date.now();
+      const fileExtension = file.name.split('.').pop();
+      const publicId = `${publisherId}_${deviceType}_${templateId}_${timestamp}`;
+      
+      // Upload to Cloudinary
+      const uploadResult = await uploadToCloudinary(buffer, {
+        folder: `ad-uploads/${publisherId}/${deviceType}`,
+        public_id: publicId,
+        resource_type: isVideo ? 'video' : 'image',
+        // Video optimizations
+        ...(isVideo && {
+          eager: [
+            { format: 'mp4', video_codec: 'h264' }, // Optimize for web
+          ],
+          eager_async: true,
+        }),
+        // Image optimizations
+        ...(!isVideo && {
+          quality: 'auto',
+          fetch_format: 'auto',
+        })
+      });
+      
+      imageSrc = uploadResult.secure_url;
+      cloudinaryPublicId = uploadResult.public_id;
+      
+      console.log('✅ [UPLOAD-AD-MEDIA] Uploaded to Cloudinary:', {
+        url: imageSrc,
+        publicId: cloudinaryPublicId,
+        resourceType: uploadResult.resource_type
+      });
+      
+    } catch (cloudinaryError) {
+      console.error('❌ [UPLOAD-AD-MEDIA] Cloudinary upload failed:', cloudinaryError);
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Failed to upload to Cloudinary', 
+          details: cloudinaryError.message 
+        },
+        { status: 500 }
+      );
+    }
 
     // Prepare document data
     const adMediaData = {
@@ -114,7 +183,9 @@ export async function POST(req) {
       fileName: file.name,
       fileSize: file.size,
       fileType: file.type,
-      imageSrc: dataUrl, // Store base64 for now
+      imageSrc, // Cloudinary URL
+      cloudinaryPublicId, // Store for deletion later
+      isVideo,
       destinationUrl: destinationUrl || null,
       uploadedAt: Timestamp.now(),
       status: paymentStatus === 'completed' ? 'active' : 'pending_payment',
@@ -122,7 +193,18 @@ export async function POST(req) {
       paymentStatus: paymentStatus,
       impressions: 0,
       clicks: 0,
-      activatedAt: paymentStatus === 'completed' ? Timestamp.now() : null
+      activatedAt: paymentStatus === 'completed' ? Timestamp.now() : null,
+      
+      // NEW: Duration data
+      duration: duration ? {
+        type: duration.type,
+        quantity: parseInt(duration.quantity, 10),
+        startDate: duration.startDate,
+        endDate: duration.endDate
+      } : null,
+      
+      // NEW: Notes
+      notes: notes || null
     };
 
     // Save to Firestore
@@ -132,7 +214,10 @@ export async function POST(req) {
 
     console.log('✅ [UPLOAD-AD-MEDIA] Saved to Firestore:', {
       docId: docRef.id,
-      collection: collectionName
+      collection: collectionName,
+      isVideo,
+      cloudinaryUrl: imageSrc,
+      hasDuration: !!duration
     });
 
     return NextResponse.json({
@@ -142,14 +227,18 @@ export async function POST(req) {
         : 'Ad media uploaded, pending payment',
       data: {
         docId: docRef.id,
-        uploadId: docRef.id, // Add uploadId for consistency
+        uploadId: docRef.id,
         fileName: file.name,
         fileSize: file.size,
+        fileType: file.type,
+        isVideo,
         publisherId,
         deviceType,
         destinationUrl: adMediaData.destinationUrl,
         status: adMediaData.status,
-        uploadedAt: adMediaData.uploadedAt.toDate().toISOString()
+        uploadedAt: adMediaData.uploadedAt.toDate().toISOString(),
+        mediaUrl: imageSrc,
+        duration: adMediaData.duration
       }
     });
 
@@ -174,9 +263,9 @@ export async function POST(req) {
 export async function PATCH(req) {
   try {
     const body = await req.json();
-    const { adId, paymentIntentId } = body;
+    const { adId, paymentIntentId, paymentAmount } = body;
 
-    console.log('🔄 [UPLOAD-AD-MEDIA PATCH] Activating:', { adId, paymentIntentId });
+    console.log('🔄 [UPLOAD-AD-MEDIA PATCH] Activating:', { adId, paymentIntentId, paymentAmount });
 
     if (!adId || !paymentIntentId) {
       return NextResponse.json(
@@ -200,6 +289,7 @@ export async function PATCH(req) {
         status: 'active',
         paymentStatus: 'completed',
         paymentIntentId,
+        paymentAmount: paymentAmount || null,
         activatedAt: Timestamp.now()
       });
 
@@ -226,6 +316,7 @@ export async function PATCH(req) {
       status: 'active',
       paymentStatus: 'completed',
       paymentIntentId,
+      paymentAmount: paymentAmount || null,
       activatedAt: Timestamp.now()
     });
 
@@ -236,6 +327,69 @@ export async function PATCH(req) {
     console.error('💥 [UPLOAD-AD-MEDIA PATCH] Error:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to activate ad', details: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE endpoint to remove ad and its media from Cloudinary
+export async function DELETE(req) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const adId = searchParams.get('adId');
+
+    if (!adId) {
+      return NextResponse.json(
+        { success: false, error: 'adId is required' },
+        { status: 400 }
+      );
+    }
+
+    const db = getFirestoreDb();
+    
+    // Try both collections
+    let adDoc = await db.collection('adUploads').doc(adId).get();
+    let collection = 'adUploads';
+    
+    if (!adDoc.exists) {
+      adDoc = await db.collection('pendingAdUploads').doc(adId).get();
+      collection = 'pendingAdUploads';
+    }
+
+    if (!adDoc.exists) {
+      return NextResponse.json(
+        { success: false, error: 'Ad not found' },
+        { status: 404 }
+      );
+    }
+
+    const adData = adDoc.data();
+
+    // Delete from Cloudinary if we have a public ID
+    if (adData.cloudinaryPublicId) {
+      try {
+        const resourceType = adData.isVideo ? 'video' : 'image';
+        await deleteFromCloudinary(adData.cloudinaryPublicId, resourceType);
+        console.log('✅ Deleted from Cloudinary:', adData.cloudinaryPublicId);
+      } catch (cloudinaryError) {
+        console.error('⚠️ Cloudinary deletion failed:', cloudinaryError);
+        // Continue with Firestore deletion even if Cloudinary fails
+      }
+    }
+
+    // Delete from Firestore
+    await db.collection(collection).doc(adId).delete();
+
+    console.log('✅ [DELETE] Ad deleted:', adId);
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Ad deleted successfully' 
+    });
+
+  } catch (error) {
+    console.error('💥 [DELETE] Error:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to delete ad', details: error.message },
       { status: 500 }
     );
   }

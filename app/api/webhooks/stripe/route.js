@@ -75,13 +75,19 @@ export async function POST(request) {
     }
 
     // Log webhook event
-    await db.collection('webhook_events').add({
-      eventId: event.id,
-      eventType: event.type,
-      processed: true,
-      timestamp: Timestamp.now(),
-      data: event.data.object
-    });
+   await db.collection('webhook_events').add({
+  eventId: event.id,
+  eventType: event.type,
+  processed: true,
+  timestamp: Timestamp.now(),
+  // Store only a safe summary — full event.data.object can exceed Firestore's 1MB limit
+  summary: {
+    id: event.data.object.id,
+    amount: event.data.object.amount,
+    currency: event.data.object.currency,
+    status: event.data.object.status,
+  },
+});
 
     return NextResponse.json({ received: true });
 

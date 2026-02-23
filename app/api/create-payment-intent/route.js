@@ -1,4 +1,3 @@
-// /api/create-payment-intent/route.js - CLIENT SIDE
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { getFirestoreDb } from '@/lib/firebase-admin';
@@ -6,90 +5,95 @@ import { Timestamp } from 'firebase-admin/firestore';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
+/**
+ * Flattens a nested metadata object into dot-notation string key-value pairs.
+ * Stripe requires all metadata values to be strings (no nested objects).
+ * e.g. { duration: { type: 'month', quantity: '2' } }
+ *   => { duration_type: 'month', duration_quantity: '2' }
+ */
+function flattenMetadata(obj, prefix = '') {
+  return Object.entries(obj).reduce((acc, [key, value]) => {
+    const fullKey = prefix ? `${prefix}_${key}` : key;
+    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+      Object.assign(acc, flattenMetadata(value, fullKey));
+    } else {
+      acc[fullKey] = String(value ?? '');
+    }
+    return acc;
+  }, {});
+}
+
 export async function POST(request) {
   console.log('💳 [CREATE-PAYMENT-INTENT] Starting...');
-  
+
   try {
     const body = await request.json();
     const { amount, currency = 'zar', metadata = {} } = body;
 
-    console.log('📋 [CREATE-PAYMENT-INTENT] Request data:', {
-      amount,
-      currency,
-      metadata
-    });
+    console.log('📋 [CREATE-PAYMENT-INTENT] Request data:', { amount, currency, metadata });
 
-    // Validation
     if (!amount || amount <= 0) {
-      console.error('❌ [CREATE-PAYMENT-INTENT] Invalid amount:', amount);
-      return NextResponse.json({
-        success: false,
-        error: 'Invalid amount. Must be greater than 0'
-      }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: 'Invalid amount. Must be greater than 0' },
+        { status: 400 }
+      );
     }
 
-    // Convert amount to cents (Stripe requires smallest currency unit)
     const amountInCents = Math.round(amount * 100);
 
-    console.log('💰 [CREATE-PAYMENT-INTENT] Amount conversion:', {
-      original: amount,
-      inCents: amountInCents,
-      currency: currency.toUpperCase()
-    });
+    // Flatten metadata so all values are strings — Stripe rejects nested objects
+    const flatMetadata = {
+      ...flattenMetadata(metadata),
+      originalAmount: amount.toString(),
+      timestamp: new Date().toISOString(),
+    };
 
-    // Create payment intent with Stripe
+    console.log('📦 [CREATE-PAYMENT-INTENT] Flattened metadata:', flatMetadata);
+
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amountInCents,
       currency: currency.toLowerCase(),
-      metadata: {
-        ...metadata,
-        originalAmount: amount.toString(),
-        timestamp: new Date().toISOString()
-      },
-      automatic_payment_methods: {
-        enabled: true,
-      },
+      metadata: flatMetadata,
+      automatic_payment_methods: { enabled: true },
     });
 
     console.log('✅ [CREATE-PAYMENT-INTENT] Stripe payment intent created:', {
       id: paymentIntent.id,
       amount: paymentIntent.amount,
       currency: paymentIntent.currency,
-      status: paymentIntent.status
+      status: paymentIntent.status,
     });
 
-    // Store initial payment record in Firebase
     const db = getFirestoreDb();
+
+    // ⚠️ clientSecret is intentionally NOT stored — it's a payment credential
     const paymentRecord = {
       paymentIntentId: paymentIntent.id,
-      amount: amount, // Store original amount
-      amountInCents: amountInCents,
+      amount,
+      amountInCents,
       currency: currency.toUpperCase(),
       status: 'pending',
-      metadata: metadata,
+      metadata, // store original structured metadata for internal use
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
       stripeStatus: paymentIntent.status,
-      clientSecret: paymentIntent.client_secret
     };
 
     const paymentRef = await db.collection('payments').add(paymentRecord);
 
-    console.log('💾 [CREATE-PAYMENT-INTENT] Payment record saved to Firebase:', {
+    console.log('💾 [CREATE-PAYMENT-INTENT] Payment record saved:', {
       docId: paymentRef.id,
       paymentIntentId: paymentIntent.id,
-      amount: amount,
-      currency: currency.toUpperCase()
     });
 
     return NextResponse.json({
       success: true,
-      clientSecret: paymentIntent.client_secret,
+      clientSecret: paymentIntent.client_secret, // returned to client only, never stored
       paymentIntentId: paymentIntent.id,
-      amount: amount,
-      amountInCents: amountInCents,
+      amount,
+      amountInCents,
       currency: currency.toUpperCase(),
-      firebaseDocId: paymentRef.id
+      firebaseDocId: paymentRef.id,
     });
 
   } catch (error) {
@@ -97,15 +101,17 @@ export async function POST(request) {
       message: error.message,
       type: error.type,
       code: error.code,
-      stack: error.stack
     });
 
-    return NextResponse.json({
-      success: false,
-      error: error.message || 'Failed to create payment intent',
-      errorType: error.type,
-      errorCode: error.code
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        error: error.message || 'Failed to create payment intent',
+        errorType: error.type,
+        errorCode: error.code,
+      },
+      { status: 500 }
+    );
   }
 }
 

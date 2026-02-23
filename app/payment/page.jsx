@@ -374,57 +374,59 @@ function PaymentPageContent({
     }
   };
 
-// Replace the activateAd function in app/payment/page.jsx
-
 const activateAd = async (paymentIntentId) => {
   try {
     setActivatingAd(true);
     setActivationError(null);
+    console.log('🔓 [PAYMENT-PAGE] ========== STARTING ACTIVATION ==========');
+    console.log('🔓 [PAYMENT-PAGE] Payment Intent ID:', paymentIntentId);
     
-    // Get file data from sessionStorage
-    const pendingFileStr = sessionStorage.getItem('pendingAdFile');
-    const pendingPaymentStr = sessionStorage.getItem('pendingAdPayment');
+    // Get uploadId from metadata (stored during payment creation)
+    const uploadId = metadata.uploadId;
     
-    let fileData = null;
-    let paymentData = null;
-    
-    if (pendingFileStr) {
-      paymentData = JSON.parse(pendingFileStr);
-      fileData = paymentData.fileData; // base64
-    } else if (pendingPaymentStr) {
-      paymentData = JSON.parse(pendingPaymentStr);
-    }
-    
-    if (!paymentData) {
-      setActivationError('No pending ad data found');
-      return;
-    }
+    console.log('📤 [PAYMENT-PAGE] Sending activation request:', {
+      paymentIntentId,
+      uploadId
+    });
     
     const response = await fetch('/api/activate-ad-after-payment', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         paymentIntentId,
-        pendingId: paymentData.pendingId,
-        fileData: fileData, // May be null if file was too large
-        publisherId: paymentData.publisherId,
-        templateId: paymentData.templateId,
-        deviceType: paymentData.deviceType,
-        destinationUrl: paymentData.destinationUrl
+        uploadId
       }),
     });
 
+    console.log('📥 [PAYMENT-PAGE] Response status:', response.status);
+    
     const result = await response.json();
+    console.log('📥 [PAYMENT-PAGE] Response data:', result);
     
     if (result.success) {
-      sessionStorage.removeItem('pendingAdFile');
-      sessionStorage.removeItem('pendingAdPayment');
+      console.log('✅ [PAYMENT-PAGE] Ad activated successfully:', result.data);
+      
+      // Clean up sessionStorage
+      try {
+        sessionStorage.removeItem('pendingAdPayment');
+        console.log('🧹 [PAYMENT-PAGE] Cleaned up sessionStorage');
+      } catch (cleanupError) {
+        console.warn('⚠️ [PAYMENT-PAGE] Failed to clean sessionStorage:', cleanupError);
+      }
+      
+      console.log('🎉 [PAYMENT-PAGE] ========== ACTIVATION COMPLETE ==========');
     } else {
-      setActivationError(result.error);
+      const errorMsg = result.error || 'Ad activation failed';
+      console.error('❌ [PAYMENT-PAGE] Activation failed:', errorMsg);
+      setActivationError(errorMsg);
+      setErrorMessage(`Payment successful, but failed to activate ad: ${errorMsg}. Please contact support with payment ID: ${paymentIntentId}.`);
     }
     
   } catch (error) {
+    console.error('💥 [PAYMENT-PAGE] ========== ACTIVATION ERROR ==========');
+    console.error('💥 [PAYMENT-PAGE] Error:', error);
     setActivationError(error.message);
+    setErrorMessage(`Payment successful, but failed to activate ad. Please contact support with payment ID: ${paymentIntentId}.`);
   } finally {
     setActivatingAd(false);
   }

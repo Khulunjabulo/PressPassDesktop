@@ -1,118 +1,54 @@
-
-// app/api/support/send-message/route.js
+// app/api/support/messages/route.js
 import { NextResponse } from 'next/server';
-import { getFirestoreDb, getStorage } from '@/lib/firebase-admin';
+import { getFirestoreDb } from '@/lib/firebase-admin';
 
 export async function POST(request) {
   try {
-    const formData = await request.formData();
-    const message = formData.get('message');
-    const email = formData.get('email');
-    const userId = formData.get('userId');
-    const userName = formData.get('userName');
-    const file = formData.get('file');
+    const body = await request.json();
+    const { userId, conversationId } = body;
 
-    if (!message && !file) {
+    if (!userId || !conversationId) {
       return NextResponse.json(
-        { error: 'Message or file is required' },
-        { status: 400 }
-      );
-    }
-
-    if (!email) {
-      return NextResponse.json(
-        { error: 'Email is required' },
+        { success: false, error: 'userId and conversationId are required' },
         { status: 400 }
       );
     }
 
     const db = getFirestoreDb();
     
-    // Generate ticket ID
-    const ticketNumber = `T-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
+    // Get messages from Firestore
+    const messagesRef = db
+      .collection('support-messages')
+      .where('conversationId', '==', conversationId)
+      .orderBy('timestamp', 'asc');
+
+    const snapshot = await messagesRef.get();
     
-    // Handle file upload if present
-    let fileUrl = null;
-    let fileName = null;
-    
-    if (file) {
-      const storage = getStorage();
-      const bucket = storage.bucket();
-      const fileBuffer = Buffer.from(await file.arrayBuffer());
-      const filePath = `support-files/${userId}/${Date.now()}-${file.name}`;
-      
-      const fileUpload = bucket.file(filePath);
-      await fileUpload.save(fileBuffer, {
-        metadata: {
-          contentType: file.type,
-        },
+    const messages = [];
+    snapshot.forEach(doc => {
+      messages.push({
+        id: doc.id,
+        ...doc.data(),
+        timestamp: doc.data().timestamp?.toDate().toISOString()
       });
-      
-      // Make file publicly accessible
-      await fileUpload.makePublic();
-      fileUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
-      fileName = file.name;
-    }
-
-    // Create ticket document
-    const ticketData = {
-      ticketId: ticketNumber,
-      subject: message ? message.substring(0, 100) : 'File attachment',
-      customer: email,
-      userId: userId,
-      userName: userName,
-      priority: 'MEDIUM',
-      status: 'Open',
-      assigned: null,
-      createdAt: new Date().toISOString(),
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days
-      isExpired: false,
-      isArchived: false,
-      messages: [
-        {
-          id: `msg-${Date.now()}`,
-          message: message || '',
-          timestamp: new Date().toISOString(),
-          fromUser: true,
-          fromAdmin: false,
-          senderName: userName,
-          senderEmail: email,
-          fileUrl: fileUrl,
-          fileName: fileName,
-        }
-      ]
-    };
-
-    const ticketRef = await db.collection('support-tickets').add(ticketData);
-
-    // Trigger email notification to admin (using Firebase Extension)
-    await db.collection('mail').add({
-      to: process.env.ADMIN_EMAIL || 'admin@yourdomain.com',
-      message: {
-        subject: `New Support Ticket: ${ticketNumber}`,
-        html: `
-          <h2>New Support Ticket Received</h2>
-          <p><strong>Ticket ID:</strong> ${ticketNumber}</p>
-          <p><strong>From:</strong> ${userName} (${email})</p>
-          <p><strong>Message:</strong></p>
-          <p>${message || 'File attachment only'}</p>
-          ${fileName ? `<p><strong>Attachment:</strong> ${fileName}</p>` : ''}
-          <p><a href="${process.env.ADMIN_DASHBOARD_URL || 'https://admin.yourdomain.com'}/tickets/${ticketRef.id}">View Ticket</a></p>
-        `,
-      },
     });
 
     return NextResponse.json({
       success: true,
-      ticketId: ticketNumber,
-      message: 'Message sent successfully'
+      messages
     });
 
   } catch (error) {
-    console.error('Error sending message:', error);
+    console.error('❌ [SUPPORT-MESSAGES] Error:', error);
     return NextResponse.json(
-      { error: 'Failed to send message', details: error.message },
+      {
+        success: false,
+        error: 'Failed to fetch messages',
+        details: error.message
+      },
       { status: 500 }
     );
   }
 }
+
+export const dynamic = 'force-dynamic';
