@@ -13,7 +13,7 @@ import { useFavorites } from '@/hooks/useFavorites';
 import AdSlot from '@/components/news-reader/AdsSlot';
 import FavoriteButton from '@/components/FavoriteButton';
 import PublisherFavoriteButton from '@/components/PublisherFavoriteButton'; 
-import NewsReaderHeader from '@/components/news-reader/NewsReaderHeader';
+import NewsReaderHeader from '@/components/news-reader/Header';
 import MobileBottomNav from '@/components/news-reader/MobileBottomNav';
 
 // ─── Date Helpers ──────────────────────────────────────────────────────────────
