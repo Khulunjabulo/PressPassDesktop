@@ -16,13 +16,9 @@ import {
 } from '../../lib/authLogic';
 import Link from 'next/link';
 
-// ─── Robust email validator ───────────────────────────────────────────────────
-// Rejects: abc@.com  |  abc@com  |  @domain.com  |  user@domain.  |  user@-bad.com
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$/;
-
 const isValidEmail = (email) => EMAIL_REGEX.test(email.trim());
 
-// ─── Default form shapes ──────────────────────────────────────────────────────
 const defaultReaderForm = {
   firstName: '',
   lastName: '',
@@ -51,6 +47,29 @@ const defaultPublisherForm = {
   role: 'publisher',
 };
 
+// ─── FIX 2: All fields that can have inline errors ───────────────────────────
+const defaultReaderErrors = {
+  firstName: '',
+  lastName: '',
+  email: '',
+  password: '',
+  confirmPassword: '',
+  agreeToTerms: '',
+};
+
+const defaultPublisherErrors = {
+  companyName: '',
+  industry: '',
+  contactName: '',
+  jobTitle: '',
+  email: '',
+  password: '',
+  confirmPassword: '',
+  publicationType: '',
+  audienceType: '',
+  agreeToTerms: '',
+};
+
 const MediaHubRegistration = () => {
   const [isPublisher, setIsPublisher] = useState(false);
   const [profilePicPreview, setProfilePicPreview] = useState('');
@@ -58,15 +77,13 @@ const MediaHubRegistration = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // ── FIX 1: Two completely separate form states ──────────────────────────────
   const [readerFormData, setReaderFormData] = useState(defaultReaderForm);
   const [publisherFormData, setPublisherFormData] = useState(defaultPublisherForm);
 
-  // ── FIX 2: Email error states (one per form) ────────────────────────────────
-  const [readerEmailError, setReaderEmailError] = useState('');
-  const [publisherEmailError, setPublisherEmailError] = useState('');
+  // FIX 2: Per-field error state (replaces alert popup)
+  const [readerErrors, setReaderErrors] = useState(defaultReaderErrors);
+  const [publisherErrors, setPublisherErrors] = useState(defaultPublisherErrors);
 
-  // Google Sign-up modal states
   const [showFormModal, setShowFormModal] = useState(false);
   const [googleUserData, setGoogleUserData] = useState(null);
 
@@ -79,16 +96,15 @@ const MediaHubRegistration = () => {
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
     }));
-
-    // Clear email error as user types
-    if (name === 'email') setReaderEmailError('');
+    // Clear the error for this field as user types/changes
+    setReaderErrors((prev) => ({ ...prev, [name]: '' }));
   };
 
   const handleReaderEmailBlur = () => {
     if (readerFormData.email && !isValidEmail(readerFormData.email)) {
-      setReaderEmailError('Invalid email format (e.g. name@example.com)');
+      setReaderErrors((prev) => ({ ...prev, email: 'Invalid email format (e.g. name@example.com)' }));
     } else {
-      setReaderEmailError('');
+      setReaderErrors((prev) => ({ ...prev, email: '' }));
     }
   };
 
@@ -99,15 +115,14 @@ const MediaHubRegistration = () => {
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
     }));
-
-    if (name === 'email') setPublisherEmailError('');
+    setPublisherErrors((prev) => ({ ...prev, [name]: '' }));
   };
 
   const handlePublisherEmailBlur = () => {
     if (publisherFormData.email && !isValidEmail(publisherFormData.email)) {
-      setPublisherEmailError('Invalid email format (e.g. name@example.com)');
+      setPublisherErrors((prev) => ({ ...prev, email: 'Invalid email format (e.g. name@example.com)' }));
     } else {
-      setPublisherEmailError('');
+      setPublisherErrors((prev) => ({ ...prev, email: '' }));
     }
   };
 
@@ -121,25 +136,117 @@ const MediaHubRegistration = () => {
     else setProfilePicPreview('');
   };
 
+  // ── FIX 2: Inline validation for reader ────────────────────────────────────
+  const validateReaderInline = () => {
+    const errs = { ...defaultReaderErrors };
+    let valid = true;
+
+    if (!readerFormData.agreeToTerms) {
+      errs.agreeToTerms = 'You must agree to the Terms of Service and Privacy Policy.';
+      valid = false;
+    }
+    if (!readerFormData.firstName.trim()) {
+      errs.firstName = 'First name is required.';
+      valid = false;
+    }
+    if (!readerFormData.lastName.trim()) {
+      errs.lastName = 'Last name is required.';
+      valid = false;
+    }
+    if (!readerFormData.email.trim()) {
+      errs.email = 'Email address is required.';
+      valid = false;
+    } else if (!isValidEmail(readerFormData.email)) {
+      errs.email = 'Invalid email format (e.g. name@example.com)';
+      valid = false;
+    }
+    if (!readerFormData.password) {
+      errs.password = 'Password is required.';
+      valid = false;
+    } else if (readerFormData.password.length < 8 || !/[A-Z]/.test(readerFormData.password) || !/[0-9]/.test(readerFormData.password)) {
+      errs.password = 'Password must be 8+ characters with an uppercase letter and a number.';
+      valid = false;
+    }
+    if (!readerFormData.confirmPassword) {
+      errs.confirmPassword = 'Please confirm your password.';
+      valid = false;
+    } else if (readerFormData.password !== readerFormData.confirmPassword) {
+      errs.confirmPassword = 'Passwords do not match.';
+      valid = false;
+    }
+
+    setReaderErrors(errs);
+    return valid;
+  };
+
+  // ── FIX 2: Inline validation for publisher ──────────────────────────────────
+  const validatePublisherInline = () => {
+    const errs = { ...defaultPublisherErrors };
+    let valid = true;
+
+    if (!publisherFormData.agreeToTerms) {
+      errs.agreeToTerms = 'You must agree to the Terms of Service and Privacy Policy.';
+      valid = false;
+    }
+    if (!publisherFormData.companyName.trim()) {
+      errs.companyName = 'Company name is required.';
+      valid = false;
+    }
+    if (!publisherFormData.industry) {
+      errs.industry = 'Please select an industry.';
+      valid = false;
+    }
+    if (!publisherFormData.contactName.trim()) {
+      errs.contactName = 'Contact name is required.';
+      valid = false;
+    }
+    if (!publisherFormData.jobTitle.trim()) {
+      errs.jobTitle = 'Job title is required.';
+      valid = false;
+    }
+    if (!publisherFormData.email.trim()) {
+      errs.email = 'Email address is required.';
+      valid = false;
+    } else if (!isValidEmail(publisherFormData.email)) {
+      errs.email = 'Invalid email format (e.g. name@example.com)';
+      valid = false;
+    }
+    if (!publisherFormData.password) {
+      errs.password = 'Password is required.';
+      valid = false;
+    } else if (publisherFormData.password.length < 8 || !/[A-Z]/.test(publisherFormData.password) || !/[0-9]/.test(publisherFormData.password)) {
+      errs.password = 'Password must be 8+ characters with an uppercase letter and a number.';
+      valid = false;
+    }
+    if (!publisherFormData.confirmPassword) {
+      errs.confirmPassword = 'Please confirm your password.';
+      valid = false;
+    } else if (publisherFormData.password !== publisherFormData.confirmPassword) {
+      errs.confirmPassword = 'Passwords do not match.';
+      valid = false;
+    }
+    if (!publisherFormData.publicationType) {
+      errs.publicationType = 'Please select a publication type.';
+      valid = false;
+    }
+    if (!publisherFormData.audienceType) {
+      errs.audienceType = 'Please select an audience type.';
+      valid = false;
+    }
+
+    setPublisherErrors(errs);
+    return valid;
+  };
+
   // ── Submit handlers ─────────────────────────────────────────────────────────
   const handleReaderSubmit = async () => {
-    // Validate email before delegating to authLogic
-    if (!isValidEmail(readerFormData.email)) {
-      setReaderEmailError('Invalid email format (e.g. name@example.com)');
-      return;
-    }
-    const errors = validateReaderForm(readerFormData);
-    if (errors.length > 0) { alert(errors.join('\n')); return; }
+    // FIX 2: use inline validation, no alert()
+    if (!validateReaderInline()) return;
     await handleReaderRegistration(readerFormData, router, setIsLoading);
   };
 
   const handlePublisherSubmit = async () => {
-    if (!isValidEmail(publisherFormData.email)) {
-      setPublisherEmailError('Invalid email format (e.g. name@example.com)');
-      return;
-    }
-    const errors = validatePublisherForm(publisherFormData);
-    if (errors.length > 0) { alert(errors.join('\n')); return; }
+    if (!validatePublisherInline()) return;
     await handlePublisherRegistration(publisherFormData, router, setIsLoading);
   };
 
@@ -186,6 +293,14 @@ const MediaHubRegistration = () => {
       hasError ? 'border-red-500 bg-red-50' : 'border-blue-200'
     }`;
 
+  // ── Reusable inline error message ───────────────────────────────────────────
+  const FieldError = ({ msg, id }) =>
+    msg ? (
+      <p id={id} className="text-red-600 text-xs mt-1 flex items-center gap-1">
+        <i className="fas fa-exclamation-circle" /> {msg}
+      </p>
+    ) : null;
+
   return (
     <>
       <div className="bg-gray-50 min-h-screen flex items-center justify-center p-4">
@@ -203,9 +318,9 @@ const MediaHubRegistration = () => {
               </div>
               <div className="space-y-4 md:space-y-6">
                 {[
-                  { icon: 'fa-check',     title: 'Reach Millions',       sub: 'Access our global audience of readers' },
-                  { icon: 'fa-chart-line', title: 'Analytics Dashboard',  sub: 'Track your publication performance' },
-                  { icon: 'fa-mobile-alt', title: 'Multi-Platform',       sub: 'Publish to web, mobile, and tablets' },
+                  { icon: 'fa-check',      title: 'Reach Millions',      sub: 'Access our global audience of readers' },
+                  { icon: 'fa-chart-line', title: 'Analytics Dashboard', sub: 'Track your publication performance' },
+                  { icon: 'fa-mobile-alt', title: 'Multi-Platform',      sub: 'Publish to web, mobile, and tablets' },
                 ].map(({ icon, title, sub }) => (
                   <div key={title} className="flex items-start">
                     <div className="bg-white/20 p-2 rounded-lg mr-4">
@@ -247,36 +362,36 @@ const MediaHubRegistration = () => {
                 <div className="space-y-4 md:space-y-6 bg-blue-50 p-4 md:p-6 rounded-xl">
                   <h2 className="text-xl md:text-2xl font-bold text-gray-800 text-center">News Reader Registration</h2>
 
-                  {/* Terms */}
-                  <label className="flex items-center bg-white p-4 rounded-lg border">
-                    <input
-                      type="checkbox"
-                      name="agreeToTerms"
-                      checked={readerFormData.agreeToTerms}
-                      onChange={handleReaderInputChange}
-                      required
-                      className="mr-3"
-                    />
-                    <span className="text-sm">
-                      I agree to the
-                      <a href="/terms" target="_blank" className="text-blue-600 underline ml-1">Terms of Service</a> and
-                      <a href="/privacy" target="_blank" className="text-blue-600 underline ml-1">Privacy Policy</a>.
-                    </span>
-                  </label>
+                  {/* FIX 1: Terms checkbox — error appears directly below it */}
+                  <div>
+                    <label className={`flex items-center bg-white p-4 rounded-lg border ${readerErrors.agreeToTerms ? 'border-red-500' : 'border-gray-200'}`}>
+                      <input
+                        type="checkbox"
+                        name="agreeToTerms"
+                        checked={readerFormData.agreeToTerms}
+                        onChange={handleReaderInputChange}
+                        className="mr-3"
+                      />
+                      <span className="text-sm">
+                        I agree to the
+                        <a href="/terms" target="_blank" className="text-blue-600 underline ml-1">Terms of Service</a> and
+                        <a href="/privacy" target="_blank" className="text-blue-600 underline ml-1">Privacy Policy</a>.
+                      </span>
+                    </label>
+                    {/* FIX 1: error RIGHT under the checkbox, not under Google button */}
+                    <FieldError msg={readerErrors.agreeToTerms} id="reader-terms-error" />
+                  </div>
 
-                  {/* Google button */}
+                  {/* Google button — no error message here anymore (FIX 1) */}
                   <div className="mb-6">
                     <div
                       id="google-signin-button"
                       className={`flex justify-center ${(!readerFormData.agreeToTerms || isLoading) ? 'opacity-50 pointer-events-none' : ''}`}
                     />
-                    {!readerFormData.agreeToTerms && (
-                      <p className="text-sm text-red-600 mt-2">Please agree to the terms first</p>
-                    )}
                   </div>
 
                   <div className="relative">
-                    <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-300"/></div>
+                    <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-300" /></div>
                     <div className="relative flex justify-center text-sm">
                       <span className="px-2 bg-blue-50 text-gray-500">or sign up with email</span>
                     </div>
@@ -288,10 +403,10 @@ const MediaHubRegistration = () => {
                       <div className="w-24 h-24 rounded-full bg-blue-100 border-2 border-dashed border-blue-300 flex items-center justify-center overflow-hidden">
                         {profilePicPreview
                           ? <img src={profilePicPreview} className="w-full h-full object-cover" alt="Profile preview" />
-                          : <i className="fas fa-user text-3xl text-blue-400"/>}
+                          : <i className="fas fa-user text-3xl text-blue-400" />}
                       </div>
                       <label className="absolute bottom-0 right-0 bg-blue-500 rounded-full p-2 cursor-pointer hover:bg-blue-600">
-                        <i className="fas fa-camera text-white text-sm"/>
+                        <i className="fas fa-camera text-white text-sm" />
                         <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
                       </label>
                     </div>
@@ -300,10 +415,32 @@ const MediaHubRegistration = () => {
 
                   {/* Name + email */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <input type="text" name="firstName" value={readerFormData.firstName} onChange={handleReaderInputChange} required placeholder="First Name" className={inputClass()} />
-                    <input type="text" name="lastName"  value={readerFormData.lastName}  onChange={handleReaderInputChange} required placeholder="Last Name"  className={inputClass()} />
+                    <div>
+                      <input
+                        type="text"
+                        name="firstName"
+                        value={readerFormData.firstName}
+                        onChange={handleReaderInputChange}
+                        placeholder="First Name"
+                        className={inputClass(!!readerErrors.firstName)}
+                        aria-describedby="reader-firstname-error"
+                      />
+                      <FieldError msg={readerErrors.firstName} id="reader-firstname-error" />
+                    </div>
 
-                    {/* ── FIX 2: email with validation ── */}
+                    <div>
+                      <input
+                        type="text"
+                        name="lastName"
+                        value={readerFormData.lastName}
+                        onChange={handleReaderInputChange}
+                        placeholder="Last Name"
+                        className={inputClass(!!readerErrors.lastName)}
+                        aria-describedby="reader-lastname-error"
+                      />
+                      <FieldError msg={readerErrors.lastName} id="reader-lastname-error" />
+                    </div>
+
                     <div className="md:col-span-2">
                       <input
                         type="email"
@@ -311,33 +448,51 @@ const MediaHubRegistration = () => {
                         value={readerFormData.email}
                         onChange={handleReaderInputChange}
                         onBlur={handleReaderEmailBlur}
-                        required
                         placeholder="Email Address"
-                        className={inputClass(!!readerEmailError)}
-                        aria-invalid={!!readerEmailError}
+                        className={inputClass(!!readerErrors.email)}
+                        aria-invalid={!!readerErrors.email}
                         aria-describedby="reader-email-error"
                       />
-                      {readerEmailError && (
-                        <p id="reader-email-error" className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                          <i className="fas fa-exclamation-circle"/> {readerEmailError}
-                        </p>
-                      )}
+                      <FieldError msg={readerErrors.email} id="reader-email-error" />
                     </div>
                   </div>
 
                   {/* Passwords */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="relative">
-                      <input type={showPassword ? 'text' : 'password'} name="password" value={readerFormData.password} onChange={handleReaderInputChange} required placeholder="Password" className={`${inputClass()} pr-12`} />
-                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700" aria-label={showPassword ? 'Hide password' : 'Show password'}>
-                        {showPassword ? <EyeOff size={20}/> : <Eye size={20}/>}
-                      </button>
+                    <div>
+                      <div className="relative">
+                        <input
+                          type={showPassword ? 'text' : 'password'}
+                          name="password"
+                          value={readerFormData.password}
+                          onChange={handleReaderInputChange}
+                          placeholder="Password"
+                          className={`${inputClass(!!readerErrors.password)} pr-12`}
+                          aria-describedby="reader-password-error"
+                        />
+                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700" aria-label={showPassword ? 'Hide password' : 'Show password'}>
+                          {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                        </button>
+                      </div>
+                      <FieldError msg={readerErrors.password} id="reader-password-error" />
                     </div>
-                    <div className="relative">
-                      <input type={showConfirmPassword ? 'text' : 'password'} name="confirmPassword" value={readerFormData.confirmPassword} onChange={handleReaderInputChange} required placeholder="Confirm Password" className={`${inputClass()} pr-12`} />
-                      <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700" aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}>
-                        {showConfirmPassword ? <EyeOff size={20}/> : <Eye size={20}/>}
-                      </button>
+
+                    <div>
+                      <div className="relative">
+                        <input
+                          type={showConfirmPassword ? 'text' : 'password'}
+                          name="confirmPassword"
+                          value={readerFormData.confirmPassword}
+                          onChange={handleReaderInputChange}
+                          placeholder="Confirm Password"
+                          className={`${inputClass(!!readerErrors.confirmPassword)} pr-12`}
+                          aria-describedby="reader-confirm-error"
+                        />
+                        <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700" aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}>
+                          {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                        </button>
+                      </div>
+                      <FieldError msg={readerErrors.confirmPassword} id="reader-confirm-error" />
                     </div>
                   </div>
 
@@ -350,12 +505,11 @@ const MediaHubRegistration = () => {
                     </ul>
                   </div>
 
-                  {/* ── FIX 3: disabled until terms checked ── */}
                   <button
                     type="button"
                     onClick={handleReaderSubmit}
                     disabled={isLoading || !readerFormData.agreeToTerms}
-                    title={!readerFormData.agreeToTerms ? 'Please agree to the terms first' : ''}
+                    title={!readerFormData.agreeToTerms ? 'Please agree to the Terms of Service first' : ''}
                     className="w-full bg-[#329ae1] text-white font-semibold py-3 px-4 rounded-lg hover:from-blue-700 hover:to-blue-800 transition duration-300 transform hover:-translate-y-0.5 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed mt-4"
                   >
                     {isLoading ? 'Registering...' : 'Register as News Reader'}
@@ -363,36 +517,36 @@ const MediaHubRegistration = () => {
                 </div>
 
               ) : (
-              /* ════════════════ PUBLISHER FORM ════════════════ */
+                /* ════════════════ PUBLISHER FORM ════════════════ */
                 <div className="space-y-4 md:space-y-6 bg-blue-50 p-4 md:p-6 rounded-xl max-h-[70vh] overflow-y-auto">
                   <h2 className="text-xl md:text-2xl font-bold text-gray-800 text-center">Print Media Registration</h2>
 
-                  {/* Terms */}
-                  <label className="flex items-center bg-white p-4 rounded-lg border">
-                    <input
-                      type="checkbox"
-                      name="agreeToTerms"
-                      checked={publisherFormData.agreeToTerms}
-                      onChange={handlePublisherInputChange}
-                      required
-                      className="mr-3"
-                    />
-                    <span className="text-sm">I agree to the Terms of Service and Privacy Policy</span>
-                  </label>
+                  {/* FIX 1: Terms checkbox — error appears directly below it */}
+                  <div>
+                    <label className={`flex items-center bg-white p-4 rounded-lg border ${publisherErrors.agreeToTerms ? 'border-red-500' : 'border-gray-200'}`}>
+                      <input
+                        type="checkbox"
+                        name="agreeToTerms"
+                        checked={publisherFormData.agreeToTerms}
+                        onChange={handlePublisherInputChange}
+                        className="mr-3"
+                      />
+                      <span className="text-sm">I agree to the Terms of Service and Privacy Policy</span>
+                    </label>
+                    {/* FIX 1: error RIGHT under the checkbox */}
+                    <FieldError msg={publisherErrors.agreeToTerms} id="publisher-terms-error" />
+                  </div>
 
-                  {/* Google button */}
+                  {/* Google button — no error message here anymore (FIX 1) */}
                   <div className="mb-6">
                     <div
                       id="google-signin-button-publisher"
                       className={`flex justify-center ${(!publisherFormData.agreeToTerms || isLoading) ? 'opacity-50 pointer-events-none' : ''}`}
                     />
-                    {!publisherFormData.agreeToTerms && (
-                      <p className="text-sm text-red-600 mt-2">Please agree to the terms first</p>
-                    )}
                   </div>
 
                   <div className="relative">
-                    <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-300"/></div>
+                    <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-300" /></div>
                     <div className="relative flex justify-center text-sm">
                       <span className="px-2 bg-blue-50 text-gray-500">or sign up with email</span>
                     </div>
@@ -401,30 +555,87 @@ const MediaHubRegistration = () => {
                   {/* Company Info */}
                   <div>
                     <h3 className="text-lg font-semibold text-black-800 mb-4 flex items-center">
-                      <i className="fas fa-building text-blue-600 mr-2"/>Company Information
+                      <i className="fas fa-building text-blue-600 mr-2" />Company Information
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <input type="text" name="companyName" value={publisherFormData.companyName} onChange={handlePublisherInputChange} required placeholder="Company Name" className={inputClass()} />
-                      <select name="industry" value={publisherFormData.industry} onChange={handlePublisherInputChange} required className={inputClass()}>
-                        <option value="">Select Industry</option>
-                        <option value="news">News &amp; Journalism</option>
-                        <option value="magazine">Magazine</option>
-                        <option value="academic">Academic Publishing</option>
-                        <option value="trade">Trade Publications</option>
-                        <option value="other">Other</option>
-                      </select>
+                      <div>
+                        <input
+                          type="text"
+                          name="companyName"
+                          value={publisherFormData.companyName}
+                          onChange={handlePublisherInputChange}
+                          placeholder="Company Name"
+                          className={inputClass(!!publisherErrors.companyName)}
+                          aria-describedby="pub-company-error"
+                        />
+                        <FieldError msg={publisherErrors.companyName} id="pub-company-error" />
+                      </div>
+
+                      {/* FIX 3 & 4: Removed duplicate "Select Industry" label option;
+                          kept empty-value placeholder for controlled select.
+                          Added overflow-ellipsis + min-w-0 so selected text never clips. */}
+                      <div>
+                        <select
+                          name="industry"
+                          value={publisherFormData.industry}
+                          onChange={handlePublisherInputChange}
+                          className={`${inputClass(!!publisherErrors.industry)} min-w-0 truncate`}
+                          style={{ textOverflow: 'ellipsis' }}
+                          aria-describedby="pub-industry-error"
+                        >
+                          {/* FIX 3: single hidden placeholder — not a selectable duplicate */}
+                          <option value="" disabled hidden>Select Industry</option>
+                          <option value="news">News &amp; Journalism</option>
+                          <option value="magazine">Magazine</option>
+                          <option value="academic">Academic Publishing</option>
+                          <option value="trade">Trade Publications</option>
+                          <option value="other">Other</option>
+                        </select>
+                        <FieldError msg={publisherErrors.industry} id="pub-industry-error" />
+                      </div>
                     </div>
-                    <input type="url" name="companyWebsite" value={publisherFormData.companyWebsite} onChange={handlePublisherInputChange} placeholder="Company Website" className={`${inputClass()} mt-4`} />
+                    <input
+                      type="url"
+                      name="companyWebsite"
+                      value={publisherFormData.companyWebsite}
+                      onChange={handlePublisherInputChange}
+                      placeholder="Company Website"
+                      className={`${inputClass()} mt-4`}
+                    />
                   </div>
 
                   {/* Contact Info */}
                   <div>
                     <h3 className="text-lg font-semibold text-black-800 mb-4 flex items-center">
-                      <i className="fas fa-user-tie text-blue-600 mr-2"/>Primary Contact
+                      <i className="fas fa-user-tie text-blue-600 mr-2" />Primary Contact
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <input type="text"  name="contactName" value={publisherFormData.contactName} onChange={handlePublisherInputChange} required placeholder="Full Name"    className={inputClass()} />
-                      <input type="text"  name="jobTitle"    value={publisherFormData.jobTitle}    onChange={handlePublisherInputChange} required placeholder="Job Title"    className={inputClass()} />
+                      <div>
+                        <input
+                          type="text"
+                          name="contactName"
+                          value={publisherFormData.contactName}
+                          onChange={handlePublisherInputChange}
+                          placeholder="Full Name"
+                          className={inputClass(!!publisherErrors.contactName)}
+                          aria-describedby="pub-contact-error"
+                        />
+                        <FieldError msg={publisherErrors.contactName} id="pub-contact-error" />
+                      </div>
+
+                      <div>
+                        <input
+                          type="text"
+                          name="jobTitle"
+                          value={publisherFormData.jobTitle}
+                          onChange={handlePublisherInputChange}
+                          placeholder="Job Title"
+                          className={inputClass(!!publisherErrors.jobTitle)}
+                          aria-describedby="pub-jobtitle-error"
+                        />
+                        <FieldError msg={publisherErrors.jobTitle} id="pub-jobtitle-error" />
+                      </div>
+
                       <div className="md:col-span-2">
                         <input
                           type="email"
@@ -432,33 +643,59 @@ const MediaHubRegistration = () => {
                           value={publisherFormData.email}
                           onChange={handlePublisherInputChange}
                           onBlur={handlePublisherEmailBlur}
-                          required
                           placeholder="Email Address"
-                          className={inputClass(!!publisherEmailError)}
-                          aria-invalid={!!publisherEmailError}
-                          aria-describedby="publisher-email-error"
+                          className={inputClass(!!publisherErrors.email)}
+                          aria-invalid={!!publisherErrors.email}
+                          aria-describedby="pub-email-error"
                         />
-                        {publisherEmailError && (
-                          <p id="publisher-email-error" className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                            <i className="fas fa-exclamation-circle"/> {publisherEmailError}
-                          </p>
-                        )}
+                        <FieldError msg={publisherErrors.email} id="pub-email-error" />
                       </div>
-                      <input type="tel" name="phone" value={publisherFormData.phone} onChange={handlePublisherInputChange} placeholder="Phone Number" className={inputClass()} />
+
+                      <input
+                        type="tel"
+                        name="phone"
+                        value={publisherFormData.phone}
+                        onChange={handlePublisherInputChange}
+                        placeholder="Phone Number"
+                        className={inputClass()}
+                      />
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                      <div className="relative">
-                        <input type={showPassword ? 'text' : 'password'} name="password" value={publisherFormData.password} onChange={handlePublisherInputChange} required placeholder="Password" className={`${inputClass()} pr-12`} />
-                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700">
-                          {showPassword ? <EyeOff size={20}/> : <Eye size={20}/>}
-                        </button>
+                      <div>
+                        <div className="relative">
+                          <input
+                            type={showPassword ? 'text' : 'password'}
+                            name="password"
+                            value={publisherFormData.password}
+                            onChange={handlePublisherInputChange}
+                            placeholder="Password"
+                            className={`${inputClass(!!publisherErrors.password)} pr-12`}
+                            aria-describedby="pub-password-error"
+                          />
+                          <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700">
+                            {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                          </button>
+                        </div>
+                        <FieldError msg={publisherErrors.password} id="pub-password-error" />
                       </div>
-                      <div className="relative">
-                        <input type={showConfirmPassword ? 'text' : 'password'} name="confirmPassword" value={publisherFormData.confirmPassword} onChange={handlePublisherInputChange} required placeholder="Confirm Password" className={`${inputClass()} pr-12`} />
-                        <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700">
-                          {showConfirmPassword ? <EyeOff size={20}/> : <Eye size={20}/>}
-                        </button>
+
+                      <div>
+                        <div className="relative">
+                          <input
+                            type={showConfirmPassword ? 'text' : 'password'}
+                            name="confirmPassword"
+                            value={publisherFormData.confirmPassword}
+                            onChange={handlePublisherInputChange}
+                            placeholder="Confirm Password"
+                            className={`${inputClass(!!publisherErrors.confirmPassword)} pr-12`}
+                            aria-describedby="pub-confirm-error"
+                          />
+                          <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700">
+                            {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                          </button>
+                        </div>
+                        <FieldError msg={publisherErrors.confirmPassword} id="pub-confirm-error" />
                       </div>
                     </div>
 
@@ -475,35 +712,63 @@ const MediaHubRegistration = () => {
                   {/* Publication Details */}
                   <div>
                     <h3 className="text-lg font-semibold text-black-800 mb-4 flex items-center">
-                      <i className="fas fa-book-open text-blue-600 mr-2"/>Publication Details
+                      <i className="fas fa-book-open text-blue-600 mr-2" />Publication Details
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <select name="publicationType" value={publisherFormData.publicationType} onChange={handlePublisherInputChange} required className={inputClass()}>
-                        <option value="">Select Type</option>
-                        <option value="daily">Daily Newspaper</option>
-                        <option value="weekly">Weekly Magazine</option>
-                        <option value="monthly">Monthly Publication</option>
-                        <option value="quarterly">Quarterly Journal</option>
-                        <option value="digital">Digital Only</option>
-                      </select>
-                      <select name="audienceType" value={publisherFormData.audienceType} onChange={handlePublisherInputChange} required className={inputClass()}>
-                        <option value="">Select Audience</option>
-                        <option value="general">General Public</option>
-                        <option value="business">Business Professionals</option>
-                        <option value="academic">Academic/Researchers</option>
-                        <option value="youth">Youth/Students</option>
-                        <option value="specialized">Specialized Interest</option>
-                      </select>
+                      {/* FIX 3 & 4: same pattern for publicationType and audienceType */}
+                      <div>
+                        <select
+                          name="publicationType"
+                          value={publisherFormData.publicationType}
+                          onChange={handlePublisherInputChange}
+                          className={`${inputClass(!!publisherErrors.publicationType)} min-w-0`}
+                          style={{ textOverflow: 'ellipsis' }}
+                          aria-describedby="pub-pubtype-error"
+                        >
+                          <option value="" disabled hidden>Select Type</option>
+                          <option value="daily">Daily Newspaper</option>
+                          <option value="weekly">Weekly Magazine</option>
+                          <option value="monthly">Monthly Publication</option>
+                          <option value="quarterly">Quarterly Journal</option>
+                          <option value="digital">Digital Only</option>
+                        </select>
+                        <FieldError msg={publisherErrors.publicationType} id="pub-pubtype-error" />
+                      </div>
+
+                      <div>
+                        <select
+                          name="audienceType"
+                          value={publisherFormData.audienceType}
+                          onChange={handlePublisherInputChange}
+                          className={`${inputClass(!!publisherErrors.audienceType)} min-w-0`}
+                          style={{ textOverflow: 'ellipsis' }}
+                          aria-describedby="pub-audience-error"
+                        >
+                          <option value="" disabled hidden>Select Audience</option>
+                          <option value="general">General Public</option>
+                          <option value="business">Business Professionals</option>
+                          <option value="academic">Academic/Researchers</option>
+                          <option value="youth">Youth/Students</option>
+                          <option value="specialized">Specialized Interest</option>
+                        </select>
+                        <FieldError msg={publisherErrors.audienceType} id="pub-audience-error" />
+                      </div>
                     </div>
-                    <input type="number" name="monthlyReadership" value={publisherFormData.monthlyReadership} onChange={handlePublisherInputChange} placeholder="Average Monthly Readership" className={`${inputClass()} mt-4`} />
+                    <input
+                      type="number"
+                      name="monthlyReadership"
+                      value={publisherFormData.monthlyReadership}
+                      onChange={handlePublisherInputChange}
+                      placeholder="Average Monthly Readership"
+                      className={`${inputClass()} mt-4`}
+                    />
                   </div>
 
-                  {/* ── FIX 3: disabled until terms checked ── */}
                   <button
                     type="button"
                     onClick={handlePublisherSubmit}
                     disabled={isLoading || !publisherFormData.agreeToTerms}
-                    title={!publisherFormData.agreeToTerms ? 'Please agree to the terms first' : ''}
+                    title={!publisherFormData.agreeToTerms ? 'Please agree to the Terms of Service first' : ''}
                     className="w-full bg-[#329ae1] text-white font-semibold py-3 px-4 rounded-lg hover:from-blue-700 hover:to-blue-800 transition duration-300 transform hover:-translate-y-0.5 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed mt-4"
                   >
                     {isLoading ? 'Registering...' : 'Register as Print Media'}
