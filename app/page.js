@@ -11,12 +11,12 @@ import useLandingPageLogic from "@/hooks/LandingPageLogic";
 export default function NewsReaderHomePage() {
   const { handleStartReading } = useLandingPageLogic();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  
+
   // Featured Publishers State
   const [publishers, setPublishers] = useState([]);
   const [loadingPublishers, setLoadingPublishers] = useState(true);
   const [currentPublisherIndex, setCurrentPublisherIndex] = useState(0);
-  
+
   // Reviews State
   const [reviews, setReviews] = useState([]);
   const [loadingReviews, setLoadingReviews] = useState(true);
@@ -31,7 +31,6 @@ export default function NewsReaderHomePage() {
         setLoadingPublishers(true);
         const response = await fetch('/api/news-sources');
         const data = await response.json();
-        
         if (data.success && data.newsources) {
           setPublishers(data.newsources);
         }
@@ -41,7 +40,6 @@ export default function NewsReaderHomePage() {
         setLoadingPublishers(false);
       }
     };
-
     fetchPublishers();
   }, []);
 
@@ -52,7 +50,6 @@ export default function NewsReaderHomePage() {
         setLoadingReviews(true);
         const response = await fetch('/api/reviews');
         const data = await response.json();
-        
         if (data.success) {
           setReviews(data.reviews || []);
           setAverageRating(data.averageRating || 0);
@@ -64,18 +61,15 @@ export default function NewsReaderHomePage() {
         setLoadingReviews(false);
       }
     };
-
     fetchReviews();
   }, []);
 
   // Auto-scroll publishers carousel
   useEffect(() => {
     if (publishers.length <= 4) return;
-
     const interval = setInterval(() => {
       setCurrentPublisherIndex(prev => (prev + 1) % publishers.length);
     }, 3000);
-
     return () => clearInterval(interval);
   }, [publishers.length]);
 
@@ -88,10 +82,9 @@ export default function NewsReaderHomePage() {
     setCurrentPublisherIndex((prev) => (prev - 1 + publishers.length) % publishers.length);
   };
 
-  // Get visible publishers
+  // Get visible publishers (up to 4 at a time)
   const getVisiblePublishers = () => {
     if (publishers.length === 0) return [];
-    
     const visible = [];
     for (let i = 0; i < Math.min(4, publishers.length); i++) {
       const index = (currentPublisherIndex + i) % publishers.length;
@@ -103,20 +96,38 @@ export default function NewsReaderHomePage() {
   // Get visible reviews
   const visibleReviews = showAllReviews ? reviews : reviews.slice(0, 4);
 
-  // Render star rating
+  // FIX 2: Proper half-star rendering using clip-based overlay
   const renderStars = (rating) => {
-    return Array.from({ length: 5 }, (_, index) => (
-      <Star
-        key={index}
-        className={`w-5 h-5 ${
-          index < Math.floor(rating)
-            ? 'fill-yellow-400 text-yellow-400'
-            : index < rating
-            ? 'fill-yellow-200 text-yellow-400'
-            : 'text-gray-300'
-        }`}
-      />
-    ));
+    return Array.from({ length: 5 }, (_, index) => {
+      const filled = index < Math.floor(rating);
+      const half = !filled && index < rating; // true when e.g. index=4 and rating=4.5
+
+      if (half) {
+        return (
+          // Layered half-star: grey base + left-50%-clipped yellow overlay
+          <span key={index} className="relative inline-block w-5 h-5">
+            {/* Grey empty star underneath */}
+            <Star className="w-5 h-5 text-gray-300 absolute inset-0" />
+            {/* Yellow filled star clipped to left half */}
+            <span
+              className="absolute inset-0 overflow-hidden"
+              style={{ width: "50%" }}
+            >
+              <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+            </span>
+          </span>
+        );
+      }
+
+      return (
+        <Star
+          key={index}
+          className={`w-5 h-5 ${
+            filled ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
+          }`}
+        />
+      );
+    });
   };
 
   return (
@@ -125,10 +136,20 @@ export default function NewsReaderHomePage() {
       <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-[#329ae1] px-3 sm:px-6 py-2 sm:py-3 shadow-md">
         <div className="max-w-7xl mx-auto flex items-center justify-between h-12">
           <Link href="/" className="flex-shrink-0">
-            <Image src="/Presspass.png" alt="Press Pass logo" width={80} height={32} className="w-[80px] h-auto" priority />
+            <Image
+              src="/Presspass.png"
+              alt="Press Pass logo"
+              width={80}
+              height={32}
+              className="w-[80px] h-auto"
+              priority
+            />
           </Link>
           <div className="relative">
-            <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-white p-2">
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="text-white p-2"
+            >
               <Menu size={24} />
             </button>
             {isMobileMenuOpen && (
@@ -155,12 +176,14 @@ export default function NewsReaderHomePage() {
 
       {/* Desktop Header */}
       <div className="hidden md:block">
-        <MainHeader/>
+        <MainHeader />
       </div>
 
       <div className="w-full min-h-screen bg-gray-50 overflow-x-hidden pt-14 sm:pt-20 md:pt-24 lg:pt-28">
-        {/* Hero Section */}
-        <section className="w-full relative bg-gray-50 py-8 sm:py-12 lg:py-20 overflow-hidden">
+
+        {/* ── Hero Section ── */}
+        {/* FIX 3: Reduced vertical padding from py-8/12/20 → py-6/10/14 */}
+        <section className="w-full relative bg-gray-50 py-6 sm:py-10 lg:py-14 overflow-hidden">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
             <div className="grid lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 items-center">
               <div className="text-center lg:text-left">
@@ -170,7 +193,7 @@ export default function NewsReaderHomePage() {
                   STAY LOCAL.
                 </h1>
                 <div className="mb-4 sm:mb-6">
-                  <AnimatedSlogan/>
+                  <AnimatedSlogan />
                 </div>
                 <p className="text-gray-600 mb-6 sm:mb-8 max-w-lg mx-auto lg:mx-0 text-sm sm:text-base">
                   Press Pass brings South Africa's diverse community media together — empowering you with credible,
@@ -182,11 +205,12 @@ export default function NewsReaderHomePage() {
                     <div>READING</div>
                     <div>FREE</div>
                   </div>
+                  {/* FIX 4: "Start to read" → "Start Reading" */}
                   <button
                     onClick={handleStartReading}
                     className="bg-[#329ae1] hover:bg-[#6aa9d3] text-white px-6 sm:px-8 py-2 sm:py-3 rounded-full text-sm sm:text-base font-medium transition-colors"
                   >
-                    Start to read
+                    Start Reading
                   </button>
                 </div>
                 <div className="grid grid-cols-3 gap-3 sm:gap-6 lg:gap-8 max-w-md mx-auto lg:mx-0">
@@ -219,28 +243,38 @@ export default function NewsReaderHomePage() {
           </div>
         </section>
 
-        {/* Why Use Section */}
-        <section className="w-full py-10 sm:py-16 lg:py-20 bg-gray-50">
+        {/* ── Why Use Section ── */}
+        {/* FIX 3: Reduced padding py-10/16/20 → py-6/10/14, mb-8/12/16 → mb-6/8/10 */}
+        <section className="w-full py-6 sm:py-10 lg:py-14 bg-gray-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6">
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-center text-black mb-8 sm:mb-12 lg:mb-16">Why Use Press Pass?</h2>
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-center text-black mb-6 sm:mb-8 lg:mb-10">
+              Why Use Press Pass?
+            </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
-              {[{
-                icon: <Users className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 text-[#329ae1] mx-auto mb-3 sm:mb-4" />,
-                title: "Stay Connected",
-                subtitle: "to your Community",
-                description: "Follow news that matters from community papers, regional newsletters, and grassroots outlets."
-              }, {
-                icon: <Megaphone className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 text-[#329ae1] mx-auto mb-3 sm:mb-4" />,
-                title: "One Platform.",
-                subtitle: "Hundreds of Voices.",
-                description: "Discover diverse perspectives from trusted local sources — all in one app."
-              }, {
-                icon: <MessageSquare className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 text-[#329ae1] mx-auto mb-3 sm:mb-4" />,
-                title: "Support Independent",
-                subtitle: "Journalism",
-                description: "Your views and subscriptions empower community journalists across South Africa."
-              }].map((item, idx) => (
-                <div key={idx} className="border-2 border-[#ffbd59] bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
+              {[
+                {
+                  icon: <Users className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 text-[#329ae1] mx-auto mb-3 sm:mb-4" />,
+                  title: "Stay Connected",
+                  subtitle: "to your Community",
+                  description: "Follow news that matters from community papers, regional newsletters, and grassroots outlets.",
+                },
+                {
+                  icon: <Megaphone className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 text-[#329ae1] mx-auto mb-3 sm:mb-4" />,
+                  title: "One Platform.",
+                  subtitle: "Hundreds of Voices.",
+                  description: "Discover diverse perspectives from trusted local sources — all in one app.",
+                },
+                {
+                  icon: <MessageSquare className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 text-[#329ae1] mx-auto mb-3 sm:mb-4" />,
+                  title: "Support Independent",
+                  subtitle: "Journalism",
+                  description: "Your views and subscriptions empower community journalists across South Africa.",
+                },
+              ].map((item, idx) => (
+                <div
+                  key={idx}
+                  className="border-2 border-[#ffbd59] bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow"
+                >
                   <div className="p-4 sm:p-6 lg:p-8 text-center">
                     {item.icon}
                     <h3 className="text-lg sm:text-xl font-bold text-black mb-1 sm:mb-2">{item.title}</h3>
@@ -253,25 +287,35 @@ export default function NewsReaderHomePage() {
           </div>
         </section>
 
-        {/* How it works */}
-        <section className="w-full py-10 sm:py-16 lg:py-20 bg-white">
+        {/* ── How It Works ── */}
+        {/* FIX 3: Reduced padding */}
+        <section className="w-full py-6 sm:py-10 lg:py-14 bg-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6">
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-center text-black mb-8 sm:mb-12 lg:mb-16">How it works</h2>
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-center text-black mb-6 sm:mb-8 lg:mb-10">
+              How it works
+            </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
-              {[{
-                icon: <User className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 text-[#329ae1] mx-auto mb-3 sm:mb-4" />,
-                title: "Sign up for free.",
-                description: "Create your profile in seconds."
-              }, {
-                icon: <BarChart3 className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 text-[#329ae1] mx-auto mb-3 sm:mb-4" />,
-                title: "Choose your communities.",
-                description: "Follow publications that matter to you."
-              }, {
-                icon: <Smartphone className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 text-[#329ae1] mx-auto mb-3 sm:mb-4" />,
-                title: "Get fresh local news.",
-                description: "Curated, relevant, and reliable updates daily."
-              }].map((item, idx) => (
-                <div key={idx} className="border-2 border-[#ffbd59] bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
+              {[
+                {
+                  icon: <User className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 text-[#329ae1] mx-auto mb-3 sm:mb-4" />,
+                  title: "Sign up for free.",
+                  description: "Create your profile in seconds.",
+                },
+                {
+                  icon: <BarChart3 className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 text-[#329ae1] mx-auto mb-3 sm:mb-4" />,
+                  title: "Choose your communities.",
+                  description: "Follow publications that matter to you.",
+                },
+                {
+                  icon: <Smartphone className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 text-[#329ae1] mx-auto mb-3 sm:mb-4" />,
+                  title: "Get fresh local news.",
+                  description: "Curated, relevant, and reliable updates daily.",
+                },
+              ].map((item, idx) => (
+                <div
+                  key={idx}
+                  className="border-2 border-[#ffbd59] bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow"
+                >
                   <div className="p-4 sm:p-6 lg:p-8 text-center">
                     {item.icon}
                     <h3 className="text-lg sm:text-xl font-bold text-black mb-3 sm:mb-4">{item.title}</h3>
@@ -283,11 +327,15 @@ export default function NewsReaderHomePage() {
           </div>
         </section>
 
-        {/* Featured Publications */}
-        <section className="w-full py-10 sm:py-16 lg:py-20 bg-gray-50">
+        {/* ── Featured Publications ── */}
+        {/* FIX 1: Improved image quality + fallback text */}
+        {/* FIX 3: Reduced padding */}
+        <section className="w-full py-6 sm:py-10 lg:py-14 bg-gray-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6">
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-center text-black mb-8 sm:mb-12 lg:mb-16">Featured publications</h2>
-            
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-center text-black mb-6 sm:mb-8 lg:mb-10">
+              Featured publications
+            </h2>
+
             {loadingPublishers ? (
               <div className="flex justify-center items-center py-12">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#329ae1]"></div>
@@ -311,26 +359,40 @@ export default function NewsReaderHomePage() {
                     </button>
                   )}
 
-                  {/* Publishers Display */}
+                  {/* Publishers Grid */}
                   <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 flex-1 max-w-4xl">
                     {getVisiblePublishers().map((publisher, index) => (
                       <div
                         key={`${publisher.id}-${index}`}
-                        className="flex items-center justify-center p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-all"
+                        className="flex items-center justify-center p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-all min-h-[96px]"
                       >
-                        <div className="text-center">
-                          {publisher.logo ? (
-                            <img
+                        {publisher.logo ? (
+                          // FIX 1: Next.js <Image> with fill + quality={100} for sharp rendering.
+                          // unoptimized for external URLs avoids domain-whitelist errors in next.config.
+                          // For internal /public logos, remove the unoptimized prop.
+                          <div className="relative w-32 h-14 mx-auto">
+                            <Image
                               src={publisher.logo}
                               alt={publisher.name}
-                              className="max-h-16 max-w-full object-contain mx-auto"
+                              fill
+                              sizes="(max-width: 640px) 128px, 160px"
+                              className="object-contain"
+                              quality={100}
+                              unoptimized={
+                                publisher.logo.startsWith("http://") ||
+                                publisher.logo.startsWith("https://")
+                              }
                             />
-                          ) : (
-                            <div className="text-lg sm:text-xl lg:text-2xl font-bold text-[#329ae1]">
+                          </div>
+                        ) : (
+                          // FIX 1: Improved fallback — smaller controlled font, line-clamp,
+                          // centered with padding so long names don't overflow the card
+                          <div className="flex items-center justify-center w-full h-14 px-2">
+                            <span className="text-sm sm:text-base font-bold text-[#329ae1] text-center leading-tight line-clamp-2">
                               {publisher.name}
-                            </div>
-                          )}
-                        </div>
+                            </span>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -356,8 +418,8 @@ export default function NewsReaderHomePage() {
                         onClick={() => setCurrentPublisherIndex(index)}
                         className={`w-2 h-2 rounded-full transition-all ${
                           index === currentPublisherIndex
-                            ? 'bg-[#329ae1] w-8'
-                            : 'bg-gray-300 hover:bg-gray-400'
+                            ? "bg-[#329ae1] w-8"
+                            : "bg-gray-300 hover:bg-gray-400"
                         }`}
                         aria-label={`Go to slide ${index + 1}`}
                       />
@@ -369,12 +431,16 @@ export default function NewsReaderHomePage() {
           </div>
         </section>
 
-        {/* User Reviews Section */}
-        <section className="w-full py-10 sm:py-16 lg:py-20 bg-white">
+        {/* ── User Reviews Section ── */}
+        {/* FIX 2: Fixed half-star via renderStars above */}
+        {/* FIX 3: Reduced padding */}
+        <section className="w-full py-6 sm:py-10 lg:py-14 bg-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6">
-            <div className="text-center mb-8 sm:mb-12">
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-black mb-4">What Our Users Say</h2>
-              
+            <div className="text-center mb-6 sm:mb-8">
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-black mb-4">
+                What Our Users Say
+              </h2>
+
               {/* Overall Rating */}
               {totalReviews > 0 && (
                 <div className="flex items-center justify-center gap-4 mb-4">
@@ -385,7 +451,7 @@ export default function NewsReaderHomePage() {
                     {averageRating} out of 5
                   </div>
                   <div className="text-sm text-gray-600">
-                    ({totalReviews} {totalReviews === 1 ? 'review' : 'reviews'})
+                    ({totalReviews} {totalReviews === 1 ? "review" : "reviews"})
                   </div>
                 </div>
               )}
@@ -432,6 +498,7 @@ export default function NewsReaderHomePage() {
                         <div className="flex-1">
                           <div className="flex items-center justify-between mb-2">
                             <h4 className="font-semibold text-gray-900">{review.userName}</h4>
+                            {/* FIX 2: renderStars now correctly renders half stars */}
                             <div className="flex items-center gap-1">
                               {renderStars(review.rating)}
                             </div>
@@ -440,10 +507,10 @@ export default function NewsReaderHomePage() {
                             {review.reviewText}
                           </p>
                           <p className="text-xs text-gray-500">
-                            {new Date(review.createdAt).toLocaleDateString('en-US', {
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric'
+                            {new Date(review.createdAt).toLocaleDateString("en-US", {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
                             })}
                           </p>
                         </div>
@@ -459,7 +526,7 @@ export default function NewsReaderHomePage() {
                       onClick={() => setShowAllReviews(!showAllReviews)}
                       className="px-6 py-3 bg-[#329ae1] text-white rounded-full hover:bg-[#287dbf] transition-colors font-medium"
                     >
-                      {showAllReviews ? 'Show Less' : `See All ${reviews.length} Reviews`}
+                      {showAllReviews ? "Show Less" : `See All ${reviews.length} Reviews`}
                     </button>
                   </div>
                 )}
@@ -468,31 +535,42 @@ export default function NewsReaderHomePage() {
           </div>
         </section>
 
-        {/* Download App CTA */}
-        <section className="w-full py-8 sm:py-10 bg-gray-50 text-center">
+        {/* ── Download App CTA ── */}
+        {/* FIX 3: Reduced padding */}
+        <section className="w-full py-6 sm:py-8 bg-gray-50 text-center">
           <div className="max-w-7xl mx-auto px-4 sm:px-6">
             <h3 className="text-xl sm:text-2xl font-bold text-black mb-3 sm:mb-4">Prefer mobile?</h3>
-            <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6 max-w-md mx-auto">Download the Press Pass app for a better on-the-go experience.</p>
+            <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6 max-w-md mx-auto">
+              Download the Press Pass app for a better on-the-go experience.
+            </p>
             <button className="bg-[#329ae1] hover:bg-[#287dbf] text-white px-5 sm:px-6 py-2 sm:py-3 rounded-full text-sm sm:text-base font-medium transition-colors">
               Download App
             </button>
           </div>
         </section>
 
-        {/* Call to Action Section */}
-        <section className="w-full bg-[#329ae1] py-12 sm:py-16">
+        {/* ── Call to Action Section ── */}
+        <section className="w-full bg-[#329ae1] py-10 sm:py-14">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center">
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-3 sm:mb-4 leading-tight">Ready to read smarter, local news?</h2>
-            <p className="text-white/90 mb-6 sm:mb-8 text-sm sm:text-base max-w-2xl mx-auto">Join thousands of South Africans switching to community-first media.</p>
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-3 sm:mb-4 leading-tight">
+              Ready to read smarter, local news?
+            </h2>
+            <p className="text-white/90 mb-6 sm:mb-8 text-sm sm:text-base max-w-2xl mx-auto">
+              Join thousands of South Africans switching to community-first media.
+            </p>
             <div className="flex justify-center gap-3 sm:gap-4">
               {["in", "@", "f"].map((char, idx) => (
-                <div key={idx} className="w-8 h-8 sm:w-10 sm:h-10 bg-[#ffbd59] rounded flex items-center justify-center hover:bg-[#ffbd59]/90 transition-colors cursor-pointer">
+                <div
+                  key={idx}
+                  className="w-8 h-8 sm:w-10 sm:h-10 bg-[#ffbd59] rounded flex items-center justify-center hover:bg-[#ffbd59]/90 transition-colors cursor-pointer"
+                >
                   <span className="text-white font-bold text-sm sm:text-base">{char}</span>
                 </div>
               ))}
             </div>
           </div>
         </section>
+
       </div>
     </div>
   );
