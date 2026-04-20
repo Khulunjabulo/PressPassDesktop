@@ -1204,63 +1204,95 @@ useEffect(() => {
                 </div>
 
                 {/* Document Uploads */}
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">
-                      Publishing License <span className="text-red-500">*</span>
-                    </label>
-                    {isEditing ? (
-                      <div className="relative">
-                        <input
-                          type="file"
-                          accept=".pdf,.jpg,.jpeg,.png"
-                          onChange={(e) => handleDocumentUpload(e, 'publishingLicense')}
-                          className="w-full px-4 py-3 border-2 border-dashed border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 file:font-medium"
-                        />
-                        <p className="text-xs text-slate-500 mt-2">PDF, JPG, PNG up to 5MB</p>
-                      </div>
-                    ) : (
-                      <div className="px-4 py-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center">
-                        <FileText className="w-5 h-5 mr-3 text-slate-400" />
-                        {user?.publishingLicense ? 
-                          <span className="text-green-600 font-medium flex items-center">
-                            <CheckCircle className="w-4 h-4 mr-2" />
-                            Document uploaded
-                          </span> : 
-                          <span className="text-slate-400">Not provided</span>
-                        }
-                      </div>
-                    )}
-                  </div>
+<div className="space-y-4">
+  <div>
+    <label className="block text-sm font-semibold text-slate-700 mb-2">
+      Publishing License <span className="text-red-500">*</span>
+    </label>
+    {isEditing ? (
+      <div>
+        <label className="flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-slate-300 rounded-xl cursor-pointer bg-slate-50 hover:bg-blue-50 hover:border-blue-400 transition-all">
+          <div className="flex flex-col items-center justify-center py-4">
+            <FileText className="w-7 h-7 text-slate-400 mb-2" />
+            <p className="text-sm font-medium text-slate-600">
+              {formData.publishingLicense
+                ? formData.publishingLicense.name
+                : 'Click to upload Publishing License'}
+            </p>
+            <p className="text-xs text-slate-400 mt-1">PDF, JPG, PNG — max 5MB</p>
+          </div>
+          <input
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png"
+            onChange={(e) => handleDocumentUpload(e, 'publishingLicense')}
+            className="hidden"
+          />
+        </label>
+        {formData.publishingLicense && (
+          <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+            <CheckCircle className="w-3 h-3" />
+            {formData.publishingLicense.name}
+          </p>
+        )}
+      </div>
+    ) : (
+      <div className="px-4 py-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center">
+        <FileText className="w-5 h-5 mr-3 text-slate-400" />
+        {user?.publishingLicense ?
+          <span className="text-green-600 font-medium flex items-center">
+            <CheckCircle className="w-4 h-4 mr-2" />
+            Document uploaded
+          </span> :
+          <span className="text-slate-400">Not provided</span>
+        }
+      </div>
+    )}
+  </div>
 
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">
-                      Proof of Address <span className="text-red-500">*</span>
-                    </label>
-                    {isEditing ? (
-                      <div className="relative">
-                        <input
-                          type="file"
-                          accept=".pdf,.jpg,.jpeg,.png"
-                          onChange={(e) => handleDocumentUpload(e, 'proofOfAddress')}
-                          className="w-full px-4 py-3 border-2 border-dashed border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 file:font-medium"
-                        />
-                        <p className="text-xs text-slate-500 mt-2">PDF, JPG, PNG up to 5MB</p>
-                      </div>
-                    ) : (
-                      <div className="px-4 py-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center">
-                        <FileText className="w-5 h-5 mr-3 text-slate-400" />
-                        {user?.proofOfAddress ? 
-                          <span className="text-green-600 font-medium flex items-center">
-                            <CheckCircle className="w-4 h-4 mr-2" />
-                            Document uploaded
-                          </span> : 
-                          <span className="text-slate-400">Not provided</span>
-                        }
-                      </div>
-                    )}
-                  </div>
-                </div>
+  <div>
+    <label className="block text-sm font-semibold text-slate-700 mb-2">
+      Proof of Address <span className="text-red-500">*</span>
+    </label>
+    {isEditing ? (
+      <div>
+        <label className="flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-slate-300 rounded-xl cursor-pointer bg-slate-50 hover:bg-blue-50 hover:border-blue-400 transition-all">
+          <div className="flex flex-col items-center justify-center py-4">
+            <FileText className="w-7 h-7 text-slate-400 mb-2" />
+            <p className="text-sm font-medium text-slate-600">
+              {formData.proofOfAddress
+                ? formData.proofOfAddress.name
+                : 'Click to upload Proof of Address'}
+            </p>
+            <p className="text-xs text-slate-400 mt-1">PDF, JPG, PNG — max 5MB</p>
+          </div>
+          <input
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png"
+            onChange={(e) => handleDocumentUpload(e, 'proofOfAddress')}
+            className="hidden"
+          />
+        </label>
+        {formData.proofOfAddress && (
+          <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+            <CheckCircle className="w-3 h-3" />
+            {formData.proofOfAddress.name}
+          </p>
+        )}
+      </div>
+    ) : (
+      <div className="px-4 py-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center">
+        <FileText className="w-5 h-5 mr-3 text-slate-400" />
+        {user?.proofOfAddress ?
+          <span className="text-green-600 font-medium flex items-center">
+            <CheckCircle className="w-4 h-4 mr-2" />
+            Document uploaded
+          </span> :
+          <span className="text-slate-400">Not provided</span>
+        }
+      </div>
+    )}
+  </div>
+</div>
               </div>
             </div>
 
