@@ -15,18 +15,18 @@ const ReaderProfile = () => {
   const [profilePicPreview, setProfilePicPreview] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  
+
   // Review states
   const [userReview, setUserReview] = useState(null);
   const [loadingReview, setLoadingReview] = useState(true);
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [reviewFormData, setReviewFormData] = useState({
-    rating: 5,
+    rating: 0,        // FIX 1: was 5 — stars now start empty
     reviewText: ''
   });
   const [submittingReview, setSubmittingReview] = useState(false);
   const [reviewError, setReviewError] = useState('');
-  
+
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -46,20 +46,20 @@ const ReaderProfile = () => {
   const router = useRouter();
 
   const newsCategories = [
-    'Politics', 'Technology', 'Sports', 'Entertainment', 'Business', 
+    'Politics', 'Technology', 'Sports', 'Entertainment', 'Business',
     'Health', 'Science', 'Travel', 'Food', 'Fashion', 'Environment', 'Education'
   ];
 
   useEffect(() => {
     console.log('👤 Setting up auth listener...');
-    
+
     const storedUser = localStorage.getItem('currentUser');
     if (storedUser) {
       console.log('💾 Found user in localStorage');
       try {
         const userData = JSON.parse(storedUser);
         console.log('✅ User from localStorage:', userData.email);
-        
+
         if (userData.role !== 'reader') {
           console.warn('⚠️ User is not a reader, redirecting...');
           router.push('/signin');
@@ -73,16 +73,16 @@ const ReaderProfile = () => {
 
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       console.log('🔄 Auth state changed:', firebaseUser ? firebaseUser.email : 'No user');
-      
+
       setAuthChecked(true);
-      
+
       if (firebaseUser) {
         console.log('✅ Firebase user is authenticated');
         loadUserProfile();
         loadUserReview();
       } else {
         console.warn('⚠️ No authenticated Firebase user');
-        
+
         const storedUser = localStorage.getItem('currentUser');
         if (storedUser) {
           console.log('📱 User session found in storage, attempting to restore...');
@@ -104,10 +104,10 @@ const ReaderProfile = () => {
     try {
       setIsLoading(true);
       console.log('📡 Loading user profile...');
-      
+
       let currentUser = auth.currentUser;
       let attempts = 0;
-      
+
       while (!currentUser && attempts < 10) {
         console.log(`⏳ Waiting for auth user... attempt ${attempts + 1}`);
         await new Promise(resolve => setTimeout(resolve, 500));
@@ -123,7 +123,7 @@ const ReaderProfile = () => {
 
       console.log('✅ Auth user found:', currentUser.email);
       console.log('🎫 Getting ID token...');
-      
+
       const idToken = await currentUser.getIdToken();
       console.log('✅ ID token obtained');
 
@@ -167,7 +167,7 @@ const ReaderProfile = () => {
 
     } catch (error) {
       console.error('❌ Error loading profile:', error);
-      
+
       if (error.message.includes('Unauthorized') || error.message.includes('401')) {
         console.log('🔐 Authentication error, redirecting to signin...');
         localStorage.removeItem('currentUser');
@@ -184,7 +184,7 @@ const ReaderProfile = () => {
     try {
       setLoadingReview(true);
       const currentUser = auth.currentUser;
-      
+
       if (!currentUser) return;
 
       const idToken = await currentUser.getIdToken();
@@ -200,7 +200,7 @@ const ReaderProfile = () => {
         if (data.success && data.reviews) {
           const readerUid = `reader_${currentUser.uid}`;
           const review = data.reviews.find(r => r.userId === readerUid);
-          
+
           if (review) {
             setUserReview(review);
             setReviewFormData({
@@ -218,6 +218,12 @@ const ReaderProfile = () => {
   };
 
   const handleReviewSubmit = async () => {
+    // FIX 2: Validate that user has selected a rating
+    if (reviewFormData.rating === 0) {
+      setReviewError('Please select a star rating before submitting');
+      return;
+    }
+
     if (!reviewFormData.reviewText.trim()) {
       setReviewError('Please write a review before submitting');
       return;
@@ -231,13 +237,13 @@ const ReaderProfile = () => {
     try {
       setSubmittingReview(true);
       setReviewError('');
-      
+
       const currentUser = auth.currentUser;
       const idToken = await currentUser.getIdToken();
 
       const url = '/api/reviews';
       const method = userReview ? 'PUT' : 'POST';
-      const body = userReview 
+      const body = userReview
         ? { reviewId: userReview.id, ...reviewFormData }
         : reviewFormData;
 
@@ -286,7 +292,7 @@ const ReaderProfile = () => {
 
       if (data.success) {
         setUserReview(null);
-        setReviewFormData({ rating: 5, reviewText: '' });
+        setReviewFormData({ rating: 0, reviewText: '' }); // FIX 3: reset to 0 not 5
         alert('Review deleted successfully');
       }
     } catch (error) {
@@ -299,7 +305,7 @@ const ReaderProfile = () => {
     return Array.from({ length: 5 }, (_, index) => (
       <Star
         key={index}
-        className={`w-6 h-6 ${interactive ? 'cursor-pointer' : ''} ${
+        className={`w-6 h-6 transition-colors ${interactive ? 'cursor-pointer hover:scale-110' : ''} ${
           index < rating
             ? 'fill-yellow-400 text-yellow-400'
             : 'text-gray-300'
@@ -370,7 +376,7 @@ const ReaderProfile = () => {
 
       const idToken = await currentUser.getIdToken();
       console.log('📤 Sending profile update to API...');
-      
+
       const response = await fetch('/api/user-profile', {
         method: 'PUT',
         headers: {
@@ -415,7 +421,7 @@ const ReaderProfile = () => {
 
       const idToken = await currentUser.getIdToken();
       console.log('📤 Sending delete request to API...');
-      
+
       const response = await fetch('/api/user-profile', {
         method: 'DELETE',
         headers: {
@@ -430,7 +436,7 @@ const ReaderProfile = () => {
       }
 
       console.log('✅ Profile deleted successfully');
-      
+
       localStorage.removeItem('currentUser');
       await auth.signOut();
       router.push('/');
@@ -574,7 +580,7 @@ const ReaderProfile = () => {
             <div className="lg:col-span-2">
               <div className="bg-white rounded-lg shadow-md p-6 mb-6">
                 <h3 className="text-xl font-semibold text-gray-800 mb-6">Profile Information</h3>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -778,11 +784,12 @@ const ReaderProfile = () => {
                   </div>
                 ) : userReview && !showReviewForm ? (
                   <div className="bg-gray-50 rounded-lg p-4">
+                    {/* FIX 4: Edit/Delete buttons properly aligned */}
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-1">
                         {renderStars(userReview.rating)}
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex items-center gap-2">
                         <button
                           onClick={() => {
                             setShowReviewForm(true);
@@ -791,14 +798,16 @@ const ReaderProfile = () => {
                               reviewText: userReview.reviewText
                             });
                           }}
-                          className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition"
                         >
+                          <Edit2 className="w-3.5 h-3.5" />
                           Edit
                         </button>
                         <button
                           onClick={handleReviewDelete}
-                          className="text-red-600 hover:text-red-700 text-sm font-medium"
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition"
                         >
+                          <Trash2 className="w-3.5 h-3.5" />
                           Delete
                         </button>
                       </div>
@@ -817,18 +826,29 @@ const ReaderProfile = () => {
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Rating
+                        Rating <span className="text-red-500">*</span>
                       </label>
-                      <div className="flex items-center gap-1">
-                        {renderStars(reviewFormData.rating, true, (rating) => 
-                          setReviewFormData(prev => ({ ...prev, rating }))
+                      {/* FIX 5: Helper text so user knows to click stars */}
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
+                          {renderStars(reviewFormData.rating, true, (rating) =>
+                            setReviewFormData(prev => ({ ...prev, rating }))
+                          )}
+                        </div>
+                        {reviewFormData.rating === 0 && (
+                          <span className="text-xs text-gray-400 italic">Click to rate</span>
+                        )}
+                        {reviewFormData.rating > 0 && (
+                          <span className="text-xs text-gray-500 font-medium">
+                            {['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'][reviewFormData.rating]}
+                          </span>
                         )}
                       </div>
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Your Review
+                        Your Review <span className="text-red-500">*</span>
                       </label>
                       <textarea
                         value={reviewFormData.reviewText}
@@ -837,9 +857,7 @@ const ReaderProfile = () => {
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         placeholder="Share your experience with Press Pass..."
                       />
-                      <p className="text-xs text-gray-500 mt-1">
-                        Minimum 10 characters
-                      </p>
+                      <p className="text-xs text-gray-500 mt-1">Minimum 10 characters</p>
                     </div>
 
                     {reviewError && (
@@ -854,7 +872,7 @@ const ReaderProfile = () => {
                           setShowReviewForm(false);
                           setReviewError('');
                           if (!userReview) {
-                            setReviewFormData({ rating: 5, reviewText: '' });
+                            setReviewFormData({ rating: 0, reviewText: '' }); // FIX 6: reset to 0
                           }
                         }}
                         className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
