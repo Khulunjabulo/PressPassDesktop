@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import '@fortawesome/fontawesome-free/css/all.min.css';
@@ -11,8 +11,6 @@ import {
   handleGoogleSignUp,
   handleReaderRegistration,
   handlePublisherRegistration,
-  validateReaderForm,
-  validatePublisherForm
 } from '../../lib/authLogic';
 import Link from 'next/link';
 
@@ -69,14 +67,16 @@ const defaultPublisherErrors = {
   agreeToTerms: '',
 };
 
-const MediaHubRegistration = () => {
-  // FIX 1: Read the role from URL search params (?role=reader or ?role=publisher)
+// ─────────────────────────────────────────────────────────────────────────────
+// Inner component — this is the one that calls useSearchParams().
+// It MUST be rendered inside a <Suspense> boundary (see the default export).
+// ─────────────────────────────────────────────────────────────────────────────
+function RegistrationForm() {
+  // FIX: useSearchParams() is safe here because this component is wrapped in Suspense
   const searchParams = useSearchParams();
   const lockedRole = searchParams.get('role'); // "reader" | "publisher" | null
 
-  // FIX 1: Initialize the tab based on lockedRole
   const [isPublisher, setIsPublisher] = useState(lockedRole === 'publisher');
-
   const [profilePicPreview, setProfilePicPreview] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -93,7 +93,7 @@ const MediaHubRegistration = () => {
 
   const router = useRouter();
 
-  // ── Handlers: reader form ───────────────────────────────────────────────────
+  // ── Handlers: reader form ─────────────────────────────────────────────────
   const handleReaderInputChange = (e) => {
     const { name, value, type, checked } = e.target;
     setReaderFormData((prev) => ({
@@ -111,7 +111,7 @@ const MediaHubRegistration = () => {
     }
   };
 
-  // ── Handlers: publisher form ────────────────────────────────────────────────
+  // ── Handlers: publisher form ──────────────────────────────────────────────
   const handlePublisherInputChange = (e) => {
     const { name, value, type, checked } = e.target;
     setPublisherFormData((prev) => ({
@@ -129,7 +129,7 @@ const MediaHubRegistration = () => {
     }
   };
 
-  // ── Profile picture (reader only) ──────────────────────────────────────────
+  // ── Profile picture ───────────────────────────────────────────────────────
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     setReaderFormData((prev) => ({ ...prev, profilePic: file }));
@@ -139,7 +139,7 @@ const MediaHubRegistration = () => {
     else setProfilePicPreview('');
   };
 
-  // ── Inline validation: reader ───────────────────────────────────────────────
+  // ── Inline validation: reader ─────────────────────────────────────────────
   const validateReaderInline = () => {
     const errs = { ...defaultReaderErrors };
     let valid = true;
@@ -166,7 +166,11 @@ const MediaHubRegistration = () => {
     if (!readerFormData.password) {
       errs.password = 'Password is required.';
       valid = false;
-    } else if (readerFormData.password.length < 8 || !/[A-Z]/.test(readerFormData.password) || !/[0-9]/.test(readerFormData.password)) {
+    } else if (
+      readerFormData.password.length < 8 ||
+      !/[A-Z]/.test(readerFormData.password) ||
+      !/[0-9]/.test(readerFormData.password)
+    ) {
       errs.password = 'Password must be 8+ characters with an uppercase letter and a number.';
       valid = false;
     }
@@ -182,7 +186,7 @@ const MediaHubRegistration = () => {
     return valid;
   };
 
-  // ── Inline validation: publisher ────────────────────────────────────────────
+  // ── Inline validation: publisher ──────────────────────────────────────────
   const validatePublisherInline = () => {
     const errs = { ...defaultPublisherErrors };
     let valid = true;
@@ -217,7 +221,11 @@ const MediaHubRegistration = () => {
     if (!publisherFormData.password) {
       errs.password = 'Password is required.';
       valid = false;
-    } else if (publisherFormData.password.length < 8 || !/[A-Z]/.test(publisherFormData.password) || !/[0-9]/.test(publisherFormData.password)) {
+    } else if (
+      publisherFormData.password.length < 8 ||
+      !/[A-Z]/.test(publisherFormData.password) ||
+      !/[0-9]/.test(publisherFormData.password)
+    ) {
       errs.password = 'Password must be 8+ characters with an uppercase letter and a number.';
       valid = false;
     }
@@ -241,7 +249,7 @@ const MediaHubRegistration = () => {
     return valid;
   };
 
-  // ── Submit handlers ─────────────────────────────────────────────────────────
+  // ── Submit handlers ───────────────────────────────────────────────────────
   const handleReaderSubmit = async () => {
     if (!validateReaderInline()) return;
     await handleReaderRegistration(readerFormData, router, setIsLoading);
@@ -257,7 +265,7 @@ const MediaHubRegistration = () => {
     setGoogleUserData(null);
   };
 
-  // ── Google Sign-In ──────────────────────────────────────────────────────────
+  // ── Google Sign-In ────────────────────────────────────────────────────────
   useEffect(() => {
     const handleGoogleCallback = (response) => {
       handleGoogleSignUp(response, setIsLoading, setShowFormModal, setGoogleUserData);
@@ -266,7 +274,13 @@ const MediaHubRegistration = () => {
 
     const timer = setTimeout(() => {
       if (window.google?.accounts?.id) {
-        const btnConfig = { theme: 'outline', size: 'large', width: 400, text: 'signup_with', shape: 'rectangular' };
+        const btnConfig = {
+          theme: 'outline',
+          size: 'large',
+          width: 400,
+          text: 'signup_with',
+          shape: 'rectangular',
+        };
         const readerBtn = document.getElementById('google-signin-button');
         if (readerBtn) window.google.accounts.id.renderButton(readerBtn, btnConfig);
         const publisherBtn = document.getElementById('google-signin-button-publisher');
@@ -277,11 +291,10 @@ const MediaHubRegistration = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  // ── Enforce reader-only on mobile (unless lockedRole is publisher) ──────────
+  // ── Enforce reader-only on mobile (unless lockedRole is publisher) ─────────
   useEffect(() => {
     const enforceMobileRole = () => {
       if (typeof window !== 'undefined' && window.innerWidth < 768) {
-        // Only force reader on mobile if the role is NOT locked to publisher
         if (lockedRole !== 'publisher') {
           setIsPublisher(false);
         }
@@ -292,13 +305,12 @@ const MediaHubRegistration = () => {
     return () => window.removeEventListener('resize', enforceMobileRole);
   }, [lockedRole]);
 
-  // ── Shared input class helper ───────────────────────────────────────────────
+  // ── Helpers ───────────────────────────────────────────────────────────────
   const inputClass = (hasError = false) =>
     `w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition bg-white ${
       hasError ? 'border-red-500 bg-red-50' : 'border-blue-200'
     }`;
 
-  // ── Reusable inline error message ───────────────────────────────────────────
   const FieldError = ({ msg, id }) =>
     msg ? (
       <p id={id} className="text-red-600 text-xs mt-1 flex items-center gap-1">
@@ -306,9 +318,7 @@ const MediaHubRegistration = () => {
       </p>
     ) : null;
 
-  // ── FIX 1: Tab switcher handler — no-op when role is locked ────────────────
   const handleTabSwitch = (targetIsPublisher) => {
-    // If a role is locked via URL param, do nothing
     if (lockedRole) return;
     setIsPublisher(targetIsPublisher);
   };
@@ -320,7 +330,7 @@ const MediaHubRegistration = () => {
           <div className="flex flex-col md:flex-row">
 
             {/* ── Left panel ── */}
-            <div className="md:w-2/5 bg-gradient-to-br bg-[#329ae1] text-white p-6 md:p-8 flex flex-col justify-center">
+            <div className="md:w-2/5 bg-[#329ae1] text-white p-6 md:p-8 flex flex-col justify-center">
               <div className="text-center mb-8">
                 <div className="bg-white/20 p-4 rounded-full inline-block mb-4">
                   <img src="/Presspass.png" alt="News Icon" className="w-12 h-12" />
@@ -350,11 +360,10 @@ const MediaHubRegistration = () => {
             {/* ── Right panel ── */}
             <div className="md:w-3/5 p-5 md:p-8">
 
-              {/* FIX 1: Tab switcher — disabled and visually locked when lockedRole is set */}
+              {/* Tab switcher */}
               <div className="flex mb-5 md:mb-8 bg-blue-100 rounded-lg p-1">
                 <button
                   onClick={() => handleTabSwitch(false)}
-                  // Disabled only when locked to publisher role
                   disabled={lockedRole === 'publisher'}
                   title={lockedRole === 'publisher' ? 'You arrived here as a publisher' : ''}
                   className={`flex-1 py-2 px-4 rounded-md text-center font-medium transition text-sm md:text-base
@@ -367,7 +376,6 @@ const MediaHubRegistration = () => {
 
                 <button
                   onClick={() => handleTabSwitch(true)}
-                  // Disabled only when locked to reader role; also hidden on mobile unless locked to publisher
                   disabled={lockedRole === 'reader'}
                   title={lockedRole === 'reader' ? 'You arrived here as a news reader' : ''}
                   className={`
@@ -381,7 +389,7 @@ const MediaHubRegistration = () => {
                 </button>
               </div>
 
-              {/* ════════════════ READER FORM ════════════════ */}
+              {/* ════════ READER FORM ════════ */}
               {!isPublisher ? (
                 <div className="space-y-4 md:space-y-6 bg-blue-50 p-4 md:p-6 rounded-xl">
                   <h2 className="text-xl md:text-2xl font-bold text-gray-800 text-center">News Reader Registration</h2>
@@ -434,7 +442,6 @@ const MediaHubRegistration = () => {
                     <p className="text-sm text-blue-600 mt-2">Upload profile picture</p>
                   </div>
 
-                  {/* Name + email */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <input
@@ -448,7 +455,6 @@ const MediaHubRegistration = () => {
                       />
                       <FieldError msg={readerErrors.firstName} id="reader-firstname-error" />
                     </div>
-
                     <div>
                       <input
                         type="text"
@@ -461,7 +467,6 @@ const MediaHubRegistration = () => {
                       />
                       <FieldError msg={readerErrors.lastName} id="reader-lastname-error" />
                     </div>
-
                     <div className="md:col-span-2">
                       <input
                         type="email"
@@ -478,7 +483,6 @@ const MediaHubRegistration = () => {
                     </div>
                   </div>
 
-                  {/* Passwords */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <div className="relative">
@@ -491,13 +495,12 @@ const MediaHubRegistration = () => {
                           className={`${inputClass(!!readerErrors.password)} pr-12`}
                           aria-describedby="reader-password-error"
                         />
-                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700" aria-label={showPassword ? 'Hide password' : 'Show password'}>
+                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700">
                           {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                         </button>
                       </div>
                       <FieldError msg={readerErrors.password} id="reader-password-error" />
                     </div>
-
                     <div>
                       <div className="relative">
                         <input
@@ -509,7 +512,7 @@ const MediaHubRegistration = () => {
                           className={`${inputClass(!!readerErrors.confirmPassword)} pr-12`}
                           aria-describedby="reader-confirm-error"
                         />
-                        <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700" aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}>
+                        <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700">
                           {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                         </button>
                       </div>
@@ -531,14 +534,14 @@ const MediaHubRegistration = () => {
                     onClick={handleReaderSubmit}
                     disabled={isLoading || !readerFormData.agreeToTerms}
                     title={!readerFormData.agreeToTerms ? 'Please agree to the Terms of Service first' : ''}
-                    className="w-full bg-[#329ae1] text-white font-semibold py-3 px-4 rounded-lg hover:from-blue-700 hover:to-blue-800 transition duration-300 transform hover:-translate-y-0.5 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed mt-4"
+                    className="w-full bg-[#329ae1] text-white font-semibold py-3 px-4 rounded-lg transition duration-300 transform hover:-translate-y-0.5 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed mt-4"
                   >
                     {isLoading ? 'Registering...' : 'Register as News Reader'}
                   </button>
                 </div>
 
               ) : (
-                /* ════════════════ PUBLISHER FORM ════════════════ */
+                /* ════════ PUBLISHER FORM ════════ */
                 <div className="space-y-4 md:space-y-6 bg-blue-50 p-4 md:p-6 rounded-xl max-h-[70vh] overflow-y-auto">
                   <h2 className="text-xl md:text-2xl font-bold text-gray-800 text-center">Print Media Registration</h2>
 
@@ -572,7 +575,7 @@ const MediaHubRegistration = () => {
 
                   {/* Company Info */}
                   <div>
-                    <h3 className="text-lg font-semibold text-black-800 mb-4 flex items-center">
+                    <h3 className="text-lg font-semibold mb-4 flex items-center">
                       <i className="fas fa-building text-blue-600 mr-2" />Company Information
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -588,7 +591,6 @@ const MediaHubRegistration = () => {
                         />
                         <FieldError msg={publisherErrors.companyName} id="pub-company-error" />
                       </div>
-
                       <div>
                         <select
                           name="industry"
@@ -620,7 +622,7 @@ const MediaHubRegistration = () => {
 
                   {/* Contact Info */}
                   <div>
-                    <h3 className="text-lg font-semibold text-black-800 mb-4 flex items-center">
+                    <h3 className="text-lg font-semibold mb-4 flex items-center">
                       <i className="fas fa-user-tie text-blue-600 mr-2" />Primary Contact
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -636,7 +638,6 @@ const MediaHubRegistration = () => {
                         />
                         <FieldError msg={publisherErrors.contactName} id="pub-contact-error" />
                       </div>
-
                       <div>
                         <input
                           type="text"
@@ -649,7 +650,6 @@ const MediaHubRegistration = () => {
                         />
                         <FieldError msg={publisherErrors.jobTitle} id="pub-jobtitle-error" />
                       </div>
-
                       <div className="md:col-span-2">
                         <input
                           type="email"
@@ -664,7 +664,6 @@ const MediaHubRegistration = () => {
                         />
                         <FieldError msg={publisherErrors.email} id="pub-email-error" />
                       </div>
-
                       <input
                         type="tel"
                         name="phone"
@@ -693,7 +692,6 @@ const MediaHubRegistration = () => {
                         </div>
                         <FieldError msg={publisherErrors.password} id="pub-password-error" />
                       </div>
-
                       <div>
                         <div className="relative">
                           <input
@@ -725,7 +723,7 @@ const MediaHubRegistration = () => {
 
                   {/* Publication Details */}
                   <div>
-                    <h3 className="text-lg font-semibold text-black-800 mb-4 flex items-center">
+                    <h3 className="text-lg font-semibold mb-4 flex items-center">
                       <i className="fas fa-book-open text-blue-600 mr-2" />Publication Details
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -747,7 +745,6 @@ const MediaHubRegistration = () => {
                         </select>
                         <FieldError msg={publisherErrors.publicationType} id="pub-pubtype-error" />
                       </div>
-
                       <div>
                         <select
                           name="audienceType"
@@ -782,7 +779,7 @@ const MediaHubRegistration = () => {
                     onClick={handlePublisherSubmit}
                     disabled={isLoading || !publisherFormData.agreeToTerms}
                     title={!publisherFormData.agreeToTerms ? 'Please agree to the Terms of Service first' : ''}
-                    className="w-full bg-[#329ae1] text-white font-semibold py-3 px-4 rounded-lg hover:from-blue-700 hover:to-blue-800 transition duration-300 transform hover:-translate-y-0.5 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed mt-4"
+                    className="w-full bg-[#329ae1] text-white font-semibold py-3 px-4 rounded-lg transition duration-300 transform hover:-translate-y-0.5 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed mt-4"
                   >
                     {isLoading ? 'Registering...' : 'Register as Print Media'}
                   </button>
@@ -819,6 +816,23 @@ const MediaHubRegistration = () => {
       />
     </>
   );
-};
+}
 
-export default MediaHubRegistration;
+// ─────────────────────────────────────────────────────────────────────────────
+// Default export — wraps RegistrationForm in <Suspense> so that
+// useSearchParams() does not crash during static prerendering at build time.
+// The fallback spinner is shown while the page hydrates on the client.
+// ─────────────────────────────────────────────────────────────────────────────
+export default function MediaHubRegistration() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#329ae1] border-t-transparent" />
+        </div>
+      }
+    >
+      <RegistrationForm />
+    </Suspense>
+  );
+}
