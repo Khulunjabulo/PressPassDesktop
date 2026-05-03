@@ -48,8 +48,10 @@ export default function Header({ publisher }) {
               onLoad={() => setLogoError(false)}
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg bg-gray-100">
-              <span className="text-2xl md:text-3xl font-bold text-gray-500">?</span>
+            <div className="w-full h-full flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg bg-gray-100 p-1">
+              <span className="text-[9px] md:text-xs text-gray-500 text-center leading-tight">
+                Upload profile picture
+              </span>
             </div>
           )}
         </div>
