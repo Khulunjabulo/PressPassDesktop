@@ -7,11 +7,12 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from '@/Firebase/firebase';
 import { getUserRole } from '@/Firebase/auth';
 import { useRouter } from 'next/navigation';
-import { BookOpen, LogOut, UserPlus, LogIn } from 'lucide-react';
+import { BookOpen, LogOut, UserPlus, LogIn, Menu } from 'lucide-react';
 
 export default function PrintMediaHeader() {
   const [user, setUser] = useState(null);
   const [role, setRole] = useState(null);
+  const [menuOpen, setMenuOpen] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -36,55 +37,121 @@ export default function PrintMediaHeader() {
     router.push('/print-media');
   };
 
+  // Always route to the news-reader landing page
   const handleNewsReaderClick = (e) => {
     e.preventDefault();
-    if (user && role !== 'print-media') {
-      alert('You are not a print media');
-    } else {
-      router.push('/');
-    }
+    router.push('/');
   };
 
   return (
-   <header className="relative bg-[#329ae1] px-2 md:px-4 py-2 md:py-3 flex flex-col md:flex-row items-start md:items-center justify-between shadow-md gap-2 md:gap-0">
-      <div className="max-w-7xl mx-auto flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Link href="/">
+    // FIX 3: Matches news-reader header exactly — same height, padding, structure
+    <header className="bg-[#329ae1] px-3 sm:px-6 py-2 shadow-md h-16 md:h-32 fixed md:relative top-0 left-0 right-0 w-full z-50">
+      <div className="max-w-7xl mx-auto flex items-center justify-between h-full">
+
+        {/* Logo — left side, same sizing as news-reader header */}
+        <div className="flex items-center">
+          <Link href="/print-media" className="flex-shrink-0">
             <Image
               src="/Presspass.png"
               alt="Press Pass logo"
-              width={200}
-              height={100}
+              width={80}
+              height={32}
+              className="w-auto h-12 md:h-24"
               priority
             />
           </Link>
         </div>
 
-        <nav className="flex items-center gap-4 text-white">
-          {/* Always show News Reader */}
-          <button onClick={handleNewsReaderClick} className="flex items-center gap-1 hover:underline text-sm">
-            <BookOpen size={16} />
-            News Reader
+        {/* Desktop Nav — right side, same gap/padding/text as news-reader header */}
+        <nav className="hidden md:flex items-center gap-1 sm:gap-3 md:gap-4 text-white">
+          <button
+            onClick={handleNewsReaderClick}
+            className="hover:bg-white/10 px-2 py-1 rounded text-sm flex items-center gap-1 transition-colors"
+          >
+            <BookOpen size={18} />
+            <span className="font-medium">News Reader</span>
           </button>
 
           {user ? (
-            <button onClick={handleLogout} className="flex items-center gap-1 hover:underline text-sm">
-              <LogOut size={16} />
-              Logout
+            <button
+              onClick={handleLogout}
+              className="hover:bg-white/10 px-2 py-1 rounded text-sm flex items-center gap-1 transition-colors"
+            >
+              <LogOut size={14} className="sm:w-4 sm:h-4" />
+              <span className="text-xs sm:text-sm font-medium">Logout</span>
             </button>
           ) : (
             <>
-              <Link href="/signup" className="flex items-center gap-1 hover:underline">
-                <UserPlus size={16} />
-                Sign Up
+              <Link
+                href="/signup?role=publisher"
+                className="hover:bg-white/10 px-2 py-1 rounded flex items-center gap-1 transition-colors"
+              >
+                <UserPlus size={14} className="sm:w-4 sm:h-4" />
+                <span className="text-xs sm:text-sm font-medium">Sign Up</span>
               </Link>
-              <Link href="/signin" className="flex items-center gap-1 hover:underline">
-                <LogIn size={16} />
-                Login
+
+              <Link
+                href="/signin"
+                className="hover:bg-white/10 px-2 py-1 rounded flex items-center gap-1 transition-colors bg-white/10"
+              >
+                <LogIn size={14} className="sm:w-4 sm:h-4" />
+                <span className="text-xs sm:text-sm font-medium">Login</span>
               </Link>
             </>
           )}
         </nav>
+
+        {/* Mobile Menu */}
+        <div className="md:hidden relative">
+          <button onClick={() => setMenuOpen(!menuOpen)} className="text-white p-2">
+            <Menu size={24} />
+          </button>
+          {menuOpen && (
+            <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50">
+              <div className="py-1">
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    router.push('/');
+                  }}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                >
+                  <BookOpen className="w-4 h-4 mr-2" />
+                  News Reader
+                </button>
+
+                {user ? (
+                  <button
+                    onClick={() => {
+                      setMenuOpen(false);
+                      handleLogout();
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Logout
+                  </button>
+                ) : (
+                  <>
+                    <Link href="/signup?role=publisher">
+                      <div className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
+                        <UserPlus className="w-4 h-4 mr-2" />
+                        Sign Up
+                      </div>
+                    </Link>
+                    <Link href="/signin">
+                      <div className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
+                        <LogIn className="w-4 h-4 mr-2" />
+                        Login
+                      </div>
+                    </Link>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
       </div>
     </header>
   );

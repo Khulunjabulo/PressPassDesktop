@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import "../globals.css";
@@ -47,7 +47,6 @@ const defaultPublisherForm = {
   role: 'publisher',
 };
 
-// ─── FIX 2: All fields that can have inline errors ───────────────────────────
 const defaultReaderErrors = {
   firstName: '',
   lastName: '',
@@ -71,7 +70,13 @@ const defaultPublisherErrors = {
 };
 
 const MediaHubRegistration = () => {
-  const [isPublisher, setIsPublisher] = useState(false);
+  // FIX 1: Read the role from URL search params (?role=reader or ?role=publisher)
+  const searchParams = useSearchParams();
+  const lockedRole = searchParams.get('role'); // "reader" | "publisher" | null
+
+  // FIX 1: Initialize the tab based on lockedRole
+  const [isPublisher, setIsPublisher] = useState(lockedRole === 'publisher');
+
   const [profilePicPreview, setProfilePicPreview] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -80,7 +85,6 @@ const MediaHubRegistration = () => {
   const [readerFormData, setReaderFormData] = useState(defaultReaderForm);
   const [publisherFormData, setPublisherFormData] = useState(defaultPublisherForm);
 
-  // FIX 2: Per-field error state (replaces alert popup)
   const [readerErrors, setReaderErrors] = useState(defaultReaderErrors);
   const [publisherErrors, setPublisherErrors] = useState(defaultPublisherErrors);
 
@@ -96,7 +100,6 @@ const MediaHubRegistration = () => {
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
     }));
-    // Clear the error for this field as user types/changes
     setReaderErrors((prev) => ({ ...prev, [name]: '' }));
   };
 
@@ -136,7 +139,7 @@ const MediaHubRegistration = () => {
     else setProfilePicPreview('');
   };
 
-  // ── FIX 2: Inline validation for reader ────────────────────────────────────
+  // ── Inline validation: reader ───────────────────────────────────────────────
   const validateReaderInline = () => {
     const errs = { ...defaultReaderErrors };
     let valid = true;
@@ -179,7 +182,7 @@ const MediaHubRegistration = () => {
     return valid;
   };
 
-  // ── FIX 2: Inline validation for publisher ──────────────────────────────────
+  // ── Inline validation: publisher ────────────────────────────────────────────
   const validatePublisherInline = () => {
     const errs = { ...defaultPublisherErrors };
     let valid = true;
@@ -240,7 +243,6 @@ const MediaHubRegistration = () => {
 
   // ── Submit handlers ─────────────────────────────────────────────────────────
   const handleReaderSubmit = async () => {
-    // FIX 2: use inline validation, no alert()
     if (!validateReaderInline()) return;
     await handleReaderRegistration(readerFormData, router, setIsLoading);
   };
@@ -275,17 +277,20 @@ const MediaHubRegistration = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  // ── Enforce reader-only on mobile ───────────────────────────────────────────
+  // ── Enforce reader-only on mobile (unless lockedRole is publisher) ──────────
   useEffect(() => {
     const enforceMobileRole = () => {
       if (typeof window !== 'undefined' && window.innerWidth < 768) {
-        setIsPublisher(false);
+        // Only force reader on mobile if the role is NOT locked to publisher
+        if (lockedRole !== 'publisher') {
+          setIsPublisher(false);
+        }
       }
     };
     enforceMobileRole();
     window.addEventListener('resize', enforceMobileRole);
     return () => window.removeEventListener('resize', enforceMobileRole);
-  }, []);
+  }, [lockedRole]);
 
   // ── Shared input class helper ───────────────────────────────────────────────
   const inputClass = (hasError = false) =>
@@ -300,6 +305,13 @@ const MediaHubRegistration = () => {
         <i className="fas fa-exclamation-circle" /> {msg}
       </p>
     ) : null;
+
+  // ── FIX 1: Tab switcher handler — no-op when role is locked ────────────────
+  const handleTabSwitch = (targetIsPublisher) => {
+    // If a role is locked via URL param, do nothing
+    if (lockedRole) return;
+    setIsPublisher(targetIsPublisher);
+  };
 
   return (
     <>
@@ -337,21 +349,33 @@ const MediaHubRegistration = () => {
 
             {/* ── Right panel ── */}
             <div className="md:w-3/5 p-5 md:p-8">
-              {/* Tab switcher */}
+
+              {/* FIX 1: Tab switcher — disabled and visually locked when lockedRole is set */}
               <div className="flex mb-5 md:mb-8 bg-blue-100 rounded-lg p-1">
                 <button
-                  onClick={() => setIsPublisher(false)}
-                  className={`flex-1 py-2 px-4 rounded-md text-center font-medium transition text-sm md:text-base ${
-                    !isPublisher ? 'bg-[#329ae1] text-white' : 'text-black-600'
-                  }`}
+                  onClick={() => handleTabSwitch(false)}
+                  // Disabled only when locked to publisher role
+                  disabled={lockedRole === 'publisher'}
+                  title={lockedRole === 'publisher' ? 'You arrived here as a publisher' : ''}
+                  className={`flex-1 py-2 px-4 rounded-md text-center font-medium transition text-sm md:text-base
+                    ${!isPublisher ? 'bg-[#329ae1] text-white' : 'text-gray-600'}
+                    ${lockedRole === 'publisher' ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}
+                  `}
                 >
                   News Reader Registration
                 </button>
+
                 <button
-                  onClick={() => setIsPublisher(true)}
-                  className={`hidden md:block flex-1 py-2 px-4 rounded-md text-center font-medium transition text-sm md:text-base ${
-                    isPublisher ? 'bg-[#329ae1] text-white' : 'text-black-600'
-                  }`}
+                  onClick={() => handleTabSwitch(true)}
+                  // Disabled only when locked to reader role; also hidden on mobile unless locked to publisher
+                  disabled={lockedRole === 'reader'}
+                  title={lockedRole === 'reader' ? 'You arrived here as a news reader' : ''}
+                  className={`
+                    flex-1 py-2 px-4 rounded-md text-center font-medium transition text-sm md:text-base
+                    ${isPublisher ? 'bg-[#329ae1] text-white' : 'text-gray-600'}
+                    ${lockedRole === 'reader' ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}
+                    ${lockedRole === 'publisher' ? 'block' : 'hidden md:block'}
+                  `}
                 >
                   Print Media Registration
                 </button>
@@ -362,7 +386,6 @@ const MediaHubRegistration = () => {
                 <div className="space-y-4 md:space-y-6 bg-blue-50 p-4 md:p-6 rounded-xl">
                   <h2 className="text-xl md:text-2xl font-bold text-gray-800 text-center">News Reader Registration</h2>
 
-                  {/* FIX 1: Terms checkbox — error appears directly below it */}
                   <div>
                     <label className={`flex items-center bg-white p-4 rounded-lg border ${readerErrors.agreeToTerms ? 'border-red-500' : 'border-gray-200'}`}>
                       <input
@@ -378,11 +401,9 @@ const MediaHubRegistration = () => {
                         <a href="/privacy" target="_blank" className="text-blue-600 underline ml-1">Privacy Policy</a>.
                       </span>
                     </label>
-                    {/* FIX 1: error RIGHT under the checkbox, not under Google button */}
                     <FieldError msg={readerErrors.agreeToTerms} id="reader-terms-error" />
                   </div>
 
-                  {/* Google button — no error message here anymore (FIX 1) */}
                   <div className="mb-6">
                     <div
                       id="google-signin-button"
@@ -521,7 +542,6 @@ const MediaHubRegistration = () => {
                 <div className="space-y-4 md:space-y-6 bg-blue-50 p-4 md:p-6 rounded-xl max-h-[70vh] overflow-y-auto">
                   <h2 className="text-xl md:text-2xl font-bold text-gray-800 text-center">Print Media Registration</h2>
 
-                  {/* FIX 1: Terms checkbox — error appears directly below it */}
                   <div>
                     <label className={`flex items-center bg-white p-4 rounded-lg border ${publisherErrors.agreeToTerms ? 'border-red-500' : 'border-gray-200'}`}>
                       <input
@@ -533,11 +553,9 @@ const MediaHubRegistration = () => {
                       />
                       <span className="text-sm">I agree to the Terms of Service and Privacy Policy</span>
                     </label>
-                    {/* FIX 1: error RIGHT under the checkbox */}
                     <FieldError msg={publisherErrors.agreeToTerms} id="publisher-terms-error" />
                   </div>
 
-                  {/* Google button — no error message here anymore (FIX 1) */}
                   <div className="mb-6">
                     <div
                       id="google-signin-button-publisher"
@@ -571,9 +589,6 @@ const MediaHubRegistration = () => {
                         <FieldError msg={publisherErrors.companyName} id="pub-company-error" />
                       </div>
 
-                      {/* FIX 3 & 4: Removed duplicate "Select Industry" label option;
-                          kept empty-value placeholder for controlled select.
-                          Added overflow-ellipsis + min-w-0 so selected text never clips. */}
                       <div>
                         <select
                           name="industry"
@@ -583,7 +598,6 @@ const MediaHubRegistration = () => {
                           style={{ textOverflow: 'ellipsis' }}
                           aria-describedby="pub-industry-error"
                         >
-                          {/* FIX 3: single hidden placeholder — not a selectable duplicate */}
                           <option value="" disabled hidden>Select Industry</option>
                           <option value="news">News &amp; Journalism</option>
                           <option value="magazine">Magazine</option>
@@ -715,7 +729,6 @@ const MediaHubRegistration = () => {
                       <i className="fas fa-book-open text-blue-600 mr-2" />Publication Details
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* FIX 3 & 4: same pattern for publicationType and audienceType */}
                       <div>
                         <select
                           name="publicationType"
@@ -788,7 +801,10 @@ const MediaHubRegistration = () => {
       </div>
 
       <div className="absolute top-4 left-4">
-        <Link href="/" className="bg-[#3ba6e7] text-white px-4 py-2 rounded-md shadow-sm hover:bg-[#2a7ab8] transition-colors duration-200 mb-8 flex items-center text-sm">
+        <Link
+          href={lockedRole === 'publisher' ? '/print-media' : '/'}
+          className="bg-[#3ba6e7] text-white px-4 py-2 rounded-md shadow-sm hover:bg-[#2a7ab8] transition-colors duration-200 mb-8 flex items-center text-sm"
+        >
           <ArrowLeft className="w-4 h-4 mr-1" />
           Back to Home
         </Link>
