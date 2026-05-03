@@ -4,11 +4,25 @@ import Header from '@/components/UI/header'
 import PublisherSidebar from '@/components/UI/publisherSidebar'
 import { useCurrentPublisher } from "@/hooks/useCurrentPublisher";
 import { useState, useEffect } from 'react'
-import { Rss, Trash2, RefreshCw, Eye, ExternalLink, CheckCircle, XCircle, Clock } from 'lucide-react'
+import { Rss, Trash2, RefreshCw, Eye, ExternalLink, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react'
+
+// Normalize URL — prepend https:// if missing scheme
+const normalizeUrl = (url) => {
+  const trimmed = url.trim()
+  if (/^https?:\/\//i.test(trimmed)) return trimmed
+  if (/^www\./i.test(trimmed)) return `https://${trimmed}`
+  return trimmed
+}
+
+// Validate that a URL is usable (http/https after normalization)
+const isValidUrl = (url) => {
+  const normalized = normalizeUrl(url)
+  return /^https?:\/\/.+/i.test(normalized)
+}
 
 export default function RssFeeds() {
   const { publisher, loading: publisherLoading } = useCurrentPublisher("currentPublisherId");
-  
+
   const [showAddFeedForm, setShowAddFeedForm] = useState(false)
   const [feedUrl, setFeedUrl] = useState('')
   const [feedName, setFeedName] = useState('')
@@ -17,6 +31,31 @@ export default function RssFeeds() {
   const [previewData, setPreviewData] = useState(null)
   const [previewLoading, setPreviewLoading] = useState(false)
   const [publishingFeed, setPublishingFeed] = useState(false)
+
+  // Inline error state — keyed by field name
+  const [fieldErrors, setFieldErrors] = useState({
+    feedUrl: '',
+    feedName: '',
+    general: '',   // for errors not tied to a specific field (e.g. sync/delete)
+  })
+
+  // Sync/delete operation inline messages (shown per feed row)
+  const [feedMessages, setFeedMessages] = useState({}) // { [feedId]: { type: 'success'|'error', text: string } }
+
+  const setFieldError = (field, message) =>
+    setFieldErrors((prev) => ({ ...prev, [field]: message }))
+
+  const clearFieldError = (field) =>
+    setFieldErrors((prev) => ({ ...prev, [field]: '' }))
+
+  const clearAllErrors = () =>
+    setFieldErrors({ feedUrl: '', feedName: '', general: '' })
+
+  const setFeedMessage = (feedId, type, text) =>
+    setFeedMessages((prev) => ({ ...prev, [feedId]: { type, text } }))
+
+  const clearFeedMessage = (feedId) =>
+    setFeedMessages((prev) => { const n = { ...prev }; delete n[feedId]; return n })
 
   // Debug: Log publisher data
   useEffect(() => {
@@ -42,135 +81,121 @@ export default function RssFeeds() {
       console.error('No publisher ID found')
       return
     }
-    
+
     try {
       setLoading(true)
-      console.log('Fetching RSS feeds for publisher:', publisherId)
       const response = await fetch(`/api/rss-feeds?publisherId=${publisherId}`)
       const data = await response.json()
-      
+
       if (data.success) {
         setFeeds(data.feeds)
       } else {
-        console.error('Failed to fetch feeds:', data.error)
-        alert('Failed to load RSS feeds: ' + data.error)
+        setFieldError('general', 'Failed to load RSS feeds: ' + (data.error || 'Unknown error'))
       }
     } catch (error) {
       console.error('Error fetching feeds:', error)
-      alert('Failed to load RSS feeds')
+      setFieldError('general', 'Failed to load RSS feeds. Please refresh the page.')
     } finally {
       setLoading(false)
     }
   }
 
-  const handlePreviewFeed = async () => {
+  // Validate before any feed action — returns normalized URL or null
+  const validateAndNormalize = () => {
+    clearAllErrors()
     const publisherId = publisher?.uid || publisher?.id
-    
-    // Better validation
+    let valid = true
+
     if (!publisherId) {
-      alert('Publisher information not found. Please refresh the page.')
-      return
+      setFieldError('general', 'Publisher information not found. Please refresh the page.')
+      valid = false
     }
-    
-    if (!feedUrl || !feedUrl.trim()) {
-      alert('Please enter an RSS feed URL')
-      return
+
+    if (!feedUrl.trim()) {
+      setFieldError('feedUrl', 'Please enter an RSS feed URL.')
+      valid = false
+    } else if (!isValidUrl(feedUrl)) {
+      setFieldError('feedUrl', 'Please enter a valid URL (e.g. https://example.com/rss.xml or www.example.com/rss.xml).')
+      valid = false
     }
-    
-    // Basic URL validation
-    const urlPattern = /^https?:\/\/.+/i;
-    if (!urlPattern.test(feedUrl.trim())) {
-      alert('Please enter a valid URL starting with http:// or https://')
-      return
-    }
-    
-    console.log('✅ Validation passed. Publisher ID:', publisherId);
-    console.log('✅ Feed URL:', feedUrl.trim());
-    
+
+    if (!valid) return null
+    return normalizeUrl(feedUrl)
+  }
+
+  const handlePreviewFeed = async () => {
+    const normalizedUrl = validateAndNormalize()
+    if (!normalizedUrl) return
+
+    const publisherId = publisher?.uid || publisher?.id
+
     try {
       setPreviewLoading(true)
-      console.log('Previewing RSS feed:', feedUrl)
+      setPreviewData(null)
       const response = await fetch('/api/rss-feeds', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          publisherId: publisherId,
-          feedUrl: feedUrl.trim(),
+          publisherId,
+          feedUrl: normalizedUrl,
           feedName: feedName.trim(),
           action: 'preview'
         })
       })
 
       const data = await response.json()
-      console.log('Preview response:', data)
 
       if (data.success) {
         setPreviewData(data)
+        clearAllErrors()
       } else {
-        alert(data.error || 'Failed to fetch RSS feed')
+        // Show error under the URL field since the URL is what caused it
+        setFieldError('feedUrl', data.error || 'Failed to fetch RSS feed. Check the URL and try again.')
       }
     } catch (error) {
       console.error('Error previewing feed:', error)
-      alert('Failed to preview RSS feed: ' + error.message)
+      setFieldError('feedUrl', 'Failed to preview RSS feed: ' + error.message)
     } finally {
       setPreviewLoading(false)
     }
   }
 
   const handlePublishFeed = async () => {
+    const normalizedUrl = validateAndNormalize()
+    if (!normalizedUrl) return
+
     const publisherId = publisher?.uid || publisher?.id
-    
-    // Better validation
-    if (!publisherId) {
-      alert('Publisher information not found. Please refresh the page.')
-      return
-    }
-    
-    if (!feedUrl || !feedUrl.trim()) {
-      alert('Please enter an RSS feed URL')
-      return
-    }
-    
-    // Basic URL validation
-    const urlPattern = /^https?:\/\/.+/i;
-    if (!urlPattern.test(feedUrl.trim())) {
-      alert('Please enter a valid URL starting with http:// or https://')
-      return
-    }
-    
-    console.log('✅ Publishing with Publisher ID:', publisherId);
-    console.log('✅ Feed URL:', feedUrl.trim());
-    
+
     try {
       setPublishingFeed(true)
-      console.log('Publishing RSS feed for publisher:', publisherId)
       const response = await fetch('/api/rss-feeds', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          publisherId: publisherId,
-          feedUrl: feedUrl.trim(),
+          publisherId,
+          feedUrl: normalizedUrl,
           feedName: feedName.trim() || previewData?.feedInfo?.title,
           action: 'publish'
         })
       })
 
       const data = await response.json()
-      console.log('Publish response:', data)
 
       if (data.success) {
-        alert(`RSS feed published! ${data.articlesPublished} articles added.`)
         setFeedName('')
         setFeedUrl('')
         setPreviewData(null)
         setShowAddFeedForm(false)
+        clearAllErrors()
         fetchFeeds()
+        // Show inline success in the feeds list area
+        setFieldError('general', '') // clear any lingering errors
       } else {
-        alert(data.error || 'Failed to publish RSS feed')
+        setFieldError('general', data.error || 'Failed to publish RSS feed.')
       }
     } catch (error) {
       console.error('Error publishing feed:', error)
-      alert('Failed to publish RSS feed: ' + error.message)
+      setFieldError('general', 'Failed to publish RSS feed: ' + error.message)
     } finally {
       setPublishingFeed(false)
     }
@@ -179,39 +204,38 @@ export default function RssFeeds() {
   const handleSyncFeed = async (feedId) => {
     const publisherId = publisher?.uid || publisher?.id
     if (!publisherId) return
-    
+
+    clearFeedMessage(feedId)
+
     try {
-      console.log('Syncing feed:', feedId, 'for publisher:', publisherId)
       const response = await fetch(`/api/rss-feeds/${feedId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          publisherId: publisherId,
-          action: 'sync'
-        })
+        body: JSON.stringify({ publisherId, action: 'sync' })
       })
 
       const data = await response.json()
 
       if (data.success) {
-        alert(`Synced! ${data.newArticles} new articles added.`)
+        setFeedMessage(feedId, 'success', `Synced! ${data.newArticles} new article${data.newArticles === 1 ? '' : 's'} added.`)
         fetchFeeds()
       } else {
-        alert(data.error || 'Failed to sync RSS feed')
+        setFeedMessage(feedId, 'error', data.error || 'Failed to sync RSS feed.')
       }
     } catch (error) {
       console.error('Error syncing feed:', error)
-      alert('Failed to sync RSS feed: ' + error.message)
+      setFeedMessage(feedId, 'error', 'Failed to sync RSS feed: ' + error.message)
     }
   }
 
   const handleDeleteFeed = async (feedId) => {
     const publisherId = publisher?.uid || publisher?.id
     if (!publisherId) return
-    if (!confirm('Are you sure? This will delete the RSS feed and all its articles.')) return
-    
+    if (!window.confirm('Are you sure? This will delete the RSS feed and all its articles.')) return
+
+    clearFeedMessage(feedId)
+
     try {
-      console.log('Deleting feed:', feedId, 'for publisher:', publisherId)
       const response = await fetch(`/api/rss-feeds/${feedId}?publisherId=${publisherId}`, {
         method: 'DELETE'
       })
@@ -219,14 +243,13 @@ export default function RssFeeds() {
       const data = await response.json()
 
       if (data.success) {
-        alert(`RSS feed deleted. ${data.articlesDeleted} articles removed.`)
         fetchFeeds()
       } else {
-        alert(data.error || 'Failed to delete RSS feed')
+        setFeedMessage(feedId, 'error', data.error || 'Failed to delete RSS feed.')
       }
     } catch (error) {
       console.error('Error deleting feed:', error)
-      alert('Failed to delete RSS feed: ' + error.message)
+      setFeedMessage(feedId, 'error', 'Failed to delete RSS feed: ' + error.message)
     }
   }
 
@@ -235,7 +258,26 @@ export default function RssFeeds() {
     setFeedUrl('')
     setPreviewData(null)
     setShowAddFeedForm(false)
+    clearAllErrors()
   }
+
+  // Reusable inline error component
+  const FieldError = ({ message }) =>
+    message ? (
+      <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
+        <AlertCircle className="w-3 h-3 flex-shrink-0" />
+        {message}
+      </p>
+    ) : null
+
+  // Reusable inline banner for general errors (non-field)
+  const GeneralError = ({ message }) =>
+    message ? (
+      <div className="mb-4 bg-red-50 border border-red-200 rounded-lg px-4 py-3 flex items-start gap-2 text-sm text-red-700">
+        <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+        <span>{message}</span>
+      </div>
+    ) : null
 
   if (publisherLoading) {
     return (
@@ -257,6 +299,7 @@ export default function RssFeeds() {
       <div className="h-screen bg-gray-50 flex overflow-hidden">
         <PublisherSidebar />
         <div className="flex-1 p-4 md:p-6 bg-gray-50 min-h-screen overflow-y-auto">
+
           <div className="flex justify-between items-center mb-6">
             <div>
               <h1 className="text-xl md:text-2xl font-bold text-gray-800">RSS Feeds</h1>
@@ -264,53 +307,85 @@ export default function RssFeeds() {
             </div>
             <button
               className="bg-violet-600 text-white px-4 py-2 rounded-md hover:bg-violet-700 text-sm flex items-center gap-2"
-              onClick={() => setShowAddFeedForm(true)}
+              onClick={() => {
+                setShowAddFeedForm(true)
+                clearAllErrors()
+              }}
             >
               <Rss className="w-4 h-4" />
               Add RSS Feed
             </button>
           </div>
-          
-          {/* Add Feed Form */}
+
+          {/* General error banner (fetch feeds failures, publish failures) */}
+          <GeneralError message={fieldErrors.general} />
+
+          {/* ── Add Feed Form ── */}
           {showAddFeedForm && (
             <div className="bg-white rounded-xl shadow-lg p-6 mb-6 border border-gray-200">
               <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
                 <Rss className="w-5 h-5 text-violet-600" />
                 Add New RSS Feed
               </h2>
-              
+
               <div className="space-y-4">
+                {/* Feed Name */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Feed Name (Optional)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Feed Name <span className="text-gray-400">(Optional)</span>
+                  </label>
                   <input
                     type="text"
                     value={feedName}
-                    onChange={(e) => setFeedName(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-violet-500"
+                    onChange={(e) => {
+                      setFeedName(e.target.value)
+                      clearFieldError('feedName')
+                    }}
+                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-violet-500 transition-colors ${
+                      fieldErrors.feedName ? 'border-red-400 bg-red-50' : 'border-gray-300'
+                    }`}
                     placeholder="e.g., Tech News Feed"
                   />
+                  <FieldError message={fieldErrors.feedName} />
                 </div>
-                
+
+                {/* Feed URL */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">RSS Feed URL *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    RSS Feed URL <span className="text-red-500">*</span>
+                  </label>
                   <input
-                    type="url"
+                    type="text"
                     value={feedUrl}
-                    onChange={(e) => setFeedUrl(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-violet-500"
-                    placeholder="https://example.com/rss.xml"
+                    onChange={(e) => {
+                      setFeedUrl(e.target.value)
+                      clearFieldError('feedUrl')
+                      // Clear preview when URL changes
+                      if (previewData) setPreviewData(null)
+                    }}
+                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-violet-500 transition-colors ${
+                      fieldErrors.feedUrl ? 'border-red-400 bg-red-50' : 'border-gray-300'
+                    }`}
+                    placeholder="https://example.com/rss.xml or www.example.com/feed"
                   />
+                  <FieldError message={fieldErrors.feedUrl} />
+                  {/* Helper hint */}
+                  {!fieldErrors.feedUrl && (
+                    <p className="mt-1 text-xs text-gray-400">
+                      Accepts URLs with or without https:// (e.g. www.example.com/feed)
+                    </p>
+                  )}
                 </div>
-                
+
                 <div className="flex space-x-3">
                   <button
                     onClick={handlePreviewFeed}
                     disabled={!feedUrl.trim() || previewLoading}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors"
                   >
                     {previewLoading ? (
                       <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
                         Loading...
                       </>
                     ) : (
@@ -320,17 +395,17 @@ export default function RssFeeds() {
                       </>
                     )}
                   </button>
-                  
+
                   <button
                     onClick={handleCancel}
-                    className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400"
+                    className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 transition-colors"
                   >
                     Cancel
                   </button>
                 </div>
               </div>
 
-              {/* Preview Section */}
+              {/* ── Preview Section ── */}
               {previewData && (
                 <div className="mt-6 border-t pt-6">
                   <div className="flex items-center justify-between mb-4">
@@ -344,11 +419,11 @@ export default function RssFeeds() {
                     <button
                       onClick={handlePublishFeed}
                       disabled={publishingFeed}
-                      className="bg-green-600 text-white px-6 py-2 rounded-md hover:bg-green-700 disabled:opacity-50 flex items-center gap-2"
+                      className="bg-green-600 text-white px-6 py-2 rounded-md hover:bg-green-700 disabled:opacity-50 flex items-center gap-2 transition-colors"
                     >
                       {publishingFeed ? (
                         <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
                           Publishing...
                         </>
                       ) : (
@@ -367,21 +442,21 @@ export default function RssFeeds() {
                         <div key={idx} className="bg-white p-3 rounded border border-gray-200">
                           <div className="flex gap-3">
                             {article.imageUrl && (
-                              <img 
-                                src={article.imageUrl} 
-                                alt="" 
-                                className="w-20 h-20 object-cover rounded"
+                              <img
+                                src={article.imageUrl}
+                                alt=""
+                                className="w-20 h-20 object-cover rounded flex-shrink-0"
                               />
                             )}
-                            <div className="flex-1">
+                            <div className="flex-1 min-w-0">
                               <h5 className="font-semibold text-sm text-gray-800 line-clamp-2">{article.title}</h5>
                               <p className="text-xs text-gray-600 mt-1 line-clamp-2">{article.summary}</p>
                               <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
                                 <span>{new Date(article.publishedDate).toLocaleDateString()}</span>
                                 {article.link && (
-                                  <a 
-                                    href={article.link} 
-                                    target="_blank" 
+                                  <a
+                                    href={article.link}
+                                    target="_blank"
                                     rel="noopener noreferrer"
                                     className="text-blue-600 hover:underline flex items-center gap-1"
                                   >
@@ -405,14 +480,14 @@ export default function RssFeeds() {
               )}
             </div>
           )}
-          
-          {/* Existing Feeds List */}
+
+          {/* ── Existing Feeds List ── */}
           <div className="bg-white rounded-xl shadow p-6">
             <h2 className="text-lg font-bold text-gray-800 mb-4">Your RSS Feeds</h2>
-            
+
             {loading ? (
               <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-4 border-violet-600 border-t-transparent"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-4 border-violet-600 border-t-transparent" />
               </div>
             ) : feeds.length === 0 ? (
               <div className="text-center py-12 text-gray-500">
@@ -425,9 +500,9 @@ export default function RssFeeds() {
                 {feeds.map((feed) => (
                   <div key={feed.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                     <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Rss className="w-5 h-5 text-violet-600" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                          <Rss className="w-5 h-5 text-violet-600 flex-shrink-0" />
                           <h3 className="font-semibold text-gray-800">{feed.feedName}</h3>
                           {feed.isActive ? (
                             <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full flex items-center gap-1">
@@ -441,18 +516,18 @@ export default function RssFeeds() {
                             </span>
                           )}
                         </div>
-                        
-                        <a 
-                          href={feed.feedUrl} 
-                          target="_blank" 
+
+                        <a
+                          href={feed.feedUrl}
+                          target="_blank"
                           rel="noopener noreferrer"
-                          className="text-sm text-blue-600 hover:underline flex items-center gap-1 mb-2"
+                          className="text-sm text-blue-600 hover:underline flex items-center gap-1 mb-2 truncate max-w-full"
                         >
                           {feed.feedUrl}
-                          <ExternalLink className="w-3 h-3" />
+                          <ExternalLink className="w-3 h-3 flex-shrink-0" />
                         </a>
-                        
-                        <div className="flex items-center gap-4 text-xs text-gray-500">
+
+                        <div className="flex items-center gap-4 text-xs text-gray-500 flex-wrap">
                           <span className="flex items-center gap-1">
                             <Clock className="w-3 h-3" />
                             Added: {feed.createdAt ? new Date(feed.createdAt).toLocaleDateString() : 'N/A'}
@@ -462,9 +537,22 @@ export default function RssFeeds() {
                             <span>Last synced: {new Date(feed.lastFetched).toLocaleDateString()}</span>
                           )}
                         </div>
+
+                        {/* Per-feed inline message (sync success/error, delete error) */}
+                        {feedMessages[feed.id] && (
+                          <p className={`mt-2 text-xs flex items-center gap-1 ${
+                            feedMessages[feed.id].type === 'success' ? 'text-green-600' : 'text-red-600'
+                          }`}>
+                            {feedMessages[feed.id].type === 'success'
+                              ? <CheckCircle className="w-3 h-3 flex-shrink-0" />
+                              : <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                            }
+                            {feedMessages[feed.id].text}
+                          </p>
+                        )}
                       </div>
-                      
-                      <div className="flex items-center gap-2 ml-4">
+
+                      <div className="flex items-center gap-2 ml-4 flex-shrink-0">
                         <button
                           onClick={() => handleSyncFeed(feed.id)}
                           className="p-2 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
@@ -472,7 +560,7 @@ export default function RssFeeds() {
                         >
                           <RefreshCw className="w-4 h-4" />
                         </button>
-                        
+
                         <button
                           onClick={() => handleDeleteFeed(feed.id)}
                           className="p-2 text-red-600 hover:bg-red-50 rounded-md transition-colors"
