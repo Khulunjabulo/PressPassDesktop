@@ -130,9 +130,9 @@ export default function Subscribers() {
             <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-800">
               Subscribers
             </h1>
-            <button className="bg-violet-600 text-white px-4 py-2 rounded-md hover:bg-violet-700 text-sm w-full sm:w-auto transition-colors">
+            {/* <button className="bg-violet-600 text-white px-4 py-2 rounded-md hover:bg-violet-700 text-sm w-full sm:w-auto transition-colors">
               Export Data
-            </button>
+            </button> */}
           </div>
 
           {/* Error Display */}

@@ -1,65 +1,123 @@
-import React from "react";
-import { Facebook, Twitter, Linkedin } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Facebook, Linkedin } from "lucide-react";
 
-;
+const XLogo = () => (
+  <svg viewBox="0 0 24 24" className="w-4 h-4 fill-white" xmlns="http://www.w3.org/2000/svg">
+    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.741l7.73-8.835L1.254 2.25H8.08l4.213 5.567zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+  </svg>
+);
+
+const PrivacyModal = ({ onClose }) => {
+  useEffect(() => {
+    const handleKey = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/45 z-50 flex items-center justify-center p-4"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div className="bg-white rounded-xl border border-gray-200 w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden">
+        {/* Header */}
+        <div className="flex items-start justify-between px-6 py-5 border-b border-gray-100 flex-shrink-0">
+          <div>
+            <h2 className="text-lg font-medium text-gray-900">Privacy Policy</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Last updated: January 1, 2025</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="ml-3 w-7 h-7 flex items-center justify-center rounded-md border border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-500 transition-colors text-sm"
+            aria-label="Close"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Scrollable Body */}
+        <div className="overflow-y-auto px-6 py-5 flex-1 text-sm text-gray-500 leading-relaxed space-y-3">
+          <p>Press Pass ("we", "our", or "us") is committed to protecting your personal information. This Privacy Policy explains how we collect, use, and share data when you use our services.</p>
+
+          <h3 className="text-sm font-medium text-gray-800 pt-2">Information we collect</h3>
+          <p>We collect information you provide directly, such as when you create an account, subscribe to newsletters, or contact our support team. This may include your name, email address, and usage preferences.</p>
+          <p>We also automatically collect data including IP addresses, browser type, and pages visited to help us improve our services.</p>
+
+          <h3 className="text-sm font-medium text-gray-800 pt-2">How we use your information</h3>
+          <p>We use your data to deliver and improve our services, personalise your experience, and comply with legal obligations. We do not sell your personal data to third parties.</p>
+
+          <h3 className="text-sm font-medium text-gray-800 pt-2">Cookies</h3>
+          <p>Press Pass uses cookies to enhance your browsing experience and analyse site traffic. You can control cookie preferences through your browser settings.</p>
+
+          <h3 className="text-sm font-medium text-gray-800 pt-2">Your rights</h3>
+          <p>You may have the right to access, correct, or delete your personal data. Contact us at privacy@presspass.com to exercise these rights.</p>
+
+          <h3 className="text-sm font-medium text-gray-800 pt-2">Contact us</h3>
+          <p>Questions? Reach us at privacy@presspass.com — Press Pass, Privacy Team, 123 Media Lane, Johannesburg, South Africa.</p>
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-gray-100 flex justify-end flex-shrink-0">
+          <button
+            onClick={onClose}
+            className="bg-[#329ae1] text-white text-sm font-medium px-5 py-1.5 rounded-lg hover:opacity-90 transition-opacity"
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default function NewsReaderFooter() {
+  const [showPrivacy, setShowPrivacy] = useState(false);
+
   return (
-      <footer className="w-full bg-gradient-to-r bg-[#329ae1] text-white py-8 px-6">
+    <>
+      {showPrivacy && <PrivacyModal onClose={() => setShowPrivacy(false)} />}
+
+      <footer className="w-full bg-[#329ae1] text-white py-8 px-6">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
-          {/* Corporate Info Section */}
+
           <div className="flex flex-col items-center md:items-start">
-          <h3 className="text-sm font-medium mb-1">Corporate Info</h3>
-            <a
-              href="#"
-              className="text-sm text-blue-100 hover:text-white transition-colors"
-            >
+            <h3 className="text-sm font-medium mb-1">Corporate Info</h3>
+            <a href="/" className="text-sm text-blue-100 hover:text-white transition-colors">
               ABOUT PRESS PASS
             </a>
           </div>
 
-          {/* Center Legal Links */}
           <div className="flex flex-col items-center text-center">
             <div className="flex items-center gap-2 text-sm text-blue-100 mb-2">
-              <a href="#" className="hover:text-white transition-colors">
-                Terms of Use
-              </a>
+              <a href="#" className="hover:text-white transition-colors">Terms of Use</a>
               <span>|</span>
-              <a href="#" className="hover:text-white transition-colors">
+              <button
+                onClick={() => setShowPrivacy(true)}
+                className="hover:text-white transition-colors bg-transparent border-none text-blue-100 cursor-pointer text-sm"
+              >
                 Privacy Policy
-              </a>
+              </button>
             </div>
-            <p className="text-xs text-blue-100">
-              © 2023 Press Pass. All rights reserved.
-            </p>
+            <p className="text-xs text-blue-100">© 2023 Press Pass. All rights reserved.</p>
           </div>
 
-          {/* Social Media Icons */}
-            <div className="flex items-center gap-3">
-            <a
-                href="#"
-                className="w-8 h-8 bg-white/20 rounded-sm flex items-center justify-center hover:bg-white/30 transition-colors"
-                aria-label="LinkedIn"
-            >
-                <Linkedin className="w-4 h-4" />
+          <div className="flex items-center gap-3">
+            <a href="https://www.linkedin.com" target="_blank" rel="noreferrer"
+              className="w-8 h-8 bg-white/20 rounded-sm flex items-center justify-center hover:bg-white/30 transition-colors" aria-label="LinkedIn">
+              <Linkedin className="w-4 h-4" />
             </a>
-            <a
-                href="#"
-                className="w-8 h-8 bg-white/20 rounded-sm flex items-center justify-center hover:bg-white/30 transition-colors"
-                aria-label="Twitter"
-            >
-                <Twitter className="w-4 h-4" />
+            <a href="https://www.x.com" target="_blank" rel="noreferrer"
+              className="w-8 h-8 bg-white/20 rounded-sm flex items-center justify-center hover:bg-white/30 transition-colors" aria-label="X">
+              <XLogo />
             </a>
-            <a
-                href="#"
-                className="w-8 h-8 bg-white/20 rounded-sm flex items-center justify-center hover:bg-white/30 transition-colors"
-                aria-label="Facebook"
-            >
-                <Facebook className="w-4 h-4" />
+            <a href="https://www.facebook.com" target="_blank" rel="noreferrer"
+              className="w-8 h-8 bg-white/20 rounded-sm flex items-center justify-center hover:bg-white/30 transition-colors" aria-label="Facebook">
+              <Facebook className="w-4 h-4" />
             </a>
-            </div>
+          </div>
+
         </div>
       </footer>
-    
+    </>
   );
 }

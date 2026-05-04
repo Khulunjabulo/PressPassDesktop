@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from '@/Firebase/firebase';
 import { getUserRole } from '@/Firebase/auth';
-import { useRouter } from 'next/navigation'
+import { useRouter } from 'next/navigation';
 import { Newspaper, LogOut, UserPlus, LogIn, Menu } from 'lucide-react';
 
 export default function MainHeader() {
@@ -34,26 +34,20 @@ export default function MainHeader() {
     await signOut(auth);
     setUser(null);
     setRole(null);
-    router.push('/'); 
+    router.push('/');
   };
 
+  // FIX 2: Always route to /print-media — no signin/signup redirect logic
   const handlePrintMediaClick = (e) => {
     e.preventDefault();
-    if (!user) {
-      // If user is not logged in, redirect to sign in page with print media role
-      router.push('/signin?role=publisher');
-    } else if (role !== 'publisher') {
-      // If user is logged in but not a publisher, redirect to sign up page
-      router.push('/signup?role=publisher');
-    } else {
-      // If user is a publisher, redirect to print media section
-      router.push('/print-media');
-    }
+    router.push('/print-media');
   };
 
   return (
     <header className="bg-[#329ae1] px-3 sm:px-6 py-2 shadow-md h-16 md:h-32 fixed md:relative top-0 left-0 right-0 w-full z-50">
       <div className="max-w-7xl mx-auto flex items-center justify-between h-full">
+
+        {/* Logo */}
         <div className="flex items-center">
           <Link href="/" className="flex-shrink-0">
             <Image
@@ -67,13 +61,13 @@ export default function MainHeader() {
           </Link>
         </div>
 
-        <nav className=" top-0 right-0 left-0 hidden md:flex items-center gap-1 sm:gap-3 md:gap-4 text-white">
-          {/* Hide Print Media on mobile (425px and less), show on tablet (768px) and larger */}
+        {/* Desktop Nav */}
+        <nav className="hidden md:flex items-center gap-1 sm:gap-3 md:gap-4 text-white">
           <button
             onClick={handlePrintMediaClick}
-            className="hidden md:flex hover:bg-white/10 px-2 py-1 rounded text-sm items-center gap-1 transition-colors"
+            className="hover:bg-white/10 px-2 py-1 rounded text-sm flex items-center gap-1 transition-colors"
           >
-            <Newspaper size={18}/>
+            <Newspaper size={18} />
             <span className="font-medium">Print Media</span>
           </button>
 
@@ -82,13 +76,13 @@ export default function MainHeader() {
               onClick={handleLogout}
               className="hover:bg-white/10 px-2 py-1 rounded text-sm flex items-center gap-1 transition-colors"
             >
-              <LogOut size={14} className="sm:w-4 sm:h-4"/>
+              <LogOut size={14} className="sm:w-4 sm:h-4" />
               <span className="text-xs sm:text-sm font-medium">Logout</span>
             </button>
           ) : (
             <>
               <Link
-                href="/signup"
+                href="/signup?role=reader"
                 className="hover:bg-white/10 px-2 py-1 rounded flex items-center gap-1 transition-colors"
               >
                 <UserPlus size={14} className="sm:w-4 sm:h-4" />
@@ -114,16 +108,31 @@ export default function MainHeader() {
           {menuOpen && (
             <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50">
               <div className="py-1">
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    router.push('/print-media');
+                  }}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                >
+                  <Newspaper className="w-4 h-4 mr-2" />
+                  Print Media
+                </button>
+
                 {user ? (
-                  <>
-                    <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
-                      <LogOut className="w-4 h-4 mr-2" />
-                      Logout
-                    </button>
-                  </>
+                  <button
+                    onClick={() => {
+                      setMenuOpen(false);
+                      handleLogout();
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Logout
+                  </button>
                 ) : (
                   <>
-                    <Link href="/signup">
+                    <Link href="/signup?role=reader">
                       <div className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
                         <UserPlus className="w-4 h-4 mr-2" />
                         Sign Up
@@ -141,6 +150,7 @@ export default function MainHeader() {
             </div>
           )}
         </div>
+
       </div>
     </header>
   );
