@@ -264,29 +264,30 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
         
         try {
           const articleData = {
-            title: story.headline || 'Untitled Article',
-            subtitle: '',
-            author: story.byline || currentUser?.companyName || 'Unknown Author',
-            authorTitle: '',
-            category: story.category || 'general',
-            tags: story.tags || [],
-            featuredImageUrl: story.images?.[0]?.base64 || null,
-            imageCredit: '',
-            imageCaption: '',
-            content: story.content || '',
-            metaDescription: story.content?.substring(0, 160) || '',
-            publishNow: true,
-            allowComments: true,
-            sendNewsletter: false,
-            isDraft: false,
-            wordCount: story.content?.split(/\s+/).filter(w => w.length > 0).length || 0,
-            readingTime: Math.ceil((story.content?.split(/\s+/).filter(w => w.length > 0).length || 0) / 200) || 1,
-            publisherId: currentUser.uid,
-            publisherName: currentUser.companyName || 'Unknown Publisher',
-            templateId: selectedTemplateId,
-            style: templateIdToStyle[selectedTemplateId] || 'classic',
-            templateCredit: templateCredit || ''
-          };
+  title: story.headline || 'Untitled Article',
+  subtitle: '',
+  author: story.byline || currentUser?.companyName || 'Unknown Author',
+  authorTitle: '',
+  category: story.category || 'general',
+  tags: story.tags || [],
+  featuredImageUrl: story.images?.[0]?.base64 || null,
+  // ✅ NEW: pass through image credit extracted by AI
+  imageCredit: story.imageCredit || '',
+  imageCaption: '',
+  content: story.content || '',
+  metaDescription: story.content?.substring(0, 160) || '',
+  publishNow: true,
+  allowComments: true,
+  sendNewsletter: false,
+  isDraft: false,
+  wordCount: story.content?.split(/\s+/).filter(w => w.length > 0).length || 0,
+  readingTime: Math.ceil((story.content?.split(/\s+/).filter(w => w.length > 0).length || 0) / 200) || 1,
+  publisherId: currentUser.uid,
+  publisherName: currentUser.companyName || 'Unknown Publisher',
+  templateId: selectedTemplateId,
+  style: templateIdToStyle[selectedTemplateId] || 'classic',
+  templateCredit: templateCredit || ''
+}; 
 
           await submitArticle(false, articleData);
           results.success.push(story.headline);
@@ -376,26 +377,41 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
   };
 
   const applyStoryToForm = async (story) => {
-    setAutofill({
-      headline: story.headline || '',
-      byline: story.byline || '',
-      location: story.location || ''
-    });
-    
-    document.getElementById('headline').value = story.headline || '';
-    document.getElementById('byline').value = story.byline || '';
-    document.getElementById('location').value = story.location || '';
-    document.getElementById('body').value = story.content || '';
-    
-    if (story.category) {
-      document.getElementById('section').value = story.category;
-    }
-    
-    if (story.images && story.images.length > 0) {
-      setImagePreview(story.images[0].base64);
-      setFormData(prev => ({ ...prev, featuredImageUrl: story.images[0].base64 }));
-    }
+  setAutofill({
+    headline: story.headline || '',
+    byline: story.byline || '',
+    location: story.location || '',
+  });
+ 
+  const setField = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) el.value = value || '';
   };
+ 
+  setField('headline', story.headline);
+  setField('byline', story.byline);
+  setField('location', story.location);
+  setField('body', story.content);
+ 
+  if (story.category) {
+    setField('section', story.category);
+  }
+ 
+  if (story.images && story.images.length > 0) {
+    setImagePreview(story.images[0].base64);
+    setFormData(prev => ({
+      ...prev,
+      featuredImageUrl: story.images[0].base64,
+      imageCredit: story.imageCredit || prev.imageCredit || '',
+    }));
+  } else {
+    // Still carry over the image credit even if no image thumbnail
+    setFormData(prev => ({
+      ...prev,
+      imageCredit: story.imageCredit || prev.imageCredit || '',
+    }));
+  }
+};
 
   useEffect(() => {
     if (formData.author && currentUser?.staff) {
@@ -590,75 +606,101 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
     }
   };
 
-  const handleExtractAndPublish = async (action) => {
-    try {
-      const { extractTextFromPDF } = await import('../lib/pdfExtractor');
-      const pdfText = await extractTextFromPDF(file);
-      
-      const lines = pdfText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-      const headline = lines[0] || 'Untitled Article';
-      
-      let byline = '';
-      const bylineIndex = lines.findIndex(line => line.toLowerCase().startsWith('by '));
-      if (bylineIndex !== -1) byline = lines[bylineIndex].substring(3).trim();
-      
-      let contentStartIndex = 1;
-      if (bylineIndex !== -1) contentStartIndex = Math.max(contentStartIndex, bylineIndex + 1);
-      
-      const content = lines.slice(contentStartIndex).join('\n');
-      const metaDescription = content.substring(0, 160) + (content.length > 160 ? '...' : '');
-      
-      const articleData = {
-        title: headline,
-        subtitle: '',
-        author: byline || currentUser?.companyName || 'Unknown Author',
-        authorTitle: '',
-        category: 'general',
-        tags: [],
-        featuredImage: null,
-        featuredImageUrl: '',
-        content,
-        metaDescription,
-        publishNow: action === 'publish',
-        allowComments: true,
-        sendNewsletter: false,
-        isDraft: action !== 'publish',
-        wordCount: content.split(/\s+/).filter(word => word.length > 0).length,
-        readingTime: Math.ceil(content.split(/\s+/).filter(word => word.length > 0).length / 200) || 1,
-        publisherId: currentUser?.uid,
-        publisherName: currentUser?.companyName || 'Unknown Publisher',
-        templateId: selectedTemplateId,
-        style: templateIdToStyle[selectedTemplateId] || 'classic',
-        templateCredit
-      };
-      
-      if (onSubmit && typeof onSubmit === 'function') {
-        await onSubmit(articleData);
-      } else {
-        await submitArticle(action !== 'publish');
-      }
-
-      // FIX 2: Clear and specific success feedback per action
-      const successMessages = {
-        publish: '✅ PDF extracted and published successfully!',
-        draft:   '💾 Draft saved successfully!',
-        review:  '📋 Submitted for review successfully!',
-      };
-      setUploadStatus({ type: 'success', message: successMessages[action] || '✅ Success!' });
-      setUploadError('');
-      
-      setFile(null);
-      setUploadProgress(null);
-      setAutofill({ headline: "", byline: "", location: "" });
-      
-      setTimeout(() => { onClose?.(); }, 2000);
-      
-    } catch (extractionError) {
-      console.error('Error extracting PDF content:', extractionError);
-      setUploadError("Failed to extract content from PDF. Please try again or use manual entry.");
-      setUploadStatus(null);
+   
+const handleExtractAndPublish = async (action) => {
+  try {
+    const { extractTextFromPDF } = await import('../lib/pdfExtractor');
+    const pdfText = await extractTextFromPDF(file);
+ 
+    const lines = pdfText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+    const headline = lines[0] || 'Untitled Article';
+ 
+    let byline = '';
+    const bylineIndex = lines.findIndex(line => /^by\s+.+/i.test(line));
+    if (bylineIndex !== -1) byline = lines[bylineIndex].replace(/^by\s+/i, '').trim();
+ 
+    // Also check for ALL-CAPS name line right after headline
+    if (!byline && lines[1] && /^[A-Z][A-Z\s\-]+$/.test(lines[1]) && lines[1].split(' ').length >= 2) {
+      byline = lines[1];
     }
-  };
+ 
+    // Extract image credit
+    const imageCreditMatch = pdfText.match(/(?:Picture|Photo|Pic|Image|Foto):\s*([^\n\r.,]+)/i);
+    const imageCredit = imageCreditMatch
+      ? imageCreditMatch[1].trim().replace(/^(picture|photo|pic|image|foto):\s*/i, '')
+      : '';
+ 
+    let contentStartIndex = 1;
+    if (bylineIndex !== -1) contentStartIndex = Math.max(contentStartIndex, bylineIndex + 1);
+ 
+    const content = lines.slice(contentStartIndex).join('\n');
+    const metaDescription = content.substring(0, 160) + (content.length > 160 ? '...' : '');
+ 
+    const articleData = {
+      title: headline,
+      subtitle: '',
+      author: byline || currentUser?.companyName || 'Unknown Author',
+      authorTitle: '',
+      category: 'general',
+      tags: [],
+      featuredImage: null,
+      featuredImageUrl: '',
+      imageCredit,
+      imageCaption: '',
+      content,
+      metaDescription,
+      publishNow: action === 'publish',
+      allowComments: true,
+      sendNewsletter: false,
+      isDraft: action !== 'publish',
+      wordCount: content.split(/\s+/).filter(word => word.length > 0).length,
+      readingTime: Math.ceil(content.split(/\s+/).filter(word => word.length > 0).length / 200) || 1,
+      publisherId: currentUser?.uid,
+      publisherName: currentUser?.companyName || 'Unknown Publisher',
+      templateId: selectedTemplateId,
+      style: templateIdToStyle[selectedTemplateId] || 'classic',
+      templateCredit,
+    };
+ 
+    if (onSubmit && typeof onSubmit === 'function') {
+      await onSubmit(articleData);
+    } else {
+      await submitArticle(action !== 'publish');
+    }
+ 
+    const successMessages = {
+      publish: '✅ PDF extracted and published successfully!',
+      draft: '💾 Draft saved successfully!',
+      review: '📋 Submitted for review successfully!',
+    };
+    setUploadStatus({ type: 'success', message: successMessages[action] || '✅ Success!' });
+    setUploadError('');
+ 
+    // ── CLEAR ALL FIELDS AFTER SUCCESS ──────────────────────────
+    handleSetFile(null);
+    setUploadProgress(null);
+    setAutofill({ headline: '', byline: '', location: '' });
+ 
+    // Clear DOM inputs on the PDF upload side
+    const fieldIds = ['headline', 'byline', 'location', 'lead', 'body'];
+    fieldIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    const sectionEl = document.getElementById('section');
+    if (sectionEl) sectionEl.selectedIndex = 0;
+    const editionEl = document.getElementById('edition');
+    if (editionEl) editionEl.selectedIndex = 0;
+    // ─────────────────────────────────────────────────────────────
+ 
+    setTimeout(() => { onClose?.(); }, 2000);
+ 
+  } catch (extractionError) {
+    console.error('Error extracting PDF content:', extractionError);
+    setUploadError('Failed to extract content from PDF. Please try again or use manual entry.');
+    setUploadStatus(null);
+  }
+};
 
   // ─── FIX 1: handleUploadSubmit — correct file check, clear error when file exists ───
   const handleUploadSubmit = async (action = 'publish') => {

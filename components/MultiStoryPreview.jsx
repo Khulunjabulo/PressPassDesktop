@@ -1,25 +1,28 @@
-// components/MultiStoryPreview.jsx - Preview and manage multiple stories from PDF
-'use client'
+// components/MultiStoryPreview.jsx — FIXED: large edit boxes, image credit, writer fields, clear after publish
+'use client';
 
 import React, { useState } from 'react';
-import { 
-  CheckCircle, 
-  XCircle, 
-  Edit3, 
-  Image as ImageIcon, 
+import {
+  CheckCircle,
+  Edit3,
+  Image as ImageIcon,
   FileText,
   ChevronDown,
   ChevronUp,
   Trash2,
   Save,
-  AlertCircle
+  X,
+  User,
+  Camera,
+  MapPin,
+  Tag,
 } from 'lucide-react';
 
-export default function MultiStoryPreview({ 
-  stories, 
-  onPublish, 
+export default function MultiStoryPreview({
+  stories,
+  onPublish,
   onCancel,
-  onEditStory 
+  onEditStory,
 }) {
   const [selectedStories, setSelectedStories] = useState(
     stories.map((_, idx) => idx)
@@ -29,107 +32,91 @@ export default function MultiStoryPreview({
   const [storiesData, setStoriesData] = useState(stories);
 
   const toggleStorySelection = (index) => {
-    setSelectedStories(prev => 
-      prev.includes(index) 
-        ? prev.filter(i => i !== index)
-        : [...prev, index]
+    setSelectedStories((prev) =>
+      prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]
     );
   };
 
   const toggleStoryExpanded = (index) => {
-    setExpandedStories(prev => 
-      prev.includes(index)
-        ? prev.filter(i => i !== index)
-        : [...prev, index]
+    setExpandedStories((prev) =>
+      prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]
     );
-  };
-
-  const handleEditStory = (index) => {
-    setEditingStory(index);
   };
 
   const handleSaveEdit = (index, updatedStory) => {
     const updated = [...storiesData];
     updated[index] = updatedStory;
     setStoriesData(updated);
+    if (onEditStory) onEditStory(index, updatedStory);
     setEditingStory(null);
   };
 
   const handleDeleteStory = (index) => {
-    if (confirm('Are you sure you want to delete this story?')) {
-      setStoriesData(prev => prev.filter((_, idx) => idx !== index));
-      setSelectedStories(prev => prev.filter(i => i !== index).map(i => i > index ? i - 1 : i));
+    if (confirm('Are you sure you want to remove this story?')) {
+      setStoriesData((prev) => prev.filter((_, idx) => idx !== index));
+      setSelectedStories((prev) =>
+        prev.filter((i) => i !== index).map((i) => (i > index ? i - 1 : i))
+      );
+      if (editingStory === index) setEditingStory(null);
     }
   };
 
   const handlePublishSelected = () => {
     const selectedStoriesData = selectedStories
-      .map(idx => storiesData[idx])
+      .map((idx) => storiesData[idx])
       .filter(Boolean);
-    
     onPublish(selectedStoriesData);
   };
 
-  const handleImageReassign = (storyIndex, imageIndex) => {
-    // Allow user to move image to different story
-    const targetStory = prompt(`Move this image to which story? (Enter number 1-${storiesData.length}):`);
-    if (targetStory) {
-      const targetIndex = parseInt(targetStory) - 1;
-      if (targetIndex >= 0 && targetIndex < storiesData.length && targetIndex !== storyIndex) {
-        const updated = [...storiesData];
-        const image = updated[storyIndex].images[imageIndex];
-        updated[storyIndex].images = updated[storyIndex].images.filter((_, i) => i !== imageIndex);
-        updated[targetIndex].images = [...(updated[targetIndex].images || []), image];
-        setStoriesData(updated);
-      }
-    }
-  };
+  const totalImages = storiesData.reduce(
+    (acc, s) => acc + (s.images?.length || 0),
+    0
+  );
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 z-50 overflow-y-auto">
-      <div className="min-h-screen bg-gray-50 py-8 px-4">
-        <div className="max-w-6xl mx-auto">
-          {/* Header */}
-          <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-            <div className="flex items-center justify-between mb-4">
+    <div className="fixed inset-0 bg-black bg-opacity-80 z-50 overflow-y-auto">
+      <div className="min-h-screen bg-gray-100 py-6 px-4">
+        <div className="max-w-5xl mx-auto">
+
+          {/* ── Header ── */}
+          <div className="bg-white rounded-xl shadow-lg p-6 mb-5 border border-gray-200">
+            <div className="flex items-start justify-between">
               <div>
-                <h2 className="text-2xl font-bold text-gray-800 flex items-center">
-                  <FileText className="w-7 h-7 mr-3 text-blue-600" />
-                  Multiple Stories Detected
+                <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
+                  <FileText className="w-7 h-7 text-blue-600" />
+                  {storiesData.length} Articles Detected
                 </h2>
-                <p className="text-gray-600 mt-2">
-                  We found {storiesData.length} articles in your PDF. Review, edit, and select which ones to publish.
+                <p className="text-gray-500 mt-1 text-sm">
+                  Review each article, edit if needed, then publish the ones you want.
                 </p>
               </div>
               <button
                 onClick={onCancel}
-                className="text-gray-500 hover:text-gray-700 text-3xl font-bold"
+                className="text-gray-400 hover:text-gray-600 p-1"
               >
-                ×
+                <X className="w-6 h-6" />
               </button>
             </div>
 
-            {/* Summary Stats */}
-            <div className="grid grid-cols-3 gap-4 mt-4">
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <div className="text-2xl font-bold text-blue-600">{storiesData.length}</div>
-                <div className="text-sm text-gray-600">Total Stories</div>
+            {/* Stats */}
+            <div className="grid grid-cols-3 gap-4 mt-5">
+              <div className="bg-blue-50 rounded-lg p-4 text-center">
+                <div className="text-3xl font-bold text-blue-600">{storiesData.length}</div>
+                <div className="text-xs text-gray-500 mt-1">Total Articles</div>
               </div>
-              <div className="bg-green-50 p-4 rounded-lg">
-                <div className="text-2xl font-bold text-green-600">{selectedStories.length}</div>
-                <div className="text-sm text-gray-600">Selected</div>
+              <div className="bg-green-50 rounded-lg p-4 text-center">
+                <div className="text-3xl font-bold text-green-600">{selectedStories.length}</div>
+                <div className="text-xs text-gray-500 mt-1">Selected to Publish</div>
               </div>
-              <div className="bg-purple-50 p-4 rounded-lg">
-                <div className="text-2xl font-bold text-purple-600">
-                  {storiesData.reduce((acc, s) => acc + (s.images?.length || 0), 0)}
-                </div>
-                <div className="text-sm text-gray-600">Total Images</div>
+              <div className="bg-purple-50 rounded-lg p-4 text-center">
+                <div className="text-3xl font-bold text-purple-600">{totalImages}</div>
+                <div className="text-xs text-gray-500 mt-1">Total Images</div>
               </div>
             </div>
           </div>
 
-          {/* Stories List */}
-          <div className="space-y-4 mb-6">
+          {/* ── Stories List ── */}
+          <div className="space-y-4 mb-24">
             {storiesData.map((story, index) => (
               <StoryCard
                 key={index}
@@ -140,238 +127,332 @@ export default function MultiStoryPreview({
                 isEditing={editingStory === index}
                 onToggleSelect={() => toggleStorySelection(index)}
                 onToggleExpand={() => toggleStoryExpanded(index)}
-                onEdit={() => handleEditStory(index)}
+                onEdit={() => {
+                  setExpandedStories((prev) =>
+                    prev.includes(index) ? prev : [...prev, index]
+                  );
+                  setEditingStory(index);
+                }}
+                onCancelEdit={() => setEditingStory(null)}
                 onSave={(updated) => handleSaveEdit(index, updated)}
                 onDelete={() => handleDeleteStory(index)}
-                onImageReassign={(imgIdx) => handleImageReassign(index, imgIdx)}
               />
             ))}
           </div>
 
-          {/* Action Buttons */}
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <div className="flex items-center justify-between">
+          {/* ── Sticky Action Bar ── */}
+          <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-2xl z-10">
+            <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between gap-4 flex-wrap">
               <button
                 onClick={onCancel}
-                className="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                className="px-5 py-2.5 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
               >
                 Cancel
               </button>
-              
-              <div className="flex items-center space-x-4">
+
+              <div className="flex items-center gap-3 flex-wrap">
                 <button
                   onClick={() => setSelectedStories(storiesData.map((_, i) => i))}
-                  className="px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                  className="text-sm text-blue-600 hover:underline"
                 >
                   Select All
                 </button>
+                <span className="text-gray-300">|</span>
                 <button
                   onClick={() => setSelectedStories([])}
-                  className="px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+                  className="text-sm text-gray-500 hover:underline"
                 >
                   Deselect All
                 </button>
                 <button
                   onClick={handlePublishSelected}
                   disabled={selectedStories.length === 0}
-                  className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center"
+                  className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2 font-semibold text-sm"
                 >
-                  <CheckCircle className="w-5 h-5 mr-2" />
-                  Publish {selectedStories.length} {selectedStories.length === 1 ? 'Story' : 'Stories'}
+                  <CheckCircle className="w-4 h-4" />
+                  Publish {selectedStories.length}{' '}
+                  {selectedStories.length === 1 ? 'Article' : 'Articles'}
                 </button>
               </div>
             </div>
           </div>
+
         </div>
       </div>
     </div>
   );
 }
 
-// Individual Story Card Component
-function StoryCard({ 
-  story, 
-  index, 
-  isSelected, 
-  isExpanded, 
+// ─────────────────────────────────────────────────────────────────────────────
+// Individual Story Card
+// ─────────────────────────────────────────────────────────────────────────────
+function StoryCard({
+  story,
+  index,
+  isSelected,
+  isExpanded,
   isEditing,
-  onToggleSelect, 
+  onToggleSelect,
   onToggleExpand,
   onEdit,
+  onCancelEdit,
   onSave,
   onDelete,
-  onImageReassign
 }) {
-  const [editData, setEditData] = useState(story);
+  const [editData, setEditData] = useState({ ...story });
 
-  const handleSave = () => {
-    onSave(editData);
-  };
+  React.useEffect(() => {
+    setEditData({ ...story });
+  }, [story]);
+
+  const wordCount = (story.content || '').split(/\s+/).filter(Boolean).length;
 
   return (
-    <div className={`bg-white rounded-lg shadow-md overflow-hidden transition-all ${
-      isSelected ? 'ring-2 ring-blue-500' : ''
-    }`}>
-      {/* Card Header */}
-      <div className="p-4 bg-gray-50 border-b flex items-center justify-between">
-        <div className="flex items-center space-x-3">
+    <div
+      className={`bg-white rounded-xl shadow-md overflow-hidden transition-all border-2 ${
+        isSelected ? 'border-blue-500' : 'border-transparent'
+      }`}
+    >
+      {/* ── Card Header ── */}
+      <div className="px-5 py-4 bg-gray-50 border-b border-gray-100 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
           <input
             type="checkbox"
             checked={isSelected}
             onChange={onToggleSelect}
-            className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+            className="w-5 h-5 text-blue-600 rounded flex-shrink-0 cursor-pointer"
           />
-          <span className="font-bold text-gray-700">Story #{index + 1}</span>
-          <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">
-            {story.category || 'General'}
+          <span className="text-sm font-bold text-gray-500 flex-shrink-0">#{index + 1}</span>
+          <span className="font-semibold text-gray-800 truncate text-sm">
+            {story.headline || 'Untitled'}
           </span>
-          {story.images && story.images.length > 0 && (
-            <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded flex items-center">
-              <ImageIcon className="w-3 h-3 mr-1" />
-              {story.images.length} {story.images.length === 1 ? 'image' : 'images'}
+          <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full flex-shrink-0 capitalize">
+            {story.category || 'news'}
+          </span>
+          {story.images?.length > 0 && (
+            <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded-full flex-shrink-0 flex items-center gap-1">
+              <ImageIcon className="w-3 h-3" />
+              {story.images.length}
             </span>
           )}
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center gap-1 flex-shrink-0">
           {!isEditing && (
             <button
               onClick={onEdit}
-              className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors"
-              title="Edit Story"
+              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+              title="Edit"
             >
               <Edit3 className="w-4 h-4" />
             </button>
           )}
           <button
             onClick={onDelete}
-            className="p-2 text-red-600 hover:bg-red-50 rounded transition-colors"
-            title="Delete Story"
+            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+            title="Remove"
           >
             <Trash2 className="w-4 h-4" />
           </button>
           <button
             onClick={onToggleExpand}
-            className="p-2 text-gray-600 hover:bg-gray-100 rounded transition-colors"
+            className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
           >
-            {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+            {isExpanded ? (
+              <ChevronUp className="w-4 h-4" />
+            ) : (
+              <ChevronDown className="w-4 h-4" />
+            )}
           </button>
         </div>
       </div>
 
-      {/* Card Content */}
+      {/* ── Card Body ── */}
       {isExpanded && (
-        <div className="p-6">
+        <div className="p-5">
           {isEditing ? (
-            // Edit Mode
-            <div className="space-y-4">
+            // ── EDIT MODE ────────────────────────────────────────────────────
+            <div className="space-y-5">
+
+              {/* Headline */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Headline</label>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+                  Headline *
+                </label>
                 <input
                   type="text"
                   value={editData.headline}
-                  onChange={(e) => setEditData({...editData, headline: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                  onChange={(e) => setEditData({ ...editData, headline: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base font-semibold"
+                  placeholder="Article headline..."
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              {/* Writer + Image Credit */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Byline</label>
+                  <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+                    <User className="w-3.5 h-3.5" /> Writer / Byline
+                  </label>
                   <input
                     type="text"
-                    value={editData.byline}
-                    onChange={(e) => setEditData({...editData, byline: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                    value={editData.byline || ''}
+                    onChange={(e) => setEditData({ ...editData, byline: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    placeholder="e.g. Romita Hanuman-Pillay"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                  <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+                    <Camera className="w-3.5 h-3.5" /> Photo Credit
+                  </label>
                   <input
                     type="text"
-                    value={editData.location}
-                    onChange={(e) => setEditData({...editData, location: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                    value={editData.imageCredit || ''}
+                    onChange={(e) => setEditData({ ...editData, imageCredit: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    placeholder="e.g. Saneli Mthalane"
                   />
                 </div>
               </div>
 
+              {/* Location + Category */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+                    <MapPin className="w-3.5 h-3.5" /> Location
+                  </label>
+                  <input
+                    type="text"
+                    value={editData.location || ''}
+                    onChange={(e) => setEditData({ ...editData, location: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    placeholder="e.g. Durban"
+                  />
+                </div>
+                <div>
+                  <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+                    <Tag className="w-3.5 h-3.5" /> Category
+                  </label>
+                  <select
+                    value={editData.category || 'news'}
+                    onChange={(e) => setEditData({ ...editData, category: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  >
+                    {[
+                      'news', 'politics', 'business', 'sports', 'education',
+                      'health', 'environment', 'entertainment', 'lifestyle',
+                      'community', 'technology',
+                    ].map((c) => (
+                      <option key={c} value={c} className="capitalize">
+                        {c.charAt(0).toUpperCase() + c.slice(1)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* ── ARTICLE BODY — LARGE TEXTAREA ── */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Content</label>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+                  Article Body *
+                  <span className="ml-2 text-gray-400 font-normal normal-case">
+                    ({(editData.content || '').split(/\s+/).filter(Boolean).length} words)
+                  </span>
+                </label>
                 <textarea
-                  value={editData.content}
-                  onChange={(e) => setEditData({...editData, content: e.target.value})}
-                  rows="10"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                  value={editData.content || ''}
+                  onChange={(e) => setEditData({ ...editData, content: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 font-mono text-sm leading-relaxed resize-y"
+                  style={{ minHeight: '480px', height: '560px' }}
+                  placeholder="Article body content..."
                 />
               </div>
 
-              <div className="flex justify-end space-x-2">
+              {/* Save / Cancel */}
+              <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
                 <button
                   onClick={() => {
-                    setEditData(story);
-                    onEdit();
+                    setEditData({ ...story });
+                    onCancelEdit();
                   }}
-                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-md"
+                  className="px-5 py-2.5 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
                 >
                   Cancel
                 </button>
                 <button
-                  onClick={handleSave}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
+                  onClick={() => onSave(editData)}
+                  className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 text-sm font-medium transition-colors"
                 >
-                  <Save className="w-4 h-4 mr-2" />
+                  <Save className="w-4 h-4" />
                   Save Changes
                 </button>
               </div>
             </div>
           ) : (
-            // View Mode
+            // ── VIEW MODE ─────────────────────────────────────────────────────
             <div>
-              <h3 className="text-xl font-bold text-gray-800 mb-2">{story.headline}</h3>
-              
-              {(story.byline || story.location) && (
-                <div className="text-sm text-gray-600 mb-4 flex items-center space-x-4">
-                  {story.byline && <span>By {story.byline}</span>}
-                  {story.location && <span>📍 {story.location}</span>}
-                </div>
-              )}
+              <h3 className="text-xl font-bold text-gray-800 mb-3">{story.headline}</h3>
 
-              {/* Images */}
-              {story.images && story.images.length > 0 && (
-                <div className="mb-4">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">Attached Images:</h4>
-                  <div className="grid grid-cols-3 gap-3">
-                    {story.images.map((img, imgIdx) => (
-                      <div key={img.id} className="relative group">
-                        <img 
-                          src={img.base64} 
-                          alt={`Image ${imgIdx + 1}`}
-                          className="w-full h-32 object-cover rounded border"
-                        />
-                        <button
-                          onClick={() => onImageReassign(imgIdx)}
-                          className="absolute top-1 right-1 bg-white text-gray-700 px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          Move
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Content Preview */}
-              <div className="mt-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Content Preview:</h4>
-                <div className="bg-gray-50 p-4 rounded border text-sm text-gray-700 max-h-64 overflow-y-auto">
-                  {story.content.substring(0, 500)}...
-                </div>
+              {/* Meta row */}
+              <div className="flex flex-wrap gap-4 text-sm text-gray-500 mb-4">
+                {story.byline && (
+                  <span className="flex items-center gap-1">
+                    <User className="w-3.5 h-3.5" />
+                    <strong className="text-gray-700">By</strong> {story.byline}
+                  </span>
+                )}
+                {story.imageCredit && (
+                  <span className="flex items-center gap-1">
+                    <Camera className="w-3.5 h-3.5" />
+                    <strong className="text-gray-700">Photo:</strong> {story.imageCredit}
+                  </span>
+                )}
+                {story.location && (
+                  <span className="flex items-center gap-1">
+                    <MapPin className="w-3.5 h-3.5" />
+                    {story.location}
+                  </span>
+                )}
               </div>
 
-              {/* Word Count */}
-              <div className="mt-3 text-xs text-gray-500">
-                Word count: {story.content.split(/\s+/).length} words
+              {/* Image thumbnail */}
+              {story.images?.length > 0 && (
+                <div className="mb-4">
+                  <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Page Image</p>
+                  <img
+                    src={story.images[0].base64}
+                    alt="Article page"
+                    className="w-full max-h-56 object-cover rounded-lg border border-gray-200"
+                  />
+                </div>
+              )}
+
+              {/* Content preview */}
+              <div className="bg-gray-50 rounded-lg border border-gray-100 p-4">
+                <p className="text-xs font-semibold text-gray-500 uppercase mb-2">
+                  Content Preview
+                </p>
+                <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">
+                  {story.content?.substring(0, 600)}
+                  {story.content?.length > 600 && (
+                    <span className="text-gray-400 italic">
+                      {' '}...({wordCount} words total)
+                    </span>
+                  )}
+                </p>
+              </div>
+
+              <div className="mt-3 flex items-center justify-between text-xs text-gray-400">
+                <span>
+                  {wordCount} words · ~{Math.ceil(wordCount / 200)} min read
+                </span>
+                <button
+                  onClick={onEdit}
+                  className="flex items-center gap-1 text-blue-500 hover:text-blue-700 font-medium"
+                >
+                  <Edit3 className="w-3 h-3" /> Edit this article
+                </button>
               </div>
             </div>
           )}
