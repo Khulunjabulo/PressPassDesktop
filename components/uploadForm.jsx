@@ -738,13 +738,34 @@ const handleExtractAndPublish = async (action) => {
     }
   };
 
-  // FIX 1: Wrap setFile so that selecting a file also clears the "no file" error
-  const handleSetFile = (selectedFile) => {
-    setFile(selectedFile);
-    if (selectedFile) {
-      setUploadError('');
-    }
-  };
+const handleSetFile = (selectedFile) => {
+  setFile(selectedFile);
+ 
+  if (selectedFile) {
+    // New file selected — clear any stale errors
+    setUploadError('');
+  } else {
+    // File was removed (null) — clear everything related to the previous PDF
+    setDetectedStories([]);
+    setShowMultiStoryPreview(false);
+    setAiProcessingStatus('');
+    setUploadError('');
+    setUploadStatus(null);
+    setUploadProgress(null);
+    setAutofill({ headline: '', byline: '', location: '' });
+ 
+    // Also clear the DOM input fields so they don't show stale data
+    const fieldIds = ['headline', 'byline', 'location', 'lead', 'body'];
+    fieldIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    const sectionEl = document.getElementById('section');
+    if (sectionEl) sectionEl.selectedIndex = 0;
+    const editionEl = document.getElementById('edition');
+    if (editionEl) editionEl.selectedIndex = 0;
+  }
+};
 
   const formatText = (command, value = null) => {
     try {
