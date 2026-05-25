@@ -144,13 +144,16 @@ function StoryCard({
 
   const wordCount = (story.content || '').split(/\s+/).filter(Boolean).length;
 
-  // Current image to display/crop — use first image if available
-  const currentImage = editData.images?.[0]?.base64 || null;
+  // ✅ FIXED: read .url first (Cloudinary), fall back to .base64 (old flow)
+  const currentImage =
+    editData.images?.[0]?.url ||
+    editData.images?.[0]?.base64 ||
+    null;
 
+  // ✅ FIXED: after cropping, store result in both .url and .base64 for compatibility
   const handleCropDone = (croppedBase64) => {
-    // Replace the first image with the cropped version
     const newImages = [
-      { ...(editData.images?.[0] || {}), base64: croppedBase64 },
+      { ...(editData.images?.[0] || {}), url: croppedBase64, base64: croppedBase64 },
       ...(editData.images?.slice(1) || []),
     ];
     setEditData(prev => ({ ...prev, images: newImages }));
@@ -283,6 +286,7 @@ function StoryCard({
                     </label>
                     <div className="relative group rounded-xl overflow-hidden border border-gray-200 bg-gray-50"
                          style={{ maxHeight: '280px' }}>
+                      {/* ✅ FIXED: use currentImage which already reads .url || .base64 */}
                       <img src={currentImage} alt="Article"
                            className="w-full object-cover"
                            style={{ maxHeight: '280px' }} />
@@ -354,11 +358,15 @@ function StoryCard({
                   )}
                 </div>
 
+                {/* ✅ FIXED: read .url first, fall back to .base64 */}
                 {story.images?.length > 0 && (
                   <div className="mb-4">
                     <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Page Image</p>
-                    <img src={story.images[0].base64} alt="Article page"
-                         className="w-full max-h-56 object-cover rounded-lg border border-gray-200" />
+                    <img
+                      src={story.images[0].url || story.images[0].base64}
+                      alt="Article page"
+                      className="w-full max-h-56 object-cover rounded-lg border border-gray-200"
+                    />
                   </div>
                 )}
 

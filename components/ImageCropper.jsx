@@ -1,5 +1,6 @@
 // components/ImageCropper.jsx
 // Lightweight drag-to-crop — no external libraries needed.
+// ✅ FIXED: crossOrigin = 'anonymous' so Cloudinary images can be exported from canvas
 'use client';
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
@@ -15,18 +16,43 @@ export default function ImageCropper({ imageSrc, onCrop, onCancel }) {
   const [dragging, setDragging] = useState(false);
   const [dragStart, setDragStart] = useState(null);
   const [zoom, setZoom] = useState(1);
+  const [imgError, setImgError] = useState(false);
 
   const MIN_CROP = 20;
 
   // ── Load image ─────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!imageSrc) return;
+    setImgError(false);
+
     const img = new Image();
+
+    // ✅ FIXED: required for cross-origin images (Cloudinary) so canvas.toDataURL works
+    img.crossOrigin = 'anonymous';
+
     img.onload = () => {
       imgRef.current = img;
       recalcDisplay(img, zoom);
     };
-    img.src = imageSrc;
+
+    img.onerror = () => {
+      // If crossOrigin load fails (e.g. server doesn't send CORS headers),
+      // fall back to loading without crossOrigin — canvas will be tainted
+      // but at least the image renders. Crop will be blocked with a message.
+      console.warn('⚠️ CrossOrigin image load failed, trying without CORS...');
+      const fallback = new Image();
+      fallback.onload = () => {
+        imgRef.current = fallback;
+        setImgError(true); // mark as tainted so we warn the user
+        recalcDisplay(fallback, zoom);
+      };
+      fallback.onerror = () => console.error('❌ Image failed to load entirely');
+      fallback.src = imageSrc;
+    };
+
+    // Cache-bust to force CORS headers from Cloudinary
+    const sep = imageSrc.includes('?') ? '&' : '?';
+    img.src = `${imageSrc}${sep}_cb=${Date.now()}`;
   }, [imageSrc]);
 
   useEffect(() => {
@@ -86,7 +112,7 @@ export default function ImageCropper({ imageSrc, onCrop, onCancel }) {
       ctx.lineWidth = 2;
       ctx.strokeRect(x, y, w, h);
 
-      // Handles
+      // Corner handles
       const hs = 8;
       ctx.fillStyle = '#ffffff';
       [
@@ -97,12 +123,12 @@ export default function ImageCropper({ imageSrc, onCrop, onCancel }) {
         ctx.strokeRect(cx, cy, hs, hs);
       });
 
-      // Rule-of-thirds
+      // Rule-of-thirds grid
       ctx.strokeStyle = 'rgba(255,255,255,0.2)';
       ctx.lineWidth = 1;
       for (let i = 1; i < 3; i++) {
-        ctx.beginPath(); ctx.moveTo(x + (w/3)*i, y); ctx.lineTo(x + (w/3)*i, y+h); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(x, y + (h/3)*i); ctx.lineTo(x+w, y + (h/3)*i); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x + (w / 3) * i, y); ctx.lineTo(x + (w / 3) * i, y + h); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x, y + (h / 3) * i); ctx.lineTo(x + w, y + (h / 3) * i); ctx.stroke();
       }
 
       // Size label
@@ -178,20 +204,34 @@ export default function ImageCropper({ imageSrc, onCrop, onCancel }) {
   // ── Apply crop ─────────────────────────────────────────────────────────────
   const applyCrop = () => {
     if (!crop || !imgRef.current) return;
-    const img = imgRef.current;
-    const scaleX = img.naturalWidth / imgDisplay.w;
-    const scaleY = img.naturalHeight / imgDisplay.h;
 
-    const natX = (crop.x - imgDisplay.x) * scaleX;
-    const natY = (crop.y - imgDisplay.y) * scaleY;
-    const natW = crop.w * scaleX;
-    const natH = crop.h * scaleY;
+    // ✅ If the image is tainted (CORS failed), warn the user instead of crashing
+    if (imgError) {
+      alert('This image cannot be cropped because it was loaded without CORS headers. The image will be used as-is.');
+      onCancel();
+      return;
+    }
 
-    const off = document.createElement('canvas');
-    off.width = Math.round(natW);
-    off.height = Math.round(natH);
-    off.getContext('2d').drawImage(img, natX, natY, natW, natH, 0, 0, natW, natH);
-    onCrop(off.toDataURL('image/jpeg', 0.92));
+    try {
+      const img = imgRef.current;
+      const scaleX = img.naturalWidth / imgDisplay.w;
+      const scaleY = img.naturalHeight / imgDisplay.h;
+
+      const natX = (crop.x - imgDisplay.x) * scaleX;
+      const natY = (crop.y - imgDisplay.y) * scaleY;
+      const natW = crop.w * scaleX;
+      const natH = crop.h * scaleY;
+
+      const off = document.createElement('canvas');
+      off.width = Math.round(natW);
+      off.height = Math.round(natH);
+      off.getContext('2d').drawImage(img, natX, natY, natW, natH, 0, 0, natW, natH);
+      onCrop(off.toDataURL('image/jpeg', 0.92));
+    } catch (err) {
+      console.error('Crop export error:', err);
+      alert('Could not export cropped image. The image will be used as-is.');
+      onCancel();
+    }
   };
 
   const hasCrop = crop && crop.w >= MIN_CROP && crop.h >= MIN_CROP;
@@ -215,6 +255,13 @@ export default function ImageCropper({ imageSrc, onCrop, onCancel }) {
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        {/* CORS warning banner */}
+        {imgError && (
+          <div className="mx-6 mt-4 px-4 py-2 bg-yellow-900/50 border border-yellow-600/50 rounded-lg text-yellow-300 text-xs">
+            ⚠️ This image was loaded without CORS headers. You can preview and zoom, but cropping will use the full image.
+          </div>
+        )}
 
         {/* Canvas */}
         <div ref={containerRef} className="flex-1 relative overflow-hidden"
@@ -271,7 +318,7 @@ export default function ImageCropper({ imageSrc, onCrop, onCancel }) {
               Cancel
             </button>
             <button onClick={applyCrop}
-                    disabled={!hasCrop}
+                    disabled={!hasCrop || imgError}
                     className="flex items-center gap-1.5 px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
               <Check className="w-4 h-4" /> Apply Crop
             </button>

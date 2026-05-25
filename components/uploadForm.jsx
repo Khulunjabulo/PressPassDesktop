@@ -813,47 +813,65 @@ const handleSetFile = (selectedFile) => {
   };
 
   const handleFileChange = async (e) => {
-    try {
-      const file = e.target.files[0];
-      if (!file) {
-        setFileName('No file chosen');
-        setFormData(prev => ({ ...prev, featuredImage: null, featuredImageUrl: '', imageCredit: prev.imageCredit || '' }));
-        setImagePreview(null);
-        return;
-      }
-      if (!file.type.startsWith('image/')) {
-        setErrors(prev => ({ ...prev, featuredImage: 'Please select a valid image file' }));
-        return;
-      }
-      if (file.size > 5 * 1024 * 1024) {
-        setErrors(prev => ({ ...prev, featuredImage: 'Image size must be less than 5MB' }));
-        return;
-      }
-
-      const localImageUrl = URL.createObjectURL(file);
-      setImagePreview(localImageUrl);
-      setFileName(file.name);
-      setIsUploadingImage(true);
-
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const base64DataUrl = e.target.result;
-        setFormData(prev => ({ ...prev, featuredImage: file, featuredImageUrl: base64DataUrl, imageUrl: base64DataUrl }));
-        setImagePreview(base64DataUrl);
-        setIsUploadingImage(false);
-      };
-      reader.onerror = () => {
-        setErrors(prev => ({ ...prev, featuredImage: 'Failed to read file' }));
-        setIsUploadingImage(false);
-      };
-      reader.readAsDataURL(file);
-      setErrors(prev => ({ ...prev, featuredImage: null }));
-    } catch (error) {
-      console.error('Error handling file change:', error);
-      setErrors(prev => ({ ...prev, featuredImage: 'Error processing file' }));
-      setIsUploadingImage(false);
+  try {
+    const file = e.target.files[0];
+    if (!file) {
+      setFileName('No file chosen');
+      setFormData(prev => ({ ...prev, featuredImage: null, featuredImageUrl: '' }));
+      setImagePreview(null);
+      return;
     }
-  };
+    if (!file.type.startsWith('image/')) {
+      setErrors(prev => ({ ...prev, featuredImage: 'Please select a valid image file' }));
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setErrors(prev => ({ ...prev, featuredImage: 'Image size must be less than 5MB' }));
+      return;
+    }
+
+    // Show a local preview immediately so the user sees something
+    const localPreviewUrl = URL.createObjectURL(file);
+    setImagePreview(localPreviewUrl);
+    setFileName(file.name);
+    setIsUploadingImage(true);
+    setErrors(prev => ({ ...prev, featuredImage: null }));
+
+    // Upload to Cloudinary via our API route
+    const uploadForm = new FormData();
+    uploadForm.append('imageFile', file);
+
+    const response = await fetch('/api/upload-image', {
+      method: 'POST',
+      body: uploadForm,
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      throw new Error(result.error || 'Image upload failed');
+    }
+
+    // Store only the Cloudinary URL — NOT base64
+    setFormData(prev => ({
+      ...prev,
+      featuredImage: null,         // no need to send the file itself anymore
+      featuredImageUrl: result.url, // ✅ small HTTPS URL, not megabytes of base64
+      imageUrl: result.url,
+    }));
+
+    // Update preview to the permanent Cloudinary URL
+    URL.revokeObjectURL(localPreviewUrl);
+    setImagePreview(result.url);
+
+  } catch (error) {
+    console.error('Error uploading image:', error);
+    setErrors(prev => ({ ...prev, featuredImage: error.message || 'Failed to upload image' }));
+    setImagePreview(null);
+  } finally {
+    setIsUploadingImage(false);
+  }
+};
 
   const removeImage = () => {
     setImagePreview(null);

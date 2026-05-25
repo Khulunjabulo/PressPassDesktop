@@ -14,7 +14,7 @@
     "@radix-ui/react-popover": "^1.1.14",
     "@stripe/stripe-js": "^8.5.3",
     "axios": "^1.10.0",
-    "cloudinary": "^2.9.0",
+    "cloudinary": "^2.10.0",
     "date-fns": "^4.1.0",
     "firebase": "^11.10.0",
     "firebase-admin": "^13.4.0",
