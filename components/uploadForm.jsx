@@ -263,15 +263,16 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
         console.log(`📝 Publishing story ${i + 1}/${selectedStories.length}: ${story.headline}`);
         
         try {
-          const articleData = {
+const articleData = {
   title: story.headline || 'Untitled Article',
   subtitle: '',
   author: story.byline || currentUser?.companyName || 'Unknown Author',
   authorTitle: '',
   category: story.category || 'general',
   tags: story.tags || [],
-  featuredImageUrl: story.images?.[0]?.base64 || null,
-  // ✅ NEW: pass through image credit extracted by AI
+  // ✅ FIXED: use .url (Cloudinary URL already uploaded), not .base64
+  featuredImageUrl: story.images?.[0]?.url || story.images?.[0]?.base64 || null,
+  imageUrl:         story.images?.[0]?.url || story.images?.[0]?.base64 || null,
   imageCredit: story.imageCredit || '',
   imageCaption: '',
   content: story.content || '',
@@ -287,7 +288,7 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
   templateId: selectedTemplateId,
   style: templateIdToStyle[selectedTemplateId] || 'classic',
   templateCredit: templateCredit || ''
-}; 
+};
 
           await submitArticle(false, articleData);
           results.success.push(story.headline);
@@ -382,30 +383,31 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
     byline: story.byline || '',
     location: story.location || '',
   });
- 
+
   const setField = (id, value) => {
     const el = document.getElementById(id);
     if (el) el.value = value || '';
   };
- 
+
   setField('headline', story.headline);
   setField('byline', story.byline);
   setField('location', story.location);
   setField('body', story.content);
- 
+
   if (story.category) {
     setField('section', story.category);
   }
- 
+
   if (story.images && story.images.length > 0) {
-    setImagePreview(story.images[0].base64);
+    // ✅ FIXED: use .url (Cloudinary URL), not .base64 (doesn't exist)
+    const imageUrl = story.images[0].url || story.images[0].base64 || null;
+    setImagePreview(imageUrl);
     setFormData(prev => ({
       ...prev,
-      featuredImageUrl: story.images[0].base64,
+      featuredImageUrl: imageUrl,
       imageCredit: story.imageCredit || prev.imageCredit || '',
     }));
   } else {
-    // Still carry over the image credit even if no image thumbnail
     setFormData(prev => ({
       ...prev,
       imageCredit: story.imageCredit || prev.imageCredit || '',
@@ -611,31 +613,43 @@ const handleExtractAndPublish = async (action) => {
   try {
     const { extractTextFromPDF } = await import('../lib/pdfExtractor');
     const pdfText = await extractTextFromPDF(file);
- 
+
     const lines = pdfText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
     const headline = lines[0] || 'Untitled Article';
- 
+
     let byline = '';
     const bylineIndex = lines.findIndex(line => /^by\s+.+/i.test(line));
     if (bylineIndex !== -1) byline = lines[bylineIndex].replace(/^by\s+/i, '').trim();
- 
-    // Also check for ALL-CAPS name line right after headline
+
     if (!byline && lines[1] && /^[A-Z][A-Z\s\-]+$/.test(lines[1]) && lines[1].split(' ').length >= 2) {
       byline = lines[1];
     }
- 
-    // Extract image credit
+
     const imageCreditMatch = pdfText.match(/(?:Picture|Photo|Pic|Image|Foto):\s*([^\n\r.,]+)/i);
     const imageCredit = imageCreditMatch
       ? imageCreditMatch[1].trim().replace(/^(picture|photo|pic|image|foto):\s*/i, '')
       : '';
- 
+
     let contentStartIndex = 1;
     if (bylineIndex !== -1) contentStartIndex = Math.max(contentStartIndex, bylineIndex + 1);
- 
+
     const content = lines.slice(contentStartIndex).join('\n');
     const metaDescription = content.substring(0, 160) + (content.length > 160 ? '...' : '');
- 
+
+    // ✅ NEW: extract first page as image and upload to Cloudinary
+    let featuredImageUrl = '';
+    try {
+      setAiProcessingStatus('Extracting page image...');
+      const images = await aiPdfProcessor.extractImagesFromPDF(file);
+      if (images.length > 0 && images[0].url) {
+        featuredImageUrl = images[0].url;
+        console.log('✅ Got page image URL:', featuredImageUrl);
+      }
+    } catch (imgErr) {
+      console.warn('⚠️ Could not extract page image, continuing without:', imgErr.message);
+    }
+    setAiProcessingStatus('');
+
     const articleData = {
       title: headline,
       subtitle: '',
@@ -644,7 +658,8 @@ const handleExtractAndPublish = async (action) => {
       category: 'general',
       tags: [],
       featuredImage: null,
-      featuredImageUrl: '',
+      featuredImageUrl,          // ✅ Cloudinary URL or empty string
+      imageUrl: featuredImageUrl, // ✅ same URL on both fields
       imageCredit,
       imageCaption: '',
       content,
@@ -661,13 +676,13 @@ const handleExtractAndPublish = async (action) => {
       style: templateIdToStyle[selectedTemplateId] || 'classic',
       templateCredit,
     };
- 
+
     if (onSubmit && typeof onSubmit === 'function') {
       await onSubmit(articleData);
     } else {
-      await submitArticle(action !== 'publish');
+      await submitArticle(action !== 'publish', articleData);  // ✅ pass articleData!
     }
- 
+
     const successMessages = {
       publish: '✅ PDF extracted and published successfully!',
       draft: '💾 Draft saved successfully!',
@@ -675,13 +690,11 @@ const handleExtractAndPublish = async (action) => {
     };
     setUploadStatus({ type: 'success', message: successMessages[action] || '✅ Success!' });
     setUploadError('');
- 
-    // ── CLEAR ALL FIELDS AFTER SUCCESS ──────────────────────────
+
     handleSetFile(null);
     setUploadProgress(null);
     setAutofill({ headline: '', byline: '', location: '' });
- 
-    // Clear DOM inputs on the PDF upload side
+
     const fieldIds = ['headline', 'byline', 'location', 'lead', 'body'];
     fieldIds.forEach(id => {
       const el = document.getElementById(id);
@@ -691,14 +704,14 @@ const handleExtractAndPublish = async (action) => {
     if (sectionEl) sectionEl.selectedIndex = 0;
     const editionEl = document.getElementById('edition');
     if (editionEl) editionEl.selectedIndex = 0;
-    // ─────────────────────────────────────────────────────────────
- 
+
     setTimeout(() => { onClose?.(); }, 2000);
- 
+
   } catch (extractionError) {
     console.error('Error extracting PDF content:', extractionError);
     setUploadError('Failed to extract content from PDF. Please try again or use manual entry.');
     setUploadStatus(null);
+    setAiProcessingStatus('');
   }
 };
 

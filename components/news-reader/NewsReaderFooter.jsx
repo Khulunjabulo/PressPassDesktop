@@ -110,7 +110,7 @@ export default function NewsReaderFooter() {
               className="w-8 h-8 bg-white/20 rounded-sm flex items-center justify-center hover:bg-white/30 transition-colors" aria-label="X">
               <XLogo />
             </a>
-            <a href="https://www.facebook.com" target="_blank" rel="noreferrer"
+            <a href="https://www.facebook.com/profile.php?id=61580291516955" target="_blank" rel="noreferrer"
               className="w-8 h-8 bg-white/20 rounded-sm flex items-center justify-center hover:bg-white/30 transition-colors" aria-label="Facebook">
               <Facebook className="w-4 h-4" />
             </a>
