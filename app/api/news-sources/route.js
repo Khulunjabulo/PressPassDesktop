@@ -157,10 +157,29 @@ export async function GET() {
       })
     );
 
-    // 3️⃣  Remove nulls (inactive), sort newest publisher first
+    // 3️⃣  Remove nulls (inactive).
+    //     Sort: publishers with articles first, ordered by most-recent article date desc.
+    //     Publishers with no articles go last (they appear in Recommended, not the grid).
     const sorted = publishers
       .filter(Boolean)
       .sort((a, b) => {
+        // No articles → always after publishers that have articles
+        if (a.hasArticles && !b.hasArticles) return -1;
+        if (!a.hasArticles && b.hasArticles)  return  1;
+
+        // Both have articles → sort by most recent article date
+        if (a.hasArticles && b.hasArticles) {
+          const getDate = (pub) => {
+            const p = pub.recentStory?.publishedAt;
+            if (!p) return new Date(0);
+            if (p.toDate) return p.toDate();
+            if (typeof p === 'string') return new Date(p);
+            return new Date(0);
+          };
+          return getDate(b) - getDate(a);
+        }
+
+        // Both have no articles → sort by publisher registration date
         const dA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(0);
         const dB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(0);
         return dB - dA;

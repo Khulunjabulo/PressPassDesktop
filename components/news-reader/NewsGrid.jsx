@@ -373,40 +373,50 @@ function AdCreationModal({ isOpen, onClose, adType, dimensions }) {
   );
 }
 
-// ─── Publisher Carousel ──────────────────────────────────────────────────────
+// ─── Shared carousel navigation hook ────────────────────────────────────────
 
-const PUBLISHERS_PER_SLIDE = 10;
-
-function PublisherCarousel({ sources, onSourceClick, onReadMoreClick }) {
+function useCarousel(total, perSlide, autoPlayMs = 0) {
   const [page, setPage]       = useState(0);
-  const [animDir, setAnimDir] = useState(null); // 'left' | 'right' | null
+  const [animDir, setAnimDir] = useState(null);
   const [visible, setVisible] = useState(true);
   const timeoutRef            = useRef(null);
-
-  const totalPages = Math.ceil(sources.length / PUBLISHERS_PER_SLIDE);
+  const autoRef               = useRef(null);
+  const totalPages            = Math.ceil(total / perSlide);
 
   const navigate = useCallback((dir) => {
-    if (animDir) return; // already animating
+    if (animDir) return;
     setAnimDir(dir);
     setVisible(false);
     clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => {
-      setPage((p) => {
-        if (dir === 'right') return (p + 1) % totalPages;
-        return (p - 1 + totalPages) % totalPages;
-      });
+      setPage((p) => dir === 'right' ? (p + 1) % totalPages : (p - 1 + totalPages) % totalPages);
       setVisible(true);
       setAnimDir(null);
     }, 220);
   }, [animDir, totalPages]);
 
-  useEffect(() => () => clearTimeout(timeoutRef.current), []);
+  // Auto-play
+  useEffect(() => {
+    if (!autoPlayMs || totalPages <= 1) return;
+    autoRef.current = setInterval(() => navigate('right'), autoPlayMs);
+    return () => clearInterval(autoRef.current);
+  }, [autoPlayMs, totalPages, navigate]);
 
+  useEffect(() => () => { clearTimeout(timeoutRef.current); clearInterval(autoRef.current); }, []);
+
+  return { page, animDir, visible, totalPages, navigate };
+}
+
+// ─── Publisher Carousel (main grid — publishers WITH articles) ───────────────
+
+const PUBLISHERS_PER_SLIDE = 10;
+
+function PublisherCarousel({ sources, onSourceClick, onReadMoreClick }) {
+  const { page, animDir, visible, totalPages, navigate } = useCarousel(sources.length, PUBLISHERS_PER_SLIDE);
   const slice = sources.slice(page * PUBLISHERS_PER_SLIDE, (page + 1) * PUBLISHERS_PER_SLIDE);
 
   return (
     <div>
-      {/* Header row */}
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-3">
           <h2 className="text-lg sm:text-xl font-bold">Top Headlines</h2>
@@ -414,42 +424,26 @@ function PublisherCarousel({ sources, onSourceClick, onReadMoreClick }) {
         </div>
         {totalPages > 1 && (
           <div className="flex items-center gap-2">
-            {/* Dot indicators */}
             <div className="hidden sm:flex gap-1.5 mr-2">
               {Array.from({ length: totalPages }).map((_, i) => (
-                <button key={i} onClick={() => { if (i !== page) navigate(i > page ? 'right' : 'left'); }} className={`w-2 h-2 rounded-full transition-all duration-300 ${i === page ? 'bg-blue-600 w-5' : 'bg-gray-300 hover:bg-gray-400'}`} />
+                <button key={i} onClick={() => { if (i !== page) navigate(i > page ? 'right' : 'left'); }}
+                  className={`h-2 rounded-full transition-all duration-300 ${i === page ? 'bg-blue-600 w-5' : 'w-2 bg-gray-300 hover:bg-gray-400'}`} />
               ))}
             </div>
             <span className="text-xs text-gray-400 mr-1">{page + 1} / {totalPages}</span>
-            <button
-              onClick={() => navigate('left')}
-              disabled={!!animDir}
-              className="flex items-center justify-center w-8 h-8 rounded-full bg-white border border-gray-200 shadow-sm hover:bg-gray-50 hover:shadow transition-all disabled:opacity-40"
-              aria-label="Previous page"
-            >
-              <ChevronLeft className="w-4 h-4 text-gray-600" />
-            </button>
-            <button
-              onClick={() => navigate('right')}
-              disabled={!!animDir}
-              className="flex items-center justify-center w-8 h-8 rounded-full bg-white border border-gray-200 shadow-sm hover:bg-gray-50 hover:shadow transition-all disabled:opacity-40"
-              aria-label="Next page"
-            >
-              <ChevronRight className="w-4 h-4 text-gray-600" />
-            </button>
+            {[['left', ChevronLeft], ['right', ChevronRight]].map(([dir, Icon]) => (
+              <button key={dir} onClick={() => navigate(dir)} disabled={!!animDir}
+                className="flex items-center justify-center w-8 h-8 rounded-full bg-white border border-gray-200 shadow-sm hover:bg-gray-50 hover:shadow transition-all disabled:opacity-40"
+                aria-label={dir === 'left' ? 'Previous' : 'Next'}>
+                <Icon className="w-4 h-4 text-gray-600" />
+              </button>
+            ))}
           </div>
         )}
       </div>
 
-      {/* Grid */}
-      <div
-        style={{
-          transition: visible ? 'opacity 0.22s ease, transform 0.22s ease' : 'none',
-          opacity: visible ? 1 : 0,
-          transform: visible ? 'translateX(0)' : animDir === 'right' ? 'translateX(-12px)' : 'translateX(12px)',
-        }}
-        className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4"
-      >
+      <div style={{ transition: visible ? 'opacity 0.22s ease, transform 0.22s ease' : 'none', opacity: visible ? 1 : 0, transform: visible ? 'translateX(0)' : animDir === 'right' ? 'translateX(-12px)' : 'translateX(12px)' }}
+        className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         {slice.map((source, idx) => (
           <Fragment key={source.id}>
             <PublisherCard source={source} onSourceClick={onSourceClick} onReadMoreClick={onReadMoreClick} />
@@ -464,6 +458,8 @@ function PublisherCarousel({ sources, onSourceClick, onReadMoreClick }) {
     </div>
   );
 }
+
+
 
 // ─── Single Publisher Card ───────────────────────────────────────────────────
 
@@ -687,22 +683,27 @@ export default function NewsGrid({ articles }) {
               </>
             )}
 
-            {!loadingSources && !sourcesError && newsources.length > 0 && (
+            {!loadingSources && !sourcesError && newsources.filter(s => s.hasArticles).length > 0 && (
               <PublisherCarousel
-                sources={newsources}
+                sources={newsources.filter(s => s.hasArticles)}
                 onSourceClick={handleSourceClick}
                 onReadMoreClick={handleReadMoreClick}
               />
             )}
 
-            {!loadingSources && !sourcesError && newsources.length === 0 && (
+            {!loadingSources && !sourcesError && newsources.filter(s => s.hasArticles).length === 0 && (
               <div className="text-center py-12">
                 <Building className="mx-auto h-10 w-10 text-gray-300" />
-                <h3 className="mt-3 text-sm font-medium text-gray-900">No publishers yet</h3>
-                <p className="mt-1 text-sm text-gray-500">Publishers will appear here once they register.</p>
+                <h3 className="mt-3 text-sm font-medium text-gray-900">No articles published yet</h3>
+                <p className="mt-1 text-sm text-gray-500">Publishers will appear here once they post articles.</p>
               </div>
             )}
+
+
           </section>
+
+          {/* Recommended — inside main column, never overlaps sidebar */}
+          <RecommendedOverlayBottom articles={unique} noArticlePublishers={newsources.filter(s => !s.hasArticles)} />
         </div>
 
         {/* ── Sidebar ── */}
@@ -712,7 +713,6 @@ export default function NewsGrid({ articles }) {
           <AdSlot adType="sidebar_rectangle2" width={300} height={250} onAdvertiseClick={() => handleAdvertiseClick('sidebar_rectangle2', { width: 300, height: 250 })} />
         </aside>
 
-        <RecommendedOverlayBottom articles={unique} />
       </div>
 
       <AdCreationModal
