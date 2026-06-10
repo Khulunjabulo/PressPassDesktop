@@ -14,7 +14,6 @@ export default function Publisher() {
   const [articleSubmissionStatus, setArticleSubmissionStatus] = useState(null);
   const { publisher, loading } = useCurrentPublisher("currentPublisherId");
 
-  // Unified Article Submit (manual & PDF)
   const handleManualArticleSubmit = async (formData) => {
     try {
       setArticleSubmissionStatus({ type: 'loading', message: 'Publishing article...' });
@@ -25,72 +24,62 @@ export default function Publisher() {
       });
       const result = await response.json();
       if (result.success) {
-        setArticleSubmissionStatus({
-          type: 'success',
-          message: result.message
-        });
+        setArticleSubmissionStatus({ type: 'success', message: result.message });
         setTimeout(() => {
           setShowManualUpload(false);
           setArticleSubmissionStatus(null);
         }, 2000);
       } else {
-        setArticleSubmissionStatus({
-          type: 'error',
-          message: result.error || 'Failed to publish article'
-        });
+        setArticleSubmissionStatus({ type: 'error', message: result.error || 'Failed to publish article' });
       }
     } catch (error) {
-      setArticleSubmissionStatus({
-        type: 'error',
-        message: 'Network error. Please try again.'
-      });
+      setArticleSubmissionStatus({ type: 'error', message: 'Network error. Please try again.' });
     }
   };
 
   return (
     <>
       <Header publisher={publisher} />
-      <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row overflow-hidden">
+
+      {/*
+        flex-row: sidebar + main sit side by side
+        min-h-screen: page fills viewport
+        NO overflow-hidden here — that would clip the sticky sidebar
+      */}
+      <div className="flex flex-row min-h-screen bg-gray-50">
         <PublisherSidebar onManualUploadClick={() => setShowManualUpload(true)} />
 
-        {/* Main Content */}
-        <main className="flex-1 p-2 sm:p-4 md:p-6 bg-gray-50 overflow-y-auto">
+        {/* Main content scrolls independently */}
+        <main className="flex-1 overflow-y-auto p-2 sm:p-4 md:p-6 bg-gray-50">
           <div className="w-full max-w-2xl mx-auto">
-            {/* Status Messages */}
+
             {submissionStatus && (
-              <div
-                className={`mb-6 p-4 rounded-md ${
-                  submissionStatus.type === "success"
-                    ? "bg-green-50 border border-green-200 text-green-700"
-                    : "bg-red-50 border border-red-200 text-red-700"
-                }`}
-              >
+              <div className={`mb-6 p-4 rounded-md ${
+                submissionStatus.type === "success"
+                  ? "bg-green-50 border border-green-200 text-green-700"
+                  : "bg-red-50 border border-red-200 text-red-700"
+              }`}>
                 <p className="font-medium">{submissionStatus.message}</p>
               </div>
             )}
 
-            {/* Article Submission Status */}
             {articleSubmissionStatus && (
-              <div
-                className={`mb-6 p-4 rounded-md ${
-                  articleSubmissionStatus.type === "success"
-                    ? "bg-green-50 border border-green-200 text-green-700"
-                    : articleSubmissionStatus.type === "error"
-                    ? "bg-red-50 border border-red-200 text-red-700"
-                    : "bg-blue-50 border border-blue-200 text-blue-700"
-                }`}
-              >
+              <div className={`mb-6 p-4 rounded-md ${
+                articleSubmissionStatus.type === "success"
+                  ? "bg-green-50 border border-green-200 text-green-700"
+                  : articleSubmissionStatus.type === "error"
+                  ? "bg-red-50 border border-red-200 text-red-700"
+                  : "bg-blue-50 border border-blue-200 text-blue-700"
+              }`}>
                 <p className="font-medium">{articleSubmissionStatus.message}</p>
               </div>
             )}
 
-            {/* Upload Form (PDF Upload) */}
             <UploadForm onSubmit={handleManualArticleSubmit} />
           </div>
         </main>
       </div>
 
-      {/* Manual Article Upload Modal */}
       {showManualUpload && (
         <ManualArticleForm
           onSubmit={handleManualArticleSubmit}
