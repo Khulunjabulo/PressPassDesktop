@@ -1,11 +1,13 @@
-// components/MultiStoryPreview.jsx — with image cropper + Cloudinary upload fix
+// components/MultiStoryPreview.jsx — rich text editor in edit mode + proper HTML view
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   CheckCircle, Edit3, Image as ImageIcon, FileText,
   ChevronDown, ChevronUp, Trash2, Save, X,
   User, Camera, MapPin, Tag, Crop,
+  Bold, Italic, Underline, List, AlignLeft, AlignCenter, AlignRight,
+  Link, Type,
 } from 'lucide-react';
 import ImageCropper from './ImageCropper';
 
@@ -146,75 +148,258 @@ export default function MultiStoryPreview({ stories, onPublish, onCancel, onEdit
   );
 }
 
-// ─── Story Card ───────────────────────────────────────────────────────────────
+// ─── Toolbar button ────────────────────────────────────────────────────────────
+function ToolBtn({ onClick, title, children, active }) {
+  return (
+    <button
+      type="button"
+      onMouseDown={(e) => {
+        e.preventDefault(); // keep editor focused
+        onClick();
+      }}
+      title={title}
+      className={`p-1.5 rounded hover:bg-gray-200 transition-colors ${active ? 'bg-gray-200' : ''}`}
+    >
+      {children}
+    </button>
+  );
+}
+
+// ─── Rich Text Editor ─────────────────────────────────────────────────────────
+function RichEditor({ initialContent, onChange }) {
+  const editorRef = useRef(null);
+  const [wordCount, setWordCount] = useState(0);
+
+  // Seed the editor once on mount
+  useEffect(() => {
+    if (editorRef.current && initialContent) {
+      editorRef.current.innerHTML = initialContent;
+      countWords();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const countWords = useCallback(() => {
+    if (!editorRef.current) return;
+    const text = editorRef.current.textContent || '';
+    const count = text.trim().split(/\s+/).filter(Boolean).length;
+    setWordCount(count);
+  }, []);
+
+  const handleInput = useCallback(() => {
+    countWords();
+    if (onChange && editorRef.current) {
+      onChange(editorRef.current.innerHTML);
+    }
+  }, [countWords, onChange]);
+
+  const exec = (cmd, value = null) => {
+    editorRef.current?.focus();
+    document.execCommand(cmd, false, value);
+    handleInput();
+  };
+
+  const insertLink = () => {
+    const url = prompt('Enter URL:');
+    if (url) exec('createLink', url);
+  };
+
+  const FONT_SIZES = ['1', '2', '3', '4', '5', '6', '7'];
+  const FONT_LABELS = ['Tiny', 'Small', 'Normal', 'Large', 'X-Large', '2X-Large', '3X-Large'];
+
+  const FONT_FAMILIES = [
+    { label: 'Default', value: 'inherit' },
+    { label: 'Serif', value: 'Georgia, serif' },
+    { label: 'Sans', value: 'Arial, sans-serif' },
+    { label: 'Mono', value: 'Courier New, monospace' },
+    { label: 'Times', value: 'Times New Roman, serif' },
+  ];
+
+  return (
+    <div className="border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500">
+
+      {/* ── Toolbar row 1: formatting ── */}
+      <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+
+        {/* Font family */}
+        <select
+          onMouseDown={(e) => e.stopPropagation()}
+          onChange={(e) => exec('fontName', e.target.value)}
+          className="text-xs border border-gray-300 rounded px-1 py-1 bg-white mr-1"
+          defaultValue="inherit"
+        >
+          {FONT_FAMILIES.map(f => (
+            <option key={f.value} value={f.value}>{f.label}</option>
+          ))}
+        </select>
+
+        {/* Font size */}
+        <select
+          onMouseDown={(e) => e.stopPropagation()}
+          onChange={(e) => exec('fontSize', e.target.value)}
+          className="text-xs border border-gray-300 rounded px-1 py-1 bg-white mr-1"
+          defaultValue="3"
+        >
+          {FONT_SIZES.map((s, i) => (
+            <option key={s} value={s}>{FONT_LABELS[i]}</option>
+          ))}
+        </select>
+
+        <div className="w-px h-5 bg-gray-300 mx-1" />
+
+        {/* Text style */}
+        <ToolBtn onClick={() => exec('bold')} title="Bold"><Bold className="w-3.5 h-3.5" /></ToolBtn>
+        <ToolBtn onClick={() => exec('italic')} title="Italic"><Italic className="w-3.5 h-3.5" /></ToolBtn>
+        <ToolBtn onClick={() => exec('underline')} title="Underline"><Underline className="w-3.5 h-3.5" /></ToolBtn>
+
+        <div className="w-px h-5 bg-gray-300 mx-1" />
+
+        {/* Block style */}
+        <select
+          onMouseDown={(e) => e.stopPropagation()}
+          onChange={(e) => exec('formatBlock', e.target.value)}
+          className="text-xs border border-gray-300 rounded px-1 py-1 bg-white mr-1"
+          defaultValue="p"
+        >
+          <option value="p">Paragraph</option>
+          <option value="h1">Heading 1</option>
+          <option value="h2">Heading 2</option>
+          <option value="h3">Heading 3</option>
+          <option value="blockquote">Blockquote</option>
+        </select>
+
+        <div className="w-px h-5 bg-gray-300 mx-1" />
+
+        {/* Lists */}
+        <ToolBtn onClick={() => exec('insertUnorderedList')} title="Bullet list"><List className="w-3.5 h-3.5" /></ToolBtn>
+        <ToolBtn onClick={() => exec('insertOrderedList')} title="Numbered list">
+          <span className="text-xs font-bold">1.</span>
+        </ToolBtn>
+
+        <div className="w-px h-5 bg-gray-300 mx-1" />
+
+        {/* Alignment */}
+        <ToolBtn onClick={() => exec('justifyLeft')} title="Align left"><AlignLeft className="w-3.5 h-3.5" /></ToolBtn>
+        <ToolBtn onClick={() => exec('justifyCenter')} title="Align center"><AlignCenter className="w-3.5 h-3.5" /></ToolBtn>
+        <ToolBtn onClick={() => exec('justifyRight')} title="Align right"><AlignRight className="w-3.5 h-3.5" /></ToolBtn>
+
+        <div className="w-px h-5 bg-gray-300 mx-1" />
+
+        {/* Link */}
+        <ToolBtn onClick={insertLink} title="Insert link"><Link className="w-3.5 h-3.5" /></ToolBtn>
+
+        {/* Text colour */}
+        <label title="Text colour" className="p-1.5 rounded hover:bg-gray-200 cursor-pointer flex items-center">
+          <Type className="w-3.5 h-3.5" />
+          <input
+            type="color"
+            className="w-0 h-0 opacity-0 absolute"
+            onChange={(e) => exec('foreColor', e.target.value)}
+          />
+        </label>
+
+        {/* Highlight */}
+        <label title="Highlight" className="p-1.5 rounded hover:bg-gray-200 cursor-pointer flex items-center">
+          <span className="text-xs font-bold bg-yellow-300 px-1 rounded">A</span>
+          <input
+            type="color"
+            className="w-0 h-0 opacity-0 absolute"
+            defaultValue="#FFFF00"
+            onChange={(e) => exec('hiliteColor', e.target.value)}
+          />
+        </label>
+      </div>
+
+      {/* ── Editable area ── */}
+      <div
+        ref={editorRef}
+        contentEditable
+        suppressContentEditableWarning
+        onInput={handleInput}
+        className="p-4 focus:outline-none text-sm text-gray-800 leading-relaxed"
+        style={{
+          minHeight: '520px',
+          maxHeight: '680px',
+          overflowY: 'auto',
+          wordBreak: 'break-word',
+          lineHeight: '1.8',
+        }}
+      />
+
+      {/* ── Footer: word count ── */}
+      <div className="px-3 py-1.5 bg-gray-50 border-t border-gray-200 flex justify-between text-xs text-gray-400">
+        <span>{wordCount} words · ~{Math.max(1, Math.ceil(wordCount / 200))} min read</span>
+        <span>Rich text · HTML preserved on save</span>
+      </div>
+    </div>
+  );
+}
+
+// ─── Story Card ────────────────────────────────────────────────────────────────
 function StoryCard({
   story, index, isSelected, isExpanded, isEditing,
   onToggleSelect, onToggleExpand, onEdit, onCancelEdit, onSave, onDelete,
 }) {
-  const [editData, setEditData]           = useState({ ...story });
-  const [showCropper, setShowCropper]     = useState(false);
+  const [editData, setEditData]               = useState({ ...story });
+  const [showCropper, setShowCropper]         = useState(false);
   const [isCropUploading, setIsCropUploading] = useState(false);
   const [cropUploadError, setCropUploadError] = useState('');
 
-  // Sync editData if the parent story object changes
-  React.useEffect(() => { setEditData({ ...story }); }, [story]);
+  // live HTML content from the rich editor
+  const editorContentRef = useRef(story.content || '');
 
-  const wordCount = (story.content || '').split(/\s+/).filter(Boolean).length;
+  // Sync editData if parent story changes
+  useEffect(() => {
+    setEditData({ ...story });
+    editorContentRef.current = story.content || '';
+  }, [story]);
 
-  // Always prefer the Cloudinary URL (.url); fall back to base64 only for display
+  const wordCount = (story.content || '').replace(/<[^>]*>/g, ' ').split(/\s+/).filter(Boolean).length;
+
+  // Always prefer Cloudinary URL; fall back to base64 for display only
   const currentImage =
     editData.images?.[0]?.url ||
     editData.images?.[0]?.base64 ||
     null;
 
-  // ✅ FIXED: upload cropped base64 to Cloudinary, store the resulting HTTPS URL
+  // ── Crop handler ────────────────────────────────────────────────────────────
   const handleCropDone = async (croppedBase64) => {
     setIsCropUploading(true);
     setCropUploadError('');
 
     try {
-      // Convert base64 data URL → Blob
-      const fetchRes  = await fetch(croppedBase64);
-      const blob      = await fetchRes.blob();
+      const fetchRes = await fetch(croppedBase64);
+      const blob     = await fetchRes.blob();
 
-      const formData  = new FormData();
+      const formData = new FormData();
       formData.append('imageFile', blob, `cropped_${Date.now()}.jpg`);
 
-      const response  = await fetch('/api/upload-image', {
-        method: 'POST',
-        body:   formData,
-      });
+      const response = await fetch('/api/upload-image', { method: 'POST', body: formData });
+      const result   = await response.json();
 
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || 'Cropped image upload failed');
-      }
-
-      // ✅ Store Cloudinary HTTPS URL — resolveImageUrl will accept this
-      const cloudinaryUrl = result.url;
+      if (!response.ok || !result.success) throw new Error(result.error || 'Cropped image upload failed');
 
       const newImages = [
-        { ...(editData.images?.[0] || {}), url: cloudinaryUrl, base64: null },
+        { ...(editData.images?.[0] || {}), url: result.url, base64: null },
         ...(editData.images?.slice(1) || []),
       ];
-
       setEditData(prev => ({ ...prev, images: newImages }));
-      console.log('✅ Cropped image uploaded to Cloudinary:', cloudinaryUrl);
-
     } catch (err) {
       console.error('❌ Crop upload error:', err);
       setCropUploadError('Upload failed — the original image will be used.');
-      // Don't touch editData; keep the original image
     } finally {
       setIsCropUploading(false);
       setShowCropper(false);
     }
   };
 
+  // ── Save: merge live editor HTML into editData ───────────────────────────
+  const handleSave = () => {
+    onSave({ ...editData, content: editorContentRef.current });
+  };
+
   return (
     <>
-      {/* ── Cropper overlay ── */}
       {showCropper && currentImage && (
         <ImageCropper
           imageSrc={currentImage}
@@ -362,14 +547,13 @@ function StoryCard({
                   </div>
                 </div>
 
-                {/* ── Image preview + crop button ── */}
+                {/* Image preview + crop */}
                 {currentImage && (
                   <div>
                     <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
                       <ImageIcon className="w-3.5 h-3.5" /> Article Image
                     </label>
 
-                    {/* Error banner */}
                     {cropUploadError && (
                       <div className="mb-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-red-700 text-xs">
                         ⚠️ {cropUploadError}
@@ -387,17 +571,13 @@ function StoryCard({
                         style={{ maxHeight: '280px', opacity: isCropUploading ? 0.4 : 1 }}
                       />
 
-                      {/* Upload spinner — shown while crop is being uploaded */}
                       {isCropUploading && (
                         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40">
                           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mb-2" />
-                          <p className="text-white text-xs font-medium">
-                            Uploading cropped image...
-                          </p>
+                          <p className="text-white text-xs font-medium">Uploading cropped image...</p>
                         </div>
                       )}
 
-                      {/* Crop hover button — hidden while uploading */}
                       {!isCropUploading && (
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
                           <button
@@ -417,33 +597,31 @@ function StoryCard({
                   </div>
                 )}
 
-                {/* Article body */}
+                {/* ── Rich Text Editor (replaces textarea) ── */}
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
                     Article Body *
-                    <span className="ml-2 text-gray-400 font-normal normal-case">
-                      ({(editData.content || '').split(/\s+/).filter(Boolean).length} words)
-                    </span>
                   </label>
-                  <textarea
-                    value={editData.content || ''}
-                    onChange={e => setEditData(p => ({ ...p, content: e.target.value }))}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 font-mono text-sm leading-relaxed resize-y"
-                    style={{ minHeight: '480px', height: '560px' }}
-                    placeholder="Article body content..."
+                  <RichEditor
+                    initialContent={editData.content || ''}
+                    onChange={(html) => { editorContentRef.current = html; }}
                   />
                 </div>
 
                 {/* Save / Cancel */}
                 <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
                   <button
-                    onClick={() => { setEditData({ ...story }); onCancelEdit(); }}
+                    onClick={() => {
+                      setEditData({ ...story });
+                      editorContentRef.current = story.content || '';
+                      onCancelEdit();
+                    }}
                     className="px-5 py-2.5 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium"
                   >
                     Cancel
                   </button>
                   <button
-                    onClick={() => onSave(editData)}
+                    onClick={handleSave}
                     className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 text-sm font-medium"
                   >
                     <Save className="w-4 h-4" /> Save Changes
@@ -476,7 +654,7 @@ function StoryCard({
                   )}
                 </div>
 
-                {/* Page image — prefer .url (Cloudinary), fall back to .base64 */}
+                {/* Page image */}
                 {story.images?.length > 0 && (story.images[0].url || story.images[0].base64) && (
                   <div className="mb-4">
                     <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Page Image</p>
@@ -488,20 +666,59 @@ function StoryCard({
                   </div>
                 )}
 
+                {/* ── Article preview: render HTML properly with paragraph spacing ── */}
                 <div className="bg-gray-50 rounded-lg border border-gray-100 p-4">
-                  <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Content Preview</p>
-                  <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">
-                    {story.content?.substring(0, 600)}
-                    {story.content?.length > 600 && (
-                      <span className="text-gray-400 italic">
-                        {' '}...({wordCount} words total)
-                      </span>
-                    )}
-                  </p>
+                  <p className="text-xs font-semibold text-gray-500 uppercase mb-3">Content Preview</p>
+
+                  {/* Render HTML content with proper paragraph spacing */}
+                  <div
+                    className="text-sm text-gray-700 leading-relaxed article-preview-content"
+                    style={{
+                      maxHeight: '360px',
+                      overflowY: 'auto',
+                    }}
+                    dangerouslySetInnerHTML={{
+                      __html: story.content
+                        ? story.content.length > 2000
+                          ? story.content.substring(0, 2000) + '<p class="text-gray-400 italic">… preview truncated</p>'
+                          : story.content
+                        : '<p class="text-gray-400 italic">No content</p>',
+                    }}
+                  />
                 </div>
 
+                {/* Paragraph spacing styles injected inline so they work without a global CSS file */}
+                <style>{`
+                  .article-preview-content p {
+                    margin-bottom: 1em;
+                    line-height: 1.75;
+                  }
+                  .article-preview-content h1,
+                  .article-preview-content h2,
+                  .article-preview-content h3 {
+                    font-weight: 700;
+                    margin-top: 1.25em;
+                    margin-bottom: 0.5em;
+                  }
+                  .article-preview-content ul,
+                  .article-preview-content ol {
+                    padding-left: 1.5em;
+                    margin-bottom: 1em;
+                  }
+                  .article-preview-content li {
+                    margin-bottom: 0.3em;
+                  }
+                  .article-preview-content blockquote {
+                    border-left: 3px solid #d1d5db;
+                    padding-left: 1em;
+                    color: #6b7280;
+                    font-style: italic;
+                    margin: 1em 0;
+                  }
+                `}</style>
+
                 <div className="mt-3 flex items-center justify-between text-xs text-gray-400">
-                  <span>{wordCount} words · ~{Math.ceil(wordCount / 200)} min read</span>
+                  <span>{wordCount} words · ~{Math.max(1, Math.ceil(wordCount / 200))} min read</span>
                   <button
                     onClick={onEdit}
                     className="flex items-center gap-1 text-blue-500 hover:text-blue-700 font-medium"
