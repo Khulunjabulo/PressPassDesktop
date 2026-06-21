@@ -263,74 +263,80 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
   };
 
   const handlePublishMultipleStories = async (selectedStories) => {
-    console.log('🚀 Starting to publish multiple stories:', selectedStories.length);
-    
-    setIsSubmitting(true);
-    const results = { success: [], failed: [] };
-
-    try {
-      for (let i = 0; i < selectedStories.length; i++) {
-        const story = selectedStories[i];
-        
-        try {
-          const articleData = {
-            title: story.headline || 'Untitled Article',
-            subtitle: '',
-            author: story.byline || currentUser?.companyName || 'Unknown Author',
-            authorTitle: '',
-            category: story.category || 'general',
-            tags: story.tags || [],
-            featuredImageUrl: story.images?.[0]?.url || null,
-            imageUrl:         story.images?.[0]?.url || null,
-            imageCredit: story.imageCredit || '',
-            imageCaption: '',
-            content: story.content || '',
-            metaDescription: story.content?.substring(0, 160) || '',
-            publishNow: true,
-            allowComments: true,
-            sendNewsletter: false,
-            isDraft: false,
-            wordCount: story.content?.split(/\s+/).filter(w => w.length > 0).length || 0,
-            readingTime: Math.ceil((story.content?.split(/\s+/).filter(w => w.length > 0).length || 0) / 200) || 1,
-            publisherId: currentUser.uid,
-            publisherName: currentUser.companyName || 'Unknown Publisher',
-            templateId: selectedTemplateId,
-            style: templateIdToStyle[selectedTemplateId] || 'classic',
-            templateCredit: templateCredit || ''
-          };
-
-          await submitArticle(false, articleData);
-          results.success.push(story.headline);
-          
-        } catch (error) {
-          console.error('❌ Failed to publish story:', story.headline, error);
-          results.failed.push({ headline: story.headline, error: error.message });
-        }
+  console.log('🚀 Starting to publish multiple stories:', selectedStories.length);
+ 
+  setIsSubmitting(true);
+  const results = { success: [], failed: [] };
+ 
+  try {
+    for (let i = 0; i < selectedStories.length; i++) {
+      const story = selectedStories[i];
+ 
+      try {
+        // Use the template the user chose per-story in MultiStoryPreview;
+        // fall back to the global selectedTemplateId if somehow not set.
+        const resolvedTemplateId = story.templateId || selectedTemplateId;
+        const resolvedStyle      = templateIdToStyle[resolvedTemplateId] || 'classic';
+ 
+        const articleData = {
+          title:           story.headline     || 'Untitled Article',
+          subtitle:        '',
+          author:          story.byline       || currentUser?.companyName || 'Unknown Author',
+          authorTitle:     '',
+          category:        story.category     || 'general',
+          tags:            story.tags         || [],
+          featuredImageUrl: story.images?.[0]?.url || null,
+          imageUrl:         story.images?.[0]?.url || null,
+          imageCredit:     story.imageCredit  || '',
+          imageCaption:    '',
+          content:         story.content      || '',
+          metaDescription: story.content?.substring(0, 160) || '',
+          publishNow:      true,
+          allowComments:   true,
+          sendNewsletter:  false,
+          isDraft:         false,
+          wordCount:       story.content?.split(/\s+/).filter(w => w.length > 0).length || 0,
+          readingTime:     Math.ceil((story.content?.split(/\s+/).filter(w => w.length > 0).length || 0) / 200) || 1,
+          publisherId:     currentUser.uid,
+          publisherName:   currentUser.companyName || 'Unknown Publisher',
+          // ↓ per-story template (the key change)
+          templateId:      resolvedTemplateId,
+          style:           resolvedStyle,
+          templateCredit:  templateCredit || '',
+        };
+ 
+        await submitArticle(false, articleData);
+        results.success.push(story.headline);
+ 
+      } catch (error) {
+        console.error('❌ Failed to publish story:', story.headline, error);
+        results.failed.push({ headline: story.headline, error: error.message });
       }
-
-      if (results.success.length > 0) {
-        setUploadStatus({
-          type: 'success',
-          message: `Successfully published ${results.success.length} article(s): ${results.success.join(', ')}`
-        });
-        setShowMultiStoryPreview(false);
-        setDetectedStories([]);
-        setFile(null);
-        setTimeout(() => { onClose?.(); }, 2000);
-      }
-      
-      if (results.failed.length > 0) {
-        const failedList = results.failed.map(f => `${f.headline}: ${f.error}`).join(' | ');
-        setUploadError(`Failed to publish ${results.failed.length} article(s): ${failedList}`);
-      }
-      
-    } catch (error) {
-      console.error('💥 Error publishing stories:', error);
-      setUploadError('Failed to publish articles: ' + error.message);
-    } finally {
-      setIsSubmitting(false);
     }
-  };
+ 
+    if (results.success.length > 0) {
+      setUploadStatus({
+        type: 'success',
+        message: `Successfully published ${results.success.length} article(s): ${results.success.join(', ')}`,
+      });
+      setShowMultiStoryPreview(false);
+      setDetectedStories([]);
+      setFile(null);
+      setTimeout(() => { onClose?.(); }, 2000);
+    }
+ 
+    if (results.failed.length > 0) {
+      const failedList = results.failed.map(f => `${f.headline}: ${f.error}`).join(' | ');
+      setUploadError(`Failed to publish ${results.failed.length} article(s): ${failedList}`);
+    }
+ 
+  } catch (error) {
+    console.error('💥 Error publishing stories:', error);
+    setUploadError('Failed to publish articles: ' + error.message);
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   const submitArticle = async (isDraft = false, customArticleData = null) => {
     const authToken = await getAuthToken();

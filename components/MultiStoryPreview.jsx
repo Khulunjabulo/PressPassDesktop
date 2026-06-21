@@ -1,4 +1,4 @@
-// components/MultiStoryPreview.jsx — rich text editor in edit mode + proper HTML view
+// components/MultiStoryPreview.jsx — per-story template selector + fullscreen preview
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
@@ -7,15 +7,96 @@ import {
   ChevronDown, ChevronUp, Trash2, Save, X,
   User, Camera, MapPin, Tag, Crop,
   Bold, Italic, Underline, List, AlignLeft, AlignCenter, AlignRight,
-  Link, Type,
+  Link, Type, Eye,
 } from 'lucide-react';
 import ImageCropper from './ImageCropper';
 
+import {
+  FashionMagazineLayout,
+  TechBusinessLayout,
+  ClassicNewspaperLayout,
+  MagazineFeatureLayout,
+  MinimalCleanLayout,
+  ModernGridLayout,
+  EditorialLayout,
+} from './TemplateLayouts';
+
+// ─── Template registry (mirrors FlipCardUploadForm) ──────────────────────────
+const TEMPLATES = [
+  { id: 1, name: 'Fashion Magazine',  component: FashionMagazineLayout,  color: 'from-pink-500 to-purple-500',      style: 'fashion'   },
+  { id: 2, name: 'Tech & Business',   component: TechBusinessLayout,     color: 'from-blue-600 to-blue-800',        style: 'tech'      },
+  { id: 3, name: 'Classic Newspaper', component: ClassicNewspaperLayout, color: 'from-gray-700 to-gray-900',        style: 'classic'   },
+  { id: 4, name: 'Magazine Feature',  component: MagazineFeatureLayout,  color: 'from-yellow-500 to-orange-600',    style: 'magazine'  },
+  { id: 5, name: 'Minimal Clean',     component: MinimalCleanLayout,     color: 'from-gray-300 to-gray-500',        style: 'minimal'   },
+  { id: 6, name: 'Modern Grid',       component: ModernGridLayout,       color: 'from-indigo-600 to-purple-600',    style: 'modern'    },
+  { id: 7, name: 'Editorial Opinion', component: EditorialLayout,        color: 'from-amber-600 to-orange-700',     style: 'editorial' },
+];
+
+const DEFAULT_TEMPLATE_ID = 3;
+
+// ─── Fullscreen template preview modal ───────────────────────────────────────
+function TemplatePreviewModal({ story, templateId, onClose }) {
+  const tpl = TEMPLATES.find(t => t.id === templateId) || TEMPLATES[2];
+  const TemplateComponent = tpl.component;
+
+  const articleForTemplate = {
+    title:           story.headline  || 'Untitled Article',
+    subtitle:        story.subtitle  || '',
+    author:          story.byline    || 'Unknown Author',
+    authorTitle:     '',
+    category:        story.category  || 'news',
+    tags:            story.tags      || [],
+    content:         story.content   || '',
+    metaDescription: story.content   ? story.content.replace(/<[^>]*>/g, '').substring(0, 160) : '',
+    featuredImageUrl: story.images?.[0]?.url || story.images?.[0]?.base64 || null,
+    imageUrl:         story.images?.[0]?.url || story.images?.[0]?.base64 || null,
+    imageCredit:     story.imageCredit || '',
+    imageCaption:    '',
+    createdAt:       new Date().toISOString(),
+    readTime:        Math.max(1, Math.ceil(
+      (story.content || '').replace(/<[^>]*>/g, ' ').split(/\s+/).filter(Boolean).length / 200
+    )),
+    templateCredit:  '',
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/90 z-[60] overflow-y-auto">
+      {/* Sticky header */}
+      <div className="sticky top-0 z-10 bg-blue-700 text-white px-4 py-3 flex items-center justify-between shadow-lg">
+        <div className="flex items-center gap-3">
+          <Eye className="w-5 h-5" />
+          <div>
+            <p className="font-bold text-sm leading-tight">
+              Preview — {tpl.name}
+            </p>
+            <p className="text-blue-200 text-xs">{story.headline || 'Untitled'}</p>
+          </div>
+        </div>
+        <button
+          onClick={onClose}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors"
+        >
+          <X className="w-4 h-4" /> Close Preview
+        </button>
+      </div>
+
+      {/* Template output */}
+      <div className="bg-white">
+        <TemplateComponent article={articleForTemplate} isPreview={true} />
+      </div>
+    </div>
+  );
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
 export default function MultiStoryPreview({ stories, onPublish, onCancel, onEditStory }) {
   const [selectedStories, setSelectedStories] = useState(stories.map((_, i) => i));
   const [expandedStories, setExpandedStories] = useState([0]);
-  const [editingStory, setEditingStory] = useState(null);
-  const [storiesData, setStoriesData] = useState(stories);
+  const [editingStory,    setEditingStory]    = useState(null);
+  const [storiesData,     setStoriesData]     = useState(
+    // seed each story with a default templateId if not already set
+    stories.map(s => ({ ...s, templateId: s.templateId || DEFAULT_TEMPLATE_ID }))
+  );
 
   const toggleSelect = (i) =>
     setSelectedStories(p => p.includes(i) ? p.filter(x => x !== i) : [...p, i]);
@@ -61,7 +142,7 @@ export default function MultiStoryPreview({ stories, onPublish, onCancel, onEdit
                   {storiesData.length} Articles Detected
                 </h2>
                 <p className="text-gray-500 mt-1 text-sm">
-                  Review each article, edit or crop images if needed, then publish.
+                  Review each article, choose a template, preview it, then publish.
                 </p>
               </div>
               <button onClick={onCancel} className="text-gray-400 hover:text-gray-600 p-1">
@@ -71,9 +152,9 @@ export default function MultiStoryPreview({ stories, onPublish, onCancel, onEdit
 
             <div className="grid grid-cols-3 gap-4 mt-5">
               {[
-                { label: 'Total Articles', value: storiesData.length, color: 'blue' },
-                { label: 'Selected',       value: selectedStories.length, color: 'green' },
-                { label: 'Images',         value: totalImages, color: 'purple' },
+                { label: 'Total Articles', value: storiesData.length,      color: 'blue'   },
+                { label: 'Selected',       value: selectedStories.length,  color: 'green'  },
+                { label: 'Images',         value: totalImages,             color: 'purple' },
               ].map(({ label, value, color }) => (
                 <div key={label} className={`bg-${color}-50 rounded-lg p-4 text-center`}>
                   <div className={`text-3xl font-bold text-${color}-600`}>{value}</div>
@@ -148,17 +229,14 @@ export default function MultiStoryPreview({ stories, onPublish, onCancel, onEdit
   );
 }
 
-// ─── Toolbar button ────────────────────────────────────────────────────────────
-function ToolBtn({ onClick, title, children, active }) {
+// ─── Toolbar button ───────────────────────────────────────────────────────────
+function ToolBtn({ onClick, title, children }) {
   return (
     <button
       type="button"
-      onMouseDown={(e) => {
-        e.preventDefault(); // keep editor focused
-        onClick();
-      }}
+      onMouseDown={(e) => { e.preventDefault(); onClick(); }}
       title={title}
-      className={`p-1.5 rounded hover:bg-gray-200 transition-colors ${active ? 'bg-gray-200' : ''}`}
+      className="p-1.5 rounded hover:bg-gray-200 transition-colors"
     >
       {children}
     </button>
@@ -167,10 +245,9 @@ function ToolBtn({ onClick, title, children, active }) {
 
 // ─── Rich Text Editor ─────────────────────────────────────────────────────────
 function RichEditor({ initialContent, onChange }) {
-  const editorRef = useRef(null);
+  const editorRef  = useRef(null);
   const [wordCount, setWordCount] = useState(0);
 
-  // Seed the editor once on mount
   useEffect(() => {
     if (editorRef.current && initialContent) {
       editorRef.current.innerHTML = initialContent;
@@ -181,16 +258,14 @@ function RichEditor({ initialContent, onChange }) {
 
   const countWords = useCallback(() => {
     if (!editorRef.current) return;
-    const text = editorRef.current.textContent || '';
+    const text  = editorRef.current.textContent || '';
     const count = text.trim().split(/\s+/).filter(Boolean).length;
     setWordCount(count);
   }, []);
 
   const handleInput = useCallback(() => {
     countWords();
-    if (onChange && editorRef.current) {
-      onChange(editorRef.current.innerHTML);
-    }
+    if (onChange && editorRef.current) onChange(editorRef.current.innerHTML);
   }, [countWords, onChange]);
 
   const exec = (cmd, value = null) => {
@@ -204,129 +279,66 @@ function RichEditor({ initialContent, onChange }) {
     if (url) exec('createLink', url);
   };
 
-  const FONT_SIZES = ['1', '2', '3', '4', '5', '6', '7'];
-  const FONT_LABELS = ['Tiny', 'Small', 'Normal', 'Large', 'X-Large', '2X-Large', '3X-Large'];
-
+  const FONT_SIZES   = ['1','2','3','4','5','6','7'];
+  const FONT_LABELS  = ['Tiny','Small','Normal','Large','X-Large','2X-Large','3X-Large'];
   const FONT_FAMILIES = [
     { label: 'Default', value: 'inherit' },
-    { label: 'Serif', value: 'Georgia, serif' },
-    { label: 'Sans', value: 'Arial, sans-serif' },
-    { label: 'Mono', value: 'Courier New, monospace' },
-    { label: 'Times', value: 'Times New Roman, serif' },
+    { label: 'Serif',   value: 'Georgia, serif' },
+    { label: 'Sans',    value: 'Arial, sans-serif' },
+    { label: 'Mono',    value: 'Courier New, monospace' },
+    { label: 'Times',   value: 'Times New Roman, serif' },
   ];
 
   return (
     <div className="border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500">
-
-      {/* ── Toolbar row 1: formatting ── */}
       <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-
-        {/* Font family */}
-        <select
-          onMouseDown={(e) => e.stopPropagation()}
-          onChange={(e) => exec('fontName', e.target.value)}
-          className="text-xs border border-gray-300 rounded px-1 py-1 bg-white mr-1"
-          defaultValue="inherit"
-        >
-          {FONT_FAMILIES.map(f => (
-            <option key={f.value} value={f.value}>{f.label}</option>
-          ))}
+        <select onMouseDown={e => e.stopPropagation()} onChange={e => exec('fontName', e.target.value)}
+          className="text-xs border border-gray-300 rounded px-1 py-1 bg-white mr-1" defaultValue="inherit">
+          {FONT_FAMILIES.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
         </select>
-
-        {/* Font size */}
-        <select
-          onMouseDown={(e) => e.stopPropagation()}
-          onChange={(e) => exec('fontSize', e.target.value)}
-          className="text-xs border border-gray-300 rounded px-1 py-1 bg-white mr-1"
-          defaultValue="3"
-        >
-          {FONT_SIZES.map((s, i) => (
-            <option key={s} value={s}>{FONT_LABELS[i]}</option>
-          ))}
+        <select onMouseDown={e => e.stopPropagation()} onChange={e => exec('fontSize', e.target.value)}
+          className="text-xs border border-gray-300 rounded px-1 py-1 bg-white mr-1" defaultValue="3">
+          {FONT_SIZES.map((s, i) => <option key={s} value={s}>{FONT_LABELS[i]}</option>)}
         </select>
-
         <div className="w-px h-5 bg-gray-300 mx-1" />
-
-        {/* Text style */}
-        <ToolBtn onClick={() => exec('bold')} title="Bold"><Bold className="w-3.5 h-3.5" /></ToolBtn>
-        <ToolBtn onClick={() => exec('italic')} title="Italic"><Italic className="w-3.5 h-3.5" /></ToolBtn>
-        <ToolBtn onClick={() => exec('underline')} title="Underline"><Underline className="w-3.5 h-3.5" /></ToolBtn>
-
+        <ToolBtn onClick={() => exec('bold')}      title="Bold">      <Bold      className="w-3.5 h-3.5" /></ToolBtn>
+        <ToolBtn onClick={() => exec('italic')}    title="Italic">    <Italic    className="w-3.5 h-3.5" /></ToolBtn>
+        <ToolBtn onClick={() => exec('underline')} title="Underline"> <Underline className="w-3.5 h-3.5" /></ToolBtn>
         <div className="w-px h-5 bg-gray-300 mx-1" />
-
-        {/* Block style */}
-        <select
-          onMouseDown={(e) => e.stopPropagation()}
-          onChange={(e) => exec('formatBlock', e.target.value)}
-          className="text-xs border border-gray-300 rounded px-1 py-1 bg-white mr-1"
-          defaultValue="p"
-        >
+        <select onMouseDown={e => e.stopPropagation()} onChange={e => exec('formatBlock', e.target.value)}
+          className="text-xs border border-gray-300 rounded px-1 py-1 bg-white mr-1" defaultValue="p">
           <option value="p">Paragraph</option>
           <option value="h1">Heading 1</option>
           <option value="h2">Heading 2</option>
           <option value="h3">Heading 3</option>
           <option value="blockquote">Blockquote</option>
         </select>
-
         <div className="w-px h-5 bg-gray-300 mx-1" />
-
-        {/* Lists */}
         <ToolBtn onClick={() => exec('insertUnorderedList')} title="Bullet list"><List className="w-3.5 h-3.5" /></ToolBtn>
-        <ToolBtn onClick={() => exec('insertOrderedList')} title="Numbered list">
-          <span className="text-xs font-bold">1.</span>
-        </ToolBtn>
-
+        <ToolBtn onClick={() => exec('insertOrderedList')}   title="Numbered list"><span className="text-xs font-bold">1.</span></ToolBtn>
         <div className="w-px h-5 bg-gray-300 mx-1" />
-
-        {/* Alignment */}
-        <ToolBtn onClick={() => exec('justifyLeft')} title="Align left"><AlignLeft className="w-3.5 h-3.5" /></ToolBtn>
-        <ToolBtn onClick={() => exec('justifyCenter')} title="Align center"><AlignCenter className="w-3.5 h-3.5" /></ToolBtn>
-        <ToolBtn onClick={() => exec('justifyRight')} title="Align right"><AlignRight className="w-3.5 h-3.5" /></ToolBtn>
-
+        <ToolBtn onClick={() => exec('justifyLeft')}   title="Align left">   <AlignLeft   className="w-3.5 h-3.5" /></ToolBtn>
+        <ToolBtn onClick={() => exec('justifyCenter')} title="Align center"> <AlignCenter className="w-3.5 h-3.5" /></ToolBtn>
+        <ToolBtn onClick={() => exec('justifyRight')}  title="Align right">  <AlignRight  className="w-3.5 h-3.5" /></ToolBtn>
         <div className="w-px h-5 bg-gray-300 mx-1" />
-
-        {/* Link */}
         <ToolBtn onClick={insertLink} title="Insert link"><Link className="w-3.5 h-3.5" /></ToolBtn>
-
-        {/* Text colour */}
         <label title="Text colour" className="p-1.5 rounded hover:bg-gray-200 cursor-pointer flex items-center">
           <Type className="w-3.5 h-3.5" />
-          <input
-            type="color"
-            className="w-0 h-0 opacity-0 absolute"
-            onChange={(e) => exec('foreColor', e.target.value)}
-          />
+          <input type="color" className="w-0 h-0 opacity-0 absolute" onChange={e => exec('foreColor', e.target.value)} />
         </label>
-
-        {/* Highlight */}
         <label title="Highlight" className="p-1.5 rounded hover:bg-gray-200 cursor-pointer flex items-center">
           <span className="text-xs font-bold bg-yellow-300 px-1 rounded">A</span>
-          <input
-            type="color"
-            className="w-0 h-0 opacity-0 absolute"
-            defaultValue="#FFFF00"
-            onChange={(e) => exec('hiliteColor', e.target.value)}
-          />
+          <input type="color" className="w-0 h-0 opacity-0 absolute" defaultValue="#FFFF00" onChange={e => exec('hiliteColor', e.target.value)} />
         </label>
       </div>
-
-      {/* ── Editable area ── */}
       <div
         ref={editorRef}
         contentEditable
         suppressContentEditableWarning
         onInput={handleInput}
         className="p-4 focus:outline-none text-sm text-gray-800 leading-relaxed"
-        style={{
-          minHeight: '520px',
-          maxHeight: '680px',
-          overflowY: 'auto',
-          wordBreak: 'break-word',
-          lineHeight: '1.8',
-        }}
+        style={{ minHeight: '520px', maxHeight: '680px', overflowY: 'auto', wordBreak: 'break-word', lineHeight: '1.8' }}
       />
-
-      {/* ── Footer: word count ── */}
       <div className="px-3 py-1.5 bg-gray-50 border-t border-gray-200 flex justify-between text-xs text-gray-400">
         <span>{wordCount} words · ~{Math.max(1, Math.ceil(wordCount / 200))} min read</span>
         <span>Rich text · HTML preserved on save</span>
@@ -335,50 +347,80 @@ function RichEditor({ initialContent, onChange }) {
   );
 }
 
-// ─── Story Card ────────────────────────────────────────────────────────────────
+// ─── Template Selector (shown in edit mode) ───────────────────────────────────
+function TemplateSelector({ value, onChange }) {
+  return (
+    <div>
+      <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">
+        Article Template
+      </label>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
+        {TEMPLATES.map(tpl => (
+          <button
+            key={tpl.id}
+            type="button"
+            onClick={() => onChange(tpl.id)}
+            className={`rounded-lg p-2 border-2 text-left transition-all hover:shadow-md ${
+              value === tpl.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white'
+            }`}
+          >
+            <div className={`h-6 w-full rounded bg-gradient-to-r ${tpl.color} mb-1.5`} />
+            <p className="text-xs font-semibold text-gray-700 leading-tight">{tpl.name}</p>
+          </button>
+        ))}
+      </div>
+      {/* Full-width dropdown as an alternative for narrow screens */}
+      <select
+        value={value}
+        onChange={e => onChange(Number(e.target.value))}
+        className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500"
+      >
+        {TEMPLATES.map(tpl => (
+          <option key={tpl.id} value={tpl.id}>{tpl.name}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+// ─── Story Card ───────────────────────────────────────────────────────────────
 function StoryCard({
   story, index, isSelected, isExpanded, isEditing,
   onToggleSelect, onToggleExpand, onEdit, onCancelEdit, onSave, onDelete,
 }) {
-  const [editData, setEditData]               = useState({ ...story });
-  const [showCropper, setShowCropper]         = useState(false);
+  const [editData,        setEditData]        = useState({ ...story, templateId: story.templateId || DEFAULT_TEMPLATE_ID });
+  const [showCropper,     setShowCropper]     = useState(false);
   const [isCropUploading, setIsCropUploading] = useState(false);
   const [cropUploadError, setCropUploadError] = useState('');
+  // Controls the fullscreen template preview
+  const [previewTemplateId, setPreviewTemplateId] = useState(null);
 
-  // live HTML content from the rich editor
   const editorContentRef = useRef(story.content || '');
 
-  // Sync editData if parent story changes
   useEffect(() => {
-    setEditData({ ...story });
+    setEditData({ ...story, templateId: story.templateId || DEFAULT_TEMPLATE_ID });
     editorContentRef.current = story.content || '';
   }, [story]);
 
   const wordCount = (story.content || '').replace(/<[^>]*>/g, ' ').split(/\s+/).filter(Boolean).length;
 
-  // Always prefer Cloudinary URL; fall back to base64 for display only
   const currentImage =
-    editData.images?.[0]?.url ||
+    editData.images?.[0]?.url  ||
     editData.images?.[0]?.base64 ||
     null;
 
-  // ── Crop handler ────────────────────────────────────────────────────────────
+  // ── Crop handler ─────────────────────────────────────────────────────────
   const handleCropDone = async (croppedBase64) => {
     setIsCropUploading(true);
     setCropUploadError('');
-
     try {
       const fetchRes = await fetch(croppedBase64);
       const blob     = await fetchRes.blob();
-
       const formData = new FormData();
       formData.append('imageFile', blob, `cropped_${Date.now()}.jpg`);
-
       const response = await fetch('/api/upload-image', { method: 'POST', body: formData });
       const result   = await response.json();
-
       if (!response.ok || !result.success) throw new Error(result.error || 'Cropped image upload failed');
-
       const newImages = [
         { ...(editData.images?.[0] || {}), url: result.url, base64: null },
         ...(editData.images?.slice(1) || []),
@@ -393,13 +435,33 @@ function StoryCard({
     }
   };
 
-  // ── Save: merge live editor HTML into editData ───────────────────────────
+  // ── Save: merge live editor HTML + templateId into editData ─────────────
   const handleSave = () => {
-    onSave({ ...editData, content: editorContentRef.current });
+    const tpl = TEMPLATES.find(t => t.id === editData.templateId) || TEMPLATES[2];
+    onSave({
+      ...editData,
+      content:    editorContentRef.current,
+      templateId: editData.templateId,
+      style:      tpl.style,
+    });
   };
+
+  // Story data used by the preview modal — merges live edits
+  const storyForPreview = isEditing
+    ? { ...editData, content: editorContentRef.current }
+    : story;
 
   return (
     <>
+      {/* Fullscreen template preview */}
+      {previewTemplateId !== null && (
+        <TemplatePreviewModal
+          story={storyForPreview}
+          templateId={previewTemplateId}
+          onClose={() => setPreviewTemplateId(null)}
+        />
+      )}
+
       {showCropper && currentImage && (
         <ImageCropper
           imageSrc={currentImage}
@@ -434,9 +496,24 @@ function StoryCard({
                 <ImageIcon className="w-3 h-3" />{story.images.length}
               </span>
             )}
+            {/* Show selected template badge */}
+            <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full flex-shrink-0 hidden sm:inline">
+              {TEMPLATES.find(t => t.id === (story.templateId || DEFAULT_TEMPLATE_ID))?.name || 'Classic Newspaper'}
+            </span>
           </div>
 
           <div className="flex items-center gap-1 flex-shrink-0">
+            {/* Preview button — always visible in header */}
+            <button
+              onClick={() => {
+                setPreviewTemplateId(story.templateId || DEFAULT_TEMPLATE_ID);
+                setExpandedStories && null; // no-op, just show modal
+              }}
+              className="p-2 text-green-600 hover:bg-green-50 rounded-lg"
+              title="Preview with template"
+            >
+              <Eye className="w-4 h-4" />
+            </button>
             {!isEditing && (
               <button
                 onClick={onEdit}
@@ -471,9 +548,7 @@ function StoryCard({
 
                 {/* Headline */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
-                    Headline *
-                  </label>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Headline *</label>
                   <input
                     type="text"
                     value={editData.headline || ''}
@@ -534,17 +609,28 @@ function StoryCard({
                       onChange={e => setEditData(p => ({ ...p, category: e.target.value }))}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     >
-                      {[
-                        'news', 'politics', 'business', 'sports', 'education',
-                        'health', 'environment', 'entertainment', 'lifestyle',
-                        'community', 'technology',
-                      ].map(c => (
-                        <option key={c} value={c}>
-                          {c.charAt(0).toUpperCase() + c.slice(1)}
-                        </option>
+                      {['news','politics','business','sports','education','health','environment','entertainment','lifestyle','community','technology'].map(c => (
+                        <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
                       ))}
                     </select>
                   </div>
+                </div>
+
+                {/* ── Template Selector ── */}
+                <div className="p-4 border-2 border-blue-100 rounded-xl bg-blue-50">
+                  <TemplateSelector
+                    value={editData.templateId || DEFAULT_TEMPLATE_ID}
+                    onChange={id => setEditData(p => ({ ...p, templateId: id }))}
+                  />
+                  {/* Preview button tied to current selection */}
+                  <button
+                    type="button"
+                    onClick={() => setPreviewTemplateId(editData.templateId || DEFAULT_TEMPLATE_ID)}
+                    className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-semibold transition-colors"
+                  >
+                    <Eye className="w-4 h-4" />
+                    Preview with {TEMPLATES.find(t => t.id === (editData.templateId || DEFAULT_TEMPLATE_ID))?.name}
+                  </button>
                 </div>
 
                 {/* Image preview + crop */}
@@ -553,13 +639,11 @@ function StoryCard({
                     <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
                       <ImageIcon className="w-3.5 h-3.5" /> Article Image
                     </label>
-
                     {cropUploadError && (
                       <div className="mb-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-red-700 text-xs">
                         ⚠️ {cropUploadError}
                       </div>
                     )}
-
                     <div
                       className="relative group rounded-xl overflow-hidden border border-gray-200 bg-gray-50"
                       style={{ maxHeight: '280px' }}
@@ -570,38 +654,32 @@ function StoryCard({
                         className="w-full object-cover transition-opacity"
                         style={{ maxHeight: '280px', opacity: isCropUploading ? 0.4 : 1 }}
                       />
-
                       {isCropUploading && (
                         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40">
                           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mb-2" />
                           <p className="text-white text-xs font-medium">Uploading cropped image...</p>
                         </div>
                       )}
-
                       {!isCropUploading && (
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
                           <button
                             onClick={() => setShowCropper(true)}
                             className="flex items-center gap-2 px-5 py-2.5 bg-white text-gray-800 rounded-xl font-semibold text-sm shadow-lg hover:bg-blue-50 hover:text-blue-700 transition-colors"
                           >
-                            <Crop className="w-4 h-4" />
-                            Crop Image
+                            <Crop className="w-4 h-4" /> Crop Image
                           </button>
                         </div>
                       )}
                     </div>
-
                     <p className="text-xs text-gray-400 mt-1.5">
                       Hover over the image and click <strong>Crop Image</strong> to select just the photo you need.
                     </p>
                   </div>
                 )}
 
-                {/* ── Rich Text Editor (replaces textarea) ── */}
+                {/* Rich Text Editor */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
-                    Article Body *
-                  </label>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Article Body *</label>
                   <RichEditor
                     initialContent={editData.content || ''}
                     onChange={(html) => { editorContentRef.current = html; }}
@@ -612,7 +690,7 @@ function StoryCard({
                 <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
                   <button
                     onClick={() => {
-                      setEditData({ ...story });
+                      setEditData({ ...story, templateId: story.templateId || DEFAULT_TEMPLATE_ID });
                       editorContentRef.current = story.content || '';
                       onCancelEdit();
                     }}
@@ -654,6 +732,22 @@ function StoryCard({
                   )}
                 </div>
 
+                {/* Template badge + preview button */}
+                <div className="flex items-center justify-between mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-8 h-5 rounded bg-gradient-to-r ${TEMPLATES.find(t => t.id === (story.templateId || DEFAULT_TEMPLATE_ID))?.color || 'from-gray-700 to-gray-900'}`} />
+                    <span className="text-sm font-medium text-gray-700">
+                      {TEMPLATES.find(t => t.id === (story.templateId || DEFAULT_TEMPLATE_ID))?.name || 'Classic Newspaper'}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setPreviewTemplateId(story.templateId || DEFAULT_TEMPLATE_ID)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs font-semibold transition-colors"
+                  >
+                    <Eye className="w-3.5 h-3.5" /> Preview Article
+                  </button>
+                </div>
+
                 {/* Page image */}
                 {story.images?.length > 0 && (story.images[0].url || story.images[0].base64) && (
                   <div className="mb-4">
@@ -666,17 +760,12 @@ function StoryCard({
                   </div>
                 )}
 
-                {/* ── Article preview: render HTML properly with paragraph spacing ── */}
+                {/* Content preview */}
                 <div className="bg-gray-50 rounded-lg border border-gray-100 p-4">
                   <p className="text-xs font-semibold text-gray-500 uppercase mb-3">Content Preview</p>
-
-                  {/* Render HTML content with proper paragraph spacing */}
                   <div
                     className="text-sm text-gray-700 leading-relaxed article-preview-content"
-                    style={{
-                      maxHeight: '360px',
-                      overflowY: 'auto',
-                    }}
+                    style={{ maxHeight: '360px', overflowY: 'auto' }}
                     dangerouslySetInnerHTML={{
                       __html: story.content
                         ? story.content.length > 2000
@@ -687,34 +776,12 @@ function StoryCard({
                   />
                 </div>
 
-                {/* Paragraph spacing styles injected inline so they work without a global CSS file */}
                 <style>{`
-                  .article-preview-content p {
-                    margin-bottom: 1em;
-                    line-height: 1.75;
-                  }
-                  .article-preview-content h1,
-                  .article-preview-content h2,
-                  .article-preview-content h3 {
-                    font-weight: 700;
-                    margin-top: 1.25em;
-                    margin-bottom: 0.5em;
-                  }
-                  .article-preview-content ul,
-                  .article-preview-content ol {
-                    padding-left: 1.5em;
-                    margin-bottom: 1em;
-                  }
-                  .article-preview-content li {
-                    margin-bottom: 0.3em;
-                  }
-                  .article-preview-content blockquote {
-                    border-left: 3px solid #d1d5db;
-                    padding-left: 1em;
-                    color: #6b7280;
-                    font-style: italic;
-                    margin: 1em 0;
-                  }
+                  .article-preview-content p { margin-bottom: 1em; line-height: 1.75; }
+                  .article-preview-content h1,.article-preview-content h2,.article-preview-content h3 { font-weight: 700; margin-top: 1.25em; margin-bottom: 0.5em; }
+                  .article-preview-content ul,.article-preview-content ol { padding-left: 1.5em; margin-bottom: 1em; }
+                  .article-preview-content li { margin-bottom: 0.3em; }
+                  .article-preview-content blockquote { border-left: 3px solid #d1d5db; padding-left: 1em; color: #6b7280; font-style: italic; margin: 1em 0; }
                 `}</style>
 
                 <div className="mt-3 flex items-center justify-between text-xs text-gray-400">
