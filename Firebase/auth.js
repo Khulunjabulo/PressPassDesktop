@@ -1,3 +1,4 @@
+// client-side authentication utilities for Firebase
 "use client"
 import {
   signInWithPopup,

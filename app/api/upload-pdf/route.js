@@ -2,6 +2,35 @@
 import { NextResponse } from 'next/server';
 import { getFirestoreDb } from '../../../lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
+import { v2 as cloudinary } from 'cloudinary';
+
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+/**
+ * Uploads a PDF buffer to Cloudinary and returns the secure URL.
+ */
+async function uploadToCloudinary(buffer, fileName) {
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        resource_type: 'raw',         // Required for PDFs and non-image files
+        folder: 'pdf_articles',       // Organises uploads in a folder
+        public_id: `${Date.now()}_${fileName.replace(/\s+/g, '_')}`,
+        overwrite: false,
+      },
+      (error, result) => {
+        if (error) reject(error);
+        else resolve(result);
+      }
+    );
+    uploadStream.end(buffer);
+  });
+}
 
 export async function POST(req) {
   try {
@@ -43,18 +72,20 @@ export async function POST(req) {
       fileName: pdfFile.name,
       size: pdfFile.size,
       type: pdfFile.type,
-      publisherId
+      publisherId,
     });
 
-    // Convert PDF to base64
+    // Convert file to buffer for Cloudinary upload
     const bytes = await pdfFile.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    const base64Pdf = buffer.toString('base64');
-    const pdfDataUrl = `data:${pdfFile.type};base64,${base64Pdf}`;
 
-    console.log('✅ PDF converted to base64, size:', base64Pdf.length);
+    // Upload to Cloudinary — get back a secure HTTPS URL
+    console.log('☁️ Uploading PDF to Cloudinary...');
+    const cloudinaryResult = await uploadToCloudinary(buffer, pdfFile.name);
+    const pdfUrl = cloudinaryResult.secure_url;
+    console.log('✅ Cloudinary upload successful:', pdfUrl);
 
-    // Create article document with PDF
+    // Build Firestore document — store only the URL, NOT base64
     const articleData = {
       title: title || 'Untitled PDF Article',
       subtitle: '',
@@ -64,47 +95,47 @@ export async function POST(req) {
       description: description || '',
       metaDescription: description || '',
       tags: [],
-      
+
       // PDF-specific fields
       isPdfArticle: true,
-      pdfUrl: pdfDataUrl,
+      pdfUrl,                          // ✅ Cloudinary HTTPS URL (tiny string)
       pdfFileName: pdfFile.name,
       pdfSize: pdfFile.size,
       pdfType: pdfFile.type,
-      
+      cloudinaryPublicId: cloudinaryResult.public_id, // Useful if you want to delete later
+
       // Standard fields
       content: description || `PDF Document: ${pdfFile.name}`,
       style: 'pdf',
       publishNow: !isDraft,
-      isDraft: isDraft,
+      isDraft,
       status: isDraft ? 'draft' : 'published',
-      
+
       // Metadata
       publisherId,
       publisherName: formData.get('publisherName') || '',
       wordCount: 0,
       readingTime: 5,
-      
+
       // Timestamps
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
       publishedAt: isDraft ? null : Timestamp.now(),
-      
+
       // Engagement
       views: 0,
       likes: 0,
       comments: 0,
-      allowComments: false
+      allowComments: false,
     };
 
-    // Save to Firestore
+    // Save lightweight document to Firestore
     const db = getFirestoreDb();
     const publisherRef = db.collection('publishers').doc(publisherId);
     const collectionName = isDraft ? 'drafts' : 'articles';
-    
-    const docRef = await publisherRef.collection(collectionName).add(articleData);
 
-    console.log('✅ PDF article saved with ID:', docRef.id);
+    const docRef = await publisherRef.collection(collectionName).add(articleData);
+    console.log('✅ PDF article saved to Firestore with ID:', docRef.id);
 
     return NextResponse.json({
       success: true,
@@ -112,7 +143,8 @@ export async function POST(req) {
       articleId: docRef.id,
       status: articleData.status,
       collection: collectionName,
-      pdfFileName: pdfFile.name
+      pdfFileName: pdfFile.name,
+      pdfUrl,                          // Return URL to the client too
     });
 
   } catch (error) {

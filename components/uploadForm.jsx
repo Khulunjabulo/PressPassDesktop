@@ -75,7 +75,6 @@ const PreviewToggle = ({ previewStyle, setPreviewStyle }) => (
 );
 
 // ─── Reusable inline toast/status banner ──────────────────────────────────────
-// type: 'success' | 'error' | 'info'
 const StatusBanner = ({ type, message, onDismiss }) => {
   if (!message) return null;
 
@@ -123,9 +122,8 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
   const [file, setFile] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(null);
 
-  // FIX 1 & 2: Separate error and status state for the PDF upload side
   const [uploadError, setUploadError] = useState('');
-  const [uploadStatus, setUploadStatus] = useState(null); // { type: 'success'|'error'|'info', message: string }
+  const [uploadStatus, setUploadStatus] = useState(null);
 
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState(null);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
@@ -165,9 +163,7 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
   const [metaCharCount, setMetaCharCount] = useState(0);
   const [fileName, setFileName] = useState('No file chosen');
   const [errors, setErrors] = useState({});
-
-  // FIX 2: Manual form status — separate from PDF upload status
-  const [manualStatus, setManualStatus] = useState(null); // { type, message }
+  const [manualStatus, setManualStatus] = useState(null);
 
   const [currentUser, setCurrentUser] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
@@ -178,6 +174,24 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
 
   const editorRef = useRef(null);
   const fileInputRef = useRef(null);
+
+  // ─── Derived state: what to show in the PDF upload panel ─────────────────
+  // "extract" mode + no file  → show only mode selector + uploader
+  // "extract" mode + file     → show AI button + detected stories banner
+  // "as-is"   mode + no file  → show only mode selector + uploader
+  // "as-is"   mode + file     → show headline/byline/section fields + PDF preview
+  const isExtractMode  = pdfPublishMode === 'extract';
+  const isAsIsMode     = pdfPublishMode === 'publish-as-is';
+  const hasFile        = !!file;
+
+  // Fields visible only in "publish as PDF" mode after a file is chosen
+  const showAsIsFields     = isAsIsMode && hasFile;
+  // AI button visible only in extract mode after a file is chosen
+  const showAiButton       = isExtractMode && hasFile;
+  // PDF iframe preview only in as-is mode
+  const showPdfPreview     = isAsIsMode && hasFile && immediatePreviewUrl;
+  // Action buttons shown once a file is selected (either mode)
+  const showActionButtons  = hasFile;
 
   const templateIdToStyle = {
     1: 'fashion',
@@ -213,18 +227,15 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
     { value: 'other', label: 'Other' }
   ];
 
-  // ─── AI PDF Processing ───────────────────────────────────────────────────
+  // ─── AI PDF Processing ────────────────────────────────────────────────────
   const handleAiPdfProcessing = async (pdfFile) => {
     console.log('🚀 Starting AI PDF Processing');
-    console.log('📄 File:', pdfFile.name, 'Size:', pdfFile.size);
     
     try {
       setIsProcessingPdf(true);
       setAiProcessingStatus('Analyzing PDF with AI...');
       
       const result = await aiPdfProcessor.processPDF(pdfFile);
-      
-      console.log('✅ AI Result:', result);
       
       if (!result.success) {
         throw new Error(result.error || 'PDF processing failed');
@@ -252,80 +263,84 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
   };
 
   const handlePublishMultipleStories = async (selectedStories) => {
-    console.log('🚀 Starting to publish multiple stories:', selectedStories.length);
-    
-    setIsSubmitting(true);
-    const results = { success: [], failed: [] };
-
-    try {
-      for (let i = 0; i < selectedStories.length; i++) {
-        const story = selectedStories[i];
-        console.log(`📝 Publishing story ${i + 1}/${selectedStories.length}: ${story.headline}`);
-        
-        try {
-          const articleData = {
-            title: story.headline || 'Untitled Article',
-            subtitle: '',
-            author: story.byline || currentUser?.companyName || 'Unknown Author',
-            authorTitle: '',
-            category: story.category || 'general',
-            tags: story.tags || [],
-            featuredImageUrl: story.images?.[0]?.base64 || null,
-            imageCredit: '',
-            imageCaption: '',
-            content: story.content || '',
-            metaDescription: story.content?.substring(0, 160) || '',
-            publishNow: true,
-            allowComments: true,
-            sendNewsletter: false,
-            isDraft: false,
-            wordCount: story.content?.split(/\s+/).filter(w => w.length > 0).length || 0,
-            readingTime: Math.ceil((story.content?.split(/\s+/).filter(w => w.length > 0).length || 0) / 200) || 1,
-            publisherId: currentUser.uid,
-            publisherName: currentUser.companyName || 'Unknown Publisher',
-            templateId: selectedTemplateId,
-            style: templateIdToStyle[selectedTemplateId] || 'classic',
-            templateCredit: templateCredit || ''
-          };
-
-          await submitArticle(false, articleData);
-          results.success.push(story.headline);
-          
-        } catch (error) {
-          console.error('❌ Failed to publish story:', story.headline, error);
-          results.failed.push({ headline: story.headline, error: error.message });
-        }
+  console.log('🚀 Starting to publish multiple stories:', selectedStories.length);
+ 
+  setIsSubmitting(true);
+  const results = { success: [], failed: [] };
+ 
+  try {
+    for (let i = 0; i < selectedStories.length; i++) {
+      const story = selectedStories[i];
+ 
+      try {
+        // Use the template the user chose per-story in MultiStoryPreview;
+        // fall back to the global selectedTemplateId if somehow not set.
+        const resolvedTemplateId = story.templateId || selectedTemplateId;
+        const resolvedStyle      = templateIdToStyle[resolvedTemplateId] || 'classic';
+ 
+        const articleData = {
+          title:           story.headline     || 'Untitled Article',
+          subtitle:        '',
+          author:          story.byline       || currentUser?.companyName || 'Unknown Author',
+          authorTitle:     '',
+          category:        story.category     || 'general',
+          tags:            story.tags         || [],
+          featuredImageUrl: story.images?.[0]?.url || null,
+          imageUrl:         story.images?.[0]?.url || null,
+          imageCredit:     story.imageCredit  || '',
+          imageCaption:    '',
+          content:         story.content      || '',
+          metaDescription: story.content?.substring(0, 160) || '',
+          publishNow:      true,
+          allowComments:   true,
+          sendNewsletter:  false,
+          isDraft:         false,
+          wordCount:       story.content?.split(/\s+/).filter(w => w.length > 0).length || 0,
+          readingTime:     Math.ceil((story.content?.split(/\s+/).filter(w => w.length > 0).length || 0) / 200) || 1,
+          publisherId:     currentUser.uid,
+          publisherName:   currentUser.companyName || 'Unknown Publisher',
+          // ↓ per-story template (the key change)
+          templateId:      resolvedTemplateId,
+          style:           resolvedStyle,
+          templateCredit:  templateCredit || '',
+        };
+ 
+        await submitArticle(false, articleData);
+        results.success.push(story.headline);
+ 
+      } catch (error) {
+        console.error('❌ Failed to publish story:', story.headline, error);
+        results.failed.push({ headline: story.headline, error: error.message });
       }
-
-      if (results.success.length > 0) {
-        setUploadStatus({
-          type: 'success',
-          message: `Successfully published ${results.success.length} article(s): ${results.success.join(', ')}`
-        });
-        setShowMultiStoryPreview(false);
-        setDetectedStories([]);
-        setFile(null);
-        setTimeout(() => { onClose?.(); }, 2000);
-      }
-      
-      if (results.failed.length > 0) {
-        const failedList = results.failed.map(f => `${f.headline}: ${f.error}`).join(' | ');
-        setUploadError(`Failed to publish ${results.failed.length} article(s): ${failedList}`);
-      }
-      
-    } catch (error) {
-      console.error('💥 Error publishing stories:', error);
-      setUploadError('Failed to publish articles: ' + error.message);
-    } finally {
-      setIsSubmitting(false);
     }
-  };
+ 
+    if (results.success.length > 0) {
+      setUploadStatus({
+        type: 'success',
+        message: `Successfully published ${results.success.length} article(s): ${results.success.join(', ')}`,
+      });
+      setShowMultiStoryPreview(false);
+      setDetectedStories([]);
+      setFile(null);
+      setTimeout(() => { onClose?.(); }, 2000);
+    }
+ 
+    if (results.failed.length > 0) {
+      const failedList = results.failed.map(f => `${f.headline}: ${f.error}`).join(' | ');
+      setUploadError(`Failed to publish ${results.failed.length} article(s): ${failedList}`);
+    }
+ 
+  } catch (error) {
+    console.error('💥 Error publishing stories:', error);
+    setUploadError('Failed to publish articles: ' + error.message);
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   const submitArticle = async (isDraft = false, customArticleData = null) => {
     const authToken = await getAuthToken();
-    if (!authToken) {
-      throw new Error('Authentication token required');
-    }
+    if (!authToken) throw new Error('Authentication token required');
 
     const submitData = new FormData();
 
@@ -367,11 +382,7 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
     });
 
     const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.error || `HTTP error! status: ${response.status}`);
-    }
-
+    if (!response.ok) throw new Error(result.error || `HTTP error! status: ${response.status}`);
     return result;
   };
 
@@ -379,21 +390,34 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
     setAutofill({
       headline: story.headline || '',
       byline: story.byline || '',
-      location: story.location || ''
+      location: story.location || '',
     });
-    
-    document.getElementById('headline').value = story.headline || '';
-    document.getElementById('byline').value = story.byline || '';
-    document.getElementById('location').value = story.location || '';
-    document.getElementById('body').value = story.content || '';
-    
-    if (story.category) {
-      document.getElementById('section').value = story.category;
-    }
-    
+
+    const setField = (id, value) => {
+      const el = document.getElementById(id);
+      if (el) el.value = value || '';
+    };
+
+    setField('headline', story.headline);
+    setField('byline', story.byline);
+    setField('location', story.location);
+    setField('body', story.content);
+
+    if (story.category) setField('section', story.category);
+
     if (story.images && story.images.length > 0) {
-      setImagePreview(story.images[0].base64);
-      setFormData(prev => ({ ...prev, featuredImageUrl: story.images[0].base64 }));
+      const imageUrl = story.images[0].url || story.images[0].base64 || null;
+      setImagePreview(imageUrl);
+      setFormData(prev => ({
+        ...prev,
+        featuredImageUrl: imageUrl,
+        imageCredit: story.imageCredit || prev.imageCredit || '',
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        imageCredit: story.imageCredit || prev.imageCredit || '',
+      }));
     }
   };
 
@@ -534,10 +558,10 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
 
   const handlePdfAsIsUpload = async (action) => {
     try {
-      const title = document.getElementById('headline')?.value;
-      const author = document.getElementById('byline')?.value;
+      const title    = document.getElementById('headline')?.value;
+      const author   = document.getElementById('byline')?.value;
       const category = document.getElementById('section')?.value;
-      const description = document.getElementById('lead')?.value || document.getElementById('body')?.value;
+      const description = document.getElementById('lead')?.value || '';
 
       if (!title || !category) {
         setUploadError("Please provide at least a title and category for the PDF.");
@@ -552,7 +576,7 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
       fd.append('publisherName', currentUser.companyName || 'Unknown Publisher');
       fd.append('title', title);
       fd.append('category', category.toLowerCase());
-      fd.append('description', description || '');
+      fd.append('description', description);
       fd.append('author', author || currentUser.companyName || 'Unknown Author');
       fd.append('isDraft', action !== 'publish');
 
@@ -565,7 +589,6 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Failed to upload PDF');
 
-      // FIX 2: Set a clear success message based on action
       const successMessages = {
         publish: '✅ PDF published successfully!',
         draft:   '💾 Draft saved successfully!',
@@ -573,13 +596,8 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
       };
       setUploadStatus({ type: 'success', message: successMessages[action] || '✅ Success!' });
       setUploadError('');
-
       setFile(null);
       setUploadProgress(null);
-      document.getElementById('headline').value = '';
-      document.getElementById('byline').value = '';
-      document.getElementById('lead').value = '';
-      document.getElementById('body').value = '';
       
       setTimeout(() => { onClose?.(); }, 2000);
 
@@ -594,20 +612,43 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
     try {
       const { extractTextFromPDF } = await import('../lib/pdfExtractor');
       const pdfText = await extractTextFromPDF(file);
-      
+
       const lines = pdfText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
       const headline = lines[0] || 'Untitled Article';
-      
+
       let byline = '';
-      const bylineIndex = lines.findIndex(line => line.toLowerCase().startsWith('by '));
-      if (bylineIndex !== -1) byline = lines[bylineIndex].substring(3).trim();
-      
+      const bylineIndex = lines.findIndex(line => /^by\s+.+/i.test(line));
+      if (bylineIndex !== -1) byline = lines[bylineIndex].replace(/^by\s+/i, '').trim();
+
+      if (!byline && lines[1] && /^[A-Z][A-Z\s\-]+$/.test(lines[1]) && lines[1].split(' ').length >= 2) {
+        byline = lines[1];
+      }
+
+      const imageCreditMatch = pdfText.match(/(?:Picture|Photo|Pic|Image|Foto):\s*([^\n\r.,]+)/i);
+      const imageCredit = imageCreditMatch
+        ? imageCreditMatch[1].trim().replace(/^(picture|photo|pic|image|foto):\s*/i, '')
+        : '';
+
       let contentStartIndex = 1;
       if (bylineIndex !== -1) contentStartIndex = Math.max(contentStartIndex, bylineIndex + 1);
-      
+
       const content = lines.slice(contentStartIndex).join('\n');
       const metaDescription = content.substring(0, 160) + (content.length > 160 ? '...' : '');
-      
+
+      // Extract first page image and upload to Cloudinary
+      let featuredImageUrl = '';
+      try {
+        setAiProcessingStatus('Extracting page image...');
+        const images = await aiPdfProcessor.extractImagesFromPDF(file);
+        if (images.length > 0 && images[0].url) {
+          featuredImageUrl = images[0].url;
+          console.log('✅ Got page image URL:', featuredImageUrl);
+        }
+      } catch (imgErr) {
+        console.warn('⚠️ Could not extract page image, continuing without:', imgErr.message);
+      }
+      setAiProcessingStatus('');
+
       const articleData = {
         title: headline,
         subtitle: '',
@@ -616,7 +657,10 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
         category: 'general',
         tags: [],
         featuredImage: null,
-        featuredImageUrl: '',
+        featuredImageUrl,
+        imageUrl: featuredImageUrl,
+        imageCredit,
+        imageCaption: '',
         content,
         metaDescription,
         publishNow: action === 'publish',
@@ -629,16 +673,15 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
         publisherName: currentUser?.companyName || 'Unknown Publisher',
         templateId: selectedTemplateId,
         style: templateIdToStyle[selectedTemplateId] || 'classic',
-        templateCredit
+        templateCredit,
       };
-      
+
       if (onSubmit && typeof onSubmit === 'function') {
         await onSubmit(articleData);
       } else {
-        await submitArticle(action !== 'publish');
+        await submitArticle(action !== 'publish', articleData);
       }
 
-      // FIX 2: Clear and specific success feedback per action
       const successMessages = {
         publish: '✅ PDF extracted and published successfully!',
         draft:   '💾 Draft saved successfully!',
@@ -646,37 +689,32 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
       };
       setUploadStatus({ type: 'success', message: successMessages[action] || '✅ Success!' });
       setUploadError('');
-      
-      setFile(null);
+
+      handleSetFile(null);
       setUploadProgress(null);
-      setAutofill({ headline: "", byline: "", location: "" });
-      
+      setAutofill({ headline: '', byline: '', location: '' });
+
       setTimeout(() => { onClose?.(); }, 2000);
-      
+
     } catch (extractionError) {
       console.error('Error extracting PDF content:', extractionError);
-      setUploadError("Failed to extract content from PDF. Please try again or use manual entry.");
+      setUploadError('Failed to extract content from PDF. Please try again or use manual entry.');
       setUploadStatus(null);
+      setAiProcessingStatus('');
     }
   };
 
-  // ─── FIX 1: handleUploadSubmit — correct file check, clear error when file exists ───
   const handleUploadSubmit = async (action = 'publish') => {
-    // FIX 1: Check the `file` state directly. Do NOT use e.preventDefault() on
-    // button clicks — we pass the action string directly, not a form submit event.
     if (action === 'publish' && !publisherApproval.canPublish) {
       setUploadError(`Cannot publish: ${publisherApproval.reason}`);
       return;
     }
 
-    // FIX 1: Guard — if no file, show the error and stop. But also clear the error
-    // immediately when a file IS present (see setFile wrapper below).
     if (!file) {
       setUploadError("Please select a PDF file to upload.");
       return;
     }
 
-    // FIX 1: File exists — clear any stale "please select a file" error
     setUploadError('');
     setUploadStatus(null);
     setIsSubmitting(true);
@@ -696,12 +734,37 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
     }
   };
 
-  // FIX 1: Wrap setFile so that selecting a file also clears the "no file" error
   const handleSetFile = (selectedFile) => {
     setFile(selectedFile);
+  
     if (selectedFile) {
       setUploadError('');
+    } else {
+      // File removed — reset everything to default state
+      setDetectedStories([]);
+      setShowMultiStoryPreview(false);
+      setAiProcessingStatus('');
+      setUploadError('');
+      setUploadStatus(null);
+      setUploadProgress(null);
+      setAutofill({ headline: '', byline: '', location: '' });
+      setImmediatePreviewUrl(null);
+
+      const fieldIds = ['headline', 'byline', 'location', 'lead', 'body'];
+      fieldIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
+      const sectionEl = document.getElementById('section');
+      if (sectionEl) sectionEl.selectedIndex = 0;
     }
+  };
+
+  // ─── When mode changes, also reset file-dependent state ──────────────────
+  const handleModeChange = (newMode) => {
+    setPdfPublishMode(newMode);
+    // Reset file and all dependent state so the panel returns to "default"
+    handleSetFile(null);
   };
 
   const formatText = (command, value = null) => {
@@ -754,7 +817,7 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
       const file = e.target.files[0];
       if (!file) {
         setFileName('No file chosen');
-        setFormData(prev => ({ ...prev, featuredImage: null, featuredImageUrl: '', imageCredit: prev.imageCredit || '' }));
+        setFormData(prev => ({ ...prev, featuredImage: null, featuredImageUrl: '' }));
         setImagePreview(null);
         return;
       }
@@ -767,27 +830,35 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
         return;
       }
 
-      const localImageUrl = URL.createObjectURL(file);
-      setImagePreview(localImageUrl);
+      const localPreviewUrl = URL.createObjectURL(file);
+      setImagePreview(localPreviewUrl);
       setFileName(file.name);
       setIsUploadingImage(true);
-
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const base64DataUrl = e.target.result;
-        setFormData(prev => ({ ...prev, featuredImage: file, featuredImageUrl: base64DataUrl, imageUrl: base64DataUrl }));
-        setImagePreview(base64DataUrl);
-        setIsUploadingImage(false);
-      };
-      reader.onerror = () => {
-        setErrors(prev => ({ ...prev, featuredImage: 'Failed to read file' }));
-        setIsUploadingImage(false);
-      };
-      reader.readAsDataURL(file);
       setErrors(prev => ({ ...prev, featuredImage: null }));
+
+      const uploadForm = new FormData();
+      uploadForm.append('imageFile', file);
+
+      const response = await fetch('/api/upload-image', { method: 'POST', body: uploadForm });
+      const result = await response.json();
+
+      if (!response.ok || !result.success) throw new Error(result.error || 'Image upload failed');
+
+      setFormData(prev => ({
+        ...prev,
+        featuredImage: null,
+        featuredImageUrl: result.url,
+        imageUrl: result.url,
+      }));
+
+      URL.revokeObjectURL(localPreviewUrl);
+      setImagePreview(result.url);
+
     } catch (error) {
-      console.error('Error handling file change:', error);
-      setErrors(prev => ({ ...prev, featuredImage: 'Error processing file' }));
+      console.error('Error uploading image:', error);
+      setErrors(prev => ({ ...prev, featuredImage: error.message || 'Failed to upload image' }));
+      setImagePreview(null);
+    } finally {
       setIsUploadingImage(false);
     }
   };
@@ -820,9 +891,7 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
   };
 
   const handleEditorKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      setTimeout(() => { handleEditorInput(); }, 10);
-    }
+    if (e.key === 'Enter') setTimeout(() => { handleEditorInput(); }, 10);
   };
 
   const validateForm = () => {
@@ -839,7 +908,6 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
     return Object.keys(newErrors).length === 0;
   };
 
-  // ─── FIX 2: Manual submit — clear success messages per action ───────────────
   const handleManualSubmit = async (e, isDraft = false) => {
     e.preventDefault();
     
@@ -880,7 +948,6 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
         await submitArticle(isDraft);
       }
       
-      // FIX 2: Specific, clear confirmation per action
       setManualStatus({
         type: 'success',
         message: isDraft
@@ -917,7 +984,6 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
     }
   };
 
-  // FIX 2: Save draft — provide feedback before the API call even if title/content is sparse
   const handleManualSaveDraft = async (e) => {
     const title = formData.title.trim();
     const content = editorRef.current?.innerHTML?.trim();
@@ -987,8 +1053,11 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
 
       <div className="flip-card-container">
         <div className={`flip-card ${isFlipped ? 'flipped' : ''}`}>
+
           {/* ══════════════════════ FRONT — PDF Upload ══════════════════════ */}
           <div className="flip-card-front bg-white p-6 w-full min-w-0">
+
+            {/* Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
               <h2 className="text-lg sm:text-xl font-bold text-gray-800">Document Upload</h2>
               <div className="flex gap-2">
@@ -1003,14 +1072,12 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
 
             <ApprovalStatusBanner />
 
-            {/* FIX 2: PDF upload status/success banner */}
+            {/* Status banners */}
             <StatusBanner
               type={uploadStatus?.type}
               message={uploadStatus?.message}
               onDismiss={() => setUploadStatus(null)}
             />
-
-            {/* FIX 1: Error banner — only shows when there's actually an error */}
             {uploadError && (
               <StatusBanner
                 type="error"
@@ -1019,164 +1086,212 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
               />
             )}
 
-            {/* FIX 1: Pass handleSetFile (the wrapper) to FileUpload so selecting a 
-                file automatically clears the "please select a file" error */}
+            {/* ── ALWAYS VISIBLE: PDF Publishing Options + Uploader ── */}
+            {/* The FileUpload component contains the mode selector internally.
+                We pass handleModeChange so switching mode also resets file state. */}
             <FileUpload
               setFile={handleSetFile}
               uploadProgress={uploadProgress}
               onPreview={handlePreview}
               onExtract={(data) => setAutofill(data)}
               pdfPublishMode={pdfPublishMode}
-              setPdfPublishMode={setPdfPublishMode}
+              setPdfPublishMode={handleModeChange}
               onAiProcess={handleAiPdfProcessing}
             />
 
-            {/* AI Test Button */}
-            {file && pdfPublishMode === 'extract' && (
-              <div className="mb-4 p-3 bg-purple-50 border border-purple-200 rounded-md">
-                <button
-                  type="button"
-                  onClick={async () => { await handleAiPdfProcessing(file); }}
-                  className="w-full px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 flex items-center justify-center"
-                  disabled={isProcessingPdf}
-                >
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  {isProcessingPdf ? 'AI Processing...' : '🧪 Test AI Processing (Click to analyze PDF)'}
-                </button>
-                {aiProcessingStatus && <p className="text-sm text-purple-700 mt-2 text-center">{aiProcessingStatus}</p>}
-              </div>
-            )}
-
-            {/* Detected Articles Banner */}
-            {detectedStories.length > 0 && !isProcessingPdf && (
-              <div className="mb-4 p-4 bg-green-50 border-2 border-green-300 rounded-lg">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <CheckCircle className="w-6 h-6 text-green-600 mr-3" />
-                    <div>
-                      <p className="text-sm font-bold text-green-800">
-                        ✅ {detectedStories.length} Article{detectedStories.length !== 1 ? 's' : ''} Detected!
-                      </p>
-                      <p className="text-xs text-green-700 mt-1">
-                        {detectedStories.length === 1 ? 'Review and publish your article' : 'Review, edit, and select which articles to publish'}
-                      </p>
-                    </div>
-                  </div>
+            {/* ══ EXTRACT MODE — only shown after file is selected ══ */}
+            {isExtractMode && hasFile && (
+              <>
+                {/* AI Analyse button */}
+                <div className="mb-4 p-3 bg-purple-50 border border-purple-200 rounded-md">
                   <button
                     type="button"
-                    onClick={() => setShowMultiStoryPreview(true)}
-                    className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold flex items-center shadow-md"
+                    onClick={async () => { await handleAiPdfProcessing(file); }}
+                    className="w-full px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 flex items-center justify-center"
+                    disabled={isProcessingPdf}
                   >
-                    <Eye className="w-5 h-5 mr-2" />View All Articles
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    {isProcessingPdf ? 'AI Processing...' : '🧪 Analyse PDF with AI'}
                   </button>
+                  {aiProcessingStatus && (
+                    <p className="text-sm text-purple-700 mt-2 text-center">{aiProcessingStatus}</p>
+                  )}
                 </div>
-                <div className="mt-3 pt-3 border-t border-green-200">
-                  <p className="text-xs font-medium text-green-700 mb-2">Detected Headlines:</p>
-                  <ul className="space-y-1">
-                    {detectedStories.slice(0, 5).map((story, idx) => (
-                      <li key={idx} className="text-xs text-green-700 flex items-start">
-                        <span className="font-bold mr-2">{idx + 1}.</span>
-                        <span className="flex-1">{story.headline || 'Untitled'}</span>
-                        {story.images?.length > 0 && (
-                          <span className="ml-2 px-2 py-0.5 bg-green-200 text-green-800 rounded text-xs">{story.images.length} img</span>
+
+                {/* AI Processing spinner */}
+                {isProcessingPdf && (
+                  <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
+                    <div className="flex items-center">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mr-3"></div>
+                      <div>
+                        <p className="text-sm font-medium text-blue-800">AI is analysing your PDF...</p>
+                        {aiProcessingStatus && (
+                          <p className="text-xs text-blue-600 mt-1">{aiProcessingStatus}</p>
                         )}
-                      </li>
-                    ))}
-                    {detectedStories.length > 5 && (
-                      <li className="text-xs text-green-600 italic">+ {detectedStories.length - 5} more articles...</li>
-                    )}
-                  </ul>
-                </div>
-              </div>
-            )}
-
-            {/* AI Processing spinner */}
-            {isProcessingPdf && (
-              <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
-                <div className="flex items-center">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mr-3"></div>
-                  <div>
-                    <p className="text-sm font-medium text-blue-800">AI is analyzing your PDF...</p>
-                    {aiProcessingStatus && <p className="text-xs text-blue-600 mt-1">{aiProcessingStatus}</p>}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
+                )}
+
+                {/* Detected Articles Banner */}
+                {detectedStories.length > 0 && !isProcessingPdf && (
+                  <div className="mb-4 p-4 bg-green-50 border-2 border-green-300 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <CheckCircle className="w-6 h-6 text-green-600 mr-3" />
+                        <div>
+                          <p className="text-sm font-bold text-green-800">
+                            ✅ {detectedStories.length} Article{detectedStories.length !== 1 ? 's' : ''} Detected!
+                          </p>
+                          <p className="text-xs text-green-700 mt-1">
+                            {detectedStories.length === 1
+                              ? 'Review and publish your article'
+                              : 'Review, edit, and select which articles to publish'}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowMultiStoryPreview(true)}
+                        className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold flex items-center shadow-md"
+                      >
+                        <Eye className="w-5 h-5 mr-2" />View All Articles
+                      </button>
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-green-200">
+                      <p className="text-xs font-medium text-green-700 mb-2">Detected Headlines:</p>
+                      <ul className="space-y-1">
+                        {detectedStories.slice(0, 5).map((story, idx) => (
+                          <li key={idx} className="text-xs text-green-700 flex items-start">
+                            <span className="font-bold mr-2">{idx + 1}.</span>
+                            <span className="flex-1">{story.headline || 'Untitled'}</span>
+                            {story.images?.length > 0 && (
+                              <span className="ml-2 px-2 py-0.5 bg-green-200 text-green-800 rounded text-xs">
+                                {story.images.length} img
+                              </span>
+                            )}
+                          </li>
+                        ))}
+                        {detectedStories.length > 5 && (
+                          <li className="text-xs text-green-600 italic">
+                            + {detectedStories.length - 5} more articles...
+                          </li>
+                        )}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+
+                {/* Priority selector — still useful for extract mode */}
+                <PrioritySelector priority={priority} setPriority={setPriority} />
+              </>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-3">
-              <input name="headline" id="headline" placeholder="Enter headline..." defaultValue={autofill.headline} className="border p-1.5 rounded-md w-full text-xs" />
-              <input name="byline" id="byline" placeholder="Byline Name" defaultValue={autofill.byline} className="border p-1.5 rounded-md w-full text-xs" />
-              <input name="location" id="location" placeholder="City/Town" defaultValue={autofill.location} className="border p-1.5 rounded-md w-full text-xs" />
-              <select name="section" id="section" className="border p-1.5 rounded-md w-full text-xs">
-                <option>Select Section</option>
-                <option>World</option><option>Politics</option><option>Business</option>
-                <option>Sports</option><option>Education</option><option>Entertainment</option>
-                <option>Health</option><option>Government</option><option>Environment</option><option>Other</option>
-              </select>
-              <select name="edition" id="edition" className="border p-1.5 rounded-md w-full text-xs">
-                <option>Morning Edition</option>
-                <option>Evening Edition</option>
-              </select>
-            </div>
+            {/* ══ PUBLISH AS PDF MODE — fields shown after file is selected ══ */}
+            {showAsIsFields && (
+              <>
+                {/* PDF Preview iframe */}
+                {showPdfPreview && (
+                  <div className="mb-4 bg-white rounded-lg shadow-md p-3">
+                    <div className="flex justify-between items-center mb-2">
+                      <h3 className="text-sm font-semibold text-gray-800">📄 PDF Preview</h3>
+                      <button
+                        onClick={() => { URL.revokeObjectURL(immediatePreviewUrl); setImmediatePreviewUrl(null); }}
+                        className="px-2 py-1 bg-red-600 text-white text-xs rounded-md hover:bg-red-700"
+                      >
+                        Close Preview
+                      </button>
+                    </div>
+                    <div className="border rounded-md overflow-hidden">
+                      <iframe src={immediatePreviewUrl} width="100%" height="200px" className="w-full" title="PDF Preview" />
+                    </div>
+                  </div>
+                )}
 
-            <PrioritySelector priority={priority} setPriority={setPriority} />
+                {/* Metadata fields for Publish-as-PDF */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-3">
+                  <input
+                    name="headline" id="headline"
+                    placeholder="Enter headline..."
+                    defaultValue={autofill.headline}
+                    className="border p-1.5 rounded-md w-full text-xs"
+                  />
+                  <input
+                    name="byline" id="byline"
+                    placeholder="Byline Name"
+                    defaultValue={autofill.byline}
+                    className="border p-1.5 rounded-md w-full text-xs"
+                  />
+                  <input
+                    name="location" id="location"
+                    placeholder="City/Town"
+                    defaultValue={autofill.location}
+                    className="border p-1.5 rounded-md w-full text-xs"
+                  />
+                  <select name="section" id="section" className="border p-1.5 rounded-md w-full text-xs">
+                    <option>Select Section</option>
+                    <option>World</option>
+                    <option>Politics</option>
+                    <option>Business</option>
+                    <option>Sports</option>
+                    <option>Education</option>
+                    <option>Entertainment</option>
+                    <option>Health</option>
+                    <option>Government</option>
+                    <option>Environment</option>
+                    <option>Other</option>
+                  </select>
+                </div>
 
-            <textarea name="lead" id="lead" placeholder="Write the lead paragraph..." className="w-full border p-1.5 rounded-md mb-2 text-xs" rows="2" />
-            <textarea name="body" id="body" placeholder="Continue with the article body..." className="w-full border p-1.5 rounded-md mb-3 text-xs" rows="2" />
+                <PrioritySelector priority={priority} setPriority={setPriority} />
+              </>
+            )}
 
-            {/* FIX 1 + FIX 2: Buttons call handleUploadSubmit(action) directly — 
-                no event object needed, file is checked inside the function */}
-            <div className="flex flex-col sm:flex-row justify-between mb-3 gap-2">
-              <button
-                type="button"
-                onClick={() => handleUploadSubmit('draft')}
-                className="bg-blue-900 text-white px-3 py-1.5 rounded-md hover:bg-blue-800 transition-colors text-xs w-full sm:w-auto disabled:opacity-50"
-                disabled={isSubmitting || !currentUser}
-              >
-                {isSubmitting ? "Saving..." : "SAVE DRAFT"}
-              </button>
-              
-              <button
-                type="button"
-                onClick={() => handleUploadSubmit('review')}
-                className="bg-yellow-400 text-black font-semibold px-3 py-1.5 rounded-md hover:bg-yellow-500 transition-colors text-xs w-full sm:w-auto disabled:opacity-50"
-                disabled={isSubmitting || !currentUser}
-              >
-                {isSubmitting ? "Submitting..." : "SUBMIT FOR REVIEW"}
-              </button>
-              
-              {publisherApproval.canPublish ? (
+            {/* ══ ACTION BUTTONS — shown once any file is selected ══ */}
+            {showActionButtons && (
+              <div className="flex flex-col sm:flex-row justify-between mb-3 gap-2">
                 <button
                   type="button"
-                  onClick={() => handleUploadSubmit('publish')}
-                  className="bg-red-600 text-white px-3 py-1.5 rounded-md hover:bg-red-700 transition-colors text-xs w-full sm:w-auto disabled:opacity-50"
+                  onClick={() => handleUploadSubmit('draft')}
+                  className="bg-blue-900 text-white px-3 py-1.5 rounded-md hover:bg-blue-800 transition-colors text-xs w-full sm:w-auto disabled:opacity-50"
                   disabled={isSubmitting || !currentUser}
                 >
-                  {isSubmitting ? "Publishing..." : "PUBLISH NOW"}
+                  {isSubmitting ? "Saving..." : "SAVE DRAFT"}
                 </button>
-              ) : (
-                <button type="button" disabled className="bg-gray-400 text-white px-3 py-1.5 rounded-md cursor-not-allowed text-xs w-full sm:w-auto" title={publisherApproval.reason}>
-                  PUBLISH RESTRICTED
+                
+                <button
+                  type="button"
+                  onClick={() => handleUploadSubmit('review')}
+                  className="bg-yellow-400 text-black font-semibold px-3 py-1.5 rounded-md hover:bg-yellow-500 transition-colors text-xs w-full sm:w-auto disabled:opacity-50"
+                  disabled={isSubmitting || !currentUser}
+                >
+                  {isSubmitting ? "Submitting..." : "SUBMIT FOR REVIEW"}
                 </button>
-              )}
-            </div>
-
-            <PreviewToggle previewStyle={previewStyle} setPreviewStyle={setPreviewStyle} />
-
-            {immediatePreviewUrl && !pdfPreviewUrl && (
-              <div className="mt-3 bg-white rounded-lg shadow-md p-3">
-                <div className="flex justify-between items-center mb-2">
-                  <h3 className="text-sm font-semibold text-gray-800">PDF Preview (Before Upload)</h3>
-                  <button onClick={() => { URL.revokeObjectURL(immediatePreviewUrl); setImmediatePreviewUrl(null); }} className="px-2 py-1 bg-red-600 text-white text-xs rounded-md hover:bg-red-700">
-                    Close Preview
+                
+                {publisherApproval.canPublish ? (
+                  <button
+                    type="button"
+                    onClick={() => handleUploadSubmit('publish')}
+                    className="bg-red-600 text-white px-3 py-1.5 rounded-md hover:bg-red-700 transition-colors text-xs w-full sm:w-auto disabled:opacity-50"
+                    disabled={isSubmitting || !currentUser}
+                  >
+                    {isSubmitting ? "Publishing..." : "PUBLISH NOW"}
                   </button>
-                </div>
-                <div className="border rounded-md overflow-hidden">
-                  <iframe src={immediatePreviewUrl} width="100%" height="200px" className="w-full" title="PDF Preview" />
-                </div>
+                ) : (
+                  <button
+                    type="button"
+                    disabled
+                    className="bg-gray-400 text-white px-3 py-1.5 rounded-md cursor-not-allowed text-xs w-full sm:w-auto"
+                    title={publisherApproval.reason}
+                  >
+                    PUBLISH RESTRICTED
+                  </button>
+                )}
               </div>
             )}
+
           </div>
+          {/* ══ END FRONT ══ */}
 
           {/* ══════════════════════ BACK — Manual Entry ══════════════════════ */}
           <div className="flip-card-back bg-white p-6 max-h-[90vh] overflow-y-auto w-full min-w-0">
@@ -1204,7 +1319,6 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
               </div>
             )}
 
-            {/* FIX 2: Manual form status banner — shown at the TOP so user sees it */}
             <StatusBanner
               type={manualStatus?.type}
               message={manualStatus?.message}
@@ -1214,7 +1328,6 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
             {errors.submit && (
               <StatusBanner type="error" message={errors.submit} onDismiss={() => setErrors(prev => ({ ...prev, submit: null }))} />
             )}
-
             {errors.auth && (
               <StatusBanner type="info" message={errors.auth} onDismiss={() => setErrors(prev => ({ ...prev, auth: null }))} />
             )}
@@ -1271,7 +1384,7 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
                     className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.author ? 'border-red-500' : 'border-gray-300'}`}>
                     <option value="">Select a journalist</option>
                     {currentUser?.staff
-                      ?.filter(member => 
+                      ?.filter(member =>
                         member.department === 'Editorial' || member.department === 'Journalism' ||
                         member.position?.toLowerCase().includes('journalist') ||
                         member.position?.toLowerCase().includes('reporter') ||
@@ -1286,7 +1399,7 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
                     }
                   </select>
                   {errors.author && <p className="text-red-500 text-sm mt-1">{errors.author}</p>}
-                  {(!currentUser?.staff || currentUser.staff.filter(m => 
+                  {(!currentUser?.staff || currentUser.staff.filter(m =>
                     m.department === 'Editorial' || m.department === 'Journalism' ||
                     m.position?.toLowerCase().includes('journalist')
                   ).length === 0) && (
@@ -1372,7 +1485,7 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
                   {(imagePreview || formData.featuredImageUrl) && (
                     <div className="space-y-2">
                       <div>
-                        <label htmlFor="imageCredit" className="block text-sm font-medium text-gray-600 mb-1">Image Credit (Who took this photo?)</label>
+                        <label htmlFor="imageCredit" className="block text-sm font-medium text-gray-600 mb-1">Image Credit</label>
                         <input type="text" id="imageCredit" name="imageCredit" value={formData.imageCredit} onChange={handleInputChange}
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                           placeholder="e.g., John Smith, Reuters, Getty Images" />
@@ -1494,12 +1607,14 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
                   <p><strong>Restriction Reason:</strong> {publisherApproval.reason || 'None'}</p>
                   <p><strong>Featured Image URL:</strong> {formData.featuredImageUrl || 'Not uploaded'}</p>
                   <p><strong>Template ID:</strong> {selectedTemplateId}</p>
-                  <p><strong>Template Name:</strong> {templates.find(t => t.id === selectedTemplateId)?.name}</p>
+                  <p><strong>PDF Mode:</strong> {pdfPublishMode}</p>
                   <p><strong>PDF File:</strong> {file ? `${file.name} (${(file.size / 1024).toFixed(1)} KB)` : 'None selected'}</p>
                 </div>
               )}
             </form>
           </div>
+          {/* ══ END BACK ══ */}
+
         </div>
       </div>
       
@@ -1514,7 +1629,6 @@ export default function FlipCardUploadForm({ onSubmit, onClose }) {
         </div>
       )}
 
-      {/* FIX 3: Single MultiStoryPreview — removed the duplicate that was at the bottom */}
       {showMultiStoryPreview && (
         <MultiStoryPreview
           stories={detectedStories}

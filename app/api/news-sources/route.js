@@ -1,154 +1,197 @@
-// app/api/news-sources/route.js (More Robust Version)
+// app/api/news-sources/route.js — Optimized Version
 import { NextResponse } from 'next/server';
-import { getFirestore, collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
-import { app } from '@/Firebase/firebase';
+import { getFirestoreDb } from '@/lib/firebase-admin.js';
 
-const db = getFirestore(app);
+// ── Image resolver ───────────────────────────────────────────────────────────
+function resolveImageUrl(data) {
+  const candidates = [
+    data.featuredImageUrl,
+    data.imageUrl,
+    data.image,
+    data.featuredImage,
+  ];
+  for (const c of candidates) {
+    if (!c) continue;
+    if (typeof c === 'string' && c.startsWith('data:')) continue;
+    if (typeof c === 'string' && c.startsWith('http')) return c;
+  }
+  if (data.content) {
+    const m = data.content.match(/https?:\/\/[^\s"'<>]+\.(?:jpg|jpeg|png|gif|webp|svg)/i);
+    if (m) return m[0];
+  }
+  return null;
+}
 
-export async function GET() {
+// ── Strip HTML tags (server-safe, no DOM) ───────────────────────────────────
+function stripHtml(html) {
+  if (!html) return '';
+  return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+// ── Time-ago formatter ───────────────────────────────────────────────────────
+function formatTimeAgo(date) {
   try {
-    console.log('Fetching news sources...');
-    
-    // Fetch all publishers first (without filtering by isActive to debug)
-    const publishersRef = collection(db, 'publishers');
-    let publishersQuery;
-    
-    try {
-      // Try with isActive filter first
-      publishersQuery = query(
-        publishersRef,
-        where('isActive', '==', true)
-      );
-    } catch (error) {
-      console.warn('Error with isActive filter, fetching all publishers:', error);
-      // Fallback: fetch all publishers
-      publishersQuery = query(publishersRef);
-    }
-    
-    const publishersSnapshot = await getDocs(publishersQuery);
-    console.log(`Found ${publishersSnapshot.size} publishers`);
-    
-    if (publishersSnapshot.empty) {
-      return NextResponse.json({
-        success: true,
-        newsources: []
-      });
-    }
-    
-    const publishers = [];
-
-    for (const doc of publishersSnapshot.docs) {
-      try {
-        const publisherData = doc.data();
-        console.log(`Processing publisher: ${publisherData.companyName || doc.id}`);
-        
-        // Skip if not active (if the field exists)
-        if (publisherData.hasOwnProperty('isActive') && !publisherData.isActive) {
-          console.log(`Skipping inactive publisher: ${publisherData.companyName || doc.id}`);
-          continue;
-        }
-        
-        // Get article count for this publisher from their subcollection
-        let articleCount = 0;
-        let lastPosted = 'Just registered';
-        let lastPostedDate = publisherData.createdAt?.toDate ? publisherData.createdAt.toDate() : new Date();
-        
-        try {
-          const articlesRef = collection(db, 'publishers', doc.id, 'articles');
-          const articlesSnapshot = await getDocs(articlesRef);
-          articleCount = articlesSnapshot.size;
-          console.log(`Publisher ${publisherData.companyName || doc.id} has ${articleCount} articles`);
-          
-          if (articleCount > 0) {
-            // Try to get the latest article
-            try {
-              const latestArticleQuery = query(
-                articlesRef,
-                orderBy('createdAt', 'desc'),
-                limit(1)
-              );
-              const latestSnapshot = await getDocs(latestArticleQuery);
-              if (!latestSnapshot.empty) {
-                const latestArticle = latestSnapshot.docs[0].data();
-                lastPostedDate = latestArticle.createdAt?.toDate ? latestArticle.createdAt.toDate() : new Date();
-                lastPosted = formatTimeAgo(lastPostedDate);
-              }
-            } catch (orderError) {
-              console.warn(`Could not order articles for ${publisherData.companyName}:`, orderError);
-              // Fallback: just indicate they have articles
-              lastPosted = 'Recently';
-            }
-          }
-        } catch (articlesError) {
-          console.warn(`Error fetching articles for ${publisherData.companyName}:`, articlesError);
-          // Continue with articleCount = 0
-        }
-
-        publishers.push({
-          id: doc.id,
-          name: publisherData.companyName || 'Unnamed Publisher',
-          city: publisherData.city || "",
-          logo: publisherData.companyLogo || null,
-          industry: publisherData.industry || 'General',
-          publicationType: publisherData.publicationType || 'News',
-          audienceType: publisherData.audienceType || 'General',
-          website: publisherData.companyWebsite || null,
-          description: publisherData.description || '',
-          articleCount,
-          lastPosted,
-          lastPostedDate,
-          createdAt: publisherData.createdAt || null,
-          isActive: publisherData.isActive !== undefined ? publisherData.isActive : true,
-          hasArticles: articleCount > 0
-        });
-      } catch (publisherError) {
-        console.error(`Error processing publisher ${doc.id}:`, publisherError);
-        // Continue with next publisher
-        continue;
-      }
-    }
-
-    console.log(`Successfully processed ${publishers.length} publishers`);
-
-    // Sort publishers (newest first, handling missing dates)
-    publishers.sort((a, b) => {
-      const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(0);
-      const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(0);
-      return dateB - dateA;
-    });
-
-    return NextResponse.json({
-      success: true,
-      newsources: publishers
-    });
-
-  } catch (error) {
-    console.error('Error fetching news sources:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to fetch news sources',
-        details: error.message
-      },
-      { status: 500 }
-    );
+    const diff = Math.floor((Date.now() - date) / 1000);
+    if (diff < 60)       return 'Just now';
+    if (diff < 3600)     return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400)    return `${Math.floor(diff / 3600)}h ago`;
+    if (diff < 2592000)  return `${Math.floor(diff / 86400)}d ago`;
+    if (diff < 31536000) return `${Math.floor(diff / 2592000)}mo ago`;
+    return `${Math.floor(diff / 31536000)}y ago`;
+  } catch {
+    return 'Recently';
   }
 }
 
-// Helper function to format time ago
-function formatTimeAgo(date) {
+export async function GET() {
   try {
-    const now = new Date();
-    const diffInSeconds = Math.floor((now - date) / 1000);
-    
-    if (diffInSeconds < 60) return 'Just now';
-    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-    if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)}d ago`;
-    if (diffInSeconds < 31536000) return `${Math.floor(diffInSeconds / 2592000)}mo ago`;
-    return `${Math.floor(diffInSeconds / 31536000)}y ago`;
+    const db = getFirestoreDb();
+
+    // 1️⃣  Fetch all active publishers in ONE read
+    const publishersSnap = await db
+      .collection('publishers')
+      .where('isActive', '==', true)
+      .get();
+
+    if (publishersSnap.empty) {
+      return NextResponse.json({ success: true, newsources: [] });
+    }
+
+    // 2️⃣  For every publisher, fetch the latest 1 article in parallel.
+    //     No status filter — articles may not have a 'status' field set.
+    //     Try createdAt ordering first, fall back to updatedAt, then unordered.
+    const publishers = await Promise.all(
+      publishersSnap.docs.map(async (pubDoc) => {
+        const pub = pubDoc.data();
+
+        // Skip explicitly inactive publishers that slipped past the query
+        if (pub.hasOwnProperty('isActive') && !pub.isActive) return null;
+
+        let recentStory  = null;
+        let articleCount = 0;
+        let lastPosted   = 'Just registered';
+
+        try {
+          const articlesRef = db
+            .collection('publishers')
+            .doc(pubDoc.id)
+            .collection('articles');
+
+          // Get latest article — try createdAt, fall back to updatedAt, then plain limit
+          const latestSnap = await articlesRef
+            .orderBy('createdAt', 'desc')
+            .limit(1)
+            .get()
+            .catch(() =>
+              articlesRef
+                .orderBy('updatedAt', 'desc')
+                .limit(1)
+                .get()
+                .catch(() => articlesRef.limit(1).get())
+            );
+
+          // Count total articles (Admin SDK .count())
+          const countSnap = await articlesRef
+            .count()
+            .get()
+            .catch(() => null);
+
+          if (countSnap && typeof countSnap.data === 'function') {
+            articleCount = countSnap.data().count ?? latestSnap.size;
+          } else {
+            articleCount = latestSnap.size; // at least 0 or 1
+          }
+
+          // Build recentStory from the latest article doc
+          if (!latestSnap.empty) {
+            const doc      = latestSnap.docs[0];
+            const data     = doc.data();
+            const imageUrl = resolveImageUrl(data);
+
+            // Prefer createdAt, fall back to updatedAt for the "last posted" label
+            const articleDate =
+              data.createdAt?.toDate ? data.createdAt.toDate() :
+              data.updatedAt?.toDate ? data.updatedAt.toDate() :
+              null;
+
+            if (articleDate) lastPosted = formatTimeAgo(articleDate);
+
+            const rawTitle   = stripHtml(data.title || 'Untitled');
+            const rawSummary = stripHtml(
+              data.summary || data.metaDescription || data.content || ''
+            );
+
+            recentStory = {
+              id:          doc.id,
+              title:       rawTitle,
+              excerpt:     rawSummary.length > 150
+                             ? rawSummary.substring(0, 150).trim() + '...'
+                             : rawSummary || 'No preview available.',
+              url:         `/news-reader/article/${doc.id}?publisherId=${pubDoc.id}`,
+              imageUrl,
+              category:    data.category || 'General',
+              publishedAt: data.createdAt || data.updatedAt || null,
+            };
+          }
+        } catch (err) {
+          console.warn(`[news-sources] article fetch failed for ${pubDoc.id}:`, err.message);
+        }
+
+        return {
+          id:              pubDoc.id,
+          name:            pub.companyName    || 'Unnamed Publisher',
+          city:            pub.city           || '',
+          logo:            pub.companyLogo    || null,
+          industry:        pub.industry       || 'General',
+          publicationType: pub.publicationType|| 'News',
+          audienceType:    pub.audienceType   || 'General',
+          website:         pub.companyWebsite || null,
+          description:     pub.description   || '',
+          articleCount,
+          lastPosted,
+          hasArticles: articleCount > 0,
+          recentStory,
+          createdAt: pub.createdAt || null,
+          isActive:  pub.isActive !== undefined ? pub.isActive : true,
+        };
+      })
+    );
+
+    // 3️⃣  Remove nulls (inactive).
+    //     Sort: publishers with articles first, ordered by most-recent article date desc.
+    //     Publishers with no articles go last (they appear in Recommended, not the grid).
+    const sorted = publishers
+      .filter(Boolean)
+      .sort((a, b) => {
+        // No articles → always after publishers that have articles
+        if (a.hasArticles && !b.hasArticles) return -1;
+        if (!a.hasArticles && b.hasArticles)  return  1;
+
+        // Both have articles → sort by most recent article date
+        if (a.hasArticles && b.hasArticles) {
+          const getDate = (pub) => {
+            const p = pub.recentStory?.publishedAt;
+            if (!p) return new Date(0);
+            if (p.toDate) return p.toDate();
+            if (typeof p === 'string') return new Date(p);
+            return new Date(0);
+          };
+          return getDate(b) - getDate(a);
+        }
+
+        // Both have no articles → sort by publisher registration date
+        const dA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(0);
+        const dB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(0);
+        return dB - dA;
+      });
+
+    return NextResponse.json({ success: true, newsources: sorted });
+
   } catch (error) {
-    console.warn('Error formatting time:', error);
-    return 'Recently';
+    console.error('[news-sources] fatal error:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch news sources', details: error.message },
+      { status: 500 }
+    );
   }
 }

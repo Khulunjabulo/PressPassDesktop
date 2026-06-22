@@ -1,135 +1,171 @@
-// components/MultiStoryPreview.jsx - Preview and manage multiple stories from PDF
-'use client'
+// components/MultiStoryPreview.jsx — per-story template selector + fullscreen preview
+'use client';
 
-import React, { useState } from 'react';
-import { 
-  CheckCircle, 
-  XCircle, 
-  Edit3, 
-  Image as ImageIcon, 
-  FileText,
-  ChevronDown,
-  ChevronUp,
-  Trash2,
-  Save,
-  AlertCircle
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import {
+  CheckCircle, Edit3, Image as ImageIcon, FileText,
+  ChevronDown, ChevronUp, Trash2, Save, X,
+  User, Camera, MapPin, Tag, Crop,
+  Bold, Italic, Underline, List, AlignLeft, AlignCenter, AlignRight,
+  Link, Type, Eye,
 } from 'lucide-react';
+import ImageCropper from './ImageCropper';
 
-export default function MultiStoryPreview({ 
-  stories, 
-  onPublish, 
-  onCancel,
-  onEditStory 
-}) {
-  const [selectedStories, setSelectedStories] = useState(
-    stories.map((_, idx) => idx)
-  );
-  const [expandedStories, setExpandedStories] = useState([0]);
-  const [editingStory, setEditingStory] = useState(null);
-  const [storiesData, setStoriesData] = useState(stories);
+import {
+  FashionMagazineLayout,
+  TechBusinessLayout,
+  ClassicNewspaperLayout,
+  MagazineFeatureLayout,
+  MinimalCleanLayout,
+  ModernGridLayout,
+  EditorialLayout,
+} from './TemplateLayouts';
 
-  const toggleStorySelection = (index) => {
-    setSelectedStories(prev => 
-      prev.includes(index) 
-        ? prev.filter(i => i !== index)
-        : [...prev, index]
-    );
-  };
+// ─── Template registry (mirrors FlipCardUploadForm) ──────────────────────────
+const TEMPLATES = [
+  { id: 1, name: 'Fashion Magazine',  component: FashionMagazineLayout,  color: 'from-pink-500 to-purple-500',      style: 'fashion'   },
+  { id: 2, name: 'Tech & Business',   component: TechBusinessLayout,     color: 'from-blue-600 to-blue-800',        style: 'tech'      },
+  { id: 3, name: 'Classic Newspaper', component: ClassicNewspaperLayout, color: 'from-gray-700 to-gray-900',        style: 'classic'   },
+  { id: 4, name: 'Magazine Feature',  component: MagazineFeatureLayout,  color: 'from-yellow-500 to-orange-600',    style: 'magazine'  },
+  { id: 5, name: 'Minimal Clean',     component: MinimalCleanLayout,     color: 'from-gray-300 to-gray-500',        style: 'minimal'   },
+  { id: 6, name: 'Modern Grid',       component: ModernGridLayout,       color: 'from-indigo-600 to-purple-600',    style: 'modern'    },
+  { id: 7, name: 'Editorial Opinion', component: EditorialLayout,        color: 'from-amber-600 to-orange-700',     style: 'editorial' },
+];
 
-  const toggleStoryExpanded = (index) => {
-    setExpandedStories(prev => 
-      prev.includes(index)
-        ? prev.filter(i => i !== index)
-        : [...prev, index]
-    );
-  };
+const DEFAULT_TEMPLATE_ID = 3;
 
-  const handleEditStory = (index) => {
-    setEditingStory(index);
-  };
+// ─── Fullscreen template preview modal ───────────────────────────────────────
+function TemplatePreviewModal({ story, templateId, onClose }) {
+  const tpl = TEMPLATES.find(t => t.id === templateId) || TEMPLATES[2];
+  const TemplateComponent = tpl.component;
 
-  const handleSaveEdit = (index, updatedStory) => {
-    const updated = [...storiesData];
-    updated[index] = updatedStory;
-    setStoriesData(updated);
-    setEditingStory(null);
-  };
-
-  const handleDeleteStory = (index) => {
-    if (confirm('Are you sure you want to delete this story?')) {
-      setStoriesData(prev => prev.filter((_, idx) => idx !== index));
-      setSelectedStories(prev => prev.filter(i => i !== index).map(i => i > index ? i - 1 : i));
-    }
-  };
-
-  const handlePublishSelected = () => {
-    const selectedStoriesData = selectedStories
-      .map(idx => storiesData[idx])
-      .filter(Boolean);
-    
-    onPublish(selectedStoriesData);
-  };
-
-  const handleImageReassign = (storyIndex, imageIndex) => {
-    // Allow user to move image to different story
-    const targetStory = prompt(`Move this image to which story? (Enter number 1-${storiesData.length}):`);
-    if (targetStory) {
-      const targetIndex = parseInt(targetStory) - 1;
-      if (targetIndex >= 0 && targetIndex < storiesData.length && targetIndex !== storyIndex) {
-        const updated = [...storiesData];
-        const image = updated[storyIndex].images[imageIndex];
-        updated[storyIndex].images = updated[storyIndex].images.filter((_, i) => i !== imageIndex);
-        updated[targetIndex].images = [...(updated[targetIndex].images || []), image];
-        setStoriesData(updated);
-      }
-    }
+  const articleForTemplate = {
+    title:           story.headline  || 'Untitled Article',
+    subtitle:        story.subtitle  || '',
+    author:          story.byline    || 'Unknown Author',
+    authorTitle:     '',
+    category:        story.category  || 'news',
+    tags:            story.tags      || [],
+    content:         story.content   || '',
+    metaDescription: story.content   ? story.content.replace(/<[^>]*>/g, '').substring(0, 160) : '',
+    featuredImageUrl: story.images?.[0]?.url || story.images?.[0]?.base64 || null,
+    imageUrl:         story.images?.[0]?.url || story.images?.[0]?.base64 || null,
+    imageCredit:     story.imageCredit || '',
+    imageCaption:    '',
+    createdAt:       new Date().toISOString(),
+    readTime:        Math.max(1, Math.ceil(
+      (story.content || '').replace(/<[^>]*>/g, ' ').split(/\s+/).filter(Boolean).length / 200
+    )),
+    templateCredit:  '',
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 z-50 overflow-y-auto">
-      <div className="min-h-screen bg-gray-50 py-8 px-4">
-        <div className="max-w-6xl mx-auto">
-          {/* Header */}
-          <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-            <div className="flex items-center justify-between mb-4">
+    <div className="fixed inset-0 bg-black/90 z-[60] overflow-y-auto">
+      {/* Sticky header */}
+      <div className="sticky top-0 z-10 bg-blue-700 text-white px-4 py-3 flex items-center justify-between shadow-lg">
+        <div className="flex items-center gap-3">
+          <Eye className="w-5 h-5" />
+          <div>
+            <p className="font-bold text-sm leading-tight">
+              Preview — {tpl.name}
+            </p>
+            <p className="text-blue-200 text-xs">{story.headline || 'Untitled'}</p>
+          </div>
+        </div>
+        <button
+          onClick={onClose}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors"
+        >
+          <X className="w-4 h-4" /> Close Preview
+        </button>
+      </div>
+
+      {/* Template output */}
+      <div className="bg-white">
+        <TemplateComponent article={articleForTemplate} isPreview={true} />
+      </div>
+    </div>
+  );
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
+export default function MultiStoryPreview({ stories, onPublish, onCancel, onEditStory }) {
+  const [selectedStories, setSelectedStories] = useState(stories.map((_, i) => i));
+  const [expandedStories, setExpandedStories] = useState([0]);
+  const [editingStory,    setEditingStory]    = useState(null);
+  const [storiesData,     setStoriesData]     = useState(
+    // seed each story with a default templateId if not already set
+    stories.map(s => ({ ...s, templateId: s.templateId || DEFAULT_TEMPLATE_ID }))
+  );
+
+  const toggleSelect = (i) =>
+    setSelectedStories(p => p.includes(i) ? p.filter(x => x !== i) : [...p, i]);
+
+  const toggleExpand = (i) =>
+    setExpandedStories(p => p.includes(i) ? p.filter(x => x !== i) : [...p, i]);
+
+  const handleSaveEdit = (index, updated) => {
+    const next = [...storiesData];
+    next[index] = updated;
+    setStoriesData(next);
+    if (onEditStory) onEditStory(index, updated);
+    setEditingStory(null);
+  };
+
+  const handleDelete = (index) => {
+    if (!confirm('Remove this story?')) return;
+    setStoriesData(p => p.filter((_, i) => i !== index));
+    setSelectedStories(p =>
+      p.filter(i => i !== index).map(i => (i > index ? i - 1 : i))
+    );
+    if (editingStory === index) setEditingStory(null);
+  };
+
+  const handlePublish = () => {
+    const selected = selectedStories.map(i => storiesData[i]).filter(Boolean);
+    onPublish(selected);
+  };
+
+  const totalImages = storiesData.reduce((a, s) => a + (s.images?.length || 0), 0);
+
+  return (
+    <div className="fixed inset-0 bg-black/80 z-50 overflow-y-auto">
+      <div className="min-h-screen bg-gray-100 py-6 px-4">
+        <div className="max-w-5xl mx-auto">
+
+          {/* ── Header ── */}
+          <div className="bg-white rounded-xl shadow-lg p-6 mb-5 border border-gray-200">
+            <div className="flex items-start justify-between">
               <div>
-                <h2 className="text-2xl font-bold text-gray-800 flex items-center">
-                  <FileText className="w-7 h-7 mr-3 text-blue-600" />
-                  Multiple Stories Detected
+                <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
+                  <FileText className="w-7 h-7 text-blue-600" />
+                  {storiesData.length} Articles Detected
                 </h2>
-                <p className="text-gray-600 mt-2">
-                  We found {storiesData.length} articles in your PDF. Review, edit, and select which ones to publish.
+                <p className="text-gray-500 mt-1 text-sm">
+                  Review each article, choose a template, preview it, then publish.
                 </p>
               </div>
-              <button
-                onClick={onCancel}
-                className="text-gray-500 hover:text-gray-700 text-3xl font-bold"
-              >
-                ×
+              <button onClick={onCancel} className="text-gray-400 hover:text-gray-600 p-1">
+                <X className="w-6 h-6" />
               </button>
             </div>
 
-            {/* Summary Stats */}
-            <div className="grid grid-cols-3 gap-4 mt-4">
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <div className="text-2xl font-bold text-blue-600">{storiesData.length}</div>
-                <div className="text-sm text-gray-600">Total Stories</div>
-              </div>
-              <div className="bg-green-50 p-4 rounded-lg">
-                <div className="text-2xl font-bold text-green-600">{selectedStories.length}</div>
-                <div className="text-sm text-gray-600">Selected</div>
-              </div>
-              <div className="bg-purple-50 p-4 rounded-lg">
-                <div className="text-2xl font-bold text-purple-600">
-                  {storiesData.reduce((acc, s) => acc + (s.images?.length || 0), 0)}
+            <div className="grid grid-cols-3 gap-4 mt-5">
+              {[
+                { label: 'Total Articles', value: storiesData.length,      color: 'blue'   },
+                { label: 'Selected',       value: selectedStories.length,  color: 'green'  },
+                { label: 'Images',         value: totalImages,             color: 'purple' },
+              ].map(({ label, value, color }) => (
+                <div key={label} className={`bg-${color}-50 rounded-lg p-4 text-center`}>
+                  <div className={`text-3xl font-bold text-${color}-600`}>{value}</div>
+                  <div className="text-xs text-gray-500 mt-1">{label}</div>
                 </div>
-                <div className="text-sm text-gray-600">Total Images</div>
-              </div>
+              ))}
             </div>
           </div>
 
-          {/* Stories List */}
-          <div className="space-y-4 mb-6">
+          {/* ── Story cards ── */}
+          <div className="space-y-4 mb-24">
             {storiesData.map((story, index) => (
               <StoryCard
                 key={index}
@@ -138,245 +174,630 @@ export default function MultiStoryPreview({
                 isSelected={selectedStories.includes(index)}
                 isExpanded={expandedStories.includes(index)}
                 isEditing={editingStory === index}
-                onToggleSelect={() => toggleStorySelection(index)}
-                onToggleExpand={() => toggleStoryExpanded(index)}
-                onEdit={() => handleEditStory(index)}
+                onToggleSelect={() => toggleSelect(index)}
+                onToggleExpand={() => toggleExpand(index)}
+                onEdit={() => {
+                  setExpandedStories(p => p.includes(index) ? p : [...p, index]);
+                  setEditingStory(index);
+                }}
+                onCancelEdit={() => setEditingStory(null)}
                 onSave={(updated) => handleSaveEdit(index, updated)}
-                onDelete={() => handleDeleteStory(index)}
-                onImageReassign={(imgIdx) => handleImageReassign(index, imgIdx)}
+                onDelete={() => handleDelete(index)}
               />
             ))}
           </div>
 
-          {/* Action Buttons */}
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <div className="flex items-center justify-between">
+          {/* ── Sticky action bar ── */}
+          <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-2xl z-10">
+            <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between gap-4 flex-wrap">
               <button
                 onClick={onCancel}
-                className="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                className="px-5 py-2.5 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 text-sm font-medium"
               >
                 Cancel
               </button>
-              
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center gap-3 flex-wrap">
                 <button
                   onClick={() => setSelectedStories(storiesData.map((_, i) => i))}
-                  className="px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                  className="text-sm text-blue-600 hover:underline"
                 >
                   Select All
                 </button>
+                <span className="text-gray-300">|</span>
                 <button
                   onClick={() => setSelectedStories([])}
-                  className="px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+                  className="text-sm text-gray-500 hover:underline"
                 >
                   Deselect All
                 </button>
                 <button
-                  onClick={handlePublishSelected}
+                  onClick={handlePublish}
                   disabled={selectedStories.length === 0}
-                  className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center"
+                  className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2 font-semibold text-sm"
                 >
-                  <CheckCircle className="w-5 h-5 mr-2" />
-                  Publish {selectedStories.length} {selectedStories.length === 1 ? 'Story' : 'Stories'}
+                  <CheckCircle className="w-4 h-4" />
+                  Publish {selectedStories.length}{' '}
+                  {selectedStories.length === 1 ? 'Article' : 'Articles'}
                 </button>
               </div>
             </div>
           </div>
+
         </div>
       </div>
     </div>
   );
 }
 
-// Individual Story Card Component
-function StoryCard({ 
-  story, 
-  index, 
-  isSelected, 
-  isExpanded, 
-  isEditing,
-  onToggleSelect, 
-  onToggleExpand,
-  onEdit,
-  onSave,
-  onDelete,
-  onImageReassign
-}) {
-  const [editData, setEditData] = useState(story);
+// ─── Toolbar button ───────────────────────────────────────────────────────────
+function ToolBtn({ onClick, title, children }) {
+  return (
+    <button
+      type="button"
+      onMouseDown={(e) => { e.preventDefault(); onClick(); }}
+      title={title}
+      className="p-1.5 rounded hover:bg-gray-200 transition-colors"
+    >
+      {children}
+    </button>
+  );
+}
 
-  const handleSave = () => {
-    onSave(editData);
+// ─── Rich Text Editor ─────────────────────────────────────────────────────────
+function RichEditor({ initialContent, onChange }) {
+  const editorRef  = useRef(null);
+  const [wordCount, setWordCount] = useState(0);
+
+  useEffect(() => {
+    if (editorRef.current && initialContent) {
+      editorRef.current.innerHTML = initialContent;
+      countWords();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const countWords = useCallback(() => {
+    if (!editorRef.current) return;
+    const text  = editorRef.current.textContent || '';
+    const count = text.trim().split(/\s+/).filter(Boolean).length;
+    setWordCount(count);
+  }, []);
+
+  const handleInput = useCallback(() => {
+    countWords();
+    if (onChange && editorRef.current) onChange(editorRef.current.innerHTML);
+  }, [countWords, onChange]);
+
+  const exec = (cmd, value = null) => {
+    editorRef.current?.focus();
+    document.execCommand(cmd, false, value);
+    handleInput();
   };
 
+  const insertLink = () => {
+    const url = prompt('Enter URL:');
+    if (url) exec('createLink', url);
+  };
+
+  const FONT_SIZES   = ['1','2','3','4','5','6','7'];
+  const FONT_LABELS  = ['Tiny','Small','Normal','Large','X-Large','2X-Large','3X-Large'];
+  const FONT_FAMILIES = [
+    { label: 'Default', value: 'inherit' },
+    { label: 'Serif',   value: 'Georgia, serif' },
+    { label: 'Sans',    value: 'Arial, sans-serif' },
+    { label: 'Mono',    value: 'Courier New, monospace' },
+    { label: 'Times',   value: 'Times New Roman, serif' },
+  ];
+
   return (
-    <div className={`bg-white rounded-lg shadow-md overflow-hidden transition-all ${
-      isSelected ? 'ring-2 ring-blue-500' : ''
-    }`}>
-      {/* Card Header */}
-      <div className="p-4 bg-gray-50 border-b flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <input
-            type="checkbox"
-            checked={isSelected}
-            onChange={onToggleSelect}
-            className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
-          />
-          <span className="font-bold text-gray-700">Story #{index + 1}</span>
-          <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">
-            {story.category || 'General'}
-          </span>
-          {story.images && story.images.length > 0 && (
-            <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded flex items-center">
-              <ImageIcon className="w-3 h-3 mr-1" />
-              {story.images.length} {story.images.length === 1 ? 'image' : 'images'}
-            </span>
-          )}
-        </div>
-
-        <div className="flex items-center space-x-2">
-          {!isEditing && (
-            <button
-              onClick={onEdit}
-              className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors"
-              title="Edit Story"
-            >
-              <Edit3 className="w-4 h-4" />
-            </button>
-          )}
-          <button
-            onClick={onDelete}
-            className="p-2 text-red-600 hover:bg-red-50 rounded transition-colors"
-            title="Delete Story"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-          <button
-            onClick={onToggleExpand}
-            className="p-2 text-gray-600 hover:bg-gray-100 rounded transition-colors"
-          >
-            {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-          </button>
-        </div>
+    <div className="border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500">
+      <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+        <select onMouseDown={e => e.stopPropagation()} onChange={e => exec('fontName', e.target.value)}
+          className="text-xs border border-gray-300 rounded px-1 py-1 bg-white mr-1" defaultValue="inherit">
+          {FONT_FAMILIES.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+        </select>
+        <select onMouseDown={e => e.stopPropagation()} onChange={e => exec('fontSize', e.target.value)}
+          className="text-xs border border-gray-300 rounded px-1 py-1 bg-white mr-1" defaultValue="3">
+          {FONT_SIZES.map((s, i) => <option key={s} value={s}>{FONT_LABELS[i]}</option>)}
+        </select>
+        <div className="w-px h-5 bg-gray-300 mx-1" />
+        <ToolBtn onClick={() => exec('bold')}      title="Bold">      <Bold      className="w-3.5 h-3.5" /></ToolBtn>
+        <ToolBtn onClick={() => exec('italic')}    title="Italic">    <Italic    className="w-3.5 h-3.5" /></ToolBtn>
+        <ToolBtn onClick={() => exec('underline')} title="Underline"> <Underline className="w-3.5 h-3.5" /></ToolBtn>
+        <div className="w-px h-5 bg-gray-300 mx-1" />
+        <select onMouseDown={e => e.stopPropagation()} onChange={e => exec('formatBlock', e.target.value)}
+          className="text-xs border border-gray-300 rounded px-1 py-1 bg-white mr-1" defaultValue="p">
+          <option value="p">Paragraph</option>
+          <option value="h1">Heading 1</option>
+          <option value="h2">Heading 2</option>
+          <option value="h3">Heading 3</option>
+          <option value="blockquote">Blockquote</option>
+        </select>
+        <div className="w-px h-5 bg-gray-300 mx-1" />
+        <ToolBtn onClick={() => exec('insertUnorderedList')} title="Bullet list"><List className="w-3.5 h-3.5" /></ToolBtn>
+        <ToolBtn onClick={() => exec('insertOrderedList')}   title="Numbered list"><span className="text-xs font-bold">1.</span></ToolBtn>
+        <div className="w-px h-5 bg-gray-300 mx-1" />
+        <ToolBtn onClick={() => exec('justifyLeft')}   title="Align left">   <AlignLeft   className="w-3.5 h-3.5" /></ToolBtn>
+        <ToolBtn onClick={() => exec('justifyCenter')} title="Align center"> <AlignCenter className="w-3.5 h-3.5" /></ToolBtn>
+        <ToolBtn onClick={() => exec('justifyRight')}  title="Align right">  <AlignRight  className="w-3.5 h-3.5" /></ToolBtn>
+        <div className="w-px h-5 bg-gray-300 mx-1" />
+        <ToolBtn onClick={insertLink} title="Insert link"><Link className="w-3.5 h-3.5" /></ToolBtn>
+        <label title="Text colour" className="p-1.5 rounded hover:bg-gray-200 cursor-pointer flex items-center">
+          <Type className="w-3.5 h-3.5" />
+          <input type="color" className="w-0 h-0 opacity-0 absolute" onChange={e => exec('foreColor', e.target.value)} />
+        </label>
+        <label title="Highlight" className="p-1.5 rounded hover:bg-gray-200 cursor-pointer flex items-center">
+          <span className="text-xs font-bold bg-yellow-300 px-1 rounded">A</span>
+          <input type="color" className="w-0 h-0 opacity-0 absolute" defaultValue="#FFFF00" onChange={e => exec('hiliteColor', e.target.value)} />
+        </label>
       </div>
+      <div
+        ref={editorRef}
+        contentEditable
+        suppressContentEditableWarning
+        onInput={handleInput}
+        className="p-4 focus:outline-none text-sm text-gray-800 leading-relaxed"
+        style={{ minHeight: '520px', maxHeight: '680px', overflowY: 'auto', wordBreak: 'break-word', lineHeight: '1.8' }}
+      />
+      <div className="px-3 py-1.5 bg-gray-50 border-t border-gray-200 flex justify-between text-xs text-gray-400">
+        <span>{wordCount} words · ~{Math.max(1, Math.ceil(wordCount / 200))} min read</span>
+        <span>Rich text · HTML preserved on save</span>
+      </div>
+    </div>
+  );
+}
 
-      {/* Card Content */}
-      {isExpanded && (
-        <div className="p-6">
-          {isEditing ? (
-            // Edit Mode
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Headline</label>
-                <input
-                  type="text"
-                  value={editData.headline}
-                  onChange={(e) => setEditData({...editData, headline: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
+// ─── Template Selector (shown in edit mode) ───────────────────────────────────
+function TemplateSelector({ value, onChange }) {
+  return (
+    <div>
+      <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">
+        Article Template
+      </label>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
+        {TEMPLATES.map(tpl => (
+          <button
+            key={tpl.id}
+            type="button"
+            onClick={() => onChange(tpl.id)}
+            className={`rounded-lg p-2 border-2 text-left transition-all hover:shadow-md ${
+              value === tpl.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white'
+            }`}
+          >
+            <div className={`h-6 w-full rounded bg-gradient-to-r ${tpl.color} mb-1.5`} />
+            <p className="text-xs font-semibold text-gray-700 leading-tight">{tpl.name}</p>
+          </button>
+        ))}
+      </div>
+      {/* Full-width dropdown as an alternative for narrow screens */}
+      <select
+        value={value}
+        onChange={e => onChange(Number(e.target.value))}
+        className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500"
+      >
+        {TEMPLATES.map(tpl => (
+          <option key={tpl.id} value={tpl.id}>{tpl.name}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
 
-              <div className="grid grid-cols-2 gap-4">
+// ─── Story Card ───────────────────────────────────────────────────────────────
+function StoryCard({
+  story, index, isSelected, isExpanded, isEditing,
+  onToggleSelect, onToggleExpand, onEdit, onCancelEdit, onSave, onDelete,
+}) {
+  const [editData,        setEditData]        = useState({ ...story, templateId: story.templateId || DEFAULT_TEMPLATE_ID });
+  const [showCropper,     setShowCropper]     = useState(false);
+  const [isCropUploading, setIsCropUploading] = useState(false);
+  const [cropUploadError, setCropUploadError] = useState('');
+  // Controls the fullscreen template preview
+  const [previewTemplateId, setPreviewTemplateId] = useState(null);
+
+  const editorContentRef = useRef(story.content || '');
+
+  useEffect(() => {
+    setEditData({ ...story, templateId: story.templateId || DEFAULT_TEMPLATE_ID });
+    editorContentRef.current = story.content || '';
+  }, [story]);
+
+  const wordCount = (story.content || '').replace(/<[^>]*>/g, ' ').split(/\s+/).filter(Boolean).length;
+
+  const currentImage =
+    editData.images?.[0]?.url  ||
+    editData.images?.[0]?.base64 ||
+    null;
+
+  // ── Crop handler ─────────────────────────────────────────────────────────
+  const handleCropDone = async (croppedBase64) => {
+    setIsCropUploading(true);
+    setCropUploadError('');
+    try {
+      const fetchRes = await fetch(croppedBase64);
+      const blob     = await fetchRes.blob();
+      const formData = new FormData();
+      formData.append('imageFile', blob, `cropped_${Date.now()}.jpg`);
+      const response = await fetch('/api/upload-image', { method: 'POST', body: formData });
+      const result   = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error || 'Cropped image upload failed');
+      const newImages = [
+        { ...(editData.images?.[0] || {}), url: result.url, base64: null },
+        ...(editData.images?.slice(1) || []),
+      ];
+      setEditData(prev => ({ ...prev, images: newImages }));
+    } catch (err) {
+      console.error('❌ Crop upload error:', err);
+      setCropUploadError('Upload failed — the original image will be used.');
+    } finally {
+      setIsCropUploading(false);
+      setShowCropper(false);
+    }
+  };
+
+  // ── Save: merge live editor HTML + templateId into editData ─────────────
+  const handleSave = () => {
+    const tpl = TEMPLATES.find(t => t.id === editData.templateId) || TEMPLATES[2];
+    onSave({
+      ...editData,
+      content:    editorContentRef.current,
+      templateId: editData.templateId,
+      style:      tpl.style,
+    });
+  };
+
+  // Story data used by the preview modal — merges live edits
+  const storyForPreview = isEditing
+    ? { ...editData, content: editorContentRef.current }
+    : story;
+
+  return (
+    <>
+      {/* Fullscreen template preview */}
+      {previewTemplateId !== null && (
+        <TemplatePreviewModal
+          story={storyForPreview}
+          templateId={previewTemplateId}
+          onClose={() => setPreviewTemplateId(null)}
+        />
+      )}
+
+      {showCropper && currentImage && (
+        <ImageCropper
+          imageSrc={currentImage}
+          onCrop={handleCropDone}
+          onCancel={() => setShowCropper(false)}
+        />
+      )}
+
+      <div
+        className={`bg-white rounded-xl shadow-md overflow-hidden border-2 transition-all ${
+          isSelected ? 'border-blue-500' : 'border-transparent'
+        }`}
+      >
+        {/* ── Card header ── */}
+        <div className="px-5 py-4 bg-gray-50 border-b border-gray-100 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <input
+              type="checkbox"
+              checked={isSelected}
+              onChange={onToggleSelect}
+              className="w-5 h-5 text-blue-600 rounded flex-shrink-0 cursor-pointer"
+            />
+            <span className="text-sm font-bold text-gray-500 flex-shrink-0">#{index + 1}</span>
+            <span className="font-semibold text-gray-800 truncate text-sm">
+              {story.headline || 'Untitled'}
+            </span>
+            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full flex-shrink-0 capitalize">
+              {story.category || 'news'}
+            </span>
+            {story.images?.length > 0 && (
+              <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded-full flex-shrink-0 flex items-center gap-1">
+                <ImageIcon className="w-3 h-3" />{story.images.length}
+              </span>
+            )}
+            {/* Show selected template badge */}
+            <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full flex-shrink-0 hidden sm:inline">
+              {TEMPLATES.find(t => t.id === (story.templateId || DEFAULT_TEMPLATE_ID))?.name || 'Classic Newspaper'}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {/* Preview button — always visible in header */}
+            <button
+              onClick={() => {
+                setPreviewTemplateId(story.templateId || DEFAULT_TEMPLATE_ID);
+                setExpandedStories && null; // no-op, just show modal
+              }}
+              className="p-2 text-green-600 hover:bg-green-50 rounded-lg"
+              title="Preview with template"
+            >
+              <Eye className="w-4 h-4" />
+            </button>
+            {!isEditing && (
+              <button
+                onClick={onEdit}
+                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
+                title="Edit"
+              >
+                <Edit3 className="w-4 h-4" />
+              </button>
+            )}
+            <button
+              onClick={onDelete}
+              className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
+              title="Remove"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+            <button
+              onClick={onToggleExpand}
+              className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg"
+            >
+              {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+          </div>
+        </div>
+
+        {/* ── Card body ── */}
+        {isExpanded && (
+          <div className="p-5">
+            {isEditing ? (
+              /* ════════════ EDIT MODE ════════════ */
+              <div className="space-y-5">
+
+                {/* Headline */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Byline</label>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Headline *</label>
                   <input
                     type="text"
-                    value={editData.byline}
-                    onChange={(e) => setEditData({...editData, byline: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                    value={editData.headline || ''}
+                    onChange={e => setEditData(p => ({ ...p, headline: e.target.value }))}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-base font-semibold"
+                    placeholder="Article headline..."
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                  <input
-                    type="text"
-                    value={editData.location}
-                    onChange={(e) => setEditData({...editData, location: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Content</label>
-                <textarea
-                  value={editData.content}
-                  onChange={(e) => setEditData({...editData, content: e.target.value})}
-                  rows="10"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 font-mono text-sm"
-                />
-              </div>
-
-              <div className="flex justify-end space-x-2">
-                <button
-                  onClick={() => {
-                    setEditData(story);
-                    onEdit();
-                  }}
-                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-md"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSave}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
-                >
-                  <Save className="w-4 h-4 mr-2" />
-                  Save Changes
-                </button>
-              </div>
-            </div>
-          ) : (
-            // View Mode
-            <div>
-              <h3 className="text-xl font-bold text-gray-800 mb-2">{story.headline}</h3>
-              
-              {(story.byline || story.location) && (
-                <div className="text-sm text-gray-600 mb-4 flex items-center space-x-4">
-                  {story.byline && <span>By {story.byline}</span>}
-                  {story.location && <span>📍 {story.location}</span>}
-                </div>
-              )}
-
-              {/* Images */}
-              {story.images && story.images.length > 0 && (
-                <div className="mb-4">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">Attached Images:</h4>
-                  <div className="grid grid-cols-3 gap-3">
-                    {story.images.map((img, imgIdx) => (
-                      <div key={img.id} className="relative group">
-                        <img 
-                          src={img.base64} 
-                          alt={`Image ${imgIdx + 1}`}
-                          className="w-full h-32 object-cover rounded border"
-                        />
-                        <button
-                          onClick={() => onImageReassign(imgIdx)}
-                          className="absolute top-1 right-1 bg-white text-gray-700 px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          Move
-                        </button>
-                      </div>
-                    ))}
+                {/* Writer + Photo credit */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+                      <User className="w-3.5 h-3.5" /> Writer / Byline
+                    </label>
+                    <input
+                      type="text"
+                      value={editData.byline || ''}
+                      onChange={e => setEditData(p => ({ ...p, byline: e.target.value }))}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      placeholder="e.g. Romita Hanuman-Pillay"
+                    />
+                  </div>
+                  <div>
+                    <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+                      <Camera className="w-3.5 h-3.5" /> Photo Credit
+                    </label>
+                    <input
+                      type="text"
+                      value={editData.imageCredit || ''}
+                      onChange={e => setEditData(p => ({ ...p, imageCredit: e.target.value }))}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      placeholder="e.g. Thuli Dlamini"
+                    />
                   </div>
                 </div>
-              )}
 
-              {/* Content Preview */}
-              <div className="mt-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Content Preview:</h4>
-                <div className="bg-gray-50 p-4 rounded border text-sm text-gray-700 max-h-64 overflow-y-auto">
-                  {story.content.substring(0, 500)}...
+                {/* Location + Category */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+                      <MapPin className="w-3.5 h-3.5" /> Location
+                    </label>
+                    <input
+                      type="text"
+                      value={editData.location || ''}
+                      onChange={e => setEditData(p => ({ ...p, location: e.target.value }))}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      placeholder="e.g. Durban"
+                    />
+                  </div>
+                  <div>
+                    <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+                      <Tag className="w-3.5 h-3.5" /> Category
+                    </label>
+                    <select
+                      value={editData.category || 'news'}
+                      onChange={e => setEditData(p => ({ ...p, category: e.target.value }))}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    >
+                      {['news','politics','business','sports','education','health','environment','entertainment','lifestyle','community','technology'].map(c => (
+                        <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* ── Template Selector ── */}
+                <div className="p-4 border-2 border-blue-100 rounded-xl bg-blue-50">
+                  <TemplateSelector
+                    value={editData.templateId || DEFAULT_TEMPLATE_ID}
+                    onChange={id => setEditData(p => ({ ...p, templateId: id }))}
+                  />
+                  {/* Preview button tied to current selection */}
+                  <button
+                    type="button"
+                    onClick={() => setPreviewTemplateId(editData.templateId || DEFAULT_TEMPLATE_ID)}
+                    className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-semibold transition-colors"
+                  >
+                    <Eye className="w-4 h-4" />
+                    Preview with {TEMPLATES.find(t => t.id === (editData.templateId || DEFAULT_TEMPLATE_ID))?.name}
+                  </button>
+                </div>
+
+                {/* Image preview + crop */}
+                {currentImage && (
+                  <div>
+                    <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+                      <ImageIcon className="w-3.5 h-3.5" /> Article Image
+                    </label>
+                    {cropUploadError && (
+                      <div className="mb-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-red-700 text-xs">
+                        ⚠️ {cropUploadError}
+                      </div>
+                    )}
+                    <div
+                      className="relative group rounded-xl overflow-hidden border border-gray-200 bg-gray-50"
+                      style={{ maxHeight: '280px' }}
+                    >
+                      <img
+                        src={currentImage}
+                        alt="Article"
+                        className="w-full object-cover transition-opacity"
+                        style={{ maxHeight: '280px', opacity: isCropUploading ? 0.4 : 1 }}
+                      />
+                      {isCropUploading && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mb-2" />
+                          <p className="text-white text-xs font-medium">Uploading cropped image...</p>
+                        </div>
+                      )}
+                      {!isCropUploading && (
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                          <button
+                            onClick={() => setShowCropper(true)}
+                            className="flex items-center gap-2 px-5 py-2.5 bg-white text-gray-800 rounded-xl font-semibold text-sm shadow-lg hover:bg-blue-50 hover:text-blue-700 transition-colors"
+                          >
+                            <Crop className="w-4 h-4" /> Crop Image
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1.5">
+                      Hover over the image and click <strong>Crop Image</strong> to select just the photo you need.
+                    </p>
+                  </div>
+                )}
+
+                {/* Rich Text Editor */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Article Body *</label>
+                  <RichEditor
+                    initialContent={editData.content || ''}
+                    onChange={(html) => { editorContentRef.current = html; }}
+                  />
+                </div>
+
+                {/* Save / Cancel */}
+                <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
+                  <button
+                    onClick={() => {
+                      setEditData({ ...story, templateId: story.templateId || DEFAULT_TEMPLATE_ID });
+                      editorContentRef.current = story.content || '';
+                      onCancelEdit();
+                    }}
+                    className="px-5 py-2.5 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSave}
+                    className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 text-sm font-medium"
+                  >
+                    <Save className="w-4 h-4" /> Save Changes
+                  </button>
                 </div>
               </div>
 
-              {/* Word Count */}
-              <div className="mt-3 text-xs text-gray-500">
-                Word count: {story.content.split(/\s+/).length} words
+            ) : (
+              /* ════════════ VIEW MODE ════════════ */
+              <div>
+                <h3 className="text-xl font-bold text-gray-800 mb-3">{story.headline}</h3>
+
+                <div className="flex flex-wrap gap-4 text-sm text-gray-500 mb-4">
+                  {story.byline && (
+                    <span className="flex items-center gap-1">
+                      <User className="w-3.5 h-3.5" />
+                      <strong className="text-gray-700">By</strong> {story.byline}
+                    </span>
+                  )}
+                  {story.imageCredit && (
+                    <span className="flex items-center gap-1">
+                      <Camera className="w-3.5 h-3.5" />
+                      <strong className="text-gray-700">Photo:</strong> {story.imageCredit}
+                    </span>
+                  )}
+                  {story.location && (
+                    <span className="flex items-center gap-1">
+                      <MapPin className="w-3.5 h-3.5" />{story.location}
+                    </span>
+                  )}
+                </div>
+
+                {/* Template badge + preview button */}
+                <div className="flex items-center justify-between mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-8 h-5 rounded bg-gradient-to-r ${TEMPLATES.find(t => t.id === (story.templateId || DEFAULT_TEMPLATE_ID))?.color || 'from-gray-700 to-gray-900'}`} />
+                    <span className="text-sm font-medium text-gray-700">
+                      {TEMPLATES.find(t => t.id === (story.templateId || DEFAULT_TEMPLATE_ID))?.name || 'Classic Newspaper'}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setPreviewTemplateId(story.templateId || DEFAULT_TEMPLATE_ID)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs font-semibold transition-colors"
+                  >
+                    <Eye className="w-3.5 h-3.5" /> Preview Article
+                  </button>
+                </div>
+
+                {/* Page image */}
+                {story.images?.length > 0 && (story.images[0].url || story.images[0].base64) && (
+                  <div className="mb-4">
+                    <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Page Image</p>
+                    <img
+                      src={story.images[0].url || story.images[0].base64}
+                      alt="Article page"
+                      className="w-full max-h-56 object-cover rounded-lg border border-gray-200"
+                    />
+                  </div>
+                )}
+
+                {/* Content preview */}
+                <div className="bg-gray-50 rounded-lg border border-gray-100 p-4">
+                  <p className="text-xs font-semibold text-gray-500 uppercase mb-3">Content Preview</p>
+                  <div
+                    className="text-sm text-gray-700 leading-relaxed article-preview-content"
+                    style={{ maxHeight: '360px', overflowY: 'auto' }}
+                    dangerouslySetInnerHTML={{
+                      __html: story.content
+                        ? story.content.length > 2000
+                          ? story.content.substring(0, 2000) + '<p class="text-gray-400 italic">… preview truncated</p>'
+                          : story.content
+                        : '<p class="text-gray-400 italic">No content</p>',
+                    }}
+                  />
+                </div>
+
+                <style>{`
+                  .article-preview-content p { margin-bottom: 1em; line-height: 1.75; }
+                  .article-preview-content h1,.article-preview-content h2,.article-preview-content h3 { font-weight: 700; margin-top: 1.25em; margin-bottom: 0.5em; }
+                  .article-preview-content ul,.article-preview-content ol { padding-left: 1.5em; margin-bottom: 1em; }
+                  .article-preview-content li { margin-bottom: 0.3em; }
+                  .article-preview-content blockquote { border-left: 3px solid #d1d5db; padding-left: 1em; color: #6b7280; font-style: italic; margin: 1em 0; }
+                `}</style>
+
+                <div className="mt-3 flex items-center justify-between text-xs text-gray-400">
+                  <span>{wordCount} words · ~{Math.max(1, Math.ceil(wordCount / 200))} min read</span>
+                  <button
+                    onClick={onEdit}
+                    className="flex items-center gap-1 text-blue-500 hover:text-blue-700 font-medium"
+                  >
+                    <Edit3 className="w-3 h-3" /> Edit this article
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
+            )}
+          </div>
+        )}
+      </div>
+    </>
   );
 }

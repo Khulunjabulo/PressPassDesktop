@@ -37,7 +37,7 @@ export default function PublisherSidebar() {
 
   const SidebarContent = (
     <div className="flex flex-col h-full">
-      <nav className="px-6 mt-6 space-y-2">
+      <nav className="px-6 mt-6 space-y-2 flex-1 overflow-y-auto">
         {menuItems.map((item) => {
           const isActive = pathname === item.href
           return (
@@ -57,10 +57,11 @@ export default function PublisherSidebar() {
           )
         })}
       </nav>
+
       {/* Profile block */}
-      <div className="mt-auto px-6 pb-6">
+      <div className="px-6 pb-6 pt-4 border-t border-gray-100">
         <Link href="/print-media/profile" className="bg-gray-100 p-4 rounded-lg flex items-center space-x-3">
-          {currentUser && currentUser.profilePicture ? (
+          {currentUser?.profilePicture ? (
             <img
               src={currentUser.profilePicture}
               alt="Profile"
@@ -68,15 +69,17 @@ export default function PublisherSidebar() {
             />
           ) : (
             <div className="w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center text-white font-bold">
-              {currentUser ? currentUser.firstName.charAt(0).toUpperCase() : 'DH'}
+              {currentUser ? currentUser.firstName?.charAt(0).toUpperCase() : 'P'}
             </div>
           )}
           <div>
             <p className="text-sm font-semibold">
-              {currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'Daniel Hoppes'}
+              {currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'Publisher'}
             </p>
             <p className="text-xs text-gray-500">
-              {currentUser ? currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1) : 'Editor-in-Chief'}
+              {currentUser
+                ? currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1)
+                : 'Editor'}
             </p>
           </div>
         </Link>
@@ -86,7 +89,7 @@ export default function PublisherSidebar() {
 
   return (
     <>
-      {/* Burger menu button for mobile, positioned below header */}
+      {/* ── Burger button — mobile only ── */}
       <button
         className="md:hidden fixed top-[100px] left-4 p-2 z-40 bg-white rounded-full shadow-lg"
         onClick={() => setOpen(true)}
@@ -96,22 +99,35 @@ export default function PublisherSidebar() {
         <Menu size={24} />
       </button>
 
-      {/* Sidebar for desktop - positioned below header and above footer */}
-      <aside className="hidden md:flex w-64 bg-white shadow-md flex-col fixed left-0 z-20" style={{ top: '125px', bottom: '95px' }}>
+      {/*
+        ── Desktop sidebar ──
+        • NOT fixed — it's a normal flex child inside the page's flex-row container
+        • sticky + top keeps it visible while the page scrolls
+        • h-screen minus the header height so it fills the viewport without overflowing
+        • flex-shrink-0 + w-64 so it never collapses
+      */}
+      <aside
+        className="hidden md:flex flex-col w-64 flex-shrink-0 bg-white shadow-md"
+        style={{
+          position: 'sticky',
+          top: '125px',                       // same visual offset as before
+          height: 'calc(100vh - 125px)',       // fills remaining viewport height
+          alignSelf: 'flex-start',            // critical: don't stretch to row height
+          overflowY: 'auto',
+        }}
+      >
         {SidebarContent}
       </aside>
 
-      {/* Sidebar drawer for mobile */}
+      {/* ── Mobile drawer ── */}
       {open && (
         <>
-          {/* Overlay */}
           <div
             className="fixed inset-0 bg-black bg-opacity-30 z-40"
             onClick={() => setOpen(false)}
             aria-label="Close sidebar overlay"
           />
-          {/* Drawer */}
-          <aside className="fixed top-0 left-0 w-64 h-full bg-white shadow-lg z-50 flex flex-col animate-slide-in">
+          <aside className="fixed top-0 left-0 w-64 h-full bg-white shadow-lg z-50 flex flex-col">
             <button
               className="absolute top-4 right-4 bg-gray-100 rounded-full p-1"
               onClick={() => setOpen(false)}
@@ -124,9 +140,6 @@ export default function PublisherSidebar() {
           </aside>
         </>
       )}
-
-      {/* Spacer for main content on desktop */}
-      <div className="hidden md:block w-64 flex-shrink-0" />
     </>
   )
 }

@@ -25,10 +25,41 @@ import {
   X,
   ArrowLeft
 } from 'lucide-react';
+import {
+  FashionMagazineLayout,
+  TechBusinessLayout,
+  ClassicNewspaperLayout,
+  MagazineFeatureLayout,
+  MinimalCleanLayout,
+  ModernGridLayout,
+  EditorialLayout,
+} from '@/components/TemplateLayouts';
+import ImageCropper from '@/components/ImageCropper';
 import PublisherSidebar from '@/components/UI/publisherSidebar';
 import Header from '@/components/UI/header';
 import { useCurrentPublisher } from "@/hooks/useCurrentPublisher"
 import PrintMediaFooter from '@/components/UI/PrintMediaFooter';
+
+
+const TEMPLATE_COMPONENTS = {
+  1: FashionMagazineLayout,
+  2: TechBusinessLayout,
+  3: ClassicNewspaperLayout,
+  4: MagazineFeatureLayout,
+  5: MinimalCleanLayout,
+  6: ModernGridLayout,
+  7: EditorialLayout,
+};
+
+const TEMPLATE_NAMES = {
+  1: 'Fashion Magazine',
+  2: 'Tech & Business',
+  3: 'Classic Newspaper',
+  4: 'Magazine Feature',
+  5: 'Minimal Clean',
+  6: 'Modern Grid',
+  7: 'Editorial Opinion',
+};
 
 // Fixed hook with proper status filtering
 const usePublisherContent = (publisherId) => {
@@ -258,65 +289,135 @@ const usePublisherContent = (publisherId) => {
 };
 
 // Fixed Article Editor Component with proper tags handling
+const DASHBOARD_TEMPLATES = [
+  { id: 1, name: 'Fashion Magazine',  style: 'fashion',   color: 'from-pink-500 to-purple-500'   },
+  { id: 2, name: 'Tech & Business',   style: 'tech',      color: 'from-blue-600 to-blue-800'     },
+  { id: 3, name: 'Classic Newspaper', style: 'classic',   color: 'from-gray-700 to-gray-900'     },
+  { id: 4, name: 'Magazine Feature',  style: 'magazine',  color: 'from-yellow-500 to-orange-600' },
+  { id: 5, name: 'Minimal Clean',     style: 'minimal',   color: 'from-gray-300 to-gray-500'     },
+  { id: 6, name: 'Modern Grid',       style: 'modern',    color: 'from-indigo-600 to-purple-600' },
+  { id: 7, name: 'Editorial Opinion', style: 'editorial', color: 'from-amber-600 to-orange-700'  },
+];
+ 
+const DASHBOARD_TEMPLATE_COMPONENTS = {
+  1: FashionMagazineLayout,
+  2: TechBusinessLayout,
+  3: ClassicNewspaperLayout,
+  4: MagazineFeatureLayout,
+  5: MinimalCleanLayout,
+  6: ModernGridLayout,
+  7: EditorialLayout,
+};
+ 
 const ArticleEditor = ({ item, onSave, onCancel, isNew = false }) => {
-  const [formData, setFormData] = useState({
-    title: item?.title || '',
-    subtitle: item?.subtitle || '',
-    author: item?.author || '',
-    authorTitle: item?.authorTitle || '',
-    category: item?.category || '',
-    // FIXED: Handle tags properly - check if it's array or string
-    tags: Array.isArray(item?.tags) ? item.tags.join(', ') : (item?.tags || ''),
-    style: item?.style || 'modern',
-    content: item?.content || '',
+  const [formData, setFormData] = React.useState({
+    title:           item?.title           || '',
+    subtitle:        item?.subtitle        || '',
+    author:          item?.author          || '',
+    authorTitle:     item?.authorTitle     || '',
+    category:        item?.category        || '',
+    tags:            Array.isArray(item?.tags) ? item.tags.join(', ') : (item?.tags || ''),
+    style:           item?.style           || 'classic',
+    content:         item?.content         || '',
     metaDescription: item?.metaDescription || '',
-    publishNow: item?.publishNow ?? true,
-    allowComments: item?.allowComments ?? true,
-    sendNewsletter: item?.sendNewsletter ?? false,
+    publishNow:      item?.publishNow      ?? true,
+    allowComments:   item?.allowComments   ?? true,
+    sendNewsletter:  item?.sendNewsletter  ?? false,
+    
     featuredImageUrl: item?.featuredImageUrl || '',
-    ...item
+    // ↓ pre-select the template the article was originally published with
+    templateId:      item?.templateId      || 3,
+    ...item,
+    // Re-apply computed fields so spread above doesn't clobber them
+    tags:            Array.isArray(item?.tags) ? item.tags.join(', ') : (item?.tags || ''),
+    templateId:      item?.templateId      || 3,
   });
+ 
+  const [saving,           setSaving]           = React.useState(false);
+const [showTplPreview,   setShowTplPreview]   = React.useState(false);
+const [imagePreview,     setImagePreview]     = React.useState(item?.featuredImageUrl || null);
+const [isUploadingImage, setIsUploadingImage] = React.useState(false);
+const [showCropper,      setShowCropper]      = React.useState(false);
+const [isCropUploading,  setIsCropUploading]  = React.useState(false);
+const imageFileInputRef = React.useRef(null);
+ 
+  // Keep style in sync with templateId
+  const resolvedStyle = (DASHBOARD_TEMPLATES.find(t => t.id === formData.templateId) || DASHBOARD_TEMPLATES[2]).style;
+ 
+  const handleImageFileChange = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
 
-  const [saving, setSaving] = useState(false);
+  if (!file.type.startsWith('image/')) {
+    alert('Please select a valid image file.');
+    return;
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    alert('Image must be under 5MB.');
+    return;
+  }
 
-  console.log('🎯 ArticleEditor initialized:', {
-    isNew,
-    itemTitle: item?.title,
-    itemStatus: item?.status,
-    itemTags: item?.tags,
-    tagsType: typeof item?.tags,
-    formDataTags: formData.tags
-  });
+  const localUrl = URL.createObjectURL(file);
+  setImagePreview(localUrl);
+  setIsUploadingImage(true);
+
+  try {
+    const uploadForm = new FormData();
+    uploadForm.append('imageFile', file);
+    const response = await fetch('/api/upload-image', { method: 'POST', body: uploadForm });
+    const result = await response.json();
+    if (!response.ok || !result.success) throw new Error(result.error || 'Upload failed');
+    URL.revokeObjectURL(localUrl);
+    setImagePreview(result.url);
+    setFormData(prev => ({ ...prev, featuredImageUrl: result.url }));
+  } catch (err) {
+    console.error('Image upload error:', err);
+    alert('Image upload failed: ' + err.message);
+    setImagePreview(null);
+  } finally {
+    setIsUploadingImage(false);
+  }
+};
+
+const handleCropDone = async (croppedBase64) => {
+  setIsCropUploading(true);
+  try {
+    const fetchRes = await fetch(croppedBase64);
+    const blob = await fetchRes.blob();
+    const uploadForm = new FormData();
+    uploadForm.append('imageFile', blob, `cropped_${Date.now()}.jpg`);
+    const response = await fetch('/api/upload-image', { method: 'POST', body: uploadForm });
+    const result = await response.json();
+    if (!response.ok || !result.success) throw new Error(result.error || 'Crop upload failed');
+    setImagePreview(result.url);
+    setFormData(prev => ({ ...prev, featuredImageUrl: result.url }));
+  } catch (err) {
+    console.error('Crop upload error:', err);
+    alert('Crop upload failed: ' + err.message);
+  } finally {
+    setIsCropUploading(false);
+    setShowCropper(false);
+  }
+};
 
   const handleSubmit = async (e, asDraft = false) => {
     e.preventDefault();
     setSaving(true);
-    
     try {
+      const tpl = DASHBOARD_TEMPLATES.find(t => t.id === formData.templateId) || DASHBOARD_TEMPLATES[2];
       const submitData = {
         ...formData,
-        // FIXED: Proper tags handling - check if it's already an array
-        tags: typeof formData.tags === 'string' 
+        tags: typeof formData.tags === 'string'
           ? formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag)
-          : Array.isArray(formData.tags) 
-            ? formData.tags 
-            : [],
-        isDraft: asDraft,
-        status: asDraft ? 'draft' : 'published',
-        wordCount: formData.content.replace(/<[^>]*>/g, '').split(' ').filter(w => w.length > 0).length,
+          : Array.isArray(formData.tags) ? formData.tags : [],
+        isDraft:     asDraft,
+        status:      asDraft ? 'draft' : 'published',
+        wordCount:   formData.content.replace(/<[^>]*>/g, '').split(' ').filter(w => w.length > 0).length,
         readingTime: Math.ceil(formData.content.replace(/<[^>]*>/g, '').split(' ').filter(w => w.length > 0).length / 200),
-        articleId: item?.id || null // Add article ID for updates
+        articleId:   item?.id || null,
+        templateId:  formData.templateId,
+        style:       tpl.style,
       };
-
-      console.log('💾 Submitting article data:', {
-        title: submitData.title,
-        status: submitData.status,
-        isDraft: submitData.isDraft,
-        tags: submitData.tags,
-        tagsType: typeof submitData.tags,
-        articleId: submitData.articleId
-      });
-
       await onSave(submitData, asDraft);
     } catch (error) {
       console.error('Error saving:', error);
@@ -324,276 +425,422 @@ const ArticleEditor = ({ item, onSave, onCancel, isNew = false }) => {
       setSaving(false);
     }
   };
-
+ 
   const categories = [
-    { value: '', label: 'Select a category' },
-    { value: 'technology', label: 'Technology' },
-    { value: 'business', label: 'Business' },
-    { value: 'lifestyle', label: 'Lifestyle' },
-    { value: 'health', label: 'Health & Wellness' },
-    { value: 'education', label: 'Education' },
-    { value: 'science', label: 'Science' },
-    { value: 'arts', label: 'Arts & Culture' },
-    { value: 'politics', label: 'Politics' },
-    { value: 'sports', label: 'Sports' },
-    { value: 'other', label: 'Other' }
+    { value: '',           label: 'Select a category' },
+    { value: 'technology', label: 'Technology'        },
+    { value: 'business',   label: 'Business'          },
+    { value: 'lifestyle',  label: 'Lifestyle'         },
+    { value: 'health',     label: 'Health & Wellness' },
+    { value: 'education',  label: 'Education'         },
+    { value: 'science',    label: 'Science'           },
+    { value: 'arts',       label: 'Arts & Culture'    },
+    { value: 'politics',   label: 'Politics'          },
+    { value: 'sports',     label: 'Sports'            },
+    { value: 'other',      label: 'Other'             },
   ];
-
-  const styleOptions = [
-    { value: 'modern', label: 'Modern', color: 'bg-blue-500', description: 'Clean, contemporary design' },
-    { value: 'classic', label: 'Classic', color: 'bg-gray-800', description: 'Traditional serif typography' },
-    { value: 'minimal', label: 'Minimal', color: 'bg-gray-300', description: 'Simple, distraction-free' },
-    { value: 'academic', label: 'Academic', color: 'bg-green-600', description: 'Formal, research-oriented' }
-  ];
-
+ 
+  // Build article shape for the template preview
+  const articleForPreview = {
+    title:           formData.title           || 'Article Title',
+    subtitle:        formData.subtitle        || '',
+    author:          formData.author          || 'Author',
+    authorTitle:     formData.authorTitle     || '',
+    category:        formData.category        || 'general',
+    tags:            typeof formData.tags === 'string'
+                       ? formData.tags.split(',').map(t => t.trim()).filter(Boolean)
+                       : (formData.tags || []),
+    content:         formData.content         || '<p>Start writing your article here...</p>',
+    metaDescription: formData.metaDescription || '',
+    featuredImageUrl: formData.featuredImageUrl || null,
+    imageUrl:        formData.featuredImageUrl || null,
+    createdAt:       item?.createdAt          || new Date().toISOString(),
+    readTime:        Math.max(1, Math.ceil(
+      formData.content.replace(/<[^>]*>/g, '').split(' ').filter(w => w.length > 0).length / 200
+    )),
+    templateCredit:  '',
+  };
+ 
+  const PreviewTemplateComponent = DASHBOARD_TEMPLATE_COMPONENTS[formData.templateId] || ClassicNewspaperLayout;
+ 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
-        <div className="flex justify-between items-center p-4 border-b border-gray-200">
-          <h2 className="text-xl font-bold text-gray-900">
-            {isNew ? 'Create New Article' : `Edit ${item?.status === 'draft' ? 'Draft' : 'Article'}`}
-          </h2>
-          <button
-            onClick={onCancel}
-            className="text-gray-500 hover:text-gray-700 text-2xl"
-          >
-            ×
-          </button>
+    <>
+      {/* ── Fullscreen template preview ── */}
+      {showTplPreview && (
+        <div className="fixed inset-0 bg-black/90 z-[60] overflow-y-auto">
+          <div className="sticky top-0 z-10 bg-blue-700 text-white px-4 py-3 flex items-center justify-between shadow-lg">
+            <div className="flex items-center gap-3">
+              <Eye className="w-5 h-5" />
+              <div>
+                <p className="font-bold text-sm">
+                  Preview — {DASHBOARD_TEMPLATES.find(t => t.id === formData.templateId)?.name}
+                </p>
+                <p className="text-blue-200 text-xs">{formData.title || 'Untitled'}</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowTplPreview(false)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium"
+            >
+              <X className="w-4 h-4" /> Close Preview
+            </button>
+          </div>
+          <div className="bg-white">
+            <PreviewTemplateComponent article={articleForPreview} isPreview={true} />
+          </div>
         </div>
-
-        <div className="overflow-y-auto max-h-[calc(90vh-160px)] p-6">
-          <form onSubmit={(e) => handleSubmit(e, false)}>
-            {/* Title */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Title <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.title}
-                onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter article title"
-                required
-              />
-            </div>
-
-            {/* Subtitle */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Subtitle
-              </label>
-              <input
-                type="text"
-                value={formData.subtitle}
-                onChange={(e) => setFormData(prev => ({ ...prev, subtitle: e.target.value }))}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter subtitle (optional)"
-              />
-            </div>
-
-            {/* Author Information */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div>
+      )}
+ 
+      {/* ── Editor modal ── */}
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+          <div className="flex justify-between items-center p-4 border-b border-gray-200">
+            <h2 className="text-xl font-bold text-gray-900">
+              {isNew ? 'Create New Article' : `Edit ${item?.status === 'draft' ? 'Draft' : 'Article'}`}
+            </h2>
+            <button onClick={onCancel} className="text-gray-500 hover:text-gray-700 text-2xl">×</button>
+          </div>
+ 
+          <div className="overflow-y-auto max-h-[calc(90vh-160px)] p-6">
+            <form onSubmit={(e) => handleSubmit(e, false)}>
+ 
+              {/* Title */}
+              <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Author Name <span className="text-red-500">*</span>
+                  Title <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
-                  value={formData.author}
-                  onChange={(e) => setFormData(prev => ({ ...prev, author: e.target.value }))}
+                  value={formData.title}
+                  onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Author name"
+                  placeholder="Enter article title"
                   required
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Author Title
-                </label>
+ 
+              {/* Subtitle */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Subtitle</label>
                 <input
                   type="text"
-                  value={formData.authorTitle}
-                  onChange={(e) => setFormData(prev => ({ ...prev, authorTitle: e.target.value }))}
+                  value={formData.subtitle}
+                  onChange={(e) => setFormData(prev => ({ ...prev, subtitle: e.target.value }))}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="e.g., Senior Writer, Editor"
+                  placeholder="Enter subtitle (optional)"
                 />
               </div>
-            </div>
+ 
+              {/* Author */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Author Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.author}
+                    onChange={(e) => setFormData(prev => ({ ...prev, author: e.target.value }))}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Author name"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Author Title</label>
+                  <input
+                    type="text"
+                    value={formData.authorTitle}
+                    onChange={(e) => setFormData(prev => ({ ...prev, authorTitle: e.target.value }))}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="e.g., Senior Writer, Editor"
+                  />
+                </div>
+              </div>
+ 
+              {/* Category + Tags */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Category <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={formData.category}
+                    onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  >
+                    {categories.map(cat => (
+                      <option key={cat.value} value={cat.value}>{cat.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Tags (comma separated)</label>
+                  <input
+                    type="text"
+                    value={formData.tags}
+                    onChange={(e) => setFormData(prev => ({ ...prev, tags: e.target.value }))}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="e.g., innovation, AI, future"
+                  />
+                </div>
+              </div>
 
-            {/* Category and Tags */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div>
+              {/* Featured Image */}
+              <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Category <span className="text-red-500">*</span>
+                  Featured Image
                 </label>
+
+                <input
+                  type="file"
+                  ref={imageFileInputRef}
+                  accept="image/*"
+                  onChange={handleImageFileChange}
+                  className="hidden"
+                />
+
+                {imagePreview ? (
+                  <div className="mb-3">
+                    <div
+                      className="relative group rounded-xl overflow-hidden border border-gray-200 bg-gray-50"
+                      style={{ maxHeight: '260px' }}
+                    >
+                      <img
+                        src={imagePreview}
+                        alt="Featured"
+                        className="w-full object-cover transition-opacity"
+                        style={{ maxHeight: '260px', opacity: isCropUploading || isUploadingImage ? 0.4 : 1 }}
+                      />
+                      {(isCropUploading || isUploadingImage) && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mb-2" />
+                          <p className="text-white text-xs font-medium">
+                            {isCropUploading ? 'Uploading cropped image...' : 'Uploading image...'}
+                          </p>
+                        </div>
+                      )}
+                      {!isCropUploading && !isUploadingImage && (
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100 gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setShowCropper(true)}
+                            className="flex items-center gap-2 px-4 py-2 bg-white text-gray-800 rounded-xl font-semibold text-sm shadow-lg hover:bg-blue-50 hover:text-blue-700 transition-colors"
+                          >
+                            ✂️ Crop Image
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => imageFileInputRef.current?.click()}
+                            className="flex items-center gap-2 px-4 py-2 bg-white text-gray-800 rounded-xl font-semibold text-sm shadow-lg hover:bg-green-50 hover:text-green-700 transition-colors"
+                          >
+                            🔄 Replace
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex justify-between items-center mt-1">
+                      <p className="text-xs text-gray-400">
+                        Hover over the image to crop or replace it
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setImagePreview(null);
+                          setFormData(prev => ({ ...prev, featuredImageUrl: '' }));
+                          if (imageFileInputRef.current) imageFileInputRef.current.value = '';
+                        }}
+                        className="text-xs text-red-500 hover:text-red-700"
+                      >
+                        Remove image
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => imageFileInputRef.current?.click()}
+                    className="w-full border-2 border-dashed border-gray-300 rounded-xl py-8 flex flex-col items-center justify-center gap-2 hover:border-blue-400 hover:bg-blue-50 transition-colors text-gray-500 hover:text-blue-600"
+                  >
+                    <span className="text-2xl">🖼️</span>
+                    <span className="text-sm font-medium">Click to upload a featured image</span>
+                    <span className="text-xs text-gray-400">PNG, JPG up to 5MB</span>
+                  </button>
+                )}
+
+                {showCropper && imagePreview && (
+                  <ImageCropper
+                    imageSrc={imagePreview}
+                    onCrop={handleCropDone}
+                    onCancel={() => setShowCropper(false)}
+                  />
+                )}
+              </div>
+
+              {/* ── Template selector ── */}
+ 
+              
+              <div className="mb-4 p-4 border-2 border-blue-100 rounded-xl bg-blue-50">
+                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                  Article Template
+                  {item?.templateId && (
+                    <span className="ml-2 text-xs font-normal text-blue-600">
+                      (originally published with {DASHBOARD_TEMPLATES.find(t => t.id === item.templateId)?.name || 'Classic Newspaper'})
+                    </span>
+                  )}
+                </label>
+ 
+                {/* Visual grid */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mb-3">
+                  {DASHBOARD_TEMPLATES.map(tpl => (
+                    <button
+                      key={tpl.id}
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, templateId: tpl.id, style: tpl.style }))}
+                      className={`rounded-lg p-2 border-2 text-left transition-all hover:shadow-md ${
+                        formData.templateId === tpl.id ? 'border-blue-500 bg-white' : 'border-gray-200 bg-white/60'
+                      }`}
+                    >
+                      <div className={`h-6 w-full rounded bg-gradient-to-r ${tpl.color} mb-1.5`} />
+                      <p className="text-xs font-semibold text-gray-700 leading-tight">{tpl.name}</p>
+                    </button>
+                  ))}
+                </div>
+ 
+                {/* Dropdown for accessibility */}
                 <select
-                  value={formData.category}
-                  onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
+                  value={formData.templateId}
+                  onChange={(e) => {
+                    const id  = Number(e.target.value);
+                    const tpl = DASHBOARD_TEMPLATES.find(t => t.id === id) || DASHBOARD_TEMPLATES[2];
+                    setFormData(prev => ({ ...prev, templateId: id, style: tpl.style }));
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 mb-3"
                 >
-                  {categories.map(cat => (
-                    <option key={cat.value} value={cat.value}>{cat.label}</option>
+                  {DASHBOARD_TEMPLATES.map(tpl => (
+                    <option key={tpl.id} value={tpl.id}>{tpl.name}</option>
                   ))}
                 </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Tags (comma separated)
-                </label>
-                <input
-                  type="text"
-                  value={formData.tags}
-                  onChange={(e) => setFormData(prev => ({ ...prev, tags: e.target.value }))}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="e.g., innovation, AI, future"
-                />
-              </div>
-            </div>
-
-            {/* Article Style */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Article Style/Format
-              </label>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                {styleOptions.map(style => (
-                  <div
-                    key={style.value}
-                    onClick={() => setFormData(prev => ({ ...prev, style: style.value }))}
-                    className={`cursor-pointer border rounded-lg p-3 transition-all hover:shadow-md ${
-                      formData.style === style.value ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
-                    }`}
-                  >
-                    <div className={`w-8 h-8 ${style.color} rounded-full mb-2`}></div>
-                    <h4 className="font-medium text-gray-800 text-sm">{style.label}</h4>
-                    <p className="text-xs text-gray-500">{style.description}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Content */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Content <span className="text-red-500">*</span>
-              </label>
-              <textarea
-                value={formData.content.replace(/<[^>]*>/g, '')} // Strip HTML for simple editing
-                onChange={(e) => setFormData(prev => ({ 
-                  ...prev, 
-                  content: `<p>${e.target.value.split('\n\n').join('</p><p>')}</p>` 
-                }))}
-                rows={15}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-vertical"
-                placeholder="Start writing your article here..."
-                required
-              />
-              <p className="text-sm text-gray-500 mt-1">
-                Words: {formData.content.replace(/<[^>]*>/g, '').split(' ').filter(w => w.length > 0).length} • 
-                Reading time: {Math.ceil(formData.content.replace(/<[^>]*>/g, '').split(' ').filter(w => w.length > 0).length / 200)} min
-              </p>
-            </div>
-
-            {/* Meta Description */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Meta Description (for SEO)
-              </label>
-              <textarea
-                value={formData.metaDescription}
-                onChange={(e) => setFormData(prev => ({ ...prev, metaDescription: e.target.value }))}
-                rows={3}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                placeholder="Enter a brief description for search engines (150-160 characters)"
-              />
-              <div className="flex justify-between mt-1">
-                <span className="text-xs text-gray-500">Recommended: 150-160 characters</span>
-                <span className={`text-xs ${formData.metaDescription.length > 160 ? 'text-red-500' : 'text-gray-500'}`}>
-                  {formData.metaDescription.length}/160
-                </span>
-              </div>
-            </div>
-
-            {/* Publishing Options */}
-            <div className="bg-gray-50 rounded-lg p-4 mb-6">
-              <h3 className="font-medium text-gray-800 mb-3">Publishing Options</h3>
-              <div className="space-y-3">
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={formData.publishNow}
-                    onChange={(e) => setFormData(prev => ({ ...prev, publishNow: e.target.checked }))}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <span className="ml-2 text-sm text-gray-700">Publish immediately</span>
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={formData.allowComments}
-                    onChange={(e) => setFormData(prev => ({ ...prev, allowComments: e.target.checked }))}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <span className="ml-2 text-sm text-gray-700">Allow reader comments</span>
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={formData.sendNewsletter}
-                    onChange={(e) => setFormData(prev => ({ ...prev, sendNewsletter: e.target.checked }))}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <span className="ml-2 text-sm text-gray-700">Send notification to subscribers</span>
-                </label>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex gap-3 justify-end">
-              <button
-                type="button"
-                onClick={onCancel}
-                className="px-6 py-2 text-gray-600 hover:bg-gray-50 rounded-md font-medium transition-colors"
-                disabled={saving}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={(e) => handleSubmit(e, true)}
-                disabled={saving}
-                className="px-6 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 font-medium transition-colors disabled:opacity-50 flex items-center"
-              >
-                <Save className="w-4 h-4 mr-2" />
-                {saving ? 'Saving...' : 'Save as Draft'}
-              </button>
-              {(isNew || item?.status === 'draft') && (
+ 
+                {/* Preview button */}
                 <button
-                  type="submit"
-                  disabled={saving}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium transition-colors disabled:opacity-50 flex items-center"
+                  type="button"
+                  onClick={() => setShowTplPreview(true)}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-semibold transition-colors"
                 >
-                  <Send className="w-4 h-4 mr-2" />
-                  {saving ? 'Publishing...' : 'Publish Article'}
+                  <Eye className="w-4 h-4" />
+                  Preview with {DASHBOARD_TEMPLATES.find(t => t.id === formData.templateId)?.name || 'selected template'}
                 </button>
-              )}
-              {!isNew && item?.status !== 'draft' && (
+              </div>
+ 
+              {/* Content */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Content <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={formData.content.replace(/<[^>]*>/g, '')}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    content: `<p>${e.target.value.split('\n\n').join('</p><p>')}</p>`,
+                  }))}
+                  rows={15}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-vertical"
+                  placeholder="Start writing your article here..."
+                  required
+                />
+                <p className="text-sm text-gray-500 mt-1">
+                  Words: {formData.content.replace(/<[^>]*>/g, '').split(' ').filter(w => w.length > 0).length} •{' '}
+                  Reading time: {Math.ceil(formData.content.replace(/<[^>]*>/g, '').split(' ').filter(w => w.length > 0).length / 200)} min
+                </p>
+              </div>
+ 
+              {/* Meta Description */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Meta Description (for SEO)</label>
+                <textarea
+                  value={formData.metaDescription}
+                  onChange={(e) => setFormData(prev => ({ ...prev, metaDescription: e.target.value }))}
+                  rows={3}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  placeholder="Enter a brief description for search engines (150-160 characters)"
+                />
+                <div className="flex justify-between mt-1">
+                  <span className="text-xs text-gray-500">Recommended: 150-160 characters</span>
+                  <span className={`text-xs ${formData.metaDescription.length > 160 ? 'text-red-500' : 'text-gray-500'}`}>
+                    {formData.metaDescription.length}/160
+                  </span>
+                </div>
+              </div>
+ 
+              {/* Publishing Options */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <h3 className="font-medium text-gray-800 mb-3">Publishing Options</h3>
+                <div className="space-y-3">
+                  {[
+                    { key: 'publishNow',      label: 'Publish immediately'              },
+                    { key: 'allowComments',   label: 'Allow reader comments'            },
+                    { key: 'sendNewsletter',  label: 'Send notification to subscribers' },
+                  ].map(({ key, label }) => (
+                    <label key={key} className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={formData[key]}
+                        onChange={(e) => setFormData(prev => ({ ...prev, [key]: e.target.checked }))}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <span className="ml-2 text-sm text-gray-700">{label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+ 
+              {/* Action Buttons */}
+              <div className="flex gap-3 justify-end">
                 <button
-                  type="submit"
+                  type="button"
+                  onClick={onCancel}
+                  className="px-6 py-2 text-gray-600 hover:bg-gray-50 rounded-md font-medium transition-colors"
                   disabled={saving}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium transition-colors disabled:opacity-50 flex items-center"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => handleSubmit(e, true)}
+                  disabled={saving}
+                  className="px-6 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 font-medium transition-colors disabled:opacity-50 flex items-center"
                 >
                   <Save className="w-4 h-4 mr-2" />
-                  {saving ? 'Updating...' : 'Update Article'}
+                  {saving ? 'Saving...' : 'Save as Draft'}
                 </button>
-              )}
-            </div>
-          </form>
+                {(isNew || item?.status === 'draft') && (
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium transition-colors disabled:opacity-50 flex items-center"
+                  >
+                    <Send className="w-4 h-4 mr-2" />
+                    {saving ? 'Publishing...' : 'Publish Article'}
+                  </button>
+                )}
+                {!isNew && item?.status !== 'draft' && (
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium transition-colors disabled:opacity-50 flex items-center"
+                  >
+                    <Save className="w-4 h-4 mr-2" />
+                    {saving ? 'Updating...' : 'Update Article'}
+                  </button>
+                )}
+              </div>
+            </form>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
@@ -873,139 +1120,52 @@ export default function EnhancedPublisherDashboard() {
     });
 
   // Article Preview Component
-  const ArticlePreview = ({ article, onClose }) => (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
-        {/* Preview Header */}
-        <div className="flex justify-between items-center p-4 border-b border-gray-200">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-800">Article Preview</h3>
-            <p className="text-sm text-gray-600">
-              {article.status === 'published' ? 'Published Article' : 'Draft Preview'}
-            </p>
+  const ArticlePreview = ({ article, onClose }) => {
+  const templateId = article.templateId || 3;
+  const TemplateComponent = TEMPLATE_COMPONENTS[templateId] || ClassicNewspaperLayout;
+
+  const articleForTemplate = {
+    ...article,
+    title: article.title || 'Untitled',
+    subtitle: article.subtitle || '',
+    author: article.author || 'Unknown Author',
+    authorTitle: article.authorTitle || '',
+    category: article.category || 'general',
+    tags: Array.isArray(article.tags) ? article.tags : [],
+    content: article.content || '',
+    featuredImageUrl: article.featuredImageUrl || null,
+    imageUrl: article.featuredImageUrl || article.imageUrl || null,
+    imageCredit: article.imageCredit || '',
+    createdAt: article.createdAt || new Date().toISOString(),
+    readTime: article.readingTime || 1,
+    templateCredit: article.templateCredit || '',
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-75 z-50 overflow-y-auto">
+      <div className="min-h-screen bg-white">
+        <div className="sticky top-0 z-10 bg-blue-700 text-white px-4 py-3 flex items-center justify-between shadow-lg">
+          <div className="flex items-center gap-3">
+            <Eye className="w-5 h-5" />
+            <div>
+              <p className="font-bold text-sm">
+                Preview — {TEMPLATE_NAMES[templateId] || 'Classic Newspaper'}
+              </p>
+              <p className="text-blue-200 text-xs">{article.title}</p>
+            </div>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 text-2xl"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium"
           >
-            ×
+            <X className="w-4 h-4" /> Close Preview
           </button>
         </div>
-
-        {/* Preview Content */}
-        <div className="overflow-y-auto max-h-[calc(90vh-120px)]">
-          {/* Article Header - Newspaper Style */}
-          <div className="p-6 border-b-2 border-black">
-            <div className="text-center mb-4">
-              <h1 className="text-4xl font-bold uppercase tracking-wider mb-2">
-                {currentUser?.companyName || 'Publisher Name'}
-              </h1>
-              <div className="border-t-2 border-b-2 border-black py-1">
-                <p className="text-sm font-medium">
-                  {formatDate(new Date())} • Today's Edition
-                </p>
-              </div>
-            </div>
-
-            {/* Category */}
-            {article.category && (
-              <div className="mb-4">
-                <span className="inline-block bg-black text-white px-4 py-2 text-xs font-bold uppercase tracking-widest">
-                  {article.category}
-                </span>
-              </div>
-            )}
-
-            {/* Headline */}
-            <h1 className="text-3xl font-bold leading-tight mb-4 pb-4 border-b-2 border-black">
-              {article.title}
-            </h1>
-            
-            {/* Subtitle */}
-            {article.subtitle && (
-              <h2 className="text-xl italic text-gray-700 mb-4 font-medium">
-                {article.subtitle}
-              </h2>
-            )}
-            
-            {/* Byline */}
-            <div className="flex items-center justify-between text-sm border-b border-gray-400 pb-4">
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-2">
-                  <User className="w-4 h-4" />
-                  <span className="font-bold">By {article.author}</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <Calendar className="w-4 h-4" />
-                  <span>{formatDate(article.createdAt)}</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <Clock className="w-4 h-4" />
-                  <span>{article.readingTime} min read</span>
-                </div>
-              </div>
-              
-              {article.status === 'published' && (
-                <div className="flex items-center space-x-4 text-gray-600">
-                  <div className="flex items-center space-x-1">
-                    <Eye className="w-4 h-4" />
-                    <span>{article.views || 0} views</span>
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <TrendingUp className="w-4 h-4" />
-                    <span>{article.likes || 0} likes</span>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Article Body */}
-          <div className="p-6">
-            {/* Featured Image */}
-            {article.featuredImageUrl && (
-              <div className="mb-6">
-                <img
-                  src={article.featuredImageUrl}
-                  alt={article.title}
-                  className="w-full max-w-md mx-auto border-2 border-black"
-                  style={{ maxHeight: '300px', objectFit: 'cover' }}
-                />
-              </div>
-            )}
-
-            {/* Content */}
-            <div 
-              className="prose max-w-none text-justify leading-relaxed"
-              dangerouslySetInnerHTML={{ __html: article.content }}
-              style={{ 
-                fontFamily: '"Times New Roman", Times, serif',
-                lineHeight: '1.7',
-                wordBreak: 'break-word',
-                hyphens: 'auto'
-              }}
-            />
-
-            {/* Tags */}
-            {article.tags && Array.isArray(article.tags) && article.tags.length > 0 && (
-              <div className="mt-8 pt-4 border-t border-gray-200">
-                <div className="flex flex-wrap gap-2">
-                  {article.tags.map((tag, index) => (
-                    <span
-                      key={index}
-                      className="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-full"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+        <TemplateComponent article={articleForTemplate} isPreview={true} />
       </div>
     </div>
   );
+};
 
   if (loading) {
     return (
