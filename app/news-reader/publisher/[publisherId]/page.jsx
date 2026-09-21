@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useState, useMemo, useEffect } from 'react';
-import { ArrowLeft, FileText, Clock, Globe, Building, Users, Calendar, Eye, Hash, Filter, Rss } from 'lucide-react';
+import { ArrowLeft, FileText, Clock, Globe, Building, Users, Calendar, Eye, Hash, Filter, Rss, ChevronLeft, ChevronRight } from 'lucide-react';
 import { usePublisherArticles } from '@/hooks/useNewsSources';
 import LikeButton from '@/components/LikeButton';
 import dynamic from 'next/dynamic';
@@ -16,41 +16,44 @@ const MobileBottomNav = dynamic(() => import('@/components/news-reader/MobileBot
   ssr: false,
 });
 
+// Number of articles shown per page
+const LIST_LIMIT = 10;
+
 // Helper function to strip HTML tags and clean text
 function stripHtml(html) {
   if (!html) return '';
-  
+
   const temp = document.createElement('div');
   temp.innerHTML = html;
-  
+
   let text = temp.textContent || temp.innerText || '';
   text = text.replace(/\s+/g, ' ').trim();
-  
+
   return text;
 }
 
 // Helper function to truncate text to a specific length
 function truncateText(text, maxLength = 200) {
   if (!text) return '';
-  
+
   const cleaned = stripHtml(text);
-  
+
   if (cleaned.length <= maxLength) return cleaned;
-  
+
   return cleaned.substring(0, maxLength).trim() + '...';
 }
 
 // Helper function to clean and prepare article data
 function cleanArticleData(article) {
   if (!article) return null;
-  
+
   console.log('🔍 Cleaning article:', {
     id: article.id,
     title: article.title?.substring(0, 50),
     hasTemplateId: !!article.templateId,
     templateId: article.templateId
   });
-  
+
   return {
     ...article,
     title: stripHtml(article.title),
@@ -78,10 +81,10 @@ function PublisherAd({ publisherId, templateId, className = '', height = 120 }) 
       const isMobile = window.innerWidth < 768;
       setDeviceType(isMobile ? 'mobile' : 'desktop');
     };
-    
+
     checkDevice();
     window.addEventListener('resize', checkDevice);
-    
+
     return () => window.removeEventListener('resize', checkDevice);
   }, []);
 
@@ -96,9 +99,9 @@ function PublisherAd({ publisherId, templateId, className = '', height = 120 }) 
       try {
         setLoading(true);
         setError(null);
-        
+
         const apiUrl = `/api/get-ads?publisherId=${publisherId}&templateId=${templateId}&deviceType=${deviceType}`;
-        
+
         const response = await fetch(apiUrl);
         const result = await response.json();
 
@@ -151,7 +154,7 @@ function PublisherAd({ publisherId, templateId, className = '', height = 120 }) 
       });
 
       console.log('✅ Click tracked, opening:', ad.destinationUrl);
-      
+
       // Open destination URL in new tab
       window.open(ad.destinationUrl, '_blank', 'noopener,noreferrer');
     } catch (error) {
@@ -163,7 +166,7 @@ function PublisherAd({ publisherId, templateId, className = '', height = 120 }) 
 
   if (loading) {
     return (
-      <div 
+      <div
         className={`w-full bg-gray-100 animate-pulse flex items-center justify-center rounded-md ${className}`}
         style={{ height }}
       >
@@ -174,7 +177,7 @@ function PublisherAd({ publisherId, templateId, className = '', height = 120 }) 
 
   if (error) {
     return (
-      <div 
+      <div
         className={`w-full bg-red-50 border border-red-200 flex items-center justify-center rounded-md ${className}`}
         style={{ height }}
       >
@@ -188,7 +191,7 @@ function PublisherAd({ publisherId, templateId, className = '', height = 120 }) 
 
   if (ads.length === 0) {
     return (
-      <div 
+      <div
         className={`w-full flex flex-col items-center justify-center rounded-md ${className}`}
         style={{ height, backgroundColor: '#3ba6e7' }}
       >
@@ -208,7 +211,7 @@ function PublisherAd({ publisherId, templateId, className = '', height = 120 }) 
   const currentAd = ads[currentAdIndex];
 
   return (
-    <div 
+    <div
       className={`w-full rounded-md overflow-hidden shadow-sm relative ${className} ${
         currentAd.destinationUrl ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''
       }`}
@@ -242,7 +245,7 @@ function PublisherAd({ publisherId, templateId, className = '', height = 120 }) 
           }}
         />
       )}
-      
+
       {ads.length > 1 && (
         <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex gap-1">
           {ads.map((_, index) => (
@@ -255,7 +258,7 @@ function PublisherAd({ publisherId, templateId, className = '', height = 120 }) 
           ))}
         </div>
       )}
-      
+
       <div className="absolute top-2 right-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
         Ad {ads.length > 1 ? `${currentAdIndex + 1}/${ads.length}` : ''}
       </div>
@@ -269,6 +272,72 @@ function PublisherAd({ publisherId, templateId, className = '', height = 120 }) 
           </svg>
         </div>
       )}
+    </div>
+  );
+}
+
+// Numbered pagination controls (Previous, page numbers, Next)
+function Pagination({ currentPage, totalPages, onPageChange }) {
+  if (totalPages <= 1) return null;
+
+  // Build a compact page-number list: always show first, last, current,
+  // and neighbours of current; collapse the rest into "..."
+  const pageNumbers = [];
+  for (let i = 1; i <= totalPages; i++) {
+    if (
+      i === 1 ||
+      i === totalPages ||
+      (i >= currentPage - 1 && i <= currentPage + 1)
+    ) {
+      pageNumbers.push(i);
+    } else if (pageNumbers[pageNumbers.length - 1] !== '...') {
+      pageNumbers.push('...');
+    }
+  }
+
+  return (
+    <div className="mt-8 flex items-center justify-center gap-2 flex-wrap">
+      <button
+        type="button"
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={currentPage === 1}
+        className="flex items-center justify-center w-9 h-9 rounded-md border border-gray-300 bg-white hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white"
+        aria-label="Previous page"
+      >
+        <ChevronLeft className="w-4 h-4" />
+      </button>
+
+      {pageNumbers.map((p, i) =>
+        p === '...' ? (
+          <span key={`ellipsis-${i}`} className="px-2 text-sm text-gray-500">
+            ...
+          </span>
+        ) : (
+          <button
+            key={p}
+            type="button"
+            onClick={() => onPageChange(p)}
+            className={`min-w-9 h-9 px-3 rounded-md text-sm font-bold border transition-colors ${
+              p === currentPage
+                ? 'bg-black text-white border-black'
+                : 'bg-white text-black border-gray-300 hover:bg-gray-100'
+            }`}
+            aria-current={p === currentPage ? 'page' : undefined}
+          >
+            {p}
+          </button>
+        )
+      )}
+
+      <button
+        type="button"
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={currentPage === totalPages}
+        className="flex items-center justify-center w-9 h-9 rounded-md border border-gray-300 bg-white hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white"
+        aria-label="Next page"
+      >
+        <ChevronRight className="w-4 h-4" />
+      </button>
     </div>
   );
 }
@@ -304,14 +373,14 @@ export default function PublisherArticlesPage() {
       });
     }
   }, [rawArticles]);
-  
+
   // Clean articles data to remove HTML and ensure templateId
   const articles = useMemo(() => {
     if (!rawArticles) {
       console.log('⚠️ No raw articles available');
       return [];
     }
-    
+
     console.log('🔄 Processing articles:', rawArticles.length);
     const cleaned = rawArticles.map(cleanArticleData).filter(article => {
       // Filter out drafts and unpublished articles
@@ -321,27 +390,27 @@ export default function PublisherArticlesPage() {
       }
       return true;
     });
-    
+
     console.log('✅ Cleaned articles:', {
       total: cleaned.length,
       withTemplates: cleaned.filter(a => a.templateId).length,
       rssFeeds: cleaned.filter(a => a.isRssFeed).length
     });
-    
+
     return cleaned;
   }, [rawArticles]);
 
   // Get all unique categories from articles
   const categories = useMemo(() => {
     if (!articles || articles.length === 0) return [];
-    
+
     const categorySet = new Set();
     articles.forEach(article => {
       if (article.category) {
         categorySet.add(article.category);
       }
     });
-    
+
     return Array.from(categorySet).sort();
   }, [articles]);
 
@@ -349,11 +418,32 @@ export default function PublisherArticlesPage() {
   const filteredArticles = useMemo(() => {
     if (!articles) return [];
     if (selectedCategory === 'all') return articles;
-    
-    return articles.filter(article => 
+
+    return articles.filter(article =>
       article.category && article.category.toLowerCase() === selectedCategory.toLowerCase()
     );
   }, [articles, selectedCategory]);
+
+  // Paginate the filtered articles, LIST_LIMIT per page
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Reset to page 1 whenever the category filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategory]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredArticles.length / LIST_LIMIT));
+
+  const pagedArticles = useMemo(
+    () => filteredArticles.slice((currentPage - 1) * LIST_LIMIT, currentPage * LIST_LIMIT),
+    [filteredArticles, currentPage]
+  );
+
+  const handlePageChange = (page) => {
+    if (page < 1 || page > totalPages) return;
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const handleArticleClick = (article) => {
     console.log('🔗 Navigating to article:', {
@@ -376,10 +466,10 @@ export default function PublisherArticlesPage() {
     if (!timestamp) {
       return 'No date available';
     }
-    
+
     try {
       let date;
-      
+
       if (timestamp && typeof timestamp === 'object') {
         if (timestamp.toDate && typeof timestamp.toDate === 'function') {
           date = timestamp.toDate();
@@ -395,11 +485,11 @@ export default function PublisherArticlesPage() {
       } else {
         return 'Invalid date format';
       }
-      
+
       if (isNaN(date.getTime())) {
         return 'Invalid date';
       }
-      
+
       return date.toLocaleDateString('en-US', {
         weekday: 'long',
         year: 'numeric',
@@ -428,7 +518,7 @@ export default function PublisherArticlesPage() {
 
   const cleanPublisher = useMemo(() => {
     if (!publisher) return null;
-    
+
     return {
       ...publisher,
       name: stripHtml(publisher.name),
@@ -442,12 +532,12 @@ export default function PublisherArticlesPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-white">
-        <NewsReaderHeader 
+        <NewsReaderHeader
           publisherImage={null}
           publisherName="Loading..."
           isLoading={true}
         />
-        
+
         <div className="max-w-7xl mx-auto px-8 py-12">
           <div className="animate-pulse">
             <div className="h-4 bg-gray-200 w-24 mb-8"></div>
@@ -479,12 +569,12 @@ export default function PublisherArticlesPage() {
   if (error) {
     return (
       <div className="min-h-screen bg-white">
-        <NewsReaderHeader 
+        <NewsReaderHeader
           publisherImage={null}
           publisherName="Publisher Not Found"
           isError={true}
         />
-        
+
         <div className="max-w-7xl mx-auto px-4 sm:px-8 py-12">
           <button
             onClick={handleBackClick}
@@ -493,7 +583,7 @@ export default function PublisherArticlesPage() {
             <ArrowLeft className="w-4 h-4 mr-1" />
             Back to News Sources
           </button>
-          
+
           <div className="border-2 border-red-600 p-8 text-center">
             <h2 className="text-2xl font-bold mb-4" style={{fontFamily: 'Times, "Times New Roman", serif'}}>
               Publisher Not Found
@@ -502,7 +592,7 @@ export default function PublisherArticlesPage() {
             <div className="mt-4 text-xs text-gray-500">
               Publisher ID: {params.publisherId}
             </div>
-            <button 
+            <button
               onClick={refreshArticles}
               className="mt-4 bg-black text-white px-6 py-2 text-sm font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors"
             >
@@ -517,7 +607,7 @@ export default function PublisherArticlesPage() {
   return (
     <div className="min-h-screen bg-white pb-16 md:pb-0">
       <div className="fixed top-0 left-0 right-0 z-40">
-        <NewsReaderHeader 
+        <NewsReaderHeader
           publisherImage={cleanPublisher?.logo || cleanPublisher?.companyLogo}
           publisherName={cleanPublisher?.name || cleanPublisher?.companyName}
           publisherId={params.publisherId}
@@ -538,7 +628,7 @@ export default function PublisherArticlesPage() {
               <ArrowLeft className="w-4 h-4 mr-1" />
               Back to News Sources
             </button>
-            
+
             {/* Publication Header */}
             <div className="text-center">
               <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-wider mb-2" style={{fontFamily: 'Times, "Times New Roman", serif'}}>
@@ -549,7 +639,7 @@ export default function PublisherArticlesPage() {
                   {getCurrentDate()} • {cleanPublisher?.industry || 'News'} • {articles?.length || 0} {(articles?.length || 0) === 1 ? 'Article' : 'Articles'}
                 </p>
               </div>
-              
+
               {/* Publisher Details */}
               {cleanPublisher && (
                 <div className="flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-8 text-sm">
@@ -575,9 +665,9 @@ export default function PublisherArticlesPage() {
 
         {/* Template 1 - Headline Banner Ad */}
         <div className="max-w-7xl mx-auto px-4 sm:px-8 mt-4">
-          <PublisherAd 
-            publisherId={params.publisherId} 
-            templateId={1} 
+          <PublisherAd
+            publisherId={params.publisherId}
+            templateId={1}
             height={120}
             className="border border-gray-300"
           />
@@ -602,7 +692,7 @@ export default function PublisherArticlesPage() {
                     <Filter className="w-4 h-4" />
                     <span className="text-sm font-bold uppercase tracking-wider">Filter by Category:</span>
                   </div>
-                  
+
                   <div className="flex flex-wrap gap-2">
                     <button
                       onClick={() => handleCategoryFilter('all')}
@@ -616,10 +706,10 @@ export default function PublisherArticlesPage() {
                     </button>
 
                     {categories.map((category) => {
-                      const categoryCount = articles.filter(article => 
+                      const categoryCount = articles.filter(article =>
                         article.category && article.category.toLowerCase() === category.toLowerCase()
                       ).length;
-                      
+
                       return (
                         <button
                           key={category}
@@ -652,12 +742,12 @@ export default function PublisherArticlesPage() {
                 </div>
               )}
 
-              {/* Articles with ads interspersed */}
-              {filteredArticles && filteredArticles.length > 0 ? (
+              {/* Articles with ads interspersed (original vertical list, paginated LIST_LIMIT per page) */}
+              {pagedArticles && pagedArticles.length > 0 ? (
                 <>
-                  {filteredArticles.map((article, index) => (
+                  {pagedArticles.map((article, index) => (
                     <div key={article.id}>
-                      <article 
+                      <article
                         className="cursor-pointer transition-all duration-200 ease-in-out group md:border-b md:border-gray-300 md:pb-6 md:hover:bg-gray-50 md:p-4 md:-m-4 md:rounded bg-white border border-gray-200 rounded-lg shadow-sm p-4 mb-2.5 md:bg-transparent md:border-none md:shadow-none md:mb-0"
                         onClick={() => handleArticleClick(article)}
                       >
@@ -679,7 +769,7 @@ export default function PublisherArticlesPage() {
                                 </span>
                               </div>
                             )}
-                            <h3 className="text-lg md:text-xl lg:text-2xl font-bold leading-tight mb-3 group-hover:underline flex items-start gap-2" 
+                            <h3 className="text-lg md:text-xl lg:text-2xl font-bold leading-tight mb-3 group-hover:underline flex items-start gap-2"
                                 style={{fontFamily: 'Times, "Times New Roman", serif'}}>
                               {article.isRssFeed && (
                                 <Rss className="w-5 h-5 md:w-6 md:h-6 text-orange-500 flex-shrink-0 mt-1" />
@@ -713,32 +803,15 @@ export default function PublisherArticlesPage() {
                           </div>
                         </div>
                       </article>
-
-                      {/* Template 2 - Feed Ad (after 1st article) */}
-                      {index === 0 && (
-                        <div className="my-6">
-                          <PublisherAd 
-                            publisherId={params.publisherId} 
-                            templateId={2} 
-                            height={250}
-                            className="border border-gray-300"
-                          />
-                        </div>
-                      )}
-
-                      {/* Template 3 - Within Article Ad (after 3rd article) */}
-                      {index === 2 && (
-                        <div className="my-6">
-                          <PublisherAd 
-                            publisherId={params.publisherId} 
-                            templateId={3} 
-                            height={250}
-                            className="border border-gray-300"
-                          />
-                        </div>
-                      )}
                     </div>
                   ))}
+
+                  {/* Numbered pagination */}
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={handlePageChange}
+                  />
                 </>
               ) : (
                 <div className="text-center py-16 border border-gray-400">
@@ -758,7 +831,7 @@ export default function PublisherArticlesPage() {
                       <div>Selected Category: {selectedCategory}</div>
                     </div>
                   )}
-                  <button 
+                  <button
                     onClick={refreshArticles}
                     className="bg-black text-white px-6 py-2 text-sm font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors"
                   >
@@ -796,9 +869,9 @@ export default function PublisherArticlesPage() {
               )}
 
               {/* Template 4 - Page Wrap 1 Ad */}
-              <PublisherAd 
-                publisherId={params.publisherId} 
-                templateId={4} 
+              <PublisherAd
+                publisherId={params.publisherId}
+                templateId={4}
                 height={300}
                 className="border-2 border-black"
               />
@@ -811,12 +884,12 @@ export default function PublisherArticlesPage() {
                   </h3>
                   <div className="space-y-2 text-sm">
                     {categories.map((category) => {
-                      const categoryCount = articles.filter(article => 
+                      const categoryCount = articles.filter(article =>
                         article.category && article.category.toLowerCase() === category.toLowerCase()
                       ).length;
-                      
+
                       return (
-                        <div 
+                        <div
                           key={category}
                           className={`flex justify-between items-center py-2 px-3 border cursor-pointer transition-colors ${
                             selectedCategory.toLowerCase() === category.toLowerCase()
@@ -835,9 +908,9 @@ export default function PublisherArticlesPage() {
               )}
 
               {/* Template 5 - Page Wrap 2 Ad */}
-              <PublisherAd 
-                publisherId={params.publisherId} 
-                templateId={5} 
+              <PublisherAd
+                publisherId={params.publisherId}
+                templateId={5}
                 height={400}
                 className="border-2 border-black"
               />
@@ -846,9 +919,9 @@ export default function PublisherArticlesPage() {
 
           {/* Bottom Banner Ad - Same as Template 1 */}
           <div className="mt-8">
-            <PublisherAd 
-              publisherId={params.publisherId} 
-              templateId={1} 
+            <PublisherAd
+              publisherId={params.publisherId}
+              templateId={1}
               height={120}
               className="border border-gray-300"
             />
@@ -864,11 +937,11 @@ export default function PublisherArticlesPage() {
                   </span>
                   <span className="text-gray-600">All rights reserved</span>
                 </div>
-                
+
                 <div className="flex items-center space-x-4">
                   <span className="text-gray-600">Edition: Digital</span>
                   <button
-                    onClick={handleBackClick}                    
+                    onClick={handleBackClick}
                     className="bg-[#3ba6e7] text-white px-4 py-2 rounded-md shadow-sm hover:bg-[#2a7ab8] transition-colors duration-200 flex items-center text-sm"
                   >
                     <ArrowLeft className="w-4 h-4 mr-1" />
