@@ -84,7 +84,7 @@ function AdSlot({ adType, width, height, className = '', onAdvertiseClick, isBan
 
   if (loading) {
     return (
-      <div className={`bg-gray-200 rounded animate-pulse flex items-center justify-center ${className} ${responsiveClass}`} style={containerStyle}>
+      <div className={`bg-gray-100 rounded-2xl animate-pulse flex items-center justify-center ${className} ${responsiveClass}`} style={containerStyle}>
         <span className="text-gray-400 text-xs">Loading ad…</span>
       </div>
     );
@@ -95,14 +95,17 @@ function AdSlot({ adType, width, height, className = '', onAdvertiseClick, isBan
   if (!ad || currentIndex >= ads.length) {
     return (
       <div
-        className={`bg-[#3ba6e7] rounded-md shadow-md cursor-pointer hover:shadow-lg transition-shadow ${className} ${responsiveClass}`}
+        className={`bg-gradient-to-r from-[#329ae1] to-[#1e7bc0] rounded-2xl shadow-lg shadow-[#329ae1]/10 cursor-pointer hover:shadow-xl hover:shadow-[#329ae1]/20 transition-all duration-300 ${className} ${responsiveClass}`}
         style={containerStyle}
         onClick={onAdvertiseClick}
       >
-        <div className="h-full flex flex-col items-center justify-center p-4 text-center gap-1">
+        <div className="h-full flex items-center justify-center p-4 text-center gap-3">
           <img src="/Presspass.png" alt="PressPass" width={isBanner ? 120 : 70} height={isBanner ? 120 : 70} className="object-contain" />
-          <p className="text-yellow-400 font-bold text-sm">Advertise Here</p>
-          <p className="text-white text-xs">Partners@presspass.africa</p>
+          <div className="text-left">
+            <p className="text-yellow-400 font-bold text-sm">Advertise Here</p>
+            <p className="text-white/80 text-xs">Partners@presspass.africa</p>
+          </div>
+          {isBanner && <span className="hidden sm:block text-white/40 text-xs font-medium ml-4">728 × 90</span>}
         </div>
       </div>
     );
@@ -113,11 +116,12 @@ function AdSlot({ adType, width, height, className = '', onAdvertiseClick, isBan
   return (
     <div className={`${className} ${responsiveClass}`}>
       <div
-        style={{ ...containerStyle, position: 'relative', borderRadius: 8, overflow: 'hidden', cursor: 'pointer', border: '1px solid #ccc' }}
+        className="relative rounded-2xl overflow-hidden cursor-pointer border border-gray-100 hover:shadow-lg transition-shadow duration-300"
+        style={{ ...containerStyle }}
         onClick={() => ad.url && window.open(ad.url, '_blank')}
       >
-        <img src={imgSrc} alt={ad.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-        <span style={{ position: 'absolute', top: 4, left: 4, background: 'rgba(0,0,0,.7)', color: '#fff', padding: '2px 6px', borderRadius: 4, fontSize: 10 }}>Ad</span>
+        <img src={imgSrc} alt={ad.title} className="w-full h-full object-cover" />
+        <span className="absolute top-2.5 left-2.5 bg-black/60 backdrop-blur-sm text-white px-2 py-0.5 rounded-lg text-[10px] font-medium tracking-wider uppercase">Ad</span>
       </div>
     </div>
   );
@@ -204,65 +208,74 @@ function AdCreationModal({ isOpen, onClose, adType, dimensions }) {
 
   return (
     <>
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 overflow-y-auto">
-        <div className="bg-white rounded-xl w-full max-w-4xl mx-4 my-8 max-h-[90vh] overflow-y-auto shadow-2xl">
-          <div className="flex items-center justify-between p-6 border-b sticky top-0 bg-white z-10">
-            <h2 className="text-lg font-semibold">Create {isBannerAd ? 'Banner' : 'Advertisement'}</h2>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors"><X className="w-5 h-5" /></button>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm overflow-y-auto p-4">
+        <div className="bg-white rounded-2xl w-full max-w-4xl mx-auto my-8 max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-100">
+          <div className="flex items-center justify-between p-6 border-b border-gray-100 sticky top-0 bg-white/95 backdrop-blur-sm z-10 rounded-t-2xl">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-[#329ae1]/10 flex items-center justify-center">
+                <Monitor className="w-5 h-5 text-[#329ae1]" />
+              </div>
+              <h2 className="text-lg font-bold text-gray-900">Create {isBannerAd ? 'Banner' : 'Advertisement'}</h2>
+            </div>
+            <button onClick={onClose} className="p-2.5 hover:bg-gray-100 rounded-xl transition-all duration-200 text-gray-400 hover:text-gray-700 hover:rotate-90">
+              <X className="w-5 h-5" />
+            </button>
           </div>
 
           {step === 1 && (
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-5">
               <p className="text-sm text-gray-500">Step 1 of 3 — Ad Details {isBannerAd ? '(728×90)' : `(${dimensions.width}×${dimensions.height})`}</p>
               {[['title','Ad Title','text','Enter ad title'],['url','Target URL','url','https://your-website.com']].map(([field, label, type, ph]) => (
                 <div key={field}>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{label} *</label>
-                  <input type={type} value={formData[field]} onChange={(e) => setFormData(p => ({ ...p, [field]: e.target.value }))} placeholder={ph} className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500" />
-                  {errors[field] && <p className="text-red-500 text-xs mt-1">{errors[field]}</p>}
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">{label} *</label>
+                  <input type={type} value={formData[field]} onChange={(e) => setFormData(p => ({ ...p, [field]: e.target.value }))} placeholder={ph} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#329ae1]/20 focus:border-[#329ae1] transition-all duration-200 text-sm" />
+                  {errors[field] && <p className="text-red-500 text-xs mt-1.5">{errors[field]}</p>}
                 </div>
               ))}
               {[['desktop','Desktop Image'],['mobile','Mobile Image']].map(([type, label]) => (
                 <div key={type}>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{label} *</label>
-                  <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e.target.files[0], type)} className="w-full p-2 border border-gray-300 rounded-md file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:bg-blue-50 file:text-blue-700" />
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">{label} *</label>
+                  <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e.target.files[0], type)} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-[#329ae1]/10 file:text-[#329ae1] file:font-medium file:text-sm hover:file:bg-[#329ae1]/20 transition-colors" />
                   {uploadProgress[type] > 0 && uploadProgress[type] < 100 && (
-                    <div className="mt-1 bg-gray-200 rounded-full h-1.5"><div className="bg-blue-600 h-1.5 rounded-full transition-all" style={{ width: `${uploadProgress[type]}%` }} /></div>
+                    <div className="mt-2 bg-gray-100 rounded-full h-2 overflow-hidden">
+                      <div className="bg-[#329ae1] h-2 rounded-full transition-all duration-300" style={{ width: `${uploadProgress[type]}%` }} />
+                    </div>
                   )}
-                  {errors[`${type}Image`] && <p className="text-red-500 text-xs mt-1">{errors[`${type}Image`]}</p>}
-                  {formData[`${type}ImagePreview`] && <img src={formData[`${type}ImagePreview`]} alt="Preview" className="mt-2 rounded border max-h-32 object-contain" />}
+                  {errors[`${type}Image`] && <p className="text-red-500 text-xs mt-1.5">{errors[`${type}Image`]}</p>}
+                  {formData[`${type}ImagePreview`] && <img src={formData[`${type}ImagePreview`]} alt="Preview" className="mt-3 rounded-xl border border-gray-100 max-h-32 object-contain shadow-sm" />}
                 </div>
               ))}
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <div className="bg-amber-50/80 border border-amber-100 rounded-2xl p-5">
                 <label className="flex items-start gap-3 cursor-pointer">
-                  <input type="checkbox" checked={termsAccepted} onChange={(e) => setTermsAccepted(e.target.checked)} className="w-4 h-4 mt-0.5 rounded" />
-                  <span className="text-sm text-gray-700">I agree to the <button type="button" onClick={() => setShowTerms(true)} className="text-blue-600 hover:underline font-medium">Terms and Conditions</button> *</span>
+                  <input type="checkbox" checked={termsAccepted} onChange={(e) => setTermsAccepted(e.target.checked)} className="w-4 h-4 mt-0.5 rounded border-gray-300 text-[#329ae1] focus:ring-[#329ae1]" />
+                  <span className="text-sm text-gray-700">I agree to the <button type="button" onClick={() => setShowTerms(true)} className="text-[#329ae1] hover:underline font-medium">Terms and Conditions</button> *</span>
                 </label>
-                {errors.terms && <p className="text-red-500 text-xs mt-1 ml-7">{errors.terms}</p>}
+                {errors.terms && <p className="text-red-500 text-xs mt-1.5 ml-7">{errors.terms}</p>}
               </div>
               <div className="flex justify-end pt-2">
-                <button onClick={() => validateStep1() && setStep(2)} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50" disabled={!formData.desktopImage || !formData.mobileImage || !termsAccepted}>Next: Preview →</button>
+                <button onClick={() => validateStep1() && setStep(2)} className="px-6 py-3 bg-[#329ae1] text-white rounded-xl hover:bg-[#2580c0] hover:shadow-lg hover:shadow-[#329ae1]/20 transition-all duration-300 font-medium text-sm shadow-sm disabled:opacity-50" disabled={!formData.desktopImage || !formData.mobileImage || !termsAccepted}>Next: Preview →</button>
               </div>
             </div>
           )}
 
           {step === 2 && (
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-5">
               <p className="text-sm text-gray-500">Step 2 of 3 — Preview</p>
               <div className="flex gap-3 justify-center">
                 {[['desktop', Monitor, 'Desktop'],['mobile', Smartphone, 'Mobile']].map(([mode, Icon, label]) => (
-                  <button key={mode} onClick={() => setPreviewMode(mode)} className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium transition-all ${previewMode === mode ? 'bg-blue-600 text-white shadow' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+                  <button key={mode} onClick={() => setPreviewMode(mode)} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all duration-200 ${previewMode === mode ? 'bg-[#329ae1] text-white shadow-md shadow-[#329ae1]/20' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
                     <Icon className="w-4 h-4" />{label}
                   </button>
                 ))}
               </div>
-              <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <div className="border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
                 {previewMode === 'desktop'
                   ? <DesktopPreview adType={adType} adImage={formData.desktopImagePreview} adUrl={formData.url} />
                   : <MobilePreview  adType={adType} adImage={formData.mobileImagePreview}  adUrl={formData.url} />}
               </div>
               <div className="flex justify-between pt-2">
-                <button onClick={() => setStep(1)} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors">← Back</button>
-                <button onClick={() => setStep(3)} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">Continue to Payment →</button>
+                <button onClick={() => setStep(1)} className="px-5 py-2.5 border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-all duration-200 font-medium text-sm">← Back</button>
+                <button onClick={() => setStep(3)} className="px-5 py-2.5 bg-[#329ae1] text-white rounded-xl hover:bg-[#2580c0] hover:shadow-lg hover:shadow-[#329ae1]/20 transition-all duration-300 font-medium text-sm shadow-sm">Continue to Payment →</button>
               </div>
             </div>
           )}
@@ -273,31 +286,31 @@ function AdCreationModal({ isOpen, onClose, adType, dimensions }) {
               <div className="space-y-3">
                 {[
                   { val: '1',  label: '1 Day',           sub: 'Testing or short campaigns',   price: 'R 50',    orig: null,   save: null,   badge: null,             badgeColor: '' },
-                  { val: '7',  label: '7 Days',           sub: 'Most popular',                 price: 'R 315',   orig: 'R350', save: 'R35',  badge: 'SAVE 10%',       badgeColor: 'bg-blue-600' },
-                  { val: '14', label: '14 Days',          sub: 'Extended reach',               price: 'R 595',   orig: 'R700', save: 'R105', badge: 'SAVE 15%',       badgeColor: 'bg-green-600' },
-                  { val: '30', label: '30 Days',          sub: 'Maximum exposure',             price: 'R 1,200', orig: 'R1,500', save: 'R300', badge: 'BEST VALUE 20%', badgeColor: 'bg-yellow-500' },
+                  { val: '7',  label: '7 Days',           sub: 'Most popular',                 price: 'R 315',   orig: 'R350', save: 'R35',  badge: 'SAVE 10%',       badgeColor: 'bg-[#329ae1]' },
+                  { val: '14', label: '14 Days',          sub: 'Extended reach',               price: 'R 595',   orig: 'R700', save: 'R105', badge: 'SAVE 15%',       badgeColor: 'bg-emerald-500' },
+                  { val: '30', label: '30 Days',          sub: 'Maximum exposure',             price: 'R 1,200', orig: 'R1,500', save: 'R300', badge: 'BEST VALUE 20%', badgeColor: 'bg-amber-500' },
                 ].map(({ val, label, sub, price, orig, save, badge, badgeColor }) => (
-                  <label key={val} className={`flex items-center justify-between p-4 border-2 rounded-lg cursor-pointer relative transition-all ${formData.duration === val ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-300'}`}>
-                    {badge && <span className={`absolute -top-2 right-4 ${badgeColor} text-white text-xs font-bold px-2 py-0.5 rounded`}>{badge}</span>}
+                  <label key={val} className={`flex items-center justify-between p-4 border-2 rounded-2xl cursor-pointer relative transition-all duration-200 ${formData.duration === val ? 'border-[#329ae1] bg-blue-50/50 shadow-sm' : 'border-gray-100 hover:border-gray-300'}`}>
+                    {badge && <span className={`absolute -top-2.5 right-4 ${badgeColor} text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm tracking-wider uppercase`}>{badge}</span>}
                     <div className="flex items-center gap-3">
-                      <input type="radio" name="duration" value={val} checked={formData.duration === val} onChange={(e) => setFormData(p => ({ ...p, duration: e.target.value, customDuration: '' }))} className="w-4 h-4 text-blue-600" />
-                      <div><p className="font-medium text-gray-900">{label}</p><p className="text-xs text-gray-500">{sub}</p></div>
+                      <input type="radio" name="duration" value={val} checked={formData.duration === val} onChange={(e) => setFormData(p => ({ ...p, duration: e.target.value, customDuration: '' }))} className="w-4 h-4 text-[#329ae1] border-gray-300 focus:ring-[#329ae1]" />
+                      <div><p className="font-semibold text-gray-900 text-sm">{label}</p><p className="text-xs text-gray-500">{sub}</p></div>
                     </div>
                     <div className="text-right">
-                      <p className="text-lg font-bold text-blue-600">{price}</p>
+                      <p className="text-lg font-bold text-[#329ae1]">{price}</p>
                       {orig && <p className="text-xs text-gray-400 line-through">{orig}</p>}
-                      {save && <p className="text-xs text-green-600">Save {save}</p>}
+                      {save && <p className="text-xs text-emerald-600 font-medium">Save {save}</p>}
                     </div>
                   </label>
                 ))}
-                <label className={`flex items-center justify-between p-4 border-2 rounded-lg cursor-pointer transition-all ${formData.duration === 'custom' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-300'}`}>
+                <label className={`flex items-center justify-between p-4 border-2 rounded-2xl cursor-pointer transition-all duration-200 ${formData.duration === 'custom' ? 'border-[#329ae1] bg-blue-50/50 shadow-sm' : 'border-gray-100 hover:border-gray-300'}`}>
                   <div className="flex items-center gap-3 flex-1">
-                    <input type="radio" name="duration" value="custom" checked={formData.duration === 'custom'} onChange={(e) => setFormData(p => ({ ...p, duration: e.target.value }))} className="w-4 h-4 text-blue-600" />
+                    <input type="radio" name="duration" value="custom" checked={formData.duration === 'custom'} onChange={(e) => setFormData(p => ({ ...p, duration: e.target.value }))} className="w-4 h-4 text-[#329ae1] border-gray-300 focus:ring-[#329ae1]" />
                     <div className="flex-1">
-                      <p className="font-medium text-gray-900">Custom Duration</p>
+                      <p className="font-semibold text-gray-900 text-sm">Custom Duration</p>
                       {formData.duration === 'custom' && (
                         <div className="flex items-center gap-2 mt-2">
-                          <input type="number" min="1" max="365" value={formData.customDuration} onChange={(e) => setFormData(p => ({ ...p, customDuration: e.target.value }))} placeholder="Days" className="w-24 p-2 border border-gray-300 rounded-md text-sm" />
+                          <input type="number" min="1" max="365" value={formData.customDuration} onChange={(e) => setFormData(p => ({ ...p, customDuration: e.target.value }))} placeholder="Days" className="w-24 p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#329ae1]/20 focus:border-[#329ae1]" />
                           <span className="text-sm text-gray-600">days</span>
                         </div>
                       )}
@@ -305,8 +318,8 @@ function AdCreationModal({ isOpen, onClose, adType, dimensions }) {
                   </div>
                   {formData.duration === 'custom' && formData.customDuration && (
                     <div className="text-right ml-4">
-                      <p className="text-lg font-bold text-blue-600">R {calculatePrice().total.toFixed(0)}</p>
-                      {calculatePrice().discount > 0 && <p className="text-xs text-green-600">Save R {calculatePrice().discount.toFixed(0)}</p>}
+                      <p className="text-lg font-bold text-[#329ae1]">R {calculatePrice().total.toFixed(0)}</p>
+                      {calculatePrice().discount > 0 && <p className="text-xs text-emerald-600 font-medium">Save R {calculatePrice().discount.toFixed(0)}</p>}
                     </div>
                   )}
                 </label>
@@ -315,41 +328,41 @@ function AdCreationModal({ isOpen, onClose, adType, dimensions }) {
 
               {/* Order summary */}
               {(formData.duration || formData.customDuration) && (
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg p-4">
-                  <h4 className="font-semibold text-gray-900 mb-3">Order Summary</h4>
-                  <div className="space-y-1.5 text-sm">
+                <div className="bg-gradient-to-r from-blue-50/80 to-indigo-50/50 border border-blue-100 rounded-2xl p-5">
+                  <h4 className="font-bold text-gray-900 mb-3 text-sm uppercase tracking-wider">Order Summary</h4>
+                  <div className="space-y-2 text-sm">
                     {[['Ad Space', isBannerAd ? 'Banner' : adType.replace(/_/g, ' ').toUpperCase()], ['Duration', `${calculatePrice().days} day${calculatePrice().days !== 1 ? 's' : ''}`], ['Rate', 'R50/day']].map(([k, v]) => (
-                      <div key={k} className="flex justify-between"><span className="text-gray-600">{k}:</span><span className="font-medium">{v}</span></div>
+                      <div key={k} className="flex justify-between"><span className="text-gray-500">{k}:</span><span className="font-medium text-gray-700">{v}</span></div>
                     ))}
                     {calculatePrice().discount > 0 && <>
-                      <div className="flex justify-between"><span className="text-gray-600">Subtotal:</span><span className="line-through text-gray-400">R {calculatePrice().subtotal.toFixed(0)}</span></div>
-                      <div className="flex justify-between text-green-600"><span>Discount ({calculatePrice().discountPercentage}%):</span><span>-R {calculatePrice().discount.toFixed(0)}</span></div>
+                      <div className="flex justify-between"><span className="text-gray-500">Subtotal:</span><span className="line-through text-gray-400">R {calculatePrice().subtotal.toFixed(0)}</span></div>
+                      <div className="flex justify-between text-emerald-600"><span>Discount ({calculatePrice().discountPercentage}%):</span><span>-R {calculatePrice().discount.toFixed(0)}</span></div>
                     </>}
-                    <div className="flex justify-between pt-2 border-t-2 border-blue-300">
-                      <span className="text-lg font-bold">Total:</span>
-                      <span className="text-2xl font-bold text-blue-600">R {calculatePrice().total.toFixed(0)}</span>
+                    <div className="flex justify-between pt-3 border-t-2 border-blue-200/50">
+                      <span className="text-base font-bold text-gray-900">Total:</span>
+                      <span className="text-2xl font-bold text-[#329ae1]">R {calculatePrice().total.toFixed(0)}</span>
                     </div>
                   </div>
                 </div>
               )}
 
               <div className="space-y-3">
-                <h4 className="font-semibold text-gray-900">Contact Information</h4>
+                <h4 className="font-bold text-gray-900 text-sm uppercase tracking-wider">Contact Information</h4>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Company Name (optional)</label>
-                  <input type="text" value={formData.company} onChange={(e) => setFormData(p => ({ ...p, company: e.target.value }))} placeholder="Your company" className="w-full p-2.5 border border-gray-300 rounded-md" />
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Company Name (optional)</label>
+                  <input type="text" value={formData.company} onChange={(e) => setFormData(p => ({ ...p, company: e.target.value }))} placeholder="Your company" className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#329ae1]/20 focus:border-[#329ae1] transition-all duration-200 text-sm" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Contact Email *</label>
-                  <input type="email" value={formData.contactEmail} onChange={(e) => setFormData(p => ({ ...p, contactEmail: e.target.value }))} placeholder="contact@company.com" className="w-full p-2.5 border border-gray-300 rounded-md" />
-                  {errors.contactEmail && <p className="text-red-500 text-xs mt-1">{errors.contactEmail}</p>}
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Contact Email *</label>
+                  <input type="email" value={formData.contactEmail} onChange={(e) => setFormData(p => ({ ...p, contactEmail: e.target.value }))} placeholder="contact@company.com" className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#329ae1]/20 focus:border-[#329ae1] transition-all duration-200 text-sm" />
+                  {errors.contactEmail && <p className="text-red-500 text-xs mt-1.5">{errors.contactEmail}</p>}
                 </div>
               </div>
 
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <div className="bg-amber-50/80 border border-amber-100 rounded-2xl p-5">
                 <div className="flex gap-3">
-                  <CreditCard className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-                  <ul className="text-sm text-yellow-700 list-disc list-inside space-y-1">
+                  <CreditCard className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <ul className="text-sm text-amber-800 list-disc list-inside space-y-1.5">
                     <li>Ad goes live within 24 hours of payment</li>
                     <li>Duration starts from activation date</li>
                     <li>Confirmation sent to your email</li>
@@ -358,9 +371,9 @@ function AdCreationModal({ isOpen, onClose, adType, dimensions }) {
                 </div>
               </div>
 
-              <div className="flex justify-between pt-4 border-t border-gray-200">
-                <button onClick={() => setStep(2)} className="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors">← Back</button>
-                <button onClick={handleSubmit} disabled={loading || !formData.contactEmail} className="px-7 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2 font-medium shadow transition-colors">
+              <div className="flex justify-between pt-4 border-t border-gray-100">
+                <button onClick={() => setStep(2)} className="px-5 py-2.5 border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 font-medium transition-all duration-200 text-sm">← Back</button>
+                <button onClick={handleSubmit} disabled={loading || !formData.contactEmail} className="px-7 py-2.5 bg-[#329ae1] text-white rounded-xl hover:bg-[#2580c0] hover:shadow-lg hover:shadow-[#329ae1]/20 disabled:opacity-50 flex items-center gap-2 font-medium shadow-sm transition-all duration-300 text-sm">
                   {loading ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Processing…</> : <>Proceed to Payment <ArrowRight className="w-4 h-4" /></>}
                 </button>
               </div>
@@ -419,7 +432,10 @@ function PublisherCarousel({ sources, onSourceClick, onReadMoreClick }) {
     <div>
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-3">
-          <h2 className="text-lg sm:text-xl font-bold">Top Headlines</h2>
+          <div className="w-8 h-8 rounded-lg bg-[#329ae1]/10 flex items-center justify-center">
+            <Building className="w-4 h-4 text-[#329ae1]" />
+          </div>
+          <h2 className="text-lg sm:text-xl font-bold text-gray-900">Top Headlines</h2>
           <span className="text-sm text-gray-400">{sources.length} publisher{sources.length !== 1 ? 's' : ''}</span>
         </div>
         {totalPages > 1 && (
@@ -427,13 +443,13 @@ function PublisherCarousel({ sources, onSourceClick, onReadMoreClick }) {
             <div className="hidden sm:flex gap-1.5 mr-2">
               {Array.from({ length: totalPages }).map((_, i) => (
                 <button key={i} onClick={() => { if (i !== page) navigate(i > page ? 'right' : 'left'); }}
-                  className={`h-2 rounded-full transition-all duration-300 ${i === page ? 'bg-blue-600 w-5' : 'w-2 bg-gray-300 hover:bg-gray-400'}`} />
+                  className={`h-2 rounded-full transition-all duration-300 ${i === page ? 'bg-[#329ae1] w-5' : 'w-2 bg-gray-200 hover:bg-gray-300'}`} />
               ))}
             </div>
             <span className="text-xs text-gray-400 mr-1">{page + 1} / {totalPages}</span>
             {[['left', ChevronLeft], ['right', ChevronRight]].map(([dir, Icon]) => (
               <button key={dir} onClick={() => navigate(dir)} disabled={!!animDir}
-                className="flex items-center justify-center w-8 h-8 rounded-full bg-white border border-gray-200 shadow-sm hover:bg-gray-50 hover:shadow transition-all disabled:opacity-40"
+                className="flex items-center justify-center w-9 h-9 rounded-full bg-white border border-gray-200 shadow-sm hover:bg-gray-50 hover:shadow hover:scale-105 transition-all duration-200 disabled:opacity-40"
                 aria-label={dir === 'left' ? 'Previous' : 'Next'}>
                 <Icon className="w-4 h-4 text-gray-600" />
               </button>
@@ -443,7 +459,7 @@ function PublisherCarousel({ sources, onSourceClick, onReadMoreClick }) {
       </div>
 
       <div style={{ transition: visible ? 'opacity 0.22s ease, transform 0.22s ease' : 'none', opacity: visible ? 1 : 0, transform: visible ? 'translateX(0)' : animDir === 'right' ? 'translateX(-12px)' : 'translateX(12px)' }}
-        className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+        className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {slice.map((source, idx) => (
           <Fragment key={source.id}>
             <PublisherCard source={source} onSourceClick={onSourceClick} onReadMoreClick={onReadMoreClick} />
@@ -459,52 +475,52 @@ function PublisherCarousel({ sources, onSourceClick, onReadMoreClick }) {
   );
 }
 
-
-
 // ─── Single Publisher Card ───────────────────────────────────────────────────
 
 function PublisherCard({ source, onSourceClick, onReadMoreClick }) {
   return (
     <Card
-      className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer relative"
+      className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group relative overflow-hidden"
       onClick={() => onSourceClick(source)}
     >
-      <CardContent className="p-4">
-        <div className="text-center mb-3">
-          <h1 className="text-base font-bold text-gray-900 truncate">{stripHtml(source.name)}</h1>
+      <CardContent className="p-5">
+        <div className="text-center mb-4">
+          <h3 className="text-base font-bold text-gray-900 truncate group-hover:text-[#329ae1] transition-colors duration-200">
+            {stripHtml(source.name)}
+          </h3>
         </div>
-        <div className="flex items-start gap-3 mb-3">
+        <div className="flex items-start gap-4 mb-4">
           <div className="flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20">
             {source.logo ? (
-              <img src={source.logo} alt={`${source.name} logo`} className="w-full h-full rounded-lg object-contain border border-gray-100 bg-white" />
+              <img src={source.logo} alt={`${source.name} logo`} className="w-full h-full rounded-xl object-contain border border-gray-100 bg-white shadow-sm" />
             ) : (
-              <div className="w-full h-full bg-[#329ae1] rounded-lg flex items-center justify-center">
-                <span className="text-white font-semibold text-lg">{stripHtml(source.name).charAt(0)}</span>
+              <div className="w-full h-full bg-gradient-to-br from-[#329ae1] to-[#1e7bc0] rounded-xl flex items-center justify-center shadow-sm">
+                <span className="text-white font-bold text-xl">{stripHtml(source.name).charAt(0)}</span>
               </div>
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <h4 className="text-sm sm:text-base font-semibold text-gray-900 mb-1 line-clamp-2">
+            <h4 className="text-sm sm:text-base font-semibold text-gray-900 mb-1.5 line-clamp-2 group-hover:text-[#329ae1] transition-colors duration-200">
               {source.recentStory?.title || 'No recent articles yet'}
             </h4>
-            <p className="text-xs sm:text-sm text-gray-600 mb-2 line-clamp-3">
+            <p className="text-xs sm:text-sm text-gray-500 mb-2 line-clamp-3 leading-relaxed">
               {source.recentStory?.excerpt || source.description || 'Publisher registered on PressPass.'}
             </p>
             {source.recentStory && (
               <button
                 onClick={(e) => onReadMoreClick(e, source.recentStory.url)}
-                className="text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors"
+                className="text-xs text-[#329ae1] hover:text-[#2580c0] font-medium transition-colors duration-200"
               >
-                Read more
+                Read more →
               </button>
             )}
           </div>
         </div>
-        <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t border-gray-100">
+        <div className="flex items-center justify-between text-xs text-gray-400 pt-3 border-t border-gray-100">
           <div className="flex items-center gap-3">
             <span>Last post: {source.lastPosted}</span>
             {source.website && (
-              <a href={source.website} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="hidden sm:flex items-center gap-1 text-gray-400 hover:text-blue-600 transition-colors">
+              <a href={source.website} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="hidden sm:flex items-center gap-1 text-gray-400 hover:text-[#329ae1] transition-colors duration-200">
                 <ExternalLink className="w-3 h-3" />
                 {source.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}
               </a>
@@ -514,7 +530,7 @@ function PublisherCard({ source, onSourceClick, onReadMoreClick }) {
             publisher={source}
             size="default"
             showText={false}
-            className="p-1.5 rounded-full bg-gray-100 hover:bg-red-100 transition-colors"
+            className="p-2 rounded-full bg-gray-100 hover:bg-red-50 transition-all duration-200"
             onClick={(e) => e.stopPropagation()}
           />
         </div>
@@ -542,7 +558,6 @@ export default function NewsGrid({ articles }) {
       const paymentIntentId = params.get('id');
       if (!paymentIntentId) throw new Error('Missing payment intent ID');
 
-      // Resolve publisherId from localStorage
       let publisherId = null;
       let userEmail   = '';
       for (const key of ['user', 'currentUser', 'authUser', 'readerUser']) {
@@ -595,7 +610,6 @@ export default function NewsGrid({ articles }) {
     }
   }, []);
 
-  // Check payment redirect on mount
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('payment') === 'success' && params.get('id')) {
@@ -603,7 +617,6 @@ export default function NewsGrid({ articles }) {
     }
   }, [handlePaymentSuccess]);
 
-  // ── Fetch news sources — SINGLE API call, no second round of fetches ──────
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -638,42 +651,42 @@ export default function NewsGrid({ articles }) {
   };
 
   return (
-    <div className="relative">
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-4 px-4 sm:px-6 pb-10">
+    <div className="relative bg-gray-50/60 min-h-screen">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6 px-4 sm:px-6 pb-10 pt-6 max-w-7xl mx-auto">
 
         {/* ── Main column ── */}
-        <div className="space-y-6">
+        <div className="space-y-8">
           {/* Banner ad */}
           <AdSlot adType="banner" isBanner className="w-full" onAdvertiseClick={() => handleAdvertiseClick('banner', { width: 728, height: 90 })} />
 
           {/* Publisher section */}
           <section className="mt-6">
             {sourcesError && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4 flex items-center justify-between">
+              <div className="bg-red-50 border border-red-100 rounded-2xl p-5 mb-4 flex items-center justify-between">
                 <div>
-                  <p className="text-red-800 font-medium">Failed to load news sources</p>
-                  <p className="text-red-600 text-sm mt-0.5">{sourcesError}</p>
+                  <p className="text-red-800 font-medium text-sm">Failed to load news sources</p>
+                  <p className="text-red-600 text-xs mt-0.5">{sourcesError}</p>
                 </div>
-                <button onClick={() => window.location.reload()} className="px-3 py-1.5 bg-red-600 text-white text-sm rounded hover:bg-red-700 transition-colors">Retry</button>
+                <button onClick={() => window.location.reload()} className="px-4 py-2 bg-red-600 text-white text-sm rounded-xl hover:bg-red-700 hover:shadow-lg hover:shadow-red-500/20 transition-all duration-300 font-medium shadow-sm">Retry</button>
               </div>
             )}
 
             {loadingSources && (
               <>
                 <div className="flex items-center gap-3 mb-5">
-                  <div className="h-6 w-36 bg-gray-200 rounded animate-pulse" />
-                  <div className="h-4 w-20 bg-gray-100 rounded animate-pulse" />
+                  <div className="h-6 w-36 bg-gray-200 rounded-lg animate-pulse" />
+                  <div className="h-4 w-20 bg-gray-100 rounded-lg animate-pulse" />
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {Array.from({ length: 6 }).map((_, i) => (
-                    <Card key={i} className="animate-pulse">
-                      <CardContent className="p-4">
-                        <div className="flex gap-3">
-                          <div className="w-16 h-16 bg-gray-200 rounded-lg flex-shrink-0" />
-                          <div className="flex-1 space-y-2 pt-1">
-                            <div className="h-3 bg-gray-200 rounded w-3/4" />
-                            <div className="h-2 bg-gray-100 rounded w-full" />
-                            <div className="h-2 bg-gray-100 rounded w-2/3" />
+                    <Card key={i} className="animate-pulse rounded-2xl">
+                      <CardContent className="p-5">
+                        <div className="flex gap-4">
+                          <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-200 rounded-xl flex-shrink-0" />
+                          <div className="flex-1 space-y-2.5 pt-1">
+                            <div className="h-3 bg-gray-200 rounded-lg w-3/4" />
+                            <div className="h-2.5 bg-gray-100 rounded-lg w-full" />
+                            <div className="h-2.5 bg-gray-100 rounded-lg w-2/3" />
                           </div>
                         </div>
                       </CardContent>
@@ -692,22 +705,22 @@ export default function NewsGrid({ articles }) {
             )}
 
             {!loadingSources && !sourcesError && newsources.filter(s => s.hasArticles).length === 0 && (
-              <div className="text-center py-12">
-                <Building className="mx-auto h-10 w-10 text-gray-300" />
-                <h3 className="mt-3 text-sm font-medium text-gray-900">No articles published yet</h3>
-                <p className="mt-1 text-sm text-gray-500">Publishers will appear here once they post articles.</p>
+              <div className="text-center py-16">
+                <div className="w-20 h-20 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
+                  <Building className="w-10 h-10 text-gray-300" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-700">No articles published yet</h3>
+                <p className="text-sm text-gray-500 mt-1">Publishers will appear here once they post articles.</p>
               </div>
             )}
-
-
           </section>
 
-          {/* Recommended — inside main column, never overlaps sidebar */}
+          {/* Recommended */}
           <RecommendedOverlayBottom articles={unique} noArticlePublishers={newsources.filter(s => !s.hasArticles)} />
         </div>
 
         {/* ── Sidebar ── */}
-        <aside className="hidden lg:flex flex-col gap-6 lg:sticky lg:top-20 h-fit">
+        <aside className="hidden lg:flex flex-col gap-6 lg:sticky lg:top-24 h-fit">
           <AdSlot adType="sidebar_rectangle"  width={300} height={250} onAdvertiseClick={() => handleAdvertiseClick('sidebar_rectangle',  { width: 300, height: 250 })} />
           <AdSlot adType="sidebar_skyscraper" width={300} height={600} onAdvertiseClick={() => handleAdvertiseClick('sidebar_skyscraper', { width: 300, height: 600 })} />
           <AdSlot adType="sidebar_rectangle2" width={300} height={250} onAdvertiseClick={() => handleAdvertiseClick('sidebar_rectangle2', { width: 300, height: 250 })} />

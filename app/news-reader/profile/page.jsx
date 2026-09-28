@@ -21,7 +21,7 @@ const ReaderProfile = () => {
   const [loadingReview, setLoadingReview] = useState(true);
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [reviewFormData, setReviewFormData] = useState({
-    rating: 0,        // FIX 1: was 5 — stars now start empty
+    rating: 0,
     reviewText: ''
   });
   const [submittingReview, setSubmittingReview] = useState(false);
@@ -218,7 +218,6 @@ const ReaderProfile = () => {
   };
 
   const handleReviewSubmit = async () => {
-    // FIX 2: Validate that user has selected a rating
     if (reviewFormData.rating === 0) {
       setReviewError('Please select a star rating before submitting');
       return;
@@ -292,7 +291,7 @@ const ReaderProfile = () => {
 
       if (data.success) {
         setUserReview(null);
-        setReviewFormData({ rating: 0, reviewText: '' }); // FIX 3: reset to 0 not 5
+        setReviewFormData({ rating: 0, reviewText: '' });
         alert('Review deleted successfully');
       }
     } catch (error) {
@@ -305,7 +304,7 @@ const ReaderProfile = () => {
     return Array.from({ length: 5 }, (_, index) => (
       <Star
         key={index}
-        className={`w-6 h-6 transition-colors ${interactive ? 'cursor-pointer hover:scale-110' : ''} ${
+        className={`w-6 h-6 transition-all duration-200 ${interactive ? 'cursor-pointer hover:scale-125' : ''} ${
           index < rating
             ? 'fill-yellow-400 text-yellow-400'
             : 'text-gray-300'
@@ -474,10 +473,10 @@ const ReaderProfile = () => {
     return (
       <>
         <Header />
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center pt-16 md:pt-0">
+        <div className="min-h-screen bg-gray-50/60 flex items-center justify-center pt-16 md:pt-0">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading profile...</p>
+            <div className="w-12 h-12 border-3 border-gray-200 border-t-[#329ae1] rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-gray-600">Loading profile...</p>
           </div>
         </div>
       </>
@@ -487,290 +486,324 @@ const ReaderProfile = () => {
   return (
     <>
       <Header />
-      <div className="min-h-screen bg-gray-50 py-8 pt-20 md:pt-8">
-        <div className="max-w-4xl mx-auto px-4">
-          {/* Header */}
-          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-            <div className="flex items-center justify-between">
-              <h1 className="text-3xl font-bold text-gray-800">My Profile</h1>
-              <div className="flex gap-3">
-                {isEditing ? (
-                  <>
-                    <button
-                      onClick={handleCancelEdit}
-                      className="flex items-center gap-2 px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
-                    >
-                      <X className="w-4 h-4" />
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleSaveProfile}
-                      disabled={isLoading}
-                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
-                    >
-                      <Save className="w-4 h-4" />
-                      {isLoading ? 'Saving...' : 'Save Changes'}
-                    </button>
-                  </>
-                ) : (
+      <div className="min-h-screen bg-gray-50/60 py-8 pt-20 md:pt-8">
+        <div className="max-w-4xl mx-auto px-4 space-y-6">
+
+          {/* ── Header Card ── */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 tracking-tight">My Profile</h1>
+              <p className="text-sm text-gray-500 mt-1">Manage your account and preferences</p>
+            </div>
+            <div className="flex gap-3">
+              {isEditing ? (
+                <>
                   <button
-                    onClick={() => setIsEditing(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                    onClick={handleCancelEdit}
+                    className="flex items-center gap-2 px-5 py-2.5 text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 hover:shadow-sm transition-all duration-200 font-medium text-sm"
                   >
-                    <Edit2 className="w-4 h-4" />
-                    Edit Profile
+                    <X className="w-4 h-4" />
+                    Cancel
                   </button>
-                )}
-              </div>
+                  <button
+                    onClick={handleSaveProfile}
+                    disabled={isLoading}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-[#329ae1] text-white rounded-xl hover:bg-[#2580c0] hover:shadow-lg hover:shadow-[#329ae1]/20 transition-all duration-300 font-medium text-sm shadow-sm disabled:opacity-50"
+                  >
+                    <Save className="w-4 h-4" />
+                    {isLoading ? 'Saving...' : 'Save Changes'}
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-[#329ae1] text-white rounded-xl hover:bg-[#2580c0] hover:shadow-lg hover:shadow-[#329ae1]/20 transition-all duration-300 font-medium text-sm shadow-sm"
+                >
+                  <Edit2 className="w-4 h-4" />
+                  Edit Profile
+                </button>
+              )}
             </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Profile Picture Section */}
+
+            {/* ── Left: Profile Card ── */}
             <div className="lg:col-span-1">
-              <div className="bg-white rounded-lg shadow-md p-6">
-                <div className="text-center">
-                  <div className="relative inline-block">
-                    <div className="w-32 h-32 rounded-full bg-gray-200 mx-auto flex items-center justify-center overflow-hidden">
-                      {profilePicPreview || user?.profilePicture ? (
-                        <img
-                          src={profilePicPreview || user?.profilePicture}
-                          alt="Profile"
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <User className="w-16 h-16 text-gray-400" />
-                      )}
-                    </div>
-                    {isEditing && (
-                      <label className="absolute bottom-0 right-0 bg-blue-600 text-white p-2 rounded-full cursor-pointer hover:bg-blue-700 transition">
-                        <Camera className="w-4 h-4" />
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleImageChange}
-                          className="hidden"
-                        />
-                      </label>
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 text-center">
+                <div className="relative inline-block mx-auto">
+                  <div className="w-32 h-32 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 mx-auto flex items-center justify-center overflow-hidden shadow-inner border-2 border-gray-100">
+                    {profilePicPreview || user?.profilePicture ? (
+                      <img
+                        src={profilePicPreview || user?.profilePicture}
+                        alt="Profile"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <User className="w-16 h-16 text-gray-400" />
                     )}
                   </div>
-                  <h2 className="mt-4 text-xl font-semibold text-gray-800">
-                    {user?.firstName} {user?.lastName}
-                  </h2>
-                  <p className="text-gray-600">{user?.email}</p>
-                  <div className="mt-4 px-4 py-2 bg-green-100 text-green-800 rounded-full text-sm inline-block">
-                    ✓ Active Reader
-                  </div>
+                  {isEditing && (
+                    <label className="absolute -bottom-2 -right-2 bg-[#329ae1] text-white p-2.5 rounded-xl cursor-pointer hover:bg-[#2580c0] hover:shadow-lg hover:shadow-[#329ae1]/30 transition-all duration-300 shadow-md border-2 border-white">
+                      <Camera className="w-4 h-4" />
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageChange}
+                        className="hidden"
+                      />
+                    </label>
+                  )}
+                </div>
+                <h2 className="mt-5 text-xl font-bold text-gray-900">
+                  {user?.firstName} {user?.lastName}
+                </h2>
+                <p className="text-sm text-gray-500 mt-0.5">{user?.email}</p>
+                <div className="mt-4 inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-full text-xs font-semibold">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+                  Active Reader
+                </div>
 
-                  {/* Delete Profile Button */}
-                  <div className="mt-6">
-                    <button
-                      onClick={() => setShowDeleteConfirm(true)}
-                      className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition w-full justify-center"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      Delete Profile
-                    </button>
-                  </div>
+                <div className="mt-6 pt-6 border-t border-gray-100">
+                  <button
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-red-50 border border-red-100 text-red-600 rounded-xl hover:bg-red-100 hover:shadow-sm transition-all duration-200 w-full justify-center text-sm font-medium group"
+                  >
+                    <Trash2 className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                    Delete Profile
+                  </button>
                 </div>
               </div>
             </div>
 
-            {/* Profile Details Section */}
-            <div className="lg:col-span-2">
-              <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-                <h3 className="text-xl font-semibold text-gray-800 mb-6">Profile Information</h3>
+            {/* ── Right: Profile Details ── */}
+            <div className="lg:col-span-2 space-y-6">
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Profile Information */}
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-[#329ae1]/10 flex items-center justify-center">
+                    <User className="w-4 h-4 text-[#329ae1]" />
+                  </div>
+                  Profile Information
+                </h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      <User className="w-4 h-4 inline mr-1" />
-                      First Name
-                    </label>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">First Name</label>
                     {isEditing ? (
-                      <input
-                        type="text"
-                        name="firstName"
-                        value={formData.firstName}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
+                      <div className="relative">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                          type="text"
+                          name="firstName"
+                          value={formData.firstName}
+                          onChange={handleInputChange}
+                          className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#329ae1]/20 focus:border-[#329ae1] transition-all duration-200 text-sm"
+                        />
+                      </div>
                     ) : (
-                      <p className="px-3 py-2 bg-gray-50 rounded-lg">{user?.firstName || 'Not provided'}</p>
+                      <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 rounded-xl border border-gray-100">
+                        <User className="w-4 h-4 text-gray-400" />
+                        <span className="text-sm text-gray-700 font-medium">{user?.firstName || 'Not provided'}</span>
+                      </div>
                     )}
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      <User className="w-4 h-4 inline mr-1" />
-                      Last Name
-                    </label>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Last Name</label>
                     {isEditing ? (
-                      <input
-                        type="text"
-                        name="lastName"
-                        value={formData.lastName}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
+                      <div className="relative">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                          type="text"
+                          name="lastName"
+                          value={formData.lastName}
+                          onChange={handleInputChange}
+                          className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#329ae1]/20 focus:border-[#329ae1] transition-all duration-200 text-sm"
+                        />
+                      </div>
                     ) : (
-                      <p className="px-3 py-2 bg-gray-50 rounded-lg">{user?.lastName || 'Not provided'}</p>
+                      <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 rounded-xl border border-gray-100">
+                        <User className="w-4 h-4 text-gray-400" />
+                        <span className="text-sm text-gray-700 font-medium">{user?.lastName || 'Not provided'}</span>
+                      </div>
                     )}
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      <Mail className="w-4 h-4 inline mr-1" />
-                      Email
-                    </label>
-                    <p className="px-3 py-2 bg-gray-100 rounded-lg text-gray-600">{user?.email}</p>
-                    <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Email</label>
+                    <div className="flex items-center gap-2 px-4 py-3 bg-gray-100 rounded-xl border border-gray-100">
+                      <Mail className="w-4 h-4 text-gray-400" />
+                      <span className="text-sm text-gray-500">{user?.email}</span>
+                    </div>
+                    <p className="text-[11px] text-gray-400 mt-1.5 ml-1">Email cannot be changed</p>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      <Phone className="w-4 h-4 inline mr-1" />
-                      Phone
-                    </label>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Phone</label>
                     {isEditing ? (
-                      <input
-                        type="tel"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                          type="tel"
+                          name="phone"
+                          value={formData.phone}
+                          onChange={handleInputChange}
+                          className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#329ae1]/20 focus:border-[#329ae1] transition-all duration-200 text-sm"
+                        />
+                      </div>
                     ) : (
-                      <p className="px-3 py-2 bg-gray-50 rounded-lg">{user?.phone || 'Not provided'}</p>
+                      <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 rounded-xl border border-gray-100">
+                        <Phone className="w-4 h-4 text-gray-400" />
+                        <span className="text-sm text-gray-700 font-medium">{user?.phone || 'Not provided'}</span>
+                      </div>
                     )}
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      <MapPin className="w-4 h-4 inline mr-1" />
-                      Location
-                    </label>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Location</label>
                     {isEditing ? (
-                      <input
-                        type="text"
-                        name="location"
-                        value={formData.location}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
+                      <div className="relative">
+                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                          type="text"
+                          name="location"
+                          value={formData.location}
+                          onChange={handleInputChange}
+                          className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#329ae1]/20 focus:border-[#329ae1] transition-all duration-200 text-sm"
+                        />
+                      </div>
                     ) : (
-                      <p className="px-3 py-2 bg-gray-50 rounded-lg">{user?.location || 'Not provided'}</p>
+                      <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 rounded-xl border border-gray-100">
+                        <MapPin className="w-4 h-4 text-gray-400" />
+                        <span className="text-sm text-gray-700 font-medium">{user?.location || 'Not provided'}</span>
+                      </div>
                     )}
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      <Calendar className="w-4 h-4 inline mr-1" />
-                      Date of Birth
-                    </label>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Date of Birth</label>
                     {isEditing ? (
-                      <input
-                        type="date"
-                        name="dateOfBirth"
-                        value={formData.dateOfBirth}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
+                      <div className="relative">
+                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                          type="date"
+                          name="dateOfBirth"
+                          value={formData.dateOfBirth}
+                          onChange={handleInputChange}
+                          className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#329ae1]/20 focus:border-[#329ae1] transition-all duration-200 text-sm"
+                        />
+                      </div>
                     ) : (
-                      <p className="px-3 py-2 bg-gray-50 rounded-lg">
-                        {user?.dateOfBirth ? new Date(user.dateOfBirth).toLocaleDateString() : 'Not provided'}
-                      </p>
+                      <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 rounded-xl border border-gray-100">
+                        <Calendar className="w-4 h-4 text-gray-400" />
+                        <span className="text-sm text-gray-700 font-medium">
+                          {user?.dateOfBirth ? new Date(user.dateOfBirth).toLocaleDateString() : 'Not provided'}
+                        </span>
+                      </div>
                     )}
                   </div>
                 </div>
 
-                <div className="mt-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Bio</label>
+                <div className="mt-5">
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Bio</label>
                   {isEditing ? (
                     <textarea
                       name="bio"
                       value={formData.bio}
                       onChange={handleInputChange}
                       rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#329ae1]/20 focus:border-[#329ae1] transition-all duration-200 text-sm resize-none"
                       placeholder="Tell us about yourself..."
                     />
                   ) : (
-                    <p className="px-3 py-2 bg-gray-50 rounded-lg min-h-[2.5rem]">
-                      {user?.bio || 'No bio provided'}
-                    </p>
+                    <div className="px-4 py-3 bg-gray-50 rounded-xl border border-gray-100 min-h-[80px]">
+                      <p className="text-sm text-gray-700 leading-relaxed">{user?.bio || 'No bio provided'}</p>
+                    </div>
                   )}
                 </div>
               </div>
 
-              {/* Preferences Section */}
-              <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-                <h3 className="text-xl font-semibold text-gray-800 mb-6">
-                  <Settings className="w-5 h-5 inline mr-2" />
+              {/* Preferences */}
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-[#329ae1]/10 flex items-center justify-center">
+                    <Settings className="w-4 h-4 text-[#329ae1]" />
+                  </div>
                   Preferences
                 </h3>
 
-                <div className="space-y-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-3">Favorite Categories</label>
-                    <div className="flex flex-wrap gap-2">
-                      {newsCategories.map((category) => (
+                <div className="mb-6">
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Favorite Categories</label>
+                  <div className="flex flex-wrap gap-2">
+                    {newsCategories.map((category) => {
+                      const isSelected = (formData.preferences.categories || []).includes(category);
+                      return (
                         <button
                           key={category}
                           type="button"
                           onClick={() => isEditing && handleCategoryToggle(category)}
                           disabled={!isEditing}
-                          className={`px-3 py-1 text-sm rounded-full border transition ${
-                            (formData.preferences.categories || []).includes(category)
-                              ? 'bg-blue-100 border-blue-300 text-blue-800'
-                              : 'bg-gray-100 border-gray-300 text-gray-600'
-                          } ${isEditing ? 'cursor-pointer hover:bg-blue-50' : 'cursor-default'}`}
+                          className={`px-3 py-1.5 text-sm rounded-full border transition-all duration-200 ${
+                            isSelected
+                              ? 'bg-blue-50 border-blue-200 text-[#329ae1] font-medium shadow-sm'
+                              : 'bg-gray-50 border-gray-200 text-gray-500'
+                          } ${isEditing ? 'cursor-pointer hover:shadow-md hover:-translate-y-0.5 active:scale-95' : 'cursor-default'}`}
                         >
                           {category}
                         </button>
-                      ))}
-                    </div>
+                      );
+                    })}
                   </div>
+                </div>
 
-                  <div className="flex flex-col space-y-3">
-                    <label className="flex items-center">
+                <div className="space-y-2">
+                  <label className="flex items-center p-3 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer group">
+                    <div className="relative">
                       <input
                         type="checkbox"
                         name="preferences.notifications"
                         checked={formData.preferences.notifications}
                         onChange={handleInputChange}
                         disabled={!isEditing}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        className="peer sr-only"
                       />
-                      <span className="ml-2 text-sm text-gray-700">Enable push notifications</span>
-                    </label>
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#329ae1] disabled:opacity-40"></div>
+                    </div>
+                    <span className="ml-3 text-sm text-gray-700 font-medium group-hover:text-gray-900 transition-colors">Enable push notifications</span>
+                  </label>
 
-                    <label className="flex items-center">
+                  <label className="flex items-center p-3 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer group">
+                    <div className="relative">
                       <input
                         type="checkbox"
                         name="preferences.emailUpdates"
                         checked={formData.preferences.emailUpdates}
                         onChange={handleInputChange}
                         disabled={!isEditing}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        className="peer sr-only"
                       />
-                      <span className="ml-2 text-sm text-gray-700">Receive email updates</span>
-                    </label>
-                  </div>
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#329ae1] disabled:opacity-40"></div>
+                    </div>
+                    <span className="ml-3 text-sm text-gray-700 font-medium group-hover:text-gray-900 transition-colors">Receive email updates</span>
+                  </label>
                 </div>
               </div>
 
-              {/* Review Section */}
-              <div className="bg-white rounded-lg shadow-md p-6">
+              {/* My Review */}
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                 <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-xl font-semibold text-gray-800">
-                    <MessageSquare className="w-5 h-5 inline mr-2" />
+                  <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-yellow-50 flex items-center justify-center">
+                      <MessageSquare className="w-4 h-4 text-yellow-600" />
+                    </div>
                     My Review
                   </h3>
                   {!loadingReview && !userReview && !showReviewForm && (
                     <button
                       onClick={() => setShowReviewForm(true)}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm"
+                      className="px-4 py-2.5 bg-[#329ae1] text-white rounded-xl hover:bg-[#2580c0] hover:shadow-lg hover:shadow-[#329ae1]/20 transition-all duration-300 text-sm font-medium shadow-sm"
                     >
                       Write a Review
                     </button>
@@ -779,12 +812,11 @@ const ReaderProfile = () => {
 
                 {loadingReview ? (
                   <div className="text-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                    <p className="text-gray-600 mt-2">Loading review...</p>
+                    <div className="w-8 h-8 border-3 border-gray-200 border-t-[#329ae1] rounded-full animate-spin mx-auto mb-3" />
+                    <p className="text-gray-600 text-sm">Loading review...</p>
                   </div>
                 ) : userReview && !showReviewForm ? (
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    {/* FIX 4: Edit/Delete buttons properly aligned */}
+                  <div className="bg-gray-50 rounded-xl p-5 border border-gray-100">
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-1">
                         {renderStars(userReview.rating)}
@@ -798,22 +830,22 @@ const ReaderProfile = () => {
                               reviewText: userReview.reviewText
                             });
                           }}
-                          className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition"
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#329ae1] border border-blue-200 rounded-lg hover:bg-blue-50 transition-all duration-200"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                           Edit
                         </button>
                         <button
                           onClick={handleReviewDelete}
-                          className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition"
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-all duration-200"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                           Delete
                         </button>
                       </div>
                     </div>
-                    <p className="text-gray-700 mb-2">{userReview.reviewText}</p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-sm text-gray-700 leading-relaxed mb-2">{userReview.reviewText}</p>
+                    <p className="text-xs text-gray-400">
                       {userReview.updatedAt !== userReview.createdAt && 'Updated '}
                       {new Date(userReview.updatedAt || userReview.createdAt).toLocaleDateString('en-US', {
                         year: 'numeric',
@@ -828,7 +860,6 @@ const ReaderProfile = () => {
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Rating <span className="text-red-500">*</span>
                       </label>
-                      {/* FIX 5: Helper text so user knows to click stars */}
                       <div className="flex items-center gap-2">
                         <div className="flex items-center gap-1">
                           {renderStars(reviewFormData.rating, true, (rating) =>
@@ -854,14 +885,14 @@ const ReaderProfile = () => {
                         value={reviewFormData.reviewText}
                         onChange={(e) => setReviewFormData(prev => ({ ...prev, reviewText: e.target.value }))}
                         rows={4}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#329ae1]/20 focus:border-[#329ae1] transition-all duration-200 text-sm resize-none"
                         placeholder="Share your experience with Press Pass..."
                       />
                       <p className="text-xs text-gray-500 mt-1">Minimum 10 characters</p>
                     </div>
 
                     {reviewError && (
-                      <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                      <div className="bg-red-50 border border-red-100 rounded-xl p-4">
                         <p className="text-red-600 text-sm">{reviewError}</p>
                       </div>
                     )}
@@ -872,29 +903,31 @@ const ReaderProfile = () => {
                           setShowReviewForm(false);
                           setReviewError('');
                           if (!userReview) {
-                            setReviewFormData({ rating: 0, reviewText: '' }); // FIX 6: reset to 0
+                            setReviewFormData({ rating: 0, reviewText: '' });
                           }
                         }}
-                        className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+                        className="px-5 py-2.5 border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-all duration-200 text-sm font-medium"
                       >
                         Cancel
                       </button>
                       <button
                         onClick={handleReviewSubmit}
                         disabled={submittingReview}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+                        className="px-5 py-2.5 bg-[#329ae1] text-white rounded-xl hover:bg-[#2580c0] hover:shadow-lg hover:shadow-[#329ae1]/20 transition-all duration-300 text-sm font-medium shadow-sm disabled:opacity-50"
                       >
                         {submittingReview ? 'Submitting...' : (userReview ? 'Update Review' : 'Submit Review')}
                       </button>
                     </div>
                   </div>
                 ) : (
-                  <div className="text-center py-8">
-                    <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <div className="text-center py-10">
+                    <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                      <MessageSquare className="w-8 h-8 text-gray-300" />
+                    </div>
                     <p className="text-gray-600 mb-4">You haven&apos;t written a review yet</p>
                     <button
                       onClick={() => setShowReviewForm(true)}
-                      className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                      className="px-6 py-2.5 bg-[#329ae1] text-white rounded-xl hover:bg-[#2580c0] hover:shadow-lg hover:shadow-[#329ae1]/20 transition-all duration-300 font-medium text-sm shadow-sm"
                     >
                       Write Your First Review
                     </button>
@@ -907,14 +940,17 @@ const ReaderProfile = () => {
 
         {/* Delete Confirmation Modal */}
         {showDeleteConfirm && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg p-6 max-w-md w-full">
-              <h3 className="text-xl font-bold text-gray-800 mb-4">Delete Profile</h3>
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl border border-gray-100">
+              <div className="w-12 h-12 bg-red-50 rounded-xl flex items-center justify-center mx-auto mb-4">
+                <Trash2 className="w-6 h-6 text-red-500" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2 text-center">Delete Profile</h3>
               <div className="mb-6">
-                <p className="text-gray-700 mb-3">
+                <p className="text-gray-700 mb-3 text-sm text-center">
                   Are you sure you want to delete your profile? This action will:
                 </p>
-                <ul className="list-disc list-inside text-gray-600 space-y-2 ml-2">
+                <ul className="list-disc list-inside text-gray-600 space-y-2 ml-2 text-sm bg-gray-50 rounded-xl p-4">
                   <li>Permanently delete your account</li>
                   <li>Remove all your personal data</li>
                   <li>Delete your preferences and settings</li>
@@ -926,14 +962,14 @@ const ReaderProfile = () => {
                 <button
                   onClick={() => setShowDeleteConfirm(false)}
                   disabled={isDeleting}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition disabled:opacity-50"
+                  className="flex-1 px-4 py-2.5 border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-all duration-200 font-medium text-sm disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleDeleteProfile}
                   disabled={isDeleting}
-                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:opacity-50"
+                  className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 hover:shadow-lg hover:shadow-red-500/20 transition-all duration-300 font-medium text-sm disabled:opacity-50"
                 >
                   {isDeleting ? 'Deleting...' : 'Delete Forever'}
                 </button>
