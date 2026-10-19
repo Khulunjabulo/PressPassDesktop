@@ -4,6 +4,7 @@ import ServiceWorkerRegister from "../components/ServiceWorkerRegister"
 import { FloatingMessenger } from "../components/FloatingMessenger"
 import { AuthProvider } from "../components/AuthProvider"
 import AdminImpersonationBannerWrapper from "../components/AdminImpersonationBannerWrapper"
+import CookieConsent from "../components/CookieConsent"
 
 export default function RootLayout({ children }) {
   return (
@@ -42,6 +43,7 @@ export default function RootLayout({ children }) {
             <ServiceWorkerRegister />
             <main className="flex-grow w-full">{children}</main>
             <FloatingMessenger />
+            <CookieConsent />
           </AuthProvider>
         </AdminImpersonationBannerWrapper>
       </body>
